@@ -1,6 +1,6 @@
 Package: stemr
 Type: Package
-Title: Fit Stochastic Epidemic Models via Bayesian Data Augmentation
+Title: Stochastic Epidemic Model Simulation and Estimation
 Version: 0.1.0
 Authors@R: as.person(c(
     "Jon Fintzi <fintzij@uw.edu> [aut, cre]",
@@ -12,12 +12,14 @@ BugReports: https://github.com/fintzij/stemr/issues
 Description: Fit stochastic epidemic models using Bayesian data augmentation.
     Implements an agent-based data-driven data augmentation algorithm for
     efficient subject-level path proposals based on noisy aggregate counts at
-    discrete observation times.
+    discrete observation times. Also implements approximate inference via the
+    linear noise approximation.
 License: GPL-3
 LazyData: TRUE
 Imports:
     ECctmc,
-    Rcpp (>= 0.12.3)
+    deSolve,
+    Rcpp (>= 0.12.4)
 LinkingTo: Rcpp,
     RcppArmadillo
 RoxygenNote: 5.0.1
