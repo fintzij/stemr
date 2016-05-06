@@ -1,0 +1,10 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.RDataTmp
+src/*.o
+src/*.so
+src/*.dll
+inst/doc
+.developement_files/
