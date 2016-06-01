@@ -389,5 +389,7 @@ stem_dynamics <- function(rates, parameters, compartments, tcovar = NULL, strata
         # ODEs for the model using the deSolve package.
         rates_lumped   <- paste0("RATE", 1:length(rates),"_LUMPED")
         rates_unlumped <- paste0("RATE", 1:length(rates),"_UNLUMPED")
+
+        # compile the rate functions
         parse_rates(rates = rate_fcns, param_codes = param_codes, compartment_codes = compartment_codes, const_codes = const_codes, tcovar_codes = tcovar_codes)
 }
