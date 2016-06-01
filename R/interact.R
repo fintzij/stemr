@@ -16,7 +16,7 @@ interact <- function(...) {
         combns <- expand.grid(args)
 
         # concatenate rows of the matrix
-        interactions <- apply(combns, 1, paste, collapse = ".")
+        interactions <- apply(combns, 1, paste, collapse = "_")
 
         return(interactions)
 }

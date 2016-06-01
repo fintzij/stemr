@@ -20,7 +20,7 @@
 #'   specific, they must be named appropriately - e.g. N_children, N_adults.
 #' @param strata Names of strata. Must be specified if there are multiple
 #'   strata.
-#' @param timevar name of the time variable
+#' @param timevar name of the time variable, defaults to "t".
 #' @param stem_settings otional list of simulation settings, most
 #'   straightforwardly generated using the \code{stem_control} function.
 #' @param rmeasure,dmeasure functions to simulate from or evaluate the
@@ -31,7 +31,7 @@
 #' @return returns a \code{stem} list.
 #' @export
 #'
-stem <- function(data = NULL, times = NULL, dynamics, parameters, constants = NULL, strata = NULL, timevar = NULL, stem_settings = NULL, rmeasure = NULL, dmeasure = NULL, incidence_vars = NULL) {
+stem <- function(data = NULL, times = NULL, dynamics, parameters, constants = NULL, strata = NULL, timevar = "t", stem_settings = NULL, rmeasure = NULL, dmeasure = NULL, incidence_vars = NULL) {
 
 
 }

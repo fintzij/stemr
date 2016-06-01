@@ -5,7 +5,7 @@
 \title{Construct a stem object.}
 \usage{
 stem(data = NULL, times = NULL, dynamics, parameters, constants = NULL,
-  strata = NULL, timevar = NULL, stem_settings = NULL, rmeasure = NULL,
+  strata = NULL, timevar = "t", stem_settings = NULL, rmeasure = NULL,
   dmeasure = NULL, incidence_vars = NULL)
 }
 \arguments{
@@ -34,7 +34,7 @@ specific, they must be named appropriately - e.g. N_children, N_adults.}
 \item{strata}{Names of strata. Must be specified if there are multiple
 strata.}
 
-\item{timevar}{name of the time variable}
+\item{timevar}{name of the time variable, defaults to "t".}
 
 \item{stem_settings}{otional list of simulation settings, most
 straightforwardly generated using the \code{stem_control} function.}
