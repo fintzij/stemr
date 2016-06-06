@@ -5,12 +5,19 @@
 \title{Produces a string for seasonal terms to be added to a rate function, supplied
 as the last argument in a rate list.}
 \usage{
-seasonality(period = 52, common_seasonality = TRUE)
+seasonality(period = 52, s_params = NULL, common_seasonality = TRUE)
 }
 \arguments{
 \item{period}{period of the season, defaults to 52 for weeks. May also be
 supplied as a vector if S>1 in order to specify multiple terms with
 different periods.}
+
+\item{s_param_values}{seasonality parameter values (or initial values), a
+2*length(period) numeric vector, with all sine parameters, then all cosine
+parameters, and supplied in the same order as period. If no values are
+supplied, the parameter values default to 0. Thus, if \code{period = c(12,
+52)}, the parameter values would be, for example, \code{c(SIN_12 = 1,
+SIN_52 = 2, COS_12 = 3, COS_52 = 4)}.}
 
 \item{common_seasonlity}{logical for whether the seasonal terms should be
 shared among strata (TRUE) or whether each stratum should have its own
@@ -29,6 +36,6 @@ Supplies a string for the seasonal terms \deqn{\sum \gamma_p
 }
 \examples{
 # add two sine and cosine terms, one with a period of 12 (for months), the other with a period of 52 (for weeks)
-list("beta * I", S, I, strata = NULL, seasonality(period = 12))
+list("beta * I", S, I, strata = NULL, seasonality(period = c(12, 52), s_params = c(0.01, 0.05)))
 }
 

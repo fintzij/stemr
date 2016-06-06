@@ -13,7 +13,7 @@ build_flowmat <- function(rates, compartment_names) {
 
         # compartments are columns, reactions are rows
         flow_matrix             <- matrix(0L, ncol = length(compartment_names), nrow = length(rates))
-        colnames(flow_matrix)   <- compartment_names
+        colnames(flow_matrix)   <- compartment_names; rownames(flow_matrix) <- paste0("RATE",1:nrow(flow_matrix))
 
         # fill out the flow matrix
         for(k in 1:length(rates)) {

@@ -59,13 +59,13 @@ parse_rates <- function(rates, param_codes, compartment_codes, const_codes, tcov
                              "#include <RcppArmadillo.h>",
                              "using namespace arma;",
                              "using namespace Rcpp;",
-                             "// [[Rcpp::export]]",
+                             "// [[Rcpp::export(name = \".RATES_LUMPED\")]]",
                              paste0("void RATES_LUMPED(Rcpp::NumericVector& rates, const Rcpp::LogicalVector inds,", arg_strings, ") {"), sep = "\n ")
         code_unlumped <- paste("// [[Rcpp::depends(RcppArmadillo)]]",
                                "#include <RcppArmadillo.h>",
                                "using namespace arma;",
                                "using namespace Rcpp;",
-                               "// [[Rcpp::export]]",
+                               "// [[Rcpp::export(name = \".RATES_UNLUMPED\")]]",
                                paste0("void RATES_UNLUMPED(Rcpp::NumericVector& rates, const Rcpp::LogicalVector inds,", arg_strings, ") {"), sep = "\n ")
 
         for(i in seq_along(rates_lumped)) {

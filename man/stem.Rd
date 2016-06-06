@@ -4,46 +4,38 @@
 \alias{stem}
 \title{Construct a stem object.}
 \usage{
-stem(data = NULL, times = NULL, dynamics, parameters, constants = NULL,
-  strata = NULL, timevar = "t", stem_settings = NULL, rmeasure = NULL,
-  dmeasure = NULL, incidence_vars = NULL)
+stem(stem_object = NULL, data = NULL, dynamics = NULL,
+  stem_settings = NULL, meas_process = NULL)
 }
 \arguments{
-\item{data, times}{The observation times and data. The user may specify either
-  a vector of observation times in the \code{times} argument, or a list of
-  vectors of observation times, where the list element names identify the
-  compartment_strata to which the observation times correspond (e.g.
-  I_children, I_adults). \code{times} must be numeric and strictly
-  increasing.
+\item{stem_object}{an existing stochastic epidemic model object to which
+model settings should be added.}
 
-  \code{data} may be provided either as a data frame of observations with
-  number of rows  equal to the number of observation times and with column
-  names that identify the compartment_stratum (e.g. I_children, I_adults)
-  being measured, or as a list of vectors, where the list element names
-  identify the compartment_stratum and where each vector has a corresponding
-  vector of observation times.}
+\item{data}{a matrix/data frame, or a list of matrices/data frames. All
+columns must be named according to which compartment_strata are measured.
+The first column must consist of observation times, t_1,...,t_L. If data on
+all measured compartments are accrued at the same observation times, a
+single matrix or data frame may be provided. If each compartment in the
+data was measured at different observation times, a list of matrices or
+data frames must be provided. Again, the first column of each matrix must
+consist of observation times, while subsequent columns must be labeled
+according to which compartments are reflected.}
 
 \item{dynamics}{A list of objects describing the model dynamics, most
 straighforwardly generated using the \code{stem_dynamics} function.}
 
-\item{parameters}{Named vector of parameter values.}
-
-\item{constants}{Names vector of constants. If constants are stratum
-specific, they must be named appropriately - e.g. N_children, N_adults.}
-
-\item{strata}{Names of strata. Must be specified if there are multiple
-strata.}
-
-\item{timevar}{name of the time variable, defaults to "t".}
-
-\item{stem_settings}{otional list of simulation settings, most
+\item{stem_settings}{otional list of inference settings, most
 straightforwardly generated using the \code{stem_control} function.}
 
-\item{rmeasure, dmeasure}{functions to simulate from or evaluate the
-likelihood of the measurement process. At least one must be specified.}
+\item{meas_process}{list of functions to simulate from or evaluate the
+likelihood of the measurement process. These are most easily generated
+using the \code{stem_measure} function.}
 
-\item{incidence_vars}{vector of compartments for which the data consists of
-incidence data.}
+\item{parameters}{Named vector of parameter values.}
+
+\item{strata}{names of model strata.}
+
+\item{constants}{Named vector of constants.}
 }
 \value{
 returns a \code{stem} list.

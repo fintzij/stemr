@@ -13,14 +13,15 @@
 #'   Each rate list specifies, at a minimum, the rate function, the compartment
 #'   from which an individual exits, the compartment that she enters.
 #'   Optionally, the strata to which the rate function applies can be supplied,
-#'   along with seasonal terms that can be added (most easily) through the
-#'   \code{\link{seasonality}} function. The optional \code{strata} argument can
-#'   either be a character vector of strata for which the rate applies, or may
-#'   be specified as "ALL" if the rate function applies to common compartments
-#'   in all strata. If there are multiple strata, the strata argument for each
-#'   rate is required. If a rate is time dependent, the reserved word "TIME"
-#'   should be used for the time variable. For example, "beta * I + eta *TIME"
-#'   would indicate a linear trend in the infectivity rate.
+#'   along with seasonal terms or a linear trend in time that can be added (most
+#'   easily) through the \code{\link{seasonality}} function. The optional
+#'   \code{strata} argument can either be a character vector of strata for which
+#'   the rate applies, or may be specified as "ALL" if the rate function applies
+#'   to common compartments in all strata. If there are multiple strata, the
+#'   strata argument for each rate is required. If a rate is time dependent, the
+#'   reserved word "TIME" should be used for the time variable. For example,
+#'   "beta * I + eta *TIME" would indicate a linear trend in the infectivity
+#'   rate.
 #'
 #'   \emph{VERY IMPORTANT:} The rate functions must be specified at the subject
 #'   level as they are parsed internally and converted to lumped rates. For
@@ -29,7 +30,8 @@
 #'   which will be generated automatically are \eqn{\beta * I * S} and \eqn{\mu
 #'   * I}.
 #'
-#'   The rate functions should be provided as string snippets of valid C++ code.
+#'   The rate functions should be provided as string snippets of valid C++ code
+#'   (though if the snippet is a single line, no semicolon needs to be added).
 #'   Each function is parsed internally for references to parameters,
 #'   compartments, strata, constants, and the time variable. There are a few
 #'   case-sensitive reserved words that are provided to facilitate the
@@ -47,17 +49,17 @@
 #'   infecteds within her own stratum at rate \eqn{\beta * I^\alpha}, but does
 #'   not contract an infection from outside her stratum. Note that the rate must
 #'   be specified as valid C++, so exponentiation is done using the \code{pow()}
-#'   function. \item rate("beta * comp_fcn(I_ALL, sum)", "S", "I", "ALL"):
-#'   each susceptible contacts all infecteds in the population at rate
-#'   \eqn{\beta * \sum_s I_s}, regardless of stratum. Note that 'I_ALL' will be
-#'   replaced by a vector of I_strata, therefore using 'I_all' outside of a
-#'   function, e.g. beta * I_ALL, will result in an error. However, beta *
-#'   comp_fcn(I_ALL, sum) is well defined. \item rate("beta1 * I_SELF + beta2
-#'   * comp_fcn(I_adj, sum)", "S", "I", "ALL"): each susceptible contacts
-#'   infecteds in her own stratum at rate \eqn{\beta1 * I_SELF}, and contacts
-#'   infecteds in adjacent strata (specified in the adjacency matrix) at rate
-#'   \eqn{\beta * \sum_{s: stratum 's' is adjacent} I_s}. Note that in this
-#'   case, the diagonal entries in the adjacency matrix should be set to zero.}
+#'   function. \item rate("beta * comp_fcn(I_ALL, sum)", "S", "I", "ALL"): each
+#'   susceptible contacts all infecteds in the population at rate \eqn{\beta *
+#'   \sum_s I_s}, regardless of stratum. Note that 'I_ALL' will be replaced by a
+#'   vector of I_strata, therefore using 'I_all' outside of a function, e.g.
+#'   beta * I_ALL, will result in an error. However, beta * comp_fcn(I_ALL, sum)
+#'   is well defined. \item rate("beta1 * I_SELF + beta2 * comp_fcn(I_adj,
+#'   sum)", "S", "I", "ALL"): each susceptible contacts infecteds in her own
+#'   stratum at rate \eqn{\beta1 * I_SELF}, and contacts infecteds in adjacent
+#'   strata (specified in the adjacency matrix) at rate \eqn{\beta * \sum_{s:
+#'   stratum 's' is adjacent} I_s}. Note that in this case, the diagonal entries
+#'   in the adjacency matrix should be set to zero.}
 #'
 #'   The \code{from} and \code{to} arguments will automatically be updated when
 #'   the rate is parsed within the \code{stem_dynamics} function to reflect the
@@ -82,7 +84,6 @@
 #'   suppose there is a parameter named "BETA_N". When the rate functions are
 #'   parsed internally, the rate strings will be parsed incorrectly due to the
 #'   partial match.
-#'
 #'
 #' @return rate list
 #' @export
