@@ -8,75 +8,53 @@
 #' @param tcovar_codes vector of time-varying covariate codes
 #' @param allrates compile each individual rate function, defaults to FALSE
 #'
-#' @return Two vector of strings that serve as function pointers. Also loads
-#'   functions for forward simulation and a function for solving the system of
-#'   ODEs into the global environment.
+#' @return Two vector of strings that serve as function pointers.
 #' @export
 parse_rates <- function(rates, param_codes, compartment_codes, const_codes, tcovar_codes, allrates = FALSE) {
 
         rates_lumped   <- paste0("RATE", 1:length(rates),"_LUMPED")
         rates_unlumped <- paste0("RATE", 1:length(rates),"_UNLUMPED")
 
-        arg_strings <- "const Rcpp::IntegerVector& state, const Rcpp::NumericVector& parameters"
-        if(!is.null(const_codes))  arg_strings <- paste(arg_strings, "const Rcpp::NumericVector& constants", sep = ", ")
-        if(!is.null(tcovar_codes)) arg_strings <- paste(arg_strings, "const Rcpp::NumericVector& tcovar", sep = ", ")
+        arg_strings <- "Rcpp::NumericVector& rates, const Rcpp::LogicalVector& inds, const arma::rowvec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::rowvec& tcovar"
 
-        if(allrates) {
-                for(s in seq_along(rates)) {
-                        cat("Compiling rate functions:")
-                        cat("RATE",s,sep="\n")
+        fcns_lumped <- fcns_unlumped <- character(0)
 
-                        code_lumped <- paste("// [[Rcpp::depends(RcppArmadillo)]]",
-                                             "#include <RcppArmadillo.h>",
-                                             "using namespace arma;",
-                                             "using namespace Rcpp;",
-                                             "// [[Rcpp::export]]",
-                                             paste0("double ", rates_lumped[s],"(", arg_strings,") {"),
-                                             paste0("double rate = ",rates[[s]]$lumped,";"),
-                                             "return rate;}",
-                                             sep = "\n"
-                        )
-
-                        code_unlumped <- paste("// [[Rcpp::depends(RcppArmadillo)]]",
-                                               "#include <RcppArmadillo.h>",
-                                               "using namespace arma;",
-                                               "using namespace Rcpp;",
-                                               "// [[Rcpp::export]]",
-                                               paste0("double ", rates_unlumped[s],"(", arg_strings,") {"),
-                                               paste0("double rate = ",rates[[s]]$unlumped,";"),
-                                               "return rate;}",
-                                               sep = "\n"
-                        )
-
-                        Rcpp::sourceCpp(code = code_lumped, env = globalenv())
-                        Rcpp::sourceCpp(code = code_unlumped, env = globalenv())
-                }
+        for(i in seq_along(rates_lumped)) {
+                fcns_lumped <- paste(fcns_lumped,paste0("if(inds[",i-1,"]) rates[",i-1,"] = ", rates[[i]]$lumped,";"), sep = "\n ")
+                fcns_unlumped <- paste(fcns_unlumped,paste0("if(inds[",i-1,"]) rates[",i-1,"] = ", rates[[i]]$unlumped,";"), sep = "\n ")
         }
 
-
         # compile function for updating elements a rate vector
-        code_lumped <- code_lumped <- paste("// [[Rcpp::depends(RcppArmadillo)]]",
+        code_lumped <- paste("// [[Rcpp::depends(RcppArmadillo)]]",
+                           "#include <RcppArmadillo.h>",
+                           "using namespace arma;",
+                           "using namespace Rcpp;",
+                           paste0("void RATES_LUMPED(",arg_strings,") {"),
+                           fcns_lumped,
+                           "}",
+                           paste0("typedef void(*ratefcn_ptr)(", arg_strings,");"),
+                           "// [[Rcpp::export]]",
+                           "Rcpp::XPtr<ratefcn_ptr> LUMPED_XPtr() {",
+                           "return(Rcpp::XPtr<ratefcn_ptr>(new ratefcn_ptr(&RATES_LUMPED)));",
+                           "}", sep = "\n")
+
+        code_unlumped <- paste("// [[Rcpp::depends(RcppArmadillo)]]",
                              "#include <RcppArmadillo.h>",
                              "using namespace arma;",
                              "using namespace Rcpp;",
-                             "// [[Rcpp::export(name = \".RATES_LUMPED\")]]",
-                             paste0("void RATES_LUMPED(Rcpp::NumericVector& rates, const Rcpp::LogicalVector inds,", arg_strings, ") {"), sep = "\n ")
-        code_unlumped <- paste("// [[Rcpp::depends(RcppArmadillo)]]",
-                               "#include <RcppArmadillo.h>",
-                               "using namespace arma;",
-                               "using namespace Rcpp;",
-                               "// [[Rcpp::export(name = \".RATES_UNLUMPED\")]]",
-                               paste0("void RATES_UNLUMPED(Rcpp::NumericVector& rates, const Rcpp::LogicalVector inds,", arg_strings, ") {"), sep = "\n ")
-
-        for(i in seq_along(rates_lumped)) {
-                code_lumped <- paste(code_lumped,
-                                     paste0("if(inds[",i-1,"]) rates[",i-1,"] = ", rates[[i]]$lumped,";"), sep = "\n ")
-                code_unlumped <- paste(code_unlumped,
-                                       paste0("if(inds[",i-1,"]) rates[",i-1,"] = ", rates[[i]]$unlumped,";"), sep = "\n ")
-        }
-        code_lumped <- paste(code_lumped, "}" ,sep = "\n "); code_unlumped <- paste(code_unlumped, "}", sep = "\n ")
+                             paste0("void RATES_UNLUMPED(",arg_strings,") {"),
+                             fcns_unlumped,
+                             "}",
+                             paste0("typedef void(*ratefcn_ptr)(", arg_strings,");"),
+                             "// [[Rcpp::export]]",
+                             "Rcpp::XPtr<ratefcn_ptr> UNLUMPED_XPtr() {",
+                             "return(Rcpp::XPtr<ratefcn_ptr>(new ratefcn_ptr(&RATES_UNLUMPED)));",
+                             "}", sep = "\n")
 
         Rcpp::sourceCpp(code = code_lumped, env = globalenv())
         Rcpp::sourceCpp(code = code_unlumped, env = globalenv())
 
+        rate_pointers <- c(lumped_ptr = LUMPED_XPtr(), unlumped_ptr = UNLUMPED_XPtr())
+
+        return(rate_pointers)
 }

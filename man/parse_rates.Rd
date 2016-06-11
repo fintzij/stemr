@@ -22,9 +22,7 @@ parse_rates(rates, param_codes, compartment_codes, const_codes, tcovar_codes,
 \item{allrates}{compile each individual rate function, defaults to FALSE}
 }
 \value{
-Two vector of strings that serve as function pointers. Also loads
-  functions for forward simulation and a function for solving the system of
-  ODEs into the global environment.
+Two vector of strings that serve as function pointers.
 }
 \description{
 Instatiate the C++ rate functions for a stochastic epidemic model and return

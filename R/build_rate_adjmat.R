@@ -31,7 +31,7 @@ build_rate_adjmat <- function(rates, compartment_codes) {
         }
 
         # construct the adjacency matrix
-        rate_adjmat <- ifelse((depends_on %*% t(affects)) > 0, 1, 0)
+        rate_adjmat <- ifelse((depends_on %*% t(affects)) > 0, TRUE, FALSE)
 
         return(rate_adjmat)
 }

@@ -14,7 +14,7 @@
 #' @param tcovar Matrix or data frame of time varying covariates, the first
 #'   column of which contains the times at which covariates change.
 #' @param strata vector of stratum names, required only if not all compartments
-#'   are common to all strata
+#'   are common to all stratax
 #'
 #'   (e.g. compartments = list(S = "ALL", I = "ALL", R = "ALL", D = "old");
 #'   strata = c("infants", "young", "old");
@@ -59,6 +59,10 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 stop("'TIME' is a reserved word and should not be one of the names of constants.")
         }
 
+        if(!is.null(strata) && (any(sapply(state_initializer, "[[", 2) == TRUE) & any(sapply(state_initializer, "[[", 2) == TRUE))) {
+                stop("The initial states in each stratum must either all be fixed, or all be random.")
+        }
+
         # check that the strata names in the compartment list match the strata
         if(is.list(compartments) && !all(unlist(compartments[unlist(compartments)]) %in% strata)) {
                 stop(sQuote(unlist(compartments)[which((!unlist(compartments) %in% strata) & (unlist(compartments) != "ALL"))]), "is not in the supplied vector of stratum names")
@@ -95,14 +99,19 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
         }
 
         # get the number of strata, the number of compartments, number of parameters, and number of time-varying covariates (plus time)
-        n_strata        <- length(strata)
+        n_strata        <- max(1,length(strata));
         n_compartments  <- length(compartment_names)
         n_params        <- length(parameters)
         n_consts        <- length(constants)
 
-        tcovar_names    <- c(colnames(tcovar)[-1])
-        n_tcovar        <- length(tcovar_names)
-        tcovar_codes    <- seq_len(n_tcovar); names(tcovar_codes) <- tcovar_names # the first column will be the times, so codes start at 1.
+        if(is.null(tcovar)) {
+                tcovar_names <- tcovar_codes <- NULL
+                n_tcovar     <- 0
+        } else {
+                tcovar_names    <- colnames(tcovar)[2:ncol(tcovar)]
+                n_tcovar        <- length(tcovar_names)
+                tcovar_codes    <- seq_len(n_tcovar); names(tcovar_codes) <- tcovar_names # the first column will be the times, so codes start at 1.
+        }
 
         # construct the mapping for the compartment_strata to the columns in the bookkeeping matrix
         compartment_codes <- 0:(n_compartments - 1);    names(compartment_codes)<- compartment_names
@@ -341,9 +350,17 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 }
 
                 initializer <- unlist(initializer, recursive = FALSE); initdist_params <- unlist(initdist_params)
+                initdist_strata <- initdist_params;
+                for(s in seq_along(initializer)) initdist_strata[initializer[[s]]$param_inds] <- s
+
+                # determine if initial states are fixed
+                fixed_inits <- all(sapply(initializer, "[[", 2) == TRUE)
+
                 strata_sizes <- sapply(initializer, function(x) sum(x[[1]]));
                 names(strata_sizes) <- sapply(initializer, "[[", 3)
-                pop_size <- sum(strata_sizes)
+                popsize <- sum(strata_sizes)
+
+                constants <- c(constants, popsize = popsize, strata_sizes)
 
                 # check that either all parameters are random or that initial state is fixed for each stratum
                 if(!(all(sapply(initializer, function(x) x[[2]] == TRUE)) | all(sapply(initializer, function(x) x[[2]] == FALSE)))) {
@@ -424,9 +441,16 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
 
                 initializer  <- state_initializer; initdist_params <- state_initializer$init_states
                 initializer$param_inds <- seq_along(initdist_params)
+                initdist_strata <- rep(1, length(initdist_params)); names(initdist_strata) <- names(initdist_params)
+
+                fixed_inits <- state_initializer$fixed
                 strata_sizes <- NULL
-                pop_size     <- sum(initializer$init_states)
+                popsize     <- sum(initializer$init_states)
+
+                constants <- c(constants, popsize = popsize)
         }
+
+
 
         # construct the flow matrix
         flow_matrix <- build_flowmat(rate_fcns, compartment_names)
@@ -445,16 +469,14 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 timevarying <- TRUE
         } else {
                 timevarying <- FALSE
-                for(t in seq_along(rates)) {
+                for(t in seq_along(rate_fcns)) {
                         if(grepl("TIME", rate_fcns[[t]]$lumped)) timevarying <- TRUE
                         if(timevarying) break
                 }
         }
 
-        #############################################################################################################################
-        ### RESUME HERE. TCOVAR ADJMAT SHOULD BE INSTATIATED WHEN A METHOD IS SELECTED, AND THE "TIME" WORD HANDLED AT THAT POINT
-        ### AND THE RATES SHOULD BE PARSED THEN.
-        #############################################################################################################################
+        # the time-varying covariate rate adjacency matrix will be rebuild again
+        # later.
         if(timevarying) {
                 tcovar_adjmat <- build_tcovar_adjmat(rate_fcns, tcovar_codes)
         } else {
@@ -466,24 +488,30 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
         # along with functions that modify a vector of rates in place for
         # forward simulation, and that can be used for solving the system of
         # ODEs for the model using the deSolve package.
-        rates_lumped   <- paste0("RATE", 1:length(rates),"_LUMPED")
-        rates_unlumped <- paste0("RATE", 1:length(rates),"_UNLUMPED")
+        # rates_lumped   <- paste0("RATE", 1:length(rates),"_LUMPED")
+        # rates_unlumped <- paste0("RATE", 1:length(rates),"_UNLUMPED")
 
         # create the list determining the stem dynamics
-        dynamics <- list(comp_codes       = compartment_codes,
+        dynamics <- list(rates            = rate_fcns,
+                         parameters       = parameters,
+                         tcovar           = tcovar,
+                         constants        = constants,
+                         state_initializer= initializer,
+                         initdist_params  = initdist_params,
+                         initdist_strata  = initdist_strata,
+                         fixed_inits      = fixed_inits,
+                         flow_matrix      = flow_matrix,
+                         strata_sizes     = strata_sizes,
+                         popsize          = popsize,
+                         comp_codes       = compartment_codes,
                          param_codes      = param_codes,
                          tcovar_codes     = tcovar_codes,
                          const_codes      = const_codes,
                          strata_codes     = strata_codes,
-                         rates            = rate_fcns,
-                         state_initializer= initializer,
-                         initdist_params  = initdist_params,
-                         strata_sizes     = strata_sizes,
-                         pop_size         = pop_size,
-                         flow_matrix      = flow_matrix,
                          progressive      = progressive,
                          absorbing_states = absorbing_states,
                          rate_adjmat      = rate_adjmat,
+                         timevarying      = timevarying,
                          tcovar_adjmat    = tcovar_adjmat,
                          n_strata         = n_strata,
                          n_compartments   = n_compartments,

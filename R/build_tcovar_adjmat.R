@@ -13,7 +13,7 @@
 #'   time-varying covariate changes.
 #' @export
 build_tcovar_adjmat <- function(rates, tcovar_codes = NULL) {
-        tcovar_adjmat <- matrix(0, ncol = length(tcovar_codes), nrow = length(rates))
+        tcovar_adjmat <- matrix(FALSE, ncol = length(tcovar_codes), nrow = length(rates))
         colnames(tcovar_adjmat) <- adjmat_names <- names(tcovar_codes)
         rownames(tcovar_adjmat) <- paste0("RATE", 1:length(rates))
 

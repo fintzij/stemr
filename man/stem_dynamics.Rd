@@ -27,7 +27,7 @@ reserved word "ALL" can be used instead of listing all strata.}
 column of which contains the times at which covariates change.}
 
 \item{strata}{vector of stratum names, required only if not all compartments
-  are common to all strata
+  are common to all stratax
 
   (e.g. compartments = list(S = "ALL", I = "ALL", R = "ALL", D = "old");
   strata = c("infants", "young", "old");}

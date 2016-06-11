@@ -5,7 +5,7 @@
 \title{Construct a stem object.}
 \usage{
 stem(stem_object = NULL, data = NULL, dynamics = NULL,
-  stem_settings = NULL, meas_process = NULL)
+  meas_process = NULL, stem_settings = NULL)
 }
 \arguments{
 \item{stem_object}{an existing stochastic epidemic model object to which
@@ -24,21 +24,15 @@ according to which compartments are reflected.}
 \item{dynamics}{A list of objects describing the model dynamics, most
 straighforwardly generated using the \code{stem_dynamics} function.}
 
-\item{stem_settings}{otional list of inference settings, most
-straightforwardly generated using the \code{stem_control} function.}
-
 \item{meas_process}{list of functions to simulate from or evaluate the
 likelihood of the measurement process. These are most easily generated
 using the \code{stem_measure} function.}
 
-\item{parameters}{Named vector of parameter values.}
-
-\item{strata}{names of model strata.}
-
-\item{constants}{Named vector of constants.}
+\item{stem_settings}{otional list of inference settings, most
+straightforwardly generated using the \code{stem_control} function.}
 }
 \value{
-returns a \code{stem} list.
+returns a \code{stem} object.
 }
 \description{
 Construct a stem object.
