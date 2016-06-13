@@ -16,6 +16,17 @@ CALL_RATE_FCN <- function(rates, inds, state, parameters, constants, tcovar, rat
     invisible(.Call('stemr_CALL_RATE_FCN', PACKAGE = 'stemr', rates, inds, state, parameters, constants, tcovar, rate_ptr))
 }
 
+#' Identify which rates to update based on changes in the time-varying covariates.
+#'
+#' @param M time-varying covariate adjacency matrix
+#' @param I logical vector indicating which covariates changed at a particular time.
+#'
+#' @return logical vector stating which rates need to be updated
+#' @export
+rates_to_update <- function(M, I) {
+    .Call('stemr_rates_to_update', PACKAGE = 'stemr', M, I)
+}
+
 rcpp_hello <- function() {
     .Call('stemr_rcpp_hello', PACKAGE = 'stemr')
 }
