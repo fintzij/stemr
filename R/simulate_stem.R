@@ -89,6 +89,9 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
         # compute the time discretization interval if it is not supplied and there are smooth time-varying covariates
         if(method == "gillespie" && is.null(timestep) && stem_object$dynamics$timevarying) {
                 timestep <- (tmax - t0)/50
+
+        } else if(is.null(timestep) && !stem_object$dynamics$timevarying){
+                timestep <- tmax - t0
         }
 
         # build the time varying covariate matrix (includes, at a minimum, the endpoints of the simulation interval)
@@ -119,6 +122,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                                 const_codes = stem_object$dynamics$const_codes,
                                 tcovar_codes = stem_object$dynamics$tcovar_codes)
 
+                # generate or copy the initial states
                 if(stem_object$dynamics$fixed_inits) {
                         # if all initial states are fixed, just copy the initial compartment counts
                         init_states <- matrix(stem_object$dynamics$initdist_params, nrow = 1, byrow = TRUE)
@@ -156,16 +160,18 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                                 init_dims <- c(n_rows = sum(stem_object$dynamics$popsize * stem_object$dynamics$n_compartments) * 3, n_cols = stem_object$dynamics$n_compartments + 2)
                         } else if(stem_object$dynamics$n_strata > 1) {
                                 init_dims <- c(n_rows = sum(stem_object$dynamics$strata_sizes * sapply(sapply(stem_object$dynamics$state_initializer, "[[", 4), length)) * 3, n_cols = stem_object$dynamics$n_compartments + 2)
-
                         }
                 }
 
-                # make the initial dimensions a little bigger
+                # make the initial dimensions a little bigger (round up to nearest power of 2)
                 p <- 1
                 while(2^p < init_dims[1]) {
                         p <- p+1
                         if(2^p > init_dims[1]) init_dims[1] <- 2^p
                 }
+
+                # get the compartment names
+                path_colnames <- c("time", "event", names(stem_object$dynamics$comp_codes))
 
                 # simulate the paths
                 for(k in seq_len(nsim)) {
@@ -179,6 +185,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                                                          tcovar_changemat = stem_object$dynamics$tcovar_changemat,
                                                          init_dims        = init_dims,
                                                          rate_ptr         = rate_ptrs[[1]])
+                        colnames(paths[[k]]) <- path_colnames
                 }
 
 

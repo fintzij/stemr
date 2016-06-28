@@ -16,15 +16,28 @@ CALL_RATE_FCN <- function(rates, inds, state, parameters, constants, tcovar, rat
     invisible(.Call('stemr_CALL_RATE_FCN', PACKAGE = 'stemr', rates, inds, state, parameters, constants, tcovar, rate_ptr))
 }
 
+#' Identify which rates to update when a state transition event occurs.
+#'
+#' @param rate_inds vector of rate indices to be modified
+#' @param M adjacency matrix for which rates need to be updated in response to a transition
+#' @param event_code column in the rate adjacency matrix
+#'
+#' @return modifies logical vector stating which rates need to be updated
+#' @export
+rate_update_event <- function(rate_inds, M, event_code) {
+    invisible(.Call('stemr_rate_update_event', PACKAGE = 'stemr', rate_inds, M, event_code))
+}
+
 #' Identify which rates to update based on changes in the time-varying covariates.
 #'
+#' @param rate_inds vector of rate indices to be modified
 #' @param M time-varying covariate adjacency matrix
 #' @param I logical vector indicating which covariates changed at a particular time.
 #'
 #' @return logical vector stating which rates need to be updated
 #' @export
-rates_to_update <- function(M, I) {
-    .Call('stemr_rates_to_update', PACKAGE = 'stemr', M, I)
+rate_update_tcovar <- function(rate_inds, M, I) {
+    invisible(.Call('stemr_rate_update_tcovar', PACKAGE = 'stemr', rate_inds, M, I))
 }
 
 rcpp_hello <- function() {

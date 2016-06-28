@@ -1,4 +1,4 @@
-// [[Rcpp::depends(RcppArmadillo)]]
+        // [[Rcpp::depends(RcppArmadillo)]]
 #include <RcppArmadilloExtensions/sample.h>
 #include "stemr_types.h"
 #include "stemr_utils.hpp"
@@ -28,41 +28,48 @@ using namespace Rcpp;
 //' @export
 // [[Rcpp::export]]
 
-arma::mat simulate_gillespie(const Rcpp::IntegerMatrix& flow, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::mat& tcovar, const arma::rowvec& init_states, const Rcpp::LogicalMatrix& rate_adjmat, const arma::mat& tcovar_adjmat, const Rcpp::LogicalMatrix& tcovar_changemat, const Rcpp::IntegerVector init_dims, SEXP rate_ptr) {
+arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::mat& tcovar, const arma::rowvec& init_states, const Rcpp::LogicalMatrix& rate_adjmat, const arma::mat& tcovar_adjmat, const arma::mat& tcovar_changemat, const Rcpp::IntegerVector init_dims, SEXP rate_ptr) {
 
         // Get dimensions of various objects
-        int n_comps = init_states.size();
-        Rcpp::IntegerVector flow_dims = flow.attr("dim");
-        Rcpp::IntegerVector tcovar_dims(2);
-        tcovar_dims[0] = tcovar.n_rows;
-        tcovar_dims[1] = tcovar.n_cols;
+        Rcpp::IntegerVector flow_dims(2);       // size of flow matrix
+        Rcpp::IntegerVector tcovar_dims(2);     // size of tcovar matrix
+        flow_dims[0]    = flow.n_rows;
+        flow_dims[1]    = flow.n_cols;
+        tcovar_dims[0]  = tcovar.n_rows;
+        tcovar_dims[1]  = tcovar.n_cols;
 
         // initialize bookkeeping matrix
         arma::mat path(init_dims[0], init_dims[1]);
 
+        // vector of event codes
+        Rcpp::IntegerVector events = Rcpp::seq_len(flow_dims[0]) - 1; // vector of event codes
+        Rcpp::IntegerVector next_event(1);                            // next event
+
         // insert the initial compartment counts
-        Rcpp::IntegerVector comp_inds   = Rcpp::seq_len(n_comps) + 1;
         path(0, span(2,init_dims[1]-1)) = init_states;
+
+        // initialize a state vector
+        arma::rowvec state = init_states;
 
         // initialize the time varying covariates and the left and right
         // endpoints of the first piecewise homogeneous interval
         int tcov_ind(1);                                // row index in the time-varying covariate matrix
         arma::rowvec tcovs = tcovar.row(tcov_ind);      // initialize the time-varying covariates
-        double t_L = tcovar(0,0);                       // left-endpoint of first interval
-        double t_R = tcovar(1,0);                       // right-endpoint of first interval
+        double t_L = tcovar(tcov_ind,0);                // left-endpoint of first interval
+        double t_R = tcovar(tcov_ind + 1,0);            // right-endpoint of first interval
         double t_cur = t_L;                             // current time
         double t_max = tcovar(tcovar_dims[0] - 1, 0);   // maximum time
         Rcpp::NumericVector dt(1);                      // time increment
 
         // initialize the rates
-        Rcpp::LogicalVector rate_inds(flow_dims[0], true);
-        Rcpp::NumericVector rates(flow_dims[0]);
-        CALL_RATE_FCN(rates, rate_inds, init_states, parameters, constants, tcovs, rate_ptr);
+        Rcpp::LogicalVector rate_inds(flow_dims[0], true); // logical vector of rates to update
+        Rcpp::NumericVector rates(flow_dims[0]);           // initialize vector of rates
+        CALL_RATE_FCN(rates, rate_inds, state, parameters, constants, tcovs, rate_ptr); // compute rates
 
         // set keep_going and the row index
         bool keep_going = true;
-        int ind = 1;     // row from which to begin inserting
-        int ind_inc = 0; // variable for counting insertions
+        int ind_start = 1;       // row from which to begin inserting, updated throughout
+        int ind_cur = ind_start; // row index into which to actually insert
 
         // start simulating
         while(keep_going) {
@@ -77,16 +84,43 @@ arma::mat simulate_gillespie(const Rcpp::IntegerMatrix& flow, const Rcpp::Numeri
                                 keep_going = false;
 
                         } else {                   // increment the time-homogeneous interval and the rates
-                                t_cur = t_R;                    // left-endpoint
-                                t_L   = t_R;                    // right-endpoint
-                                tcov_ind += 1;                  // index in the time-varying covariate matrix
-                                tcovs = tcovar.row(tcov_ind);   // time-varying covariate vector
 
-                                rate_inds =
+                                tcov_ind += 1;                       // increment the index in the time-varying covariate matrix
+                                tcovs     = tcovar.row(tcov_ind);    // time-varying covariate vector
+                                t_L       = t_R;                     // set left endpoint to right endpoint
+                                t_cur     = t_R;                     // set current time to right endpoint
+                                t_R       = tcovar(tcov_ind + 1, 0); // increment the right endpoint
+
+                                rate_update_tcovar(rate_inds, tcovar_adjmat, tcovar_changemat.row(tcov_ind)); // identify rates that need to be updated
+                                CALL_RATE_FCN(rates, rate_inds, state, parameters, constants, tcovs, rate_ptr); // update the rate functions
                         }
 
+                } else {
+
+                        // sample the next event
+                        next_event = Rcpp::RcppArmadillo::sample(events, 1, false, rates);
+
+                        // update the state vector
+                        state = state + flow.row(next_event[0]);
+
+                        // insert the time, event, and new state vector into the path matrix
+                        path(ind_cur, 0) = t_cur;                       // insert new time
+                        path(ind_cur, 1) = next_event[0];               // event code
+                        path(ind_cur, span(2,init_dims[1]-1)) = state;  // state
+
+                        // increment the index
+                        ind_cur += 1;
+
+                        // update the rates
+                        rate_update_event(rate_inds, rate_adjmat, next_event[0]);                       // identify rates that need to be updated
+                        CALL_RATE_FCN(rates, rate_inds, state, parameters, constants, tcovs, rate_ptr); // update the rate functions
+
+                        // if all rates equal zero, stop simulating
+                        keep_going = Rcpp::is_false(all(rates == 0));
                 }
         }
+
+        path.shed_rows(ind_cur, init_dims[0]-1);
 
         return path;
 }
