@@ -107,15 +107,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
 
                 timecode <- which(names(stem_object$dynamics$tcovar_codes) == "TIME")
 
-                # make the substitution in the rate functions for TIME
-                for(s in seq_along(stem_object$dynamics$rates)) {
-                        stem_object$dynamics$rates[[s]]$lumped <- gsub("TIME", paste0("tcovar[",timecode,"]"), stem_object$dynamics$rates[[s]]$lumped)
-                        stem_object$dynamics$rates[[s]]$unlumped <- gsub("TIME", paste0("tcovar[",timecode,"]"), stem_object$dynamics$rates[[s]]$unlumped)
-                }
-
-                # rebuild the time-varying covariate adjacency matrix
-                stem_object$dynamics$tcovar_adjmat <- build_tcovar_adjmat(stem_object$dynamics$rates, stem_object$dynamics$tcovar_codes)
-
+                # compile the rate functions and get the pointers
                 rate_ptrs <- parse_rates(rates = stem_object$dynamics$rates,
                                 param_codes = stem_object$dynamics$param_codes,
                                 compartment_codes = stem_object$dynamics$comp_codes,

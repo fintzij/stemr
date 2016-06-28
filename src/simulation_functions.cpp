@@ -111,6 +111,11 @@ arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& p
                         // increment the index
                         ind_cur += 1;
 
+                        // if there are no empty rows in the path matrix, add some
+                        if(ind_cur == init_dims[0]) {
+                                path.insert_rows(init_dims[0]-1, init_dims[0]);
+                        }
+
                         // update the rates
                         rate_update_event(rate_inds, rate_adjmat, next_event[0]);                       // identify rates that need to be updated
                         CALL_RATE_FCN(rates, rate_inds, state, parameters, constants, tcovs, rate_ptr); // update the rate functions
