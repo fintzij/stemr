@@ -1,13 +1,14 @@
-        // [[Rcpp::depends(RcppArmadillo)]]
-#include <RcppArmadilloExtensions/sample.h>
+// [[Rcpp::depends(RcppArmadillo)]]
 #include "stemr_types.h"
 #include "stemr_utils.hpp"
+#include <RcppArmadilloExtensions/sample.h>
 
 using namespace arma;
 using namespace Rcpp;
 
 //' Simulate a stochastic epidemic model path via Gillespie's direct method and
-//' returns a matrix containing a simulated path from a stochastic epidemic model.
+//' returns a matrix containing a simulated path from a stochastic epidemic
+//' model.
 //'
 //' @param flow Flow matrix
 //' @param parameters Vector of parameters
@@ -40,6 +41,7 @@ arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& p
 
         // initialize bookkeeping matrix
         arma::mat path(init_dims[0], init_dims[1]);
+        path(0, 1) = -1;
 
         // vector of event codes
         Rcpp::IntegerVector events = Rcpp::seq_len(flow_dims[0]) - 1; // vector of event codes
@@ -53,7 +55,7 @@ arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& p
 
         // initialize the time varying covariates and the left and right
         // endpoints of the first piecewise homogeneous interval
-        int tcov_ind(1);                                // row index in the time-varying covariate matrix
+        int tcov_ind = 0;                                // row index in the time-varying covariate matrix
         arma::rowvec tcovs = tcovar.row(tcov_ind);      // initialize the time-varying covariates
         double t_L = tcovar(tcov_ind,0);                // left-endpoint of first interval
         double t_R = tcovar(tcov_ind + 1,0);            // right-endpoint of first interval
@@ -121,11 +123,19 @@ arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& p
                         CALL_RATE_FCN(rates, rate_inds, state, parameters, constants, tcovs, rate_ptr); // update the rate functions
 
                         // if all rates equal zero, stop simulating
-                        keep_going = Rcpp::is_false(all(rates == 0));
+                        keep_going = Rcpp::is_true(any(rates != 0));
                 }
         }
 
         path.shed_rows(ind_cur, init_dims[0]-1);
+
+        // ensure that tmax is the time of the last row in path. if not, add it
+        if(path(path.n_rows-1, 0) != t_max) {
+                arma::rowvec last_row = path.row(path.n_rows - 1);
+                last_row(0) = t_max;
+                last_row(1) = -1;
+                path.insert_rows(path.n_rows, last_row);
+        }
 
         return path;
 }

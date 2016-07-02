@@ -9,3 +9,4 @@
 ^README\.md$
 ^README\.Rmd$
 ^\.developement_files\
+^\tests\.extended_tests\

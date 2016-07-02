@@ -16,6 +16,39 @@ CALL_RATE_FCN <- function(rates, inds, state, parameters, constants, tcovar, rat
     invisible(.Call('stemr_CALL_RATE_FCN', PACKAGE = 'stemr', rates, inds, state, parameters, constants, tcovar, rate_ptr))
 }
 
+#' Given a vector of interval endpoints \code{breaks}, determine in which
+#' intervals the elements of a vector \code{x} fall.
+#'
+#' @param x vector for whose elements the corresponding intervals are
+#'   identified
+#' @param breaks vector containing the elements
+#' @param rightmost_closed logical; if true, the results for x[j]=breaks[N] is
+#'   N-1.
+#' @param all_inside logical; if true, 0 is mapped to 1, and N is mapped to N-1
+#'
+#' The rightmost interval is assumed to be closed. Compares to the behavior of
+#' the \code{findInterval} function in \code{R}, when \code{rightmost.closed =
+#'  TRUE}
+#'
+#' @return matrix containing the compartment counts at census times.
+#' @export
+find_interval <- function(x, breaks, rightmost_closed, all_inside) {
+    .Call('stemr_find_interval', PACKAGE = 'stemr', x, breaks, rightmost_closed, all_inside)
+}
+
+#' Obtain the compartment counts at a sequence of census times.
+#'
+#' @param path matrix containing the path to be censused.
+#' @param census_times vector of census times.
+#' @param census_columns vector of column indices to be censused (C++ indexing
+#'   beginning at 0).
+#'
+#' @return matrix containing the compartment counts at census times.
+#' @export
+get_census_path <- function(path, census_times, census_columns) {
+    .Call('stemr_get_census_path', PACKAGE = 'stemr', path, census_times, census_columns)
+}
+
 #' Identify which rates to update when a state transition event occurs.
 #'
 #' @param rate_inds vector of rate indices to be modified
@@ -40,12 +73,9 @@ rate_update_tcovar <- function(rate_inds, M, I) {
     invisible(.Call('stemr_rate_update_tcovar', PACKAGE = 'stemr', rate_inds, M, I))
 }
 
-rcpp_hello <- function() {
-    .Call('stemr_rcpp_hello', PACKAGE = 'stemr')
-}
-
 #' Simulate a stochastic epidemic model path via Gillespie's direct method and
-#' returns a matrix containing a simulated path from a stochastic epidemic model.
+#' returns a matrix containing a simulated path from a stochastic epidemic
+#' model.
 #'
 #' @param flow Flow matrix
 #' @param parameters Vector of parameters

@@ -3,7 +3,8 @@
 \name{simulate_gillespie}
 \alias{simulate_gillespie}
 \title{Simulate a stochastic epidemic model path via Gillespie's direct method and
-returns a matrix containing a simulated path from a stochastic epidemic model.}
+returns a matrix containing a simulated path from a stochastic epidemic
+model.}
 \usage{
 simulate_gillespie(flow, parameters, constants, tcovar, init_states,
   rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, rate_ptr)
@@ -38,6 +39,7 @@ matrix with a simulated path from a stochastic epidemic model.
 }
 \description{
 Simulate a stochastic epidemic model path via Gillespie's direct method and
-returns a matrix containing a simulated path from a stochastic epidemic model.
+returns a matrix containing a simulated path from a stochastic epidemic
+model.
 }
 

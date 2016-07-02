@@ -23,6 +23,33 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// find_interval
+Rcpp::IntegerVector find_interval(Rcpp::NumericVector& x, Rcpp::NumericVector& breaks, bool rightmost_closed, bool all_inside);
+RcppExport SEXP stemr_find_interval(SEXP xSEXP, SEXP breaksSEXP, SEXP rightmost_closedSEXP, SEXP all_insideSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type breaks(breaksSEXP);
+    Rcpp::traits::input_parameter< bool >::type rightmost_closed(rightmost_closedSEXP);
+    Rcpp::traits::input_parameter< bool >::type all_inside(all_insideSEXP);
+    __result = Rcpp::wrap(find_interval(x, breaks, rightmost_closed, all_inside));
+    return __result;
+END_RCPP
+}
+// get_census_path
+arma::mat get_census_path(Rcpp::NumericMatrix& path, Rcpp::NumericVector& census_times, Rcpp::IntegerVector& census_columns);
+RcppExport SEXP stemr_get_census_path(SEXP pathSEXP, SEXP census_timesSEXP, SEXP census_columnsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix& >::type path(pathSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type census_times(census_timesSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector& >::type census_columns(census_columnsSEXP);
+    __result = Rcpp::wrap(get_census_path(path, census_times, census_columns));
+    return __result;
+END_RCPP
+}
 // rate_update_event
 void rate_update_event(Rcpp::LogicalVector& rate_inds, const Rcpp::LogicalMatrix& M, int event_code);
 RcppExport SEXP stemr_rate_update_event(SEXP rate_indsSEXP, SEXP MSEXP, SEXP event_codeSEXP) {
@@ -45,16 +72,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::rowvec >::type I(ISEXP);
     rate_update_tcovar(rate_inds, M, I);
     return R_NilValue;
-END_RCPP
-}
-// rcpp_hello
-List rcpp_hello();
-RcppExport SEXP stemr_rcpp_hello() {
-BEGIN_RCPP
-    Rcpp::RObject __result;
-    Rcpp::RNGScope __rngScope;
-    __result = Rcpp::wrap(rcpp_hello());
-    return __result;
 END_RCPP
 }
 // simulate_gillespie

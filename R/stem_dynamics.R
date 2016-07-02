@@ -123,17 +123,26 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
         n_params        <- length(parameters)
         n_consts        <- length(constants)
 
-        if(is.null(tcovar)) {
+        # ensure that time and time-varying covariates will be properly accounted for
+        any_with_time <- any(sapply(rates, function(x) grepl("TIME", x[[1]]))) || any(sapply(rates, function(x) !is.null(x[[4]])))
+
+        if(!any_with_time) {
                 tcovar_names <- tcovar_codes <- NULL
                 n_tcovar     <- 0
         } else {
-                tcovar_names    <- c(colnames(tcovar)[2:ncol(tcovar)], "TIME")
-                n_tcovar        <- length(tcovar_names)
-                tcovar_codes    <- seq_len(n_tcovar); names(tcovar_codes) <- tcovar_names # the first column will be the times, so codes start at 1.
+                if(is.null(tcovar)) {
+                        tcovar_names <- "TIME"
+                        n_tcovar <- 1
+                        tcovar_codes <- 1; names(tcovar_codes) <- "TIME"
+                } else {
+                        tcovar_names    <- c(colnames(tcovar)[2:ncol(tcovar)], "TIME")
+                        n_tcovar        <- length(tcovar_names)
+                        tcovar_codes    <- seq_len(n_tcovar); names(tcovar_codes) <- tcovar_names # the first column will be the times, so codes start at 1
+                }
         }
 
         # ensure that there are no partial matches amongst names of time-varying covariates
-        if(!is.null(tcovar)) {
+        if(any_with_time) {
                 tcovar_match <- rep(FALSE, length(tcovar_names))
                 for(p in seq_along(tcovar_match)) {
                         tcovar_match[p] <- any(grepl(tcovar_names[p], tcovar_names[-p]))
@@ -519,7 +528,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
 
         # check if any of the rates depend on time or if there are time-varying
         # covariates. if so, construct an adjacency matrix.
-        if(!is.null(tcovar)) {
+        if(any_with_time) {
                 timevarying <- TRUE
         } else {
                 timevarying <- FALSE

@@ -22,15 +22,15 @@
 #'   specifically seasonal terms, to be used in simulation when
 #'   method="gillespie". If not supplied, \code{timestep} will default to
 #'   \code{(tmax - t0)/50}.
-#' @param census_interval the time interval at which compartment counts should
-#'   be evaluated. Required for \code{method = "LNA"}. If supplied and
-#'   \code{method = "gillespie"}, the compartment counts at census intervals are
-#'   returned rather than the full paths.
+#' @param census_times vector of times at which compartment counts should be
+#'   recorded. Required for \code{method = "LNA"}. If supplied and \code{method
+#'   = "gillespie"}, the compartment counts at census times are returned rather
+#'   than the full paths.
 #' @param as_array if TRUE, the simulated paths and/or simulated datasets will
 #'   be returned as an array, or as a list containing multiple arrays (one for
 #'   the paths, another for the datasets, and a third for subject-level paths if
 #'   they are requested), rather than as a list of paths. Available only if
-#'   \code{census_interval = TRUE}.
+#'   \code{census_times} is specified or if \code{method = LNA}.
 #'
 #' @return If \code{paths = FALSE} and \code{observations = FALSE}, or if
 #'   \code{paths = TRUE} and \code{observations = TRUE}, a list or array of
@@ -47,7 +47,7 @@
 #'   If \code{paths = FALSE} and \code{observations = TRUE}, a list or array of
 #'   simulated datasets is returned.
 #' @export
-simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = FALSE, subject_paths = FALSE, method = "gillespie", t0 = NULL, tmax = NULL, timestep = NULL,  census_interval = NULL, as_array = FALSE) {
+simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = FALSE, subject_paths = FALSE, method = "gillespie", t0 = NULL, tmax = NULL, timestep = NULL,  census_times = NULL, as_array = FALSE) {
 
         # ensure that the method is correctly specified
         if(!method %in% c("gillespie", "LNA")) {
@@ -71,7 +71,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
 
         # specify the time interval within which the process should be simulated
         if(is.null(t0)) {
-                if(is.null(obstimes)) {
+                if(is.null(stem_object$measurement_process$obstimes)) {
                         t0 <- 0
                 } else {
                         t0 <- min(sapply(stem_object$measurement_process$obstimes, min))
@@ -104,6 +104,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 names(stem_object$dynamics$tcovar_codes) <- colnames(stem_object$dynamics$tcovar)[2:ncol(stem_object$dynamics$tcovar)]
                 stem_object$dynamics$n_tcovar <- ncol(stem_object$dynamics$tcovar) - 1
                 stem_object$dynamics$tcovar_changemat <- build_tcovar_changemat(stem_object$dynamics$tcovar)
+                stem_object$dynamics$tcovar_adjmat <- build_tcovar_adjmat(stem_object$dynamics$rates, stem_object$dynamics$tcovar_codes)
 
                 timecode <- which(names(stem_object$dynamics$tcovar_codes) == "TIME")
 
@@ -122,7 +123,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
 
                 } else {
                         if(stem_object$dynamics$n_strata == 1) {
-                                init_states <- as.matrix(t(rmultinom(nsim, stem_object$dynamics$popsize, stem_object$dynamics$initdist_params)))
+                                init_states <- t(as.matrix(rmultinom(nsim, stem_object$dynamics$popsize, stem_object$dynamics$initdist_params)))
                                 colnames(init_states) <- names(stem_object$dynamics$comp_codes)
 
                         } else if(stem_object$dynamics$n_strata > 1) {
@@ -137,7 +138,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 }
 
                 # initialize the list of paths
-                paths <- vector(mode = "list", length = nsim)
+                paths_full <- vector(mode = "list", length = nsim)
 
                 # guess the initial dimensions. need an extra column for event times and another for event IDs.
                 if(stem_object$dynamics$progressive & any(stem_object$dynamics$absorbing_states)) {
@@ -167,21 +168,32 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
 
                 # simulate the paths
                 for(k in seq_len(nsim)) {
-                        paths[[k]] <- simulate_gillespie(flow             = stem_object$dynamics$flow_matrix,
-                                                         parameters       = stem_object$dynamics$parameters,
-                                                         constants        = stem_object$dynamics$constants,
-                                                         tcovar           = stem_object$dynamics$tcovar,
-                                                         init_states      = init_states[k,],
-                                                         rate_adjmat      = stem_object$dynamics$rate_adjmat,
-                                                         tcovar_adjmat    = stem_object$dynamics$tcovar_adjmat,
-                                                         tcovar_changemat = stem_object$dynamics$tcovar_changemat,
-                                                         init_dims        = init_dims,
-                                                         rate_ptr         = rate_ptrs[[1]])
-                        colnames(paths[[k]]) <- path_colnames
+                        paths_full[[k]] <- simulate_gillespie(flow             = stem_object$dynamics$flow_matrix,
+                                                              parameters       = stem_object$dynamics$parameters,
+                                                              constants        = stem_object$dynamics$constants,
+                                                              tcovar           = stem_object$dynamics$tcovar,
+                                                              init_states      = init_states[k,, drop = FALSE],
+                                                              rate_adjmat      = stem_object$dynamics$rate_adjmat,
+                                                              tcovar_adjmat    = stem_object$dynamics$tcovar_adjmat,
+                                                              tcovar_changemat = stem_object$dynamics$tcovar_changemat,
+                                                              init_dims        = init_dims,
+                                                              rate_ptr         = rate_ptrs[[1]])
+                        colnames(paths_full[[k]]) <- path_colnames
+                }
+
+                if(is.null(census_times)) {
+                        paths <- paths_full
+                } else {
+                        paths <- vector(mode = "list", length = nsim)
+                        for(k in seq_len(nsim)) {
+                                paths[[k]] <- census_path(paths_full[[k]], census_times)
+                        }
                 }
 
 
         } else {
 
         }
+
+        return(paths)
 }

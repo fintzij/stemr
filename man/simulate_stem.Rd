@@ -6,7 +6,7 @@
 \usage{
 simulate_stem(stem_object, nsim = 1, paths = FALSE, observations = FALSE,
   subject_paths = FALSE, method = "gillespie", t0 = NULL, tmax = NULL,
-  timestep = NULL, census_interval = NULL, as_array = FALSE)
+  timestep = NULL, census_times = NULL, as_array = FALSE)
 }
 \arguments{
 \item{nsim}{number of realizations to simulate}
@@ -36,16 +36,16 @@ specifically seasonal terms, to be used in simulation when
 method="gillespie". If not supplied, \code{timestep} will default to
 \code{(tmax - t0)/50}.}
 
-\item{census_interval}{the time interval at which compartment counts should
-be evaluated. Required for \code{method = "LNA"}. If supplied and
-\code{method = "gillespie"}, the compartment counts at census intervals are
-returned rather than the full paths.}
+\item{census_times}{vector of times at which compartment counts should be
+recorded. Required for \code{method = "LNA"}. If supplied and \code{method
+= "gillespie"}, the compartment counts at census times are returned rather
+than the full paths.}
 
 \item{as_array}{if TRUE, the simulated paths and/or simulated datasets will
 be returned as an array, or as a list containing multiple arrays (one for
 the paths, another for the datasets, and a third for subject-level paths if
 they are requested), rather than as a list of paths. Available only if
-\code{census_interval = TRUE}.}
+\code{census_times} is specified or if \code{method = LNA}.}
 
 \item{stem}{Stochastic epidemic model object. The dynamics slot must be
 supplied at a minimum. If simulations from the measurement process are
