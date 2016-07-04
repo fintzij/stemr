@@ -17,7 +17,7 @@ test_that("Rates are computed properly for a simple system", {
         t0 <- 0; tmax <- 52
 
         # set dynamics
-        dynamics <- stem_dynamics(rates = rates, parameters = parameters,state_initializer = state_initializer, compartments=compartments, strata = strata, adjacency = adjacency, tcovar = tcovar)
+        dynamics <- stem_dynamics(rates = rates, parameters = parameters,state_initializer = state_initializer, compartments=compartments, strata = strata, tcovar = tcovar, messages = FALSE)
 
         # initialize stem object
         stem_object <- stem(dynamics = dynamics)
@@ -34,7 +34,8 @@ test_that("Rates are computed properly for a simple system", {
                                  param_codes = stem_object$dynamics$param_codes,
                                  compartment_codes = stem_object$dynamics$comp_codes,
                                  const_codes = stem_object$dynamics$const_codes,
-                                 tcovar_codes = stem_object$dynamics$tcovar_codes)
+                                 tcovar_codes = stem_object$dynamics$tcovar_codes,
+                                 messages = FALSE)
 
         # objects with which to evaluate the rates
         rates_lumped   <- c(0,0) # lumped rate vector to be updated
@@ -58,7 +59,7 @@ test_that("Rates are computed properly for a simple system with two time-varying
 
         set.seed(12511)
         compartments <- c("S","I","R")
-        rates <- list(rate("beta * I + iota * TIME", "S", "I", seasonality = seasonality(period = 52, s_params = c(SIN_52 = 2, COS_52 = 3))),
+        rates <- list(rate("beta * I + iota * TIME", "S", "I", seasonality = seasonality(period = 52, s_params = c(SIN_52 = 2, COS_52 = 3), log = FALSE)),
                       rate("mu * alpha", "I", "R"))
         state_initializer <- stem_initializer(c(S = 10, I = 1, R = 5), fixed = FALSE)
         parameters <- c(beta = 1, iota = 1, mu = 1/7, rho = 0.5)
@@ -68,7 +69,7 @@ test_that("Rates are computed properly for a simple system with two time-varying
         t0 <- 0; tmax <- 52
 
         # set dynamics
-        dynamics <- stem_dynamics(rates = rates, parameters = parameters,state_initializer = state_initializer, compartments=compartments, strata = strata, adjacency = adjacency, tcovar = tcovar)
+        dynamics <- stem_dynamics(rates = rates, parameters = parameters,state_initializer = state_initializer, compartments=compartments, strata = strata, tcovar = tcovar, messages = FALSE)
 
         # initialize stem object
         stem_object <- stem(dynamics = dynamics)
@@ -91,7 +92,8 @@ test_that("Rates are computed properly for a simple system with two time-varying
                                  param_codes = stem_object$dynamics$param_codes,
                                  compartment_codes = stem_object$dynamics$comp_codes,
                                  const_codes = stem_object$dynamics$const_codes,
-                                 tcovar_codes = stem_object$dynamics$tcovar_codes)
+                                 tcovar_codes = stem_object$dynamics$tcovar_codes,
+                                 messages = FALSE)
 
         # objects with which to evaluate the rates
         rates_lumped   <- c(0,0) # lumped rate vector to be updated
@@ -122,7 +124,7 @@ test_that("Rates are computed properly for a complex system with time varying co
         set.seed(12511)
         strata <- interact(sex=c("male", "female"), age=c("young", "old"))
         compartments <- list(S = "ALL", I = "ALL", R = "ALL", D = c("male_old", "female_old"))
-        rates <- list(rate("beta * I_SELF + iota * TIME + gamma * comp_fcn(I_ADJ, sum)", "S", "I", "ALL", seasonality(period = 52, common_seasonality = FALSE)),
+        rates <- list(rate("beta * I_SELF + iota * TIME + gamma * comp_fcn(I_ADJ, sum)", "S", "I", "ALL", seasonality(period = 52, common_seasonality = FALSE, log = FALSE)),
                       rate("mu", "I", "R", "ALL"),
                       rate("delta", "R", "D", c("male_old", "female_old")))
         state_initializer <- list(stem_initializer(c(S = 900, I = 10, R = 90), fixed = FALSE, strata = c("male_young", "female_young"), shared_params = FALSE),
@@ -135,7 +137,7 @@ test_that("Rates are computed properly for a complex system with time varying co
         t0 <- 0; tmax <- 52
 
         # set dynamics
-        dynamics <- stem_dynamics(rates = rates, parameters = parameters,state_initializer = state_initializer, compartments=compartments, strata = strata, adjacency = adjacency, tcovar = tcovar)
+        dynamics <- stem_dynamics(rates = rates, parameters = parameters,state_initializer = state_initializer, compartments=compartments, strata = strata, adjacency = adjacency, tcovar = tcovar, messages = FALSE)
 
         # initialize stem object
         stem_object <- stem(dynamics = dynamics)
@@ -158,7 +160,7 @@ test_that("Rates are computed properly for a complex system with time varying co
                                  param_codes = stem_object$dynamics$param_codes,
                                  compartment_codes = stem_object$dynamics$comp_codes,
                                  const_codes = stem_object$dynamics$const_codes,
-                                 tcovar_codes = stem_object$dynamics$tcovar_codes)
+                                 tcovar_codes = stem_object$dynamics$tcovar_codes, messages = FALSE)
 
         # objects with which to evaluate the rates
         rates_lumped   <- rep(0, 10) # lumped rate vector to be updated

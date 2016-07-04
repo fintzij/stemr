@@ -15,11 +15,11 @@ test_that("Compartment counts at census times are correctly obtained", {
         strata <- NULL
         t0 <- 0; tmax <- 52
 
-        dynamics <- stem_dynamics(rates = rates, parameters = parameters,state_initializer = state_initializer, compartments=compartments, strata = strata, adjacency = adjacency, tcovar = tcovar)
+        dynamics <- stem_dynamics(rates = rates, parameters = parameters,state_initializer = state_initializer, compartments=compartments, strata = strata, tcovar = tcovar, messages = FALSE)
 
         stem_object <- stem(dynamics = dynamics)
 
-        path <- simulate_stem(stem_object, paths = TRUE, tmax = 10)[[1]]
+        path <- simulate_stem(stem_object, paths = TRUE, tmax = 10, messages = FALSE)[[1]]
 
         cens_path <-matrix(c(0,20,2,0,
                              1,18,4,0,

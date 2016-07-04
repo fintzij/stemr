@@ -6,7 +6,7 @@
 a vector of function pointers.}
 \usage{
 parse_rates(rates, param_codes, compartment_codes, const_codes, tcovar_codes,
-  allrates = FALSE)
+  allrates = FALSE, messages = TRUE)
 }
 \arguments{
 \item{rates}{list of rate functions}
@@ -20,6 +20,8 @@ parse_rates(rates, param_codes, compartment_codes, const_codes, tcovar_codes,
 \item{tcovar_codes}{vector of time-varying covariate codes}
 
 \item{allrates}{compile each individual rate function, defaults to FALSE}
+
+\item{messages}{logical; print a message that the rates are being compiled}
 }
 \value{
 Two vector of strings that serve as function pointers.

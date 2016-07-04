@@ -7,10 +7,11 @@
 #' @param const_codes vector of constant names
 #' @param tcovar_codes vector of time-varying covariate codes
 #' @param allrates compile each individual rate function, defaults to FALSE
+#' @param messages logical; print a message that the rates are being compiled
 #'
 #' @return Two vector of strings that serve as function pointers.
 #' @export
-parse_rates <- function(rates, param_codes, compartment_codes, const_codes, tcovar_codes, allrates = FALSE) {
+parse_rates <- function(rates, param_codes, compartment_codes, const_codes, tcovar_codes, allrates = FALSE, messages = TRUE) {
 
         rates_lumped   <- paste0("RATE", 1:length(rates),"_LUMPED")
         rates_unlumped <- paste0("RATE", 1:length(rates),"_UNLUMPED")
@@ -50,6 +51,10 @@ parse_rates <- function(rates, param_codes, compartment_codes, const_codes, tcov
                              "Rcpp::XPtr<ratefcn_ptr> UNLUMPED_XPtr() {",
                              "return(Rcpp::XPtr<ratefcn_ptr>(new ratefcn_ptr(&RATES_UNLUMPED)));",
                              "}", sep = "\n")
+
+        if(messages) {
+                print("Compiling rate functions.")
+        }
 
         Rcpp::sourceCpp(code = code_lumped, env = globalenv())
         Rcpp::sourceCpp(code = code_unlumped, env = globalenv())

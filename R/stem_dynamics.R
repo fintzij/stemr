@@ -13,16 +13,18 @@
 #'   reserved word "ALL" can be used instead of listing all strata.
 #' @param tcovar Matrix or data frame of time varying covariates, the first
 #'   column of which contains the times at which covariates change.
-#' @param strata vector of stratum names, required only if not all compartments
-#'   are common to all stratax
+#' @param strata vector of stratum names, required if the "ALL" reserved word is
+#'   used
 #'
 #'   (e.g. compartments = list(S = "ALL", I = "ALL", R = "ALL", D = "old");
 #'   strata = c("infants", "young", "old");
+#' @inheritParams simulate_stem
 #' @param constants optional. numeric vector with named elements that are
 #'   constants referenced in the rate functions.
 #' @param adjacency optional matrix specifying the adjacency structure of
 #'   strata, with 0 entries indicating non-adjacency and 1 for adjacency. Rows
 #'   and columns must be labeled.
+#' @inheritParams parse_rates
 #'
 #'   Important note: care should be taken to make sure that there are no partial
 #'   string matches between the building blocks of a model. For example, if the
@@ -36,7 +38,7 @@
 #'   bookkeeping for epidemic paths.
 #' @export
 #'
-stem_dynamics <- function(rates, parameters, state_initializer, compartments, tcovar = NULL, strata = NULL, constants = NULL, adjacency = NULL) {
+stem_dynamics <- function(rates, parameters, state_initializer, compartments, tcovar = NULL, t0 = NULL, tmax = NULL, timestep = NULL, strata = NULL, constants = NULL, adjacency = NULL, messages = TRUE) {
 
         # check consistency of specification and throw errors if inconsistent
         if(is.list(compartments) && ("ALL" %in% compartments) && is.null(strata)) {
@@ -88,6 +90,20 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 }
         }
 
+        # create a hidden list of user supplied arguments prior to processing
+        .dynamics_args <- list(rates             = rates,
+                               parameters        = parameters,
+                               state_initializer = state_initializer,
+                               compartments      = compartments,
+                               tcovar            = tcovar,
+                               t0                = t0,
+                               tmax              = tmax,
+                               timestep          = timestep,
+                               strata            = strata,
+                               constants         = constants,
+                               adjacency         = adjacency,
+                               messages          = messages)
+
         # build the vector of full compartment names
         if(!is.list(compartments)) {
                 compartment_names <- compartments
@@ -107,6 +123,13 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 compartment_names <- unlist(compartment_names)
         }
 
+
+        if(messages) {
+                if(any(sapply(c(compartment_names, names(parameters), colnames(tcovar), names(constants)), function(x) nchar(x) < 4))) {
+                        warning("It is highly suggested that all compartments, parameters, time-varying covariates, and constants have names that are at least four characters long to avoid errors when parsing the rate functions!")
+                }
+        }
+
         # check that there are no partial matches among compartment names
         # parameters
         comp_match <- rep(FALSE, length(compartments))
@@ -124,9 +147,9 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
         n_consts        <- length(constants)
 
         # ensure that time and time-varying covariates will be properly accounted for
-        any_with_time <- any(sapply(rates, function(x) grepl("TIME", x[[1]]))) || any(sapply(rates, function(x) !is.null(x[[4]])))
+        timevarying <- any(sapply(rates, function(x) grepl("TIME", x[[1]]))) || any(sapply(rates, function(x) !is.null(x[[4]])))
 
-        if(!any_with_time) {
+        if(!timevarying) {
                 tcovar_names <- tcovar_codes <- NULL
                 n_tcovar     <- 0
         } else {
@@ -141,8 +164,25 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 }
         }
 
+        # specify the time interval within which the process evolves
+        if(is.null(t0)) {
+                t0 <- 0
+        }
+
+        if(is.null(tmax)) {
+                tmax <- 1e6
+        }
+
+        # compute the time discretization interval if it is not supplied and there are smooth time-varying covariates
+        if(is.null(timestep) && timevarying) {
+                timestep <- (tmax - t0)/50
+
+        } else if(is.null(timestep) && !timevarying){
+                timestep <- tmax - t0
+        }
+
         # ensure that there are no partial matches amongst names of time-varying covariates
-        if(any_with_time) {
+        if(timevarying) {
                 tcovar_match <- rep(FALSE, length(tcovar_names))
                 for(p in seq_along(tcovar_match)) {
                         tcovar_match[p] <- any(grepl(tcovar_names[p], tcovar_names[-p]))
@@ -513,8 +553,6 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 constants <- c(constants, popsize = popsize)
         }
 
-
-
         # construct the flow matrix
         flow_matrix <- build_flowmat(rate_fcns, compartment_names)
 
@@ -526,25 +564,23 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
         # be updates when a transition occurs
         rate_adjmat <- build_rate_adjmat(rate_fcns, compartment_codes)
 
-        # check if any of the rates depend on time or if there are time-varying
-        # covariates. if so, construct an adjacency matrix.
-        if(any_with_time) {
-                timevarying <- TRUE
-        } else {
-                timevarying <- FALSE
-                for(t in seq_along(rate_fcns)) {
-                        if(grepl("TIME", rate_fcns[[t]]$lumped)) timevarying <- TRUE
-                        if(timevarying) break
-                }
-        }
+        # build the time-varying covariate matrix so that it contains the census intervals
+        tcovar <- build_tcovar_matrix(tcovar = tcovar, timestep = timestep, t0 = t0, tmax = tmax)
+        tcovar_codes <- seq_len(ncol(tcovar) - 1)
+        names(tcovar_codes) <- colnames(tcovar)[2:ncol(tcovar)]
+        n_tcovar <- ncol(tcovar) - 1
+        tcovar_changemat <- build_tcovar_changemat(tcovar)
+        tcovar_adjmat <- build_tcovar_adjmat(rate_fcns, tcovar_codes)
 
-        # the time-varying covariate rate adjacency matrix will be rebuild again
-        # later.
-        if(timevarying) {
-                tcovar_adjmat <- build_tcovar_adjmat(rate_fcns, tcovar_codes)
-        } else {
-                tcovar_adjmat <- NULL
-        }
+        timecode <- which(names(tcovar_codes) == "TIME")
+
+        # compile the rate functions and get the pointers
+        rate_ptrs <- parse_rates(rates = rate_fcns,
+                                 param_codes = param_codes,
+                                 compartment_codes = comp_codes,
+                                 const_codes = const_codes,
+                                 tcovar_codes = tcovar_codes,
+                                 messages = messages)
 
         # parse the rates. rate_vec is a vector of function pointers. The rate
         # functions will be compiled and loaded into the global environment,
@@ -556,6 +592,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
 
         # create the list determining the stem dynamics
         dynamics <- list(rates            = rate_fcns,
+                         rate_ptrs        = rate_ptrs,
                          parameters       = parameters,
                          tcovar           = tcovar,
                          constants        = constants,
@@ -575,12 +612,15 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                          absorbing_states = absorbing_states,
                          rate_adjmat      = rate_adjmat,
                          timevarying      = timevarying,
+                         timecode         = timecode,
                          tcovar_adjmat    = tcovar_adjmat,
+                         tcovar_changemat = tcovar_changemat,
                          n_strata         = n_strata,
                          n_compartments   = n_compartments,
                          n_params         = n_params,
                          n_tcovar         = n_tcovar,
-                         n_consts         = n_consts)
+                         n_consts         = n_consts,
+                         .dynamics_args   = .dynamics_args)
 
         return(dynamics)
 }

@@ -31,6 +31,7 @@
 #'   the paths, another for the datasets, and a third for subject-level paths if
 #'   they are requested), rather than as a list of paths. Available only if
 #'   \code{census_times} is specified or if \code{method = LNA}.
+#' @param messages should a message be printed when parsing the rates?
 #'
 #' @return If \code{paths = FALSE} and \code{observations = FALSE}, or if
 #'   \code{paths = TRUE} and \code{observations = TRUE}, a list or array of
@@ -47,7 +48,7 @@
 #'   If \code{paths = FALSE} and \code{observations = TRUE}, a list or array of
 #'   simulated datasets is returned.
 #' @export
-simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = FALSE, subject_paths = FALSE, method = "gillespie", t0 = NULL, tmax = NULL, timestep = NULL,  census_times = NULL, as_array = FALSE) {
+simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = FALSE, subject_paths = FALSE, method = "gillespie", t0 = NULL, tmax = NULL, timestep = NULL,  census_times = NULL, as_array = FALSE, messages = TRUE) {
 
         # ensure that the method is correctly specified
         if(!method %in% c("gillespie", "LNA")) {
@@ -69,56 +70,41 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 stop("In order to simulate a dataset, a measurement process must be supplied in the stem_object.")
         }
 
-        # specify the time interval within which the process should be simulated
-        if(is.null(t0)) {
-                if(is.null(stem_object$measurement_process$obstimes)) {
-                        t0 <- 0
-                } else {
-                        t0 <- min(sapply(stem_object$measurement_process$obstimes, min))
+        # if any of t0, tmax, or a timestep was supplied, check if they differ from the parameters supplied in the stem_object$dynamics.
+        # if they differ, reconstruct the tcovar matrix and associated objects
+        rebuild_tcovar <- (!is.null(t0) && t0 != stem_object$dynamics$tcovar[1,1]) ||
+                (!is.null(tmax) && tmax != stem_object$dynamics$tcovar[nrow(stem_object$dynamics$tcovar), 1]) || !is.null(timestep)
+
+        if(rebuild_tcovar) {
+                # get t0 or tmax if it wasn't supplied
+                if(is.null(t0)) t0 <- stem_object$dynamics$tcovar[1,1]
+                if(is.null(tmax)) tmax <- stem_object$dynamics$tcovar[nrow(stem_object$dynamics$tcovar), 1]
+
+                # replace t0 and tmax in the time-varying covariate matrix
+                if(is.null(timestep) && stem_object$dynamics$timevarying) {
+                        timestep <- (tmax - t0)/50
+
+                } else if(is.null(timestep) && !stem_object$dynamics$timevarying){
+                        timestep <- tmax - t0
                 }
-        }
 
-        if(is.null(tmax)) {
-                if(is.null(stem_object$measurement_process$obstimes)) {
-                        stop("A stopping time for the simulation must be specified either in the tmax argument, or through the observation times.")
-                } else {
-                        tmax <- max(sapply(stem_object$measurement_process$obstimes))
-                }
-        }
-
-        # compute the time discretization interval if it is not supplied and there are smooth time-varying covariates
-        if(method == "gillespie" && is.null(timestep) && stem_object$dynamics$timevarying) {
-                timestep <- (tmax - t0)/50
-
-        } else if(is.null(timestep) && !stem_object$dynamics$timevarying){
-                timestep <- tmax - t0
+                # rebuild the time-varying covariate matrix so that it contains the census intervals
+                stem_object$dynamics$tcovar <- build_tcovar_matrix(tcovar = stem_object$dynamics$.dynamics_args$tcovar, timestep = timestep, t0 = t0, tmax = tmax)
+                stem_object$dynamics$tcovar_codes <- seq_len(ncol(stem_object$dynamics$tcovar) - 1)
+                names(stem_object$dynamics$tcovar_codes) <- colnames(stem_object$dynamics$tcovar)[2:ncol(stem_object$dynamics$tcovar)]
+                stem_object$dynamics$n_tcovar <- ncol(stem_object$dynamics$tcovar) - 1
+                stem_object$dynamics$tcovar_changemat <- build_tcovar_changemat(stem_object$dynamics$tcovar)
+                stem_object$dynamics$tcovar_adjmat <- build_tcovar_adjmat(stem_object$dynamics$rates, stem_object$dynamics$tcovar_codes)
         }
 
         # build the time varying covariate matrix (includes, at a minimum, the endpoints of the simulation interval)
         # if timestep is null, there are no time-varying covariates
         if(method == "gillespie") {
 
-                # rebuild the time-varying covariate matrix so that it contains the census intervals
-                stem_object$dynamics$tcovar <- build_tcovar_matrix(tcovar = stem_object$dynamics$tcovar, timestep = timestep, t0 = t0, tmax = tmax)
-                stem_object$dynamics$tcovar_codes <- seq_len(ncol(stem_object$dynamics$tcovar) - 1)
-                names(stem_object$dynamics$tcovar_codes) <- colnames(stem_object$dynamics$tcovar)[2:ncol(stem_object$dynamics$tcovar)]
-                stem_object$dynamics$n_tcovar <- ncol(stem_object$dynamics$tcovar) - 1
-                stem_object$dynamics$tcovar_changemat <- build_tcovar_changemat(stem_object$dynamics$tcovar)
-                stem_object$dynamics$tcovar_adjmat <- build_tcovar_adjmat(stem_object$dynamics$rates, stem_object$dynamics$tcovar_codes)
-
-                timecode <- which(names(stem_object$dynamics$tcovar_codes) == "TIME")
-
-                # compile the rate functions and get the pointers
-                rate_ptrs <- parse_rates(rates = stem_object$dynamics$rates,
-                                param_codes = stem_object$dynamics$param_codes,
-                                compartment_codes = stem_object$dynamics$comp_codes,
-                                const_codes = stem_object$dynamics$const_codes,
-                                tcovar_codes = stem_object$dynamics$tcovar_codes)
-
                 # generate or copy the initial states
                 if(stem_object$dynamics$fixed_inits) {
                         # if all initial states are fixed, just copy the initial compartment counts
-                        init_states <- matrix(stem_object$dynamics$initdist_params, nrow = 1, byrow = TRUE)
+                        init_states <- matrix(rep(stem_object$dynamics$initdist_params, nsim), nrow = nsim, byrow = TRUE)
                         colnames(init_states) <- names(stem_object$dynamics$comp_codes)
 
                 } else {
@@ -177,7 +163,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                                                               tcovar_adjmat    = stem_object$dynamics$tcovar_adjmat,
                                                               tcovar_changemat = stem_object$dynamics$tcovar_changemat,
                                                               init_dims        = init_dims,
-                                                              rate_ptr         = rate_ptrs[[1]])
+                                                              rate_ptr         = stem_object$dynamics$rate_ptrs[[1]])
                         colnames(paths_full[[k]]) <- path_colnames
                 }
 
@@ -185,8 +171,17 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                         paths <- paths_full
                 } else {
                         paths <- vector(mode = "list", length = nsim)
+                        census_colnames <- c("time", names(stem_object$dynamics$comp_codes))
                         for(k in seq_len(nsim)) {
-                                paths[[k]] <- census_path(paths_full[[k]], census_times)
+                                paths[[k]] <- get_census_path(path = paths_full[[k]],
+                                                              census_times = census_times,
+                                                              census_columns = stem_object$dynamics$comp_codes+2)
+                                colnames(paths[[k]]) <- census_colnames
+                        }
+
+                        if(as_array) {
+                                paths <- array(unlist(paths), dim = c(nrow(paths[[1]]), ncol(paths[[1]]), length(paths)))
+                                colnames(paths) <- census_colnames
                         }
                 }
 

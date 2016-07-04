@@ -6,7 +6,8 @@
 \usage{
 simulate_stem(stem_object, nsim = 1, paths = FALSE, observations = FALSE,
   subject_paths = FALSE, method = "gillespie", t0 = NULL, tmax = NULL,
-  timestep = NULL, census_times = NULL, as_array = FALSE)
+  timestep = NULL, census_times = NULL, as_array = FALSE,
+  messages = TRUE)
 }
 \arguments{
 \item{nsim}{number of realizations to simulate}
@@ -46,6 +47,8 @@ be returned as an array, or as a list containing multiple arrays (one for
 the paths, another for the datasets, and a third for subject-level paths if
 they are requested), rather than as a list of paths. Available only if
 \code{census_times} is specified or if \code{method = LNA}.}
+
+\item{messages}{should a message be printed when parsing the rates?}
 
 \item{stem}{Stochastic epidemic model object. The dynamics slot must be
 supplied at a minimum. If simulations from the measurement process are

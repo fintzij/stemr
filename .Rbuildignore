@@ -8,5 +8,5 @@
 ^README\.RMD$
 ^README\.md$
 ^README\.Rmd$
-^\.developement_files\
-^\tests\.extended_tests\
+^.developement_files/
+^tests\.extended_tests/

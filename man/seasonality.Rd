@@ -5,12 +5,19 @@
 \title{Produces a string for seasonal terms to be added to a rate function, supplied
 as the last argument in a rate list.}
 \usage{
-seasonality(period = 52, s_params = NULL, common_seasonality = TRUE)
+seasonality(period = 52, s_params = NULL, log = TRUE,
+  common_seasonality = TRUE)
 }
 \arguments{
 \item{period}{period of the season, defaults to 52 for weeks. May also be
 supplied as a vector if S>1 in order to specify multiple terms with
 different periods.}
+
+\item{log}{should the seasonal covariates enter into the unlumped rates on
+the log scale? If true (default), each rate, \eqn{\lambda}, is log-linear
+in the seasonal terms. For example, if \eqn{\lambda_{S,I} = (\beta I +
+\alpha(t))S}, then \deqn{\alpha(t) = exp(\sum \gamma_p \times sin(2\pi
+p\times t) + \delta_p \times cos(2\pi p\times t))}}
 
 \item{s_param_values}{seasonality parameter values (or initial values), a
 2*length(period) numeric vector, with all sine parameters, then all cosine
@@ -32,7 +39,9 @@ Supplies a string for the seasonal terms \deqn{\sum \gamma_p
   added to a rate function. The parameters \eqn{\gamma period} and
   \eqn{\delta period} will automatically be named to reflect whether the
   seasonal terms are common to all strata, and then appended to the parameter
-  vector.
+  vector. If \code{log=TRUE}, the seasonal terms are exponentiated. Thus,
+  \deqn{\sum \gamma_p \times sin(2\pi p\times t) + \delta_p \times cos(2\pi
+  p\times t)}
 }
 \examples{
 # add two sine and cosine terms, one with a period of 12 (for months), the other with a period of 52 (for weeks)
