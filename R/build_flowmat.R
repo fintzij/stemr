@@ -13,12 +13,20 @@ build_flowmat <- function(rates, compartment_names) {
 
         # compartments are columns, reactions are rows
         flow_matrix             <- matrix(0L, ncol = length(compartment_names), nrow = length(rates))
-        colnames(flow_matrix)   <- compartment_names; rownames(flow_matrix) <- paste0("RATE",1:nrow(flow_matrix))
+        colnames(flow_matrix)   <- compartment_names; rownames(flow_matrix) <- rate_names <- paste0("RATE",1:nrow(flow_matrix))
 
         # fill out the flow matrix
         for(k in 1:length(rates)) {
                 flow_matrix[k, rates[[k]][[3]]] <- -1
                 flow_matrix[k, rates[[k]][[4]]] <- 1
+        }
+
+        incidence_rates <- sapply(rates, "[[", "incidence")
+
+        if(any(incidence_rates)) {
+                incidence_matrix           <- diag(1, nrow = length(rates), ncol = sum(incidence_rates))
+                rownames(incidence_matrix) <- rate_names; colnames(incidence_matrix) <- paste(sapply(rates, "[[", "to")[incidence_rates], "INCIDENCE", sep = "_")
+                flow_matrix                <- cbind(flow_matrix, incidence_matrix)
         }
 
         return(flow_matrix)

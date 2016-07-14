@@ -5,13 +5,19 @@
 \title{Produces a string for seasonal terms to be added to a rate function, supplied
 as the last argument in a rate list.}
 \usage{
-seasonality(period = 52, s_params = NULL, log = TRUE,
-  common_seasonality = TRUE)
+seasonality(period = 52, intercept = NULL, trend = NULL,
+  s_params = NULL, log = TRUE, common_seasonality = TRUE)
 }
 \arguments{
 \item{period}{period of the season, defaults to 52 for weeks. May also be
 supplied as a vector if S>1 in order to specify multiple terms with
 different periods.}
+
+\item{intercept}{numeric value (or initial value) for the intercept. Defaults
+to NULL, for no intercept.}
+
+\item{trend}{numeric value (or initial value) of the secular trend. Defaults
+to NULL, for no trend term.}
 
 \item{log}{should the seasonal covariates enter into the unlumped rates on
 the log scale? If true (default), each rate, \eqn{\lambda}, is log-linear
@@ -34,14 +40,14 @@ seasonality}
 string formula for the seasonal terms to be added to a rate.
 }
 \description{
-Supplies a string for the seasonal terms \deqn{\sum \gamma_p
-  \times sin(2\pi p\times t) + \delta_p \times cos(2\pi p\times t)} to be
-  added to a rate function. The parameters \eqn{\gamma period} and
-  \eqn{\delta period} will automatically be named to reflect whether the
-  seasonal terms are common to all strata, and then appended to the parameter
-  vector. If \code{log=TRUE}, the seasonal terms are exponentiated. Thus,
-  \deqn{\sum \gamma_p \times sin(2\pi p\times t) + \delta_p \times cos(2\pi
-  p\times t)}
+Supplies a string for the seasonal terms \deqn{\beta_0 +
+  \beta_1*TIME + \sum \gamma_p \times sin(2\pi p\times t) + \delta_p \times
+  cos(2\pi p\times t)} to be added to a rate function. The parameters,
+  \eqn{\beta_0, \beta_1}, \eqn{\gamma_{period}}, and \eqn{\delta_{period}}
+  will automatically be named to reflect whether the seasonal terms are
+  common to all strata, and then appended to the parameter vector. If
+  \code{log=TRUE}, the rates are log-linear functions of seasonal terms,
+  which are exponentiated.
 }
 \examples{
 # add two sine and cosine terms, one with a period of 12 (for months), the other with a period of 52 (for weeks)

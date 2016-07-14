@@ -5,7 +5,7 @@
 \title{Generates a rate list to be supplied to the \code{\link{stem_dynamics}}
 funciton.}
 \usage{
-rate(rate, from, to, strata = NULL, seasonality = NULL)
+rate(rate, from, to, strata = NULL, seasonality = NULL, incidence = FALSE)
 }
 \arguments{
 \item{rate}{unlumped rate, a string}
@@ -18,6 +18,10 @@ rate(rate, from, to, strata = NULL, seasonality = NULL)
 supplied as "ALL"}
 
 \item{seasonality}{string returned by the \code{\link{seasonality}} function}
+
+\item{incidence}{should an artificial compartment be created for th purpose
+of simulating or making inference based on incidence data for this
+transition or set of transitions? Defaults to FALSE.}
 }
 \value{
 rate list
@@ -102,7 +106,9 @@ funciton.
   appear in any of parameter names, compartment names, etc. In particular,
   suppose there is a parameter named "BETA_N". When the rate functions are
   parsed internally, the rate strings will be parsed incorrectly due to the
-  partial match.
+  partial match. Thus, it is highly recommended that the names of all model
+  compartment, parameters, time-varying covariates, and constants be at least
+  four characters long.
 }
 \examples{
 rate("beta*I", "S", "I", "ALL", seasonality(period = c(12,52), timevar = "t", common_seasonality = FALSE))

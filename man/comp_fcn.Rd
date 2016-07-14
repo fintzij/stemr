@@ -20,7 +20,8 @@ word, e.g. all adjacent compartments would be substituted for I_ADJ. This
 argument is generated internally and should not be provided by the user.}
 }
 \value{
-Nothing. Text string is parsed internally by \code{sub_comp_fcns}.
+Nothing. Text string is parsed internally by \code{sub_comp_rate} and
+  \code{sub_comp_emit}.
 }
 \description{
 This function serves as a placeholder in order to generate documentation on

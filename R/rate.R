@@ -6,8 +6,10 @@
 #' @param to compartment into which an individual enters, a string
 #' @param strata character vector of strata to which the rate applies, may be
 #'   supplied as "ALL"
+#' @param incidence should an artificial compartment be created for th purpose
+#'   of simulating or making inference based on incidence data for this
+#'   transition or set of transitions? Defaults to FALSE.
 #' @param seasonality string returned by the \code{\link{seasonality}} function
-#'
 #' @section Specifying the rate functions:
 #'
 #'   Each rate list specifies, at a minimum, the rate function, the compartment
@@ -83,15 +85,17 @@
 #'   appear in any of parameter names, compartment names, etc. In particular,
 #'   suppose there is a parameter named "BETA_N". When the rate functions are
 #'   parsed internally, the rate strings will be parsed incorrectly due to the
-#'   partial match.
+#'   partial match. Thus, it is highly recommended that the names of all model
+#'   compartment, parameters, time-varying covariates, and constants be at least
+#'   four characters long.
 #'
 #' @return rate list
 #' @export
 #'
 #' @examples rate("beta*I", "S", "I", "ALL", seasonality(period = c(12,52), timevar = "t", common_seasonality = FALSE))
-rate <- function(rate, from, to, strata = NULL, seasonality = NULL) {
+rate <- function(rate, from, to, strata = NULL, seasonality = NULL, incidence = FALSE) {
 
         # generate the formula
-        list(rate = rate, from = from, to = to, strata = strata, seasonality = seasonality)
+        list(rate = rate, from = from, to = to, strata = strata, seasonality = seasonality, incidence = incidence)
 
 }

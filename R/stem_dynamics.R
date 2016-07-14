@@ -147,7 +147,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
         n_consts        <- length(constants)
 
         # ensure that time and time-varying covariates will be properly accounted for
-        timevarying <- any(sapply(rates, function(x) grepl("TIME", x[[1]]))) || any(sapply(rates, function(x) !is.null(x[[4]])))
+        timevarying <- any(sapply(rates, function(x) grepl("TIME", x[["rate"]]))) || any(sapply(rates, function(x) !is.null(x[["seasonality"]])))
 
         if(!timevarying) {
                 tcovar_names <- tcovar_codes <- NULL
@@ -281,9 +281,10 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
 
                                 strat_self <- rel_strata[j] # get stratum name
 
-                                rate_fcns[[k]][[j]] <- vector(mode = "list", length = 4)
-                                names(rate_fcns[[k]][[j]]) <- c("unlumped", "lumped", "from", "to")
-                                rate_fcns[[k]][[j]][c(1,3,4)] <- rates[[k]][1:3] # copy generic rate function. slot 2 is for the lumped rate.
+                                rate_fcns[[k]][[j]] <- vector(mode = "list", length = 5)
+                                names(rate_fcns[[k]][[j]]) <- c("unlumped", "lumped", "from", "to", "incidence")
+                                rate_fcns[[k]][[j]][c(1,3,4,5)] <- rates[[k]][c("rate", "from", "to", "incidence")] # copy rate function. slot 2 is lumped rate.
+
 
                                 # if seasonal terms were supplied, instatiate
                                 # them. If they are not common to all strata,
@@ -312,6 +313,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                                                         s_fcn_kj    <- gsub(names(rates[[k]]$seasonality$s_params)[s], s_param_names_kj[s], s_fcn_kj)
                                                 }
                                                 names(s_params_kj) <- s_param_names_kj
+
                                                 # add to the parameter vector and param_codes
                                                 parameters <- c(parameters, s_params_kj)
                                                 param_codes <- seq(0, length(parameters)-1); names(param_codes) <- param_names <- names(parameters)
@@ -364,7 +366,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                                         for(l in seq_along(which_sub)) {
                                                 sub_comp <- comp_names[which(comp_all == which_sub[l])]
                                                 sub_all  <- compartment_names[compartment_names %in% paste(sub_comp, strata, sep = "_")]
-                                                rate_fcns[[k]][[j]][[1]] <- sub_comp_fcns(rate_fcns[[k]][[j]][[1]], comp = which_sub, subs = sub_all)
+                                                rate_fcns[[k]][[j]][[1]] <- sub_comp_rate(rate_fcns[[k]][[j]][[1]], comp = which_sub, subs = sub_all)
                                         }
                                 }
 
@@ -384,7 +386,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                                                 sub_adj  <- compartment_names[which(compartment_names %in% paste(sub_comp, strat_adj, sep = "_"))]
 
                                                 # make the substitution
-                                                rate_fcns[[k]][[j]][[1]] <- sub_comp_fcns(rate_fcns[[k]][[j]][[1]], comp = which_sub, subs = sub_adj)
+                                                rate_fcns[[k]][[j]][[1]] <- sub_comp_rate(rate_fcns[[k]][[j]][[1]], comp = which_sub, subs = sub_adj)
                                         }
                                 }
 
@@ -476,8 +478,8 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
 
                 for(k in seq_along(rates)) {
 
-                        rate_fcns[[k]] <- vector(mode = "list", length = 4); names(rate_fcns[[k]]) <- c("unlumped", "lumped", "from", "to")
-                        rate_fcns[[k]][c(1,3,4)] <- rates[[k]][1:3]
+                        rate_fcns[[k]] <- vector(mode = "list", length = 5); names(rate_fcns[[k]]) <- c("unlumped", "lumped", "from", "to", "incidence")
+                        rate_fcns[[k]][c(1,3,4,5)] <- rates[[k]][c("rate", "from", "to", "incidence")]
 
                         # if there are common_seasonal terms add them, and add
                         # the parameters onto the parameter vector
@@ -556,6 +558,22 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
         # construct the flow matrix
         flow_matrix <- build_flowmat(rate_fcns, compartment_names)
 
+        # recreate the incidence compartment codes
+        incidence_comps <- grepl("INCIDENCE", colnames(flow_matrix))
+        incidence_codes <- which(incidence_comps) - 1
+        if(length(incidence_codes)) {
+                names(incidence_codes) <- colnames(flow_matrix)[incidence_comps]
+                source_names <- sapply(names(incidence_codes), gsub, pattern = "_INCIDENCE", replacement = "")
+                incidence_sources <- compartment_codes[source_names]
+        } else {
+                incidence_codes <- NULL
+                incidence_sources <- NULL
+        }
+
+        # get the source compartments from which each incidence count is derived
+
+        ##### RESUME HERE - add codes for compartments corresponding to each incidence variable.
+
         # determine whether the model is progressive and whether there are absorbing states
         progressive <- is_progressive(flow_matrix)
         absorbing_states <- which_absorbing(flow_matrix)
@@ -608,6 +626,8 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                          tcovar_codes     = tcovar_codes,
                          const_codes      = const_codes,
                          strata_codes     = strata_codes,
+                         incidence_codes  = incidence_codes,
+                         incidence_sources= incidence_sources,
                          progressive      = progressive,
                          absorbing_states = absorbing_states,
                          rate_adjmat      = rate_adjmat,

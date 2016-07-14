@@ -103,16 +103,20 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
 
                 # generate or copy the initial states
                 if(stem_object$dynamics$fixed_inits) {
+
                         # if all initial states are fixed, just copy the initial compartment counts
                         init_states <- matrix(rep(stem_object$dynamics$initdist_params, nsim), nrow = nsim, byrow = TRUE)
                         colnames(init_states) <- names(stem_object$dynamics$comp_codes)
 
                 } else {
                         if(stem_object$dynamics$n_strata == 1) {
+
+                                # simulate the initial compartment counts
                                 init_states <- t(as.matrix(rmultinom(nsim, stem_object$dynamics$popsize, stem_object$dynamics$initdist_params)))
                                 colnames(init_states) <- names(stem_object$dynamics$comp_codes)
 
                         } else if(stem_object$dynamics$n_strata > 1) {
+
                                 # generate the matrix of initial compartment counts
                                 init_states <- matrix(0, nrow = nsim, ncol = stem_object$dynamics$n_compartments)
                                 colnames(init_states) <- names(stem_object$dynamics$comp_codes)
@@ -123,22 +127,30 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                         }
                 }
 
+                # if there are artificial incidence compartments, copy the
+                # incidence counts and add them to the initial state matrix
+                if(!is.null(stem_object$dynamics$incidence_codes)) {
+                        init_incid <- init_states[, stem_object$dynamics$incidence_sources + 1, drop = FALSE]
+                        colnames(init_incid) <- names(stem_object$dynamics$incidence_codes)
+                        init_states <- cbind(init_states, init_incid)
+                }
+
                 # initialize the list of paths
                 paths_full <- vector(mode = "list", length = nsim)
 
                 # guess the initial dimensions. need an extra column for event times and another for event IDs.
                 if(stem_object$dynamics$progressive & any(stem_object$dynamics$absorbing_states)) {
                         if(stem_object$dynamics$n_strata == 1) {
-                                init_dims <- c(n_rows = sum(stem_object$dynamics$popsize * stem_object$dynamics$n_compartments), n_cols = stem_object$dynamics$n_compartments + 2)
+                                init_dims <- c(n_rows = sum(stem_object$dynamics$popsize * stem_object$dynamics$n_compartments), n_cols = stem_object$dynamics$n_compartments + length(stem_object$dynamics$incidence_codes) + 2)
                         } else {
-                                init_dims <- c(n_rows = sum(stem_object$dynamics$strata_sizes * sapply(sapply(stem_object$dynamics$state_initializer, "[[", 4), length)), n_cols = stem_object$dynamics$n_compartments + 2)
+                                init_dims <- c(n_rows = sum(stem_object$dynamics$strata_sizes * sapply(sapply(stem_object$dynamics$state_initializer, "[[", 4), length)), n_cols = stem_object$dynamics$n_compartments + length(stem_object$dynamics$incidence_codes) + 2)
 
                         }
                 } else {
                         if(stem_object$dynamics$n_strata == 1) {
-                                init_dims <- c(n_rows = sum(stem_object$dynamics$popsize * stem_object$dynamics$n_compartments) * 3, n_cols = stem_object$dynamics$n_compartments + 2)
+                                init_dims <- c(n_rows = sum(stem_object$dynamics$popsize * stem_object$dynamics$n_compartments) * 3, n_cols = stem_object$dynamics$n_compartments + length(stem_object$dynamics$incidence_codes) + 2)
                         } else if(stem_object$dynamics$n_strata > 1) {
-                                init_dims <- c(n_rows = sum(stem_object$dynamics$strata_sizes * sapply(sapply(stem_object$dynamics$state_initializer, "[[", 4), length)) * 3, n_cols = stem_object$dynamics$n_compartments + 2)
+                                init_dims <- c(n_rows = sum(stem_object$dynamics$strata_sizes * sapply(sapply(stem_object$dynamics$state_initializer, "[[", 4), length)) * 3, n_cols = stem_object$dynamics$n_compartments + length(stem_object$dynamics$incidence_codes) + 2)
                         }
                 }
 
@@ -150,7 +162,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 }
 
                 # get the compartment names
-                path_colnames <- c("time", "event", names(stem_object$dynamics$comp_codes))
+                path_colnames <- c("time", "event", c(names(stem_object$dynamics$comp_codes), names(stem_object$dynamics$incidence_codes)))
 
                 # simulate the paths
                 for(k in seq_len(nsim)) {

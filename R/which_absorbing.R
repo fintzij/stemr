@@ -6,10 +6,11 @@
 #' @export
 which_absorbing <- function(flow_matrix) {
 
-        absorbing_states <- rep(FALSE, ncol(flow_matrix))
-        names(absorbing_states) <- colnames(flow_matrix)
+        comp_names <- colnames(flow_matrix); incidence_comps <- grepl("INCIDENCE", comp_names)
+        absorbing_states <- rep(FALSE, ncol(flow_matrix) - sum(incidence_comps))
+        names(absorbing_states) <- comp_names[!incidence_comps]
 
-        for(j in 1:ncol(flow_matrix)) {
+        for(j in which(!incidence_comps)) {
                 absorbing_states[j] <-  ifelse((1 %in% flow_matrix[,j]) & (!-1 %in% flow_matrix[,j]), TRUE, FALSE)
         }
 

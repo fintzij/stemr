@@ -6,7 +6,7 @@
 #'
 #' @return rate string
 #' @export
-sub_comp_fcns <- function(rate_string, comp, subs) {
+sub_comp_rate <- function(rate_string, comp, subs) {
 
         # get the number of comp_strings to replace
         matches <- gregexpr("comp_fcn", rate_string)

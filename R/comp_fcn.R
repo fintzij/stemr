@@ -21,7 +21,8 @@
 #'   word, e.g. all adjacent compartments would be substituted for I_ADJ. This
 #'   argument is generated internally and should not be provided by the user.
 #'
-#' @return Nothing. Text string is parsed internally by \code{sub_comp_fcns}.
+#' @return Nothing. Text string is parsed internally by \code{sub_comp_rate} and
+#'   \code{sub_comp_emit}.
 #' @export
 #'
 #' @examples # The following rate specification would be used to model the force
