@@ -14,10 +14,11 @@
 #'   must be provided. Again, the first column of each matrix must consist of
 #'   observation times, while subsequent columns must be labeled according to
 #'   which compartment being measured.
+#' @param messages should compilation messages be printed? defaults to true.
 #'
 #' @return list with evaluated measurement process functions and objects.
 #' @export
-stem_measure <- function(emissions, dynamics, data = NULL) {
+stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
 
         if(is.null(data)) {
                 if(any(unlist(lapply(lapply(emissions, "[[", "obstimes"), is.null)))) {
@@ -177,5 +178,8 @@ stem_measure <- function(emissions, dynamics, data = NULL) {
                         meas_procs[[k]]$dmeasure <- paste0("Rcpp::dnorm(", paste(c(meas_procs[[k]]$meas_var, meas_procs[[k]]$emission_params), collapse = ","), ",true)")
                 }
         }
+
+        # get the pointers for the rmeasure and dmeasure functions
+        emission_pointers <- parse_meas_procs(meas_procs, messages = messages)
 
 }

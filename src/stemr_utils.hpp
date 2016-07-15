@@ -17,4 +17,13 @@ arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& p
 
 Rcpp::IntegerVector find_interval(Rcpp::NumericVector& x, Rcpp::NumericVector& breaks, bool rightmost_closed, bool all_inside);
 
+void CALL_D_MEASURE(Rcpp::NumericMatrix& emitmat, const Rcpp::LogicalVector& emit_inds,
+                    const int record_ind, const arma::rowvec& record, const arma::rowvec& state,
+                    const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants,
+                    const arma::rowvec& tcovar, SEXP d_meas_ptr);
+
+void CALL_R_MEASURE(Rcpp::NumericMatrix& obsmat, const Rcpp::LogicalVector& emit_inds,
+                    const int record_ind, const arma::rowvec& state, const Rcpp::NumericVector& parameters,
+                    const Rcpp::NumericVector& constants, const arma::rowvec& tcovar, SEXP r_meas_ptr);
+
 #endif // stemr_UTILITIES_H

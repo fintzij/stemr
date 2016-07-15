@@ -2,25 +2,17 @@
 #' a vector of function pointers.
 #'
 #' @param rates list of rate functions
-#' @param param_codes vector of parameter codes
-#' @param compartment_codes vector of compartment codes
-#' @param const_codes vector of constant names
-#' @param tcovar_codes vector of time-varying covariate codes
-#' @param allrates compile each individual rate function, defaults to FALSE
 #' @param messages logical; print a message that the rates are being compiled
 #'
 #' @return Two vector of strings that serve as function pointers.
 #' @export
-parse_rates <- function(rates, param_codes, compartment_codes, const_codes, tcovar_codes, allrates = FALSE, messages = TRUE) {
-
-        rates_lumped   <- paste0("RATE", 1:length(rates),"_LUMPED")
-        rates_unlumped <- paste0("RATE", 1:length(rates),"_UNLUMPED")
+parse_rates <- function(rates, messages = TRUE) {
 
         arg_strings <- "Rcpp::NumericVector& rates, const Rcpp::LogicalVector& inds, const arma::rowvec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::rowvec& tcovar"
 
         fcns_lumped <- fcns_unlumped <- character(0)
 
-        for(i in seq_along(rates_lumped)) {
+        for(i in seq_along(rates)) {
                 fcns_lumped <- paste(fcns_lumped,paste0("if(inds[",i-1,"]) rates[",i-1,"] = ", rates[[i]]$lumped,";"), sep = "\n ")
                 fcns_unlumped <- paste(fcns_unlumped,paste0("if(inds[",i-1,"]) rates[",i-1,"] = ", rates[[i]]$unlumped,";"), sep = "\n ")
         }

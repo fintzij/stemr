@@ -5,21 +5,10 @@
 \title{Instatiate the C++ rate functions for a stochastic epidemic model and return
 a vector of function pointers.}
 \usage{
-parse_rates(rates, param_codes, compartment_codes, const_codes, tcovar_codes,
-  allrates = FALSE, messages = TRUE)
+parse_rates(rates, messages = TRUE)
 }
 \arguments{
 \item{rates}{list of rate functions}
-
-\item{param_codes}{vector of parameter codes}
-
-\item{compartment_codes}{vector of compartment codes}
-
-\item{const_codes}{vector of constant names}
-
-\item{tcovar_codes}{vector of time-varying covariate codes}
-
-\item{allrates}{compile each individual rate function, defaults to FALSE}
 
 \item{messages}{logical; print a message that the rates are being compiled}
 }
