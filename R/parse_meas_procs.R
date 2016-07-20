@@ -15,11 +15,14 @@ parse_meas_procs <- function(meas_procs, messages = TRUE) {
         # obsmat is a matrix of observations
         r_measure_args <- "Rcpp::NumericMatrix& obsmat, const Rcpp::LogicalVector& emit_inds, const int record_ind, const arma::rowvec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::rowvec& tcovar"
 
-        emits_rmeas <- emits_dmeas <- character(0)
+        r_meas <- d_meas <- character(0)
 
-        for(i in seq_along(emissions_rmeas)) {
-                emits_rmeas <- paste(emits_rmeas,paste0("if(meas_vars[",i-1,"]) emitmat(record_ind,",i-1,") = ", meas_procs[[i]]$r_measure,";"), sep = "\n ")
-                emits_dmeas <- paste(emits_dmeas,paste0("if(meas_vars[",i-1,"]) obsmat(record_ind,",i-1,") = ", meas_procs[[i]]$d_measure,";"), sep = "\n ")
+        for(i in seq_along(meas_procs)) {
+                r_meas <- paste(r_meas,paste0("if(emit_inds[",i-1,"]) obsmat(record_ind,",i-1,") = ", meas_procs[[i]]$rmeasure,"[0];"), sep = "\n ")
+                d_meas <- paste(d_meas,paste(paste0("if(emit_inds[",i-1,"]) {"),
+                                             paste0("Rcpp::NumericVector obs(1,",meas_procs[[i]]$meas_var,");"),
+                                             paste0("emitmat(record_ind,",i-1,") = ", meas_procs[[i]]$dmeasure,"[0];"),
+                                             "}", sep = "\n"), sep = "\n ")
         }
 
         # compile function for updating elements a rate vector
@@ -28,11 +31,11 @@ parse_meas_procs <- function(meas_procs, messages = TRUE) {
                              "using namespace arma;",
                              "using namespace Rcpp;",
                              paste0("void R_MEASURE(",r_measure_args,") {"),
-                             emits_rmeas,
+                             r_meas,
                              "}",
                              paste0("typedef void(*r_measure_ptr)(", r_measure_args,");"),
                              "// [[Rcpp::export]]",
-                             "Rcpp::XPtr<r_measure_ptr> D_MEASURE_XPtr() {",
+                             "Rcpp::XPtr<r_measure_ptr> R_MEASURE_XPtr() {",
                              "return(Rcpp::XPtr<r_measure_ptr>(new r_measure_ptr(&R_MEASURE)));",
                              "}", sep = "\n")
 
@@ -41,7 +44,7 @@ parse_meas_procs <- function(meas_procs, messages = TRUE) {
                                "using namespace arma;",
                                "using namespace Rcpp;",
                                paste0("void D_MEASURE(",d_measure_args,") {"),
-                               emits_dmeas,
+                               d_meas,
                                "}",
                                paste0("typedef void(*d_measure_ptr)(", d_measure_args,");"),
                                "// [[Rcpp::export]]",
@@ -51,13 +54,13 @@ parse_meas_procs <- function(meas_procs, messages = TRUE) {
 
 
         if(messages) {
-                print("Compiling rate functions.")
+                print("Compiling measurement process functions.")
         }
 
         Rcpp::sourceCpp(code = code_r_measure, env = globalenv())
         Rcpp::sourceCpp(code = code_d_measure, env = globalenv())
 
-        rate_pointers <- c(r_measure_ptr = D_MEASURE_XPtr(), d_measure_ptr = R_MEASURE_XPtr())
+        measproc_pointers <- c(r_measure_ptr = D_MEASURE_XPtr(), d_measure_ptr = R_MEASURE_XPtr())
 
-        return(rate_pointers)
+        return(measproc_pointers)
 }

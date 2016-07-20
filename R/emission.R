@@ -9,7 +9,8 @@
 #' @param emission_params character vector of emission distribution parameters,
 #'   generally a function of model compartments and parameters.
 #' @param incidence do the data represent incidence counts (as opposed to
-#'   prevalence counts)? defaults to FALSE.
+#'   prevalence counts)? defaults to FALSE. If true, the incidence compartments
+#'   will be used.
 #' @param obstimes numeric vector of observation times, required if the
 #'   measurement process is to be simulated from.
 #' @param strata strata to which the emission distribution applies, may be
@@ -49,7 +50,8 @@
 #'   "rho"))}: the observed variable, names "prevalence" is a binomial sample of
 #'   the number of individuals in compartment "I", with sampling probability
 #'   "rho". \item \code{emission("I_SELF", "binomial", c("I_SELF", "rho"),
-#'   incidence = TRUE, strata = "ALL")}: }
+#'   incidence = TRUE, strata = "ALL")}: the observed incidence for each stratum
+#'   is a binomial sample of the true incidence in that stratum.}
 #'
 #' @return an emission list to be parsed in the \code{\link{stem_measure}}
 #'   function.

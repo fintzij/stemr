@@ -13,7 +13,7 @@
 #'   according to which compartments are reflected.
 #' @param dynamics A list of objects describing the model dynamics, most
 #'   straighforwardly generated using the \code{stem_dynamics} function.
-#' @param meas_process list of functions to simulate from or evaluate the
+#' @param measurement_process list of functions to simulate from or evaluate the
 #'   likelihood of the measurement process. These are most easily generated
 #'   using the \code{stem_measure} function.
 #' @param stem_settings otional list of inference settings, most
@@ -22,26 +22,7 @@
 #' @return returns a \code{stem} object.
 #' @export
 #'
-stem <- function(stem_object = NULL, data = NULL, dynamics = NULL, meas_process = NULL, stem_settings = NULL) {
-
-        # if a dataset or multiple datasets were provided, collect the
-        # observation times and indicator matrices for which compartments were
-        # measured at which times
-        if(!is.null(data)) {
-                if(!is.list(data)) {
-                        times <- data[, 1, drop = FALSE]
-                        comps_at_obstimes <- matrix(1, nrow = nrow(data), ncol = ncol(data) - 1)
-                        colnames(comps_at_obstimes) <- colnames(data)[-1]
-                }
-                else{
-                        dat_times <- lapply(data, function(x) x[,1]); times <- as.matrix(sort(unlist(dat_times)))
-                        comps_at_obstimes <- matrix(0, nrow = length(times), ncol = sum(sapply(data, function(x) ncol(x)-1)))
-                        colnames(comps_at_obstimes) <- sapply(data, function(x) colnames(x)[-1])
-                        for(s in 1:ncol(comps_at_obstimes)) {
-                                comps_at_obstimes[times %in% dat_times[[s]], s] <- 1
-                        }
-                }
-        }
+stem <- function(stem_object = NULL, dynamics = NULL, measurement_process = NULL, stem_settings = NULL) {
 
         if(is.null(stem_object)) {
                 stem_object <- structure(list(data                = NULL,
@@ -50,14 +31,10 @@ stem <- function(stem_object = NULL, data = NULL, dynamics = NULL, meas_process 
                                               stem_settings       = NULL), class = "stem")
         }
 
-        if(!is.null(data)) {
-                stem_object$data <- data
-                stem_object$measurement_process$times <- times
-                stem_object$measurement_process$comps_at_obstimes <- comps_at_obstimes
-        }
 
-        if(!is.null(dynamics))          stem_object$dynamics <- dynamics
-        if(!is.null(stem_settings))     stem_object$stem_settings <- stem_settings
+        if(!is.null(dynamics))            stem_object$dynamics <- dynamics
+        if(!is.null(measurement_process)) stem_object$measurement_process <- measurement_process
+        if(!is.null(stem_settings))       stem_object$stem_settings <- stem_settings
 
         return(stem_object)
 }

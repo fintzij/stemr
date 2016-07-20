@@ -70,6 +70,11 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 stop("In order to simulate a dataset, a measurement process must be supplied in the stem_object.")
         }
 
+        if(paths == observations) {
+                paths <- TRUE
+                observations <- TRUE
+        }
+
         # if any of t0, tmax, or a timestep was supplied, check if they differ from the parameters supplied in the stem_object$dynamics.
         # if they differ, reconstruct the tcovar matrix and associated objects
         rebuild_tcovar <- (!is.null(t0) && t0 != stem_object$dynamics$tcovar[1,1]) ||
@@ -179,27 +184,46 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                         colnames(paths_full[[k]]) <- path_colnames
                 }
 
-                if(is.null(census_times)) {
-                        paths <- paths_full
-                } else {
-                        paths <- vector(mode = "list", length = nsim)
-                        census_colnames <- c("time", names(stem_object$dynamics$comp_codes))
-                        for(k in seq_len(nsim)) {
-                                paths[[k]] <- get_census_path(path = paths_full[[k]],
-                                                              census_times = census_times,
-                                                              census_columns = stem_object$dynamics$comp_codes+2)
-                                colnames(paths[[k]]) <- census_colnames
-                        }
+        } else if (method == "LNA") {
 
-                        if(as_array) {
-                                paths <- array(unlist(paths), dim = c(nrow(paths[[1]]), ncol(paths[[1]]), length(paths)))
-                                colnames(paths) <- census_colnames
-                        }
+        }
+
+        if(!is.null(census_times)) {
+                census_paths    <- vector(mode = "list", length = nsim)
+                census_colnames <- c("time", c(names(stem_object$dynamics$comp_codes), names(stem_object$dynamics$incidence_codes)))
+
+                # add 2 to the codes b/c 'time' and 'event' are in the full path
+                census_codes    <- c(stem_object$dynamics$comp_codes, stem_object$dynamics$incidence_codes) + 2
+
+                for(k in seq_len(nsim)) {
+                        # get the census path
+                        census_paths[[k]] <- build_census_path(path = paths_full[[k]],
+                                                      census_times = census_times,
+                                                      census_columns = census_codes)
+
+                        # compute incidence if required. n.b. add 1 to the incidence codes b/c 'time' is in the census path
+                        if(!is.null(stem_object$dynamics$incidence_codes)) compute_incidence(censusmat = census_paths[[k]],
+                                                                                             col_inds  = stem_object$dynamics$incidence_codes + 1,
+                                                                                             row_inds  = rep(list(seq_along(census_times) - 1), length(stem_object$dynamics$incidence_codes)))
+
+                        # assign column names
+                        colnames(census_paths[[k]]) <- census_colnames
                 }
 
+                if(as_array) {
+                        census_paths <- array(unlist(census_paths), dim = c(nrow(census_paths[[1]]), ncol(census_paths[[1]]), length(census_paths)))
+                        colnames(census_paths) <- census_colnames
+                }
+        }
 
-        } else {
+        if(observations) {
+                datasets  <- rep(list(stem_object$measurement_process$obsmat), nsim) # list for storing the datasets
+                censusmat <- stem_object$measurement_process$censusmat
+                census_codes    <- c(stem_object$dynamics$comp_codes, stem_object$dynamics$incidence_codes) + 2
 
+                for(k in seq_len(nsim)) {
+                        retrieve_census_path(censusmat, paths_full[[k]], stem_object$measurement_process$obstimes, census_columns = census_codes)
+                }
         }
 
         return(paths)

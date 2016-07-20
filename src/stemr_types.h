@@ -11,13 +11,12 @@ typedef void(*ratefcn_ptr)(Rcpp::NumericVector& rates, const Rcpp::LogicalVector
              const Rcpp::NumericVector& constants, const arma::rowvec& tcovar);
 
 typedef void(*d_measure_ptr)(Rcpp::NumericMatrix& emitmat, const Rcpp::LogicalVector& emit_inds,
-             const int record_ind, const arma::rowvec& record, const arma::rowvec& state,
+             const int record_ind, const Rcpp::NumericVector& record, const Rcpp::NumericVector& state,
              const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants,
              const arma::rowvec& tcovar);
 
 typedef void(*r_measure_ptr)(Rcpp::NumericMatrix& obsmat, const Rcpp::LogicalVector& emit_inds,
              const int record_ind, const arma::rowvec& state, const Rcpp::NumericVector& parameters,
              const Rcpp::NumericVector& constants, const arma::rowvec& tcovar);
-
 
 #endif

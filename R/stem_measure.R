@@ -16,7 +16,16 @@
 #'   which compartment being measured.
 #' @param messages should compilation messages be printed? defaults to true.
 #'
-#' @return list with evaluated measurement process functions and objects.
+#' @return list with evaluated measurement process functions and objects. The list contains the following objects:
+#' \describe{\item{meas_procs}{list of parsed measurement process functions}
+#'           \item{meas_pointers}{external pointers to compiled functions to simulate from and evaluate the density of the measurement process}
+#'           \item{obstimes}{complete vector of observation times}
+#'           \item{obstime_inds}{list of indices (C++) of observation times for each of the measurement variables}
+#'           \item{obsmat}{either a template for an observation matrix, or an observation matrix that combines the supplied list of observation matrices}
+#'           \item{obscomp_codes}{named numeric vector of measurement variable codes}
+#'           \item{measproc_indmat}{indicator matrix for which measurement variables are measured at which observation times}
+#'           \item{meas_inds}{indices (C++) of elements in the observation matrix that correspond to measurements (non-NAs)}
+#'           \item{censusmat}{template matrix for storing the compartment counts at observation times}}
 #' @export
 stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
 
@@ -30,6 +39,22 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
         # First, if no strata are specified
         if(all(sapply(sapply(emissions, "[[", "strata"), is.null))) {
                 meas_procs <- emissions
+
+                for(k in seq_along(meas_procs)) {
+                        meas_procs[[k]] <- vector(mode = "list", length = 7L)
+                        names(meas_procs[[k]]) <- c("dmeasure", "rmeasure", "distribution", "meas_var", "emission_params", "incidence", "obstimes")
+
+                        # assign meas_var and incidence
+                        meas_procs[[k]]$distribution <- emissions[[k]]$distribution
+                        meas_procs[[k]]$meas_var     <- emissions[[k]]$meas_var
+                        meas_procs[[k]]$incidence    <- emissions[[k]]$incidence
+
+                        # get the observation times
+                        if(is.null(data)) meas_procs[[k]]$obstimes <- emissions[[k]]$obstimes
+
+                        # get the emission distribution params
+                        meas_procs[[k]]$emission_params <- emissions[[k]]$emission_params
+                }
 
         } else {# If strata are specified
 
@@ -67,14 +92,12 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                                 meas_procs[[k]][[j]]$emission_params <- sapply(emissions[[k]]$emission_params,
                                                                                gsub,
                                                                                pattern = "SELF",
-                                                                               replacement = ifelse(emissions[[k]]$incidence,
-                                                                                                    paste0(rel_strata[[j]], "_INCIDENCE"),
-                                                                                                    rel_strata[[j]]))
+                                                                               replacement = rel_strata[[j]])
                         }
                 }
         }
 
-        meas_procs <- unlist(meas_procs, recursive = FALSE)
+        if(length(meas_procs) != 1) meas_procs <- unlist(meas_procs, recursive = FALSE)
 
         # if a dataset or list of datasets is supplied, extract the observation times, combine them and generate the indicator matrix
         if(!is.null(data)) {
@@ -93,15 +116,20 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                         }
                 }
 
-                obsmat          <- build_obsmat(datasets = data)
-                obstimes        <- obsmat[,"time"]
-                measproc_indmat <- build_measproc_indmat(obsmat = obsmat)
+                obsmat          <- build_obsmat(datasets = data)                # observation matrix
+                obstimes        <- obsmat[,"time"]                              # vector of observation times
+                measproc_indmat <- build_measproc_indmat(obsmat = obsmat)       # indicator matrix for which measurment variables are observed at which times
+                meas_inds       <- which(!is.na(obsmat[,-1, drop = FALSE]), arr.ind = T) - 1  # matrix of C++ indices in the observation matrix which are not NA.
+                meas_inds[,"row"] <- meas_inds[,"row"] - 1
 
         } else if(is.null(data)) {
                 # if a dataset is not supplied, create a template for the observation matrix
                 obsmat          <- build_obsmat(meas_procs = meas_procs)
                 obstimes        <- obsmat[,"time"]
                 measproc_indmat <- build_measproc_indmat(obsmat = obsmat)
+                meas_inds       <- which(!is.na(obsmat[,-1, drop = FALSE]), arr.ind = T)
+                meas_inds[,"row"] <- meas_inds[,"row"] - 1
+
         }
 
         # having made the name substitutions and constructed the observation matrix, proceed to make subsitutions for argument vector indices
@@ -137,20 +165,22 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                                                                   pattern = code_name, replacement = paste0("constants[",code,"]"))
                 }
 
-                # make the substitutions for the incidence compartment codes
-                for(t in seq_along(dynamics$incidence_codes)) {
-                        code_name <- names(dynamics$incidence_codes)[t]
-                        code      <- dynamics$incidence_codes[t]
-                        meas_procs[[s]]$emission_params <- sapply(meas_procs[[s]]$emission_params, gsub,
-                                                                  pattern = code_name, replacement = paste0("state[",code,"]"))
-                }
-
                 # make the substitutions for the compartment codes
-                for(t in seq_along(dynamics$comp_codes)) {
-                        code_name <- names(dynamics$comp_codes)[t]
-                        code      <- dynamics$comp_codes[t]
-                        meas_procs[[s]]$emission_params <- sapply(meas_procs[[s]]$emission_params, gsub,
-                                                                  pattern = code_name, replacement = paste0("state[",code,"]"))
+                if(meas_procs[[s]]$incidence) {
+                        for(t in seq_along(dynamics$incidence_sources)) {
+                                code_name <- names(dynamics$incidence_sources)[t]
+                                code      <- dynamics$incidence_codes[t]
+                                meas_procs[[s]]$emission_params <- sapply(meas_procs[[s]]$emission_params, gsub,
+                                                                          pattern = code_name, replacement = paste0("state[",code,"]"))
+                        }
+                } else {
+                        for(t in seq_along(dynamics$comp_codes)) {
+                                code_name <- names(dynamics$comp_codes)[t]
+                                code      <- dynamics$comp_codes[t]
+                                meas_procs[[s]]$emission_params <- sapply(meas_procs[[s]]$emission_params, gsub,
+                                                                          pattern = code_name, replacement = paste0("state[",code,"]"))
+                        }
+
                 }
         }
 
@@ -160,26 +190,46 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                 if(meas_procs[[k]]$distribution == "poisson") {
 
                         meas_procs[[k]]$rmeasure <- paste0("Rcpp::rpois(1,", meas_procs[[k]]$emission_params, ")")
-                        meas_procs[[k]]$dmeasure <- paste0("Rcpp::dpois(", paste(c(meas_procs[[k]]$meas_var, meas_procs[[k]]$emission_params), collapse = ","), ",true)")
+                        meas_procs[[k]]$dmeasure <- paste0("Rcpp::dpois(obs,", paste(meas_procs[[k]]$emission_params, collapse = ","), ",1)")
 
                 } else if(meas_procs[[k]]$distribution == "binomial") {
 
                         meas_procs[[k]]$rmeasure <- paste0("Rcpp::rbinom(1,", paste(meas_procs[[k]]$emission_params, collapse = ","), ")")
-                        meas_procs[[k]]$dmeasure <- paste0("Rcpp::dbinom(", paste(c(meas_procs[[k]]$meas_var, meas_procs[[k]]$emission_params), collapse = ","), ",true)")
+                        meas_procs[[k]]$dmeasure <- paste0("Rcpp::dbinom(obs,", paste(meas_procs[[k]]$emission_params, collapse = ","), ",1)")
 
                 } else if(meas_procs[[k]]$distribution == "negbinomial") {
 
                         meas_procs[[k]]$rmeasure <- paste0("Rcpp::rnbinom(1,", paste(meas_procs[[k]]$emission_params, collapse = ","), ")")
-                        meas_procs[[k]]$dmeasure <- paste0("Rcpp::dnbinom(", paste(c(meas_procs[[k]]$meas_var, meas_procs[[k]]$emission_params), collapse = ","), ",true)")
+                        meas_procs[[k]]$dmeasure <- paste0("Rcpp::dnbinom(obs,", paste( meas_procs[[k]]$emission_params, collapse = ","), ",1)")
 
                 } else if(meas_procs[[k]]$distribution == "normal") {
 
                         meas_procs[[k]]$rmeasure <- paste0("Rcpp::rnorm(1,", paste(meas_procs[[k]]$emission_params, collapse = ","), ")")
-                        meas_procs[[k]]$dmeasure <- paste0("Rcpp::dnorm(", paste(c(meas_procs[[k]]$meas_var, meas_procs[[k]]$emission_params), collapse = ","), ",true)")
+                        meas_procs[[k]]$dmeasure <- paste0("Rcpp::dnorm(obs,", paste(meas_procs[[k]]$emission_params, collapse = ","), ",1)")
                 }
         }
 
         # get the pointers for the rmeasure and dmeasure functions
-        emission_pointers <- parse_meas_procs(meas_procs, messages = messages)
+        meas_pointers <- parse_meas_procs(meas_procs, messages = messages)
 
+        # initialize a matrix for storing the compartment counts at observation times
+        censusmat <- matrix(0, nrow = length(obstimes), ncol = length(dynamics$comp_codes) + length(dynamics$incidence_codes) + 1)
+        colnames(censusmat) <- c("time", names(dynamics$comp_codes), names(dynamics$incidence_codes))
+        censusmat[,"time"] <- obstimes
+
+        # get the list of vectors of observation times for each measurement process
+        obstime_inds <- lapply(meas_procs, FUN = function(proc) match(proc$obstimes, obstimes) - 1)
+
+        # generate the measurement process list
+        meas_process <- list(meas_procs      = meas_procs,
+                             meas_pointers   = meas_pointers,
+                             obstimes        = obstimes,
+                             obstime_inds    = obstime_inds,
+                             obsmat          = obsmat,
+                             obscomp_codes   = obscomp_codes,
+                             measproc_indmat = measproc_indmat,
+                             meas_inds       = meas_inds,
+                             censusmat       = censusmat)
+
+        return(meas_process)
 }

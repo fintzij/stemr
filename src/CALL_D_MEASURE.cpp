@@ -22,7 +22,7 @@ using namespace arma;
 //' @export
 // [[Rcpp::export]]
 void CALL_D_MEASURE(Rcpp::NumericMatrix& emitmat, const Rcpp::LogicalVector& emit_inds,
-                    const int record_ind, const arma::rowvec& record, const arma::rowvec& state,
+                    const int record_ind, const Rcpp::NumericVector& record, const Rcpp::NumericVector& state,
                     const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants,
                     const arma::rowvec& tcovar, SEXP d_meas_ptr) {
         Rcpp::XPtr<d_measure_ptr> xpfun(d_meas_ptr);                              // Receive the SEXP and put in Xptr

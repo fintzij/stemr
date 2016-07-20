@@ -21,7 +21,7 @@ using namespace arma;
 //' @export
 // [[Rcpp::export]]
 void CALL_R_MEASURE(Rcpp::NumericMatrix& obsmat, const Rcpp::LogicalVector& emit_inds,
-                    const int record_ind, const arma::rowvec& state, const Rcpp::NumericVector& parameters,
+                    const int record_ind, const Rcpp::NumericVector& state, const Rcpp::NumericVector& parameters,
                     const Rcpp::NumericVector& constants, const arma::rowvec& tcovar, SEXP r_meas_ptr) {
         Rcpp::XPtr<r_measure_ptr> xpfun(r_meas_ptr);                              // Receive the SEXP and put in Xptr
         r_measure_ptr fun = *xpfun;                                               // get function via pointer
