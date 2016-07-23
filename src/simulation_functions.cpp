@@ -28,7 +28,6 @@ using namespace Rcpp;
 //' @return matrix with a simulated path from a stochastic epidemic model.
 //' @export
 // [[Rcpp::export]]
-
 arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::mat& tcovar, const arma::rowvec& init_states, const Rcpp::LogicalMatrix& rate_adjmat, const arma::mat& tcovar_adjmat, const arma::mat& tcovar_changemat, const Rcpp::IntegerVector init_dims, SEXP rate_ptr) {
 
         // Get dimensions of various objects
@@ -48,7 +47,7 @@ arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& p
         Rcpp::IntegerVector next_event(1);                            // next event
 
         // insert the initial compartment counts
-        path(0, span(2,init_dims[1]-1)) = init_states;
+        path(0, arma::span(2,init_dims[1]-1)) = init_states;
 
         // initialize a state vector
         arma::rowvec state = init_states;
@@ -108,7 +107,7 @@ arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& p
                         // insert the time, event, and new state vector into the path matrix
                         path(ind_cur, 0) = t_cur;                       // insert new time
                         path(ind_cur, 1) = next_event[0];               // event code
-                        path(ind_cur, span(2,init_dims[1]-1)) = state;  // state
+                        path(ind_cur, arma::span(2,init_dims[1]-1)) = state;  // state
 
                         // increment the index
                         ind_cur += 1;

@@ -169,14 +169,14 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                 if(meas_procs[[s]]$incidence) {
                         for(t in seq_along(dynamics$incidence_sources)) {
                                 code_name <- names(dynamics$incidence_sources)[t]
-                                code      <- dynamics$incidence_codes[t]
+                                code      <- dynamics$incidence_codes[t] + 1
                                 meas_procs[[s]]$emission_params <- sapply(meas_procs[[s]]$emission_params, gsub,
                                                                           pattern = code_name, replacement = paste0("state[",code,"]"))
                         }
                 } else {
                         for(t in seq_along(dynamics$comp_codes)) {
                                 code_name <- names(dynamics$comp_codes)[t]
-                                code      <- dynamics$comp_codes[t]
+                                code      <- dynamics$comp_codes[t] + 1
                                 meas_procs[[s]]$emission_params <- sapply(meas_procs[[s]]$emission_params, gsub,
                                                                           pattern = code_name, replacement = paste0("state[",code,"]"))
                         }

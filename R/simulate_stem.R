@@ -26,18 +26,17 @@
 #'   recorded. Required for \code{method = "LNA"}. If supplied and \code{method
 #'   = "gillespie"}, the compartment counts at census times are returned rather
 #'   than the full paths.
-#' @param as_array if TRUE, the simulated paths and/or simulated datasets will
-#'   be returned as an array, or as a list containing multiple arrays (one for
-#'   the paths, another for the datasets, and a third for subject-level paths if
-#'   they are requested), rather than as a list of paths. Available only if
-#'   \code{census_times} is specified or if \code{method = LNA}.
+#' @param paths_as_array if TRUE, the simulated paths will be returned as an
+#'   array. Available only if \code{census_times} is specified.
+#' @param datasets_as_array if TRUE, the simulated datasets will be returned as
+#'   an array.
 #' @param messages should a message be printed when parsing the rates?
 #'
 #' @return If \code{paths = FALSE} and \code{observations = FALSE}, or if
-#'   \code{paths = TRUE} and \code{observations = TRUE}, a list or array of
-#'   \code{nsim stem} paths and datasets is returned. If \code{subject_paths =
-#'   TRUE} and \code{method = "gillespie"}, a list of subject-level paths is
-#'   returned.
+#'   \code{paths = TRUE} and \code{observations = TRUE}, a list \code{nsim stem}
+#'   paths and datasets, each returned either as a list or array, is returned.
+#'   If \code{subject_paths = TRUE} and \code{method = "gillespie"}, a list of
+#'   subject-level paths is also returned.
 #'
 #'   If \code{paths = TRUE} and \code{observations = FALSE}, a list or array of
 #'   simulated population-level paths is returned. If \code{method =
@@ -48,7 +47,7 @@
 #'   If \code{paths = FALSE} and \code{observations = TRUE}, a list or array of
 #'   simulated datasets is returned.
 #' @export
-simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = FALSE, subject_paths = FALSE, method = "gillespie", t0 = NULL, tmax = NULL, timestep = NULL,  census_times = NULL, as_array = FALSE, messages = TRUE) {
+simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = FALSE, subject_paths = FALSE, method = "gillespie", t0 = NULL, tmax = NULL, timestep = NULL,  census_times = NULL, paths_as_array = FALSE, datasets_as_array = FALSE, messages = TRUE) {
 
         # ensure that the method is correctly specified
         if(!method %in% c("gillespie", "LNA")) {
@@ -193,36 +192,94 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 census_colnames <- c("time", c(names(stem_object$dynamics$comp_codes), names(stem_object$dynamics$incidence_codes)))
 
                 # add 2 to the codes b/c 'time' and 'event' are in the full path
-                census_codes    <- c(stem_object$dynamics$comp_codes, stem_object$dynamics$incidence_codes) + 2
+                census_codes      <- c(stem_object$dynamics$comp_codes, stem_object$dynamics$incidence_codes) + 2
+                get_incidence <- !is.null(stem_object$dynamics$incidence_codes)
+
+                if(get_incidence) {
+                        incidence_codes       <- stem_object$dynamics$incidence_codes + 1
+                        census_incidence_rows <- rep(list(seq_along(census_times) - 1), length(stem_object$dynamics$incidence_codes))
+                }
+
 
                 for(k in seq_len(nsim)) {
                         # get the census path
-                        census_paths[[k]] <- build_census_path(path = paths_full[[k]],
-                                                      census_times = census_times,
-                                                      census_columns = census_codes)
+                        census_paths[[k]] <- build_census_path(path = paths_full[[k]], census_times = census_times, census_columns = census_codes)
 
                         # compute incidence if required. n.b. add 1 to the incidence codes b/c 'time' is in the census path
-                        if(!is.null(stem_object$dynamics$incidence_codes)) compute_incidence(censusmat = census_paths[[k]],
-                                                                                             col_inds  = stem_object$dynamics$incidence_codes + 1,
-                                                                                             row_inds  = rep(list(seq_along(census_times) - 1), length(stem_object$dynamics$incidence_codes)))
+                        if(get_incidence) compute_incidence(censusmat = census_paths[[k]], col_inds  = incidence_codes, row_inds  = census_incidence_rows)
 
                         # assign column names
                         colnames(census_paths[[k]]) <- census_colnames
                 }
 
-                if(as_array) {
+                if(paths_as_array) {
                         census_paths <- array(unlist(census_paths), dim = c(nrow(census_paths[[1]]), ncol(census_paths[[1]]), length(census_paths)))
                         colnames(census_paths) <- census_colnames
                 }
         }
 
         if(observations) {
-                datasets  <- rep(list(stem_object$measurement_process$obsmat), nsim) # list for storing the datasets
-                censusmat <- stem_object$measurement_process$censusmat
-                census_codes    <- c(stem_object$dynamics$comp_codes, stem_object$dynamics$incidence_codes) + 2
+                datasets         <- vector(mode = "list", length = nsim) # list for storing the datasets
+                already_censused <- !is.na(census_times) && identical(stem_object$measurement_process$obstimes, census_times)
+                measvar_names    <- colnames(stem_object$measurement_process$obsmat)
 
-                for(k in seq_len(nsim)) {
-                        retrieve_census_path(censusmat, paths_full[[k]], stem_object$measurement_process$obstimes, census_columns = census_codes)
+                # grab the time-varying covariate values at observation times
+                tcovar_obstimes <- build_census_path(path           = stem_object$dynamics$tcovar,
+                                                     census_times   = stem_object$measurement_process$obstimes,
+                                                     census_columns = 1:(ncol(stem_object$dynamics$tcovar)-1))
+                colnames(tcovar_obstimes) <- colnames(stem_object$dynamics$tcovar)
+
+                if(already_censused) {
+
+                        for(k in seq_len(nsim)) {
+                                if(paths_as_array) {
+                                        datasets[[k]] <- simulate_measproc(censusmat = census_paths[,,k],
+                                                                           measproc_indmat = stem_object$measurement_process$measproc_indmat,
+                                                                           parameters = stem_object$dynamics$parameters,
+                                                                           constants = stem_object$dynamics$constants,
+                                                                           tcovar = tcovar_obstimes,
+                                                                           r_measure_ptr = stem_object$measurement_process$meas_pointers$r_measure_ptr)
+                                } else {
+                                        datasets[[k]] <- simulate_measproc(censusmat = census_paths[[k]],
+                                                                           measproc_indmat = stem_object$measurement_process$measproc_indmat,
+                                                                           parameters = stem_object$dynamics$parameters,
+                                                                           constants = stem_object$dynamics$constants,
+                                                                           tcovar = tcovar_obstimes,
+                                                                           r_measure_ptr = stem_object$measurement_process$meas_pointers$r_measure_ptr)
+                                }
+
+                                colnames(datasets[[k]]) <- measvar_names
+                        }
+
+
+                } else if(!already_censused) {
+
+                        censusmat       <- stem_object$measurement_process$censusmat
+                        census_codes    <- c(stem_object$dynamics$comp_codes, stem_object$dynamics$incidence_codes) + 2
+
+                        get_incidence <- !is.null(stem_object$dynamics$incidence_codes)
+
+                        if(get_incidence) incidence_codes <- stem_object$dynamics$incidence_codes + 1
+
+                        for(k in seq_len(nsim)) {
+                                retrieve_census_path(censusmat, paths_full[[k]], stem_object$measurement_process$obstimes, census_columns = census_codes)
+                                if(get_incidence) compute_incidence(censusmat = censusmat,
+                                                                        col_inds  = incidence_codes,
+                                                                        row_inds =  stem_object$measurement_process$obstime_inds)
+
+                                datasets[[k]] <- simulate_measproc(censusmat = censusmat,
+                                                                   measproc_indmat = stem_object$measurement_process$measproc_indmat,
+                                                                   parameters = stem_object$dynamics$parameters,
+                                                                   constants = stem_object$dynamics$constants,
+                                                                   tcovar = tcovar_obstimes,
+                                                                   r_measure_ptr = stem_object$measurement_process$meas_pointers$r_measure_ptr)
+                                colnames(datasets[[k]]) <- measvar_names
+                        }
+                }
+
+                if(datasets_as_array) {
+                        datasets <- array(unlist(datasets), dim = c(nrow(datasets[[1]]), ncol(datasets[[1]]), length(datasets)))
+                        colnames(datasets) <- measvar_names
                 }
         }
 

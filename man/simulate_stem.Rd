@@ -6,8 +6,8 @@
 \usage{
 simulate_stem(stem_object, nsim = 1, paths = FALSE, observations = FALSE,
   subject_paths = FALSE, method = "gillespie", t0 = NULL, tmax = NULL,
-  timestep = NULL, census_times = NULL, as_array = FALSE,
-  messages = TRUE)
+  timestep = NULL, census_times = NULL, paths_as_array = FALSE,
+  datasets_as_array = FALSE, messages = TRUE)
 }
 \arguments{
 \item{nsim}{number of realizations to simulate}
@@ -42,11 +42,11 @@ recorded. Required for \code{method = "LNA"}. If supplied and \code{method
 = "gillespie"}, the compartment counts at census times are returned rather
 than the full paths.}
 
-\item{as_array}{if TRUE, the simulated paths and/or simulated datasets will
-be returned as an array, or as a list containing multiple arrays (one for
-the paths, another for the datasets, and a third for subject-level paths if
-they are requested), rather than as a list of paths. Available only if
-\code{census_times} is specified or if \code{method = LNA}.}
+\item{paths_as_array}{if TRUE, the simulated paths will be returned as an
+array. Available only if \code{census_times} is specified.}
+
+\item{datasets_as_array}{if TRUE, the simulated datasets will be returned as
+an array.}
 
 \item{messages}{should a message be printed when parsing the rates?}
 
@@ -56,10 +56,10 @@ desired, the measurement process slot must also be supplied.}
 }
 \value{
 If \code{paths = FALSE} and \code{observations = FALSE}, or if
-  \code{paths = TRUE} and \code{observations = TRUE}, a list or array of
-  \code{nsim stem} paths and datasets is returned. If \code{subject_paths =
-  TRUE} and \code{method = "gillespie"}, a list of subject-level paths is
-  returned.
+  \code{paths = TRUE} and \code{observations = TRUE}, a list \code{nsim stem}
+  paths and datasets, each returned either as a list or array, is returned.
+  If \code{subject_paths = TRUE} and \code{method = "gillespie"}, a list of
+  subject-level paths is also returned.
 
   If \code{paths = TRUE} and \code{observations = FALSE}, a list or array of
   simulated population-level paths is returned. If \code{method =

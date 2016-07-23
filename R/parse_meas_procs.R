@@ -10,25 +10,24 @@
 parse_meas_procs <- function(meas_procs, messages = TRUE) {
 
         # emitmat is the matrix of emission probabilities
-        d_measure_args <- "Rcpp::NumericMatrix& emitmat, const Rcpp::LogicalVector& emit_inds, const int record_ind, const arma::rowvec& record, const arma::rowvec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::rowvec& tcovar"
+        d_measure_args <- "Rcpp::NumericMatrix& emitmat, const Rcpp::LogicalVector& emit_inds, const int record_ind, const Rcpp::NumericVector& record, const Rcpp::NumericVector& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar"
 
         # obsmat is a matrix of observations
-        r_measure_args <- "Rcpp::NumericMatrix& obsmat, const Rcpp::LogicalVector& emit_inds, const int record_ind, const arma::rowvec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::rowvec& tcovar"
+        r_measure_args <- "Rcpp::NumericMatrix& obsmat, const Rcpp::LogicalVector& emit_inds, const int record_ind, const Rcpp::NumericVector& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar"
 
         r_meas <- d_meas <- character(0)
 
         for(i in seq_along(meas_procs)) {
-                r_meas <- paste(r_meas,paste0("if(emit_inds[",i-1,"]) obsmat(record_ind,",i-1,") = ", meas_procs[[i]]$rmeasure,"[0];"), sep = "\n ")
+                r_meas <- paste(r_meas,paste0("if(emit_inds[",i-1,"] && (",meas_procs[[i]]$emission_params[1]," != 0)) obsmat(record_ind,",i,") = ", meas_procs[[i]]$rmeasure,"[0];"), sep = "\n ")
                 d_meas <- paste(d_meas,paste(paste0("if(emit_inds[",i-1,"]) {"),
                                              paste0("Rcpp::NumericVector obs(1,",meas_procs[[i]]$meas_var,");"),
-                                             paste0("emitmat(record_ind,",i-1,") = ", meas_procs[[i]]$dmeasure,"[0];"),
+                                             paste0("emitmat(record_ind,",i,") = ", meas_procs[[i]]$dmeasure,"[0];"),
                                              "}", sep = "\n"), sep = "\n ")
         }
 
         # compile function for updating elements a rate vector
-        code_r_measure <- paste("// [[Rcpp::depends(RcppArmadillo)]]",
-                             "#include <RcppArmadillo.h>",
-                             "using namespace arma;",
+        code_r_measure <- paste("// [[Rcpp::depends(Rcpp)]]",
+                             "#include <Rcpp.h>",
                              "using namespace Rcpp;",
                              paste0("void R_MEASURE(",r_measure_args,") {"),
                              r_meas,
@@ -39,9 +38,8 @@ parse_meas_procs <- function(meas_procs, messages = TRUE) {
                              "return(Rcpp::XPtr<r_measure_ptr>(new r_measure_ptr(&R_MEASURE)));",
                              "}", sep = "\n")
 
-        code_d_measure <- paste("// [[Rcpp::depends(RcppArmadillo)]]",
-                               "#include <RcppArmadillo.h>",
-                               "using namespace arma;",
+        code_d_measure <- paste("// [[Rcpp::depends(Rcpp)]]",
+                               "#include <Rcpp.h>",
                                "using namespace Rcpp;",
                                paste0("void D_MEASURE(",d_measure_args,") {"),
                                d_meas,
@@ -60,7 +58,7 @@ parse_meas_procs <- function(meas_procs, messages = TRUE) {
         Rcpp::sourceCpp(code = code_r_measure, env = globalenv())
         Rcpp::sourceCpp(code = code_d_measure, env = globalenv())
 
-        measproc_pointers <- c(r_measure_ptr = D_MEASURE_XPtr(), d_measure_ptr = R_MEASURE_XPtr())
+        measproc_pointers <- c(r_measure_ptr = R_MEASURE_XPtr(), d_measure_ptr = D_MEASURE_XPtr())
 
         return(measproc_pointers)
 }

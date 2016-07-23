@@ -51,8 +51,16 @@ method="gillespie". If not supplied, \code{timestep} will default to
 constants referenced in the rate functions.}
 
 \item{adjacency}{optional matrix specifying the adjacency structure of
-strata, with 0 entries indicating non-adjacency and 1 for adjacency. Rows
-and columns must be labeled.}
+  strata, with 0 entries indicating non-adjacency and 1 for adjacency. Rows
+  and columns must be labeled.
+
+  Important note: care should be taken to make sure that there are no partial
+  string matches between the building blocks of a model. For example, if the
+  population size is given by the string constant "N", then "N" should not
+  appear in any of parameter names, compartment names, etc. In particular,
+  suppose there is a parameter named "BETA_N". When the rate functions are
+  parsed internally, the rate strings will be parsed incorrectly due to the
+  partial match.}
 
 \item{messages}{should a message be printed when parsing the rates?}
 }

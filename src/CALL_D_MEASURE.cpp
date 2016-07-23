@@ -1,10 +1,8 @@
-// [[Rcpp::depends(RcppArmadillo)]]
+// [[Rcpp::depends(Rcpp)]]
 
-#include <RcppArmadillo.h>
 #include "stemr_types.h"
 
 using namespace Rcpp;
-using namespace arma;
 
 //' Evaluate the log-density of the measurement process by calling measurement
 //' process density functions via external Xptr.
@@ -24,7 +22,7 @@ using namespace arma;
 void CALL_D_MEASURE(Rcpp::NumericMatrix& emitmat, const Rcpp::LogicalVector& emit_inds,
                     const int record_ind, const Rcpp::NumericVector& record, const Rcpp::NumericVector& state,
                     const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants,
-                    const arma::rowvec& tcovar, SEXP d_meas_ptr) {
+                    const Rcpp::NumericVector& tcovar, SEXP d_meas_ptr) {
         Rcpp::XPtr<d_measure_ptr> xpfun(d_meas_ptr);                              // Receive the SEXP and put in Xptr
         d_measure_ptr fun = *xpfun;                                               // get function via pointer
         fun(emitmat, emit_inds, record_ind, record, state, parameters, constants, tcovar); // evaluate the funtion

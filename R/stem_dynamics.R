@@ -26,7 +26,6 @@
 #' @param adjacency optional matrix specifying the adjacency structure of
 #'   strata, with 0 entries indicating non-adjacency and 1 for adjacency. Rows
 #'   and columns must be labeled.
-#' @inheritParams parse_rates
 #'
 #'   Important note: care should be taken to make sure that there are no partial
 #'   string matches between the building blocks of a model. For example, if the
