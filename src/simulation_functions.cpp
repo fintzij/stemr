@@ -37,10 +37,10 @@ arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& p
         flow_dims[1]    = flow.n_cols;
         tcovar_dims[0]  = tcovar.n_rows;
         tcovar_dims[1]  = tcovar.n_cols;
-
         // initialize bookkeeping matrix
         arma::mat path(init_dims[0], init_dims[1]);
         path(0, 1) = -1;
+        int path_nrows = path.n_rows;
 
         // vector of event codes
         Rcpp::IntegerVector events = Rcpp::seq_len(flow_dims[0]) - 1; // vector of event codes
@@ -113,8 +113,9 @@ arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& p
                         ind_cur += 1;
 
                         // if there are no empty rows in the path matrix, add some
-                        if(ind_cur == init_dims[0]) {
-                                path.insert_rows(init_dims[0]-1, init_dims[0]);
+                        if(ind_cur == path_nrows) {
+                                path.insert_rows(ind_cur, init_dims[0]);
+                                path_nrows = path.n_rows;
                         }
 
                         // update the rates
@@ -126,7 +127,7 @@ arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& p
                 }
         }
 
-        path.shed_rows(ind_cur, init_dims[0]-1);
+        path.shed_rows(ind_cur, path.n_rows - 1);
 
         // ensure that tmax is the time of the last row in path. if not, add it
         if(path(path.n_rows-1, 0) != t_max) {

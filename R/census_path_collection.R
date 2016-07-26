@@ -15,7 +15,7 @@ census_path_collection <- function(paths, census_times, census_columns = NULL, a
         } else {
                 census_paths <- vector(mode = "list", length = dim(paths)[3])
                 for(k in seq_len(dim(paths)[3])) {
-                        census_paths[[k]] <- census_path(paths[,,k], census_times = census_times, census_columns = census_columns)
+                        census_paths[[k]] <- build_census_path(paths[,,k], census_times = census_times, census_columns = census_columns)
                 }
         }
 

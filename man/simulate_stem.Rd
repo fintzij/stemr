@@ -55,7 +55,8 @@ supplied at a minimum. If simulations from the measurement process are
 desired, the measurement process slot must also be supplied.}
 }
 \value{
-If \code{paths = FALSE} and \code{observations = FALSE}, or if
+Returns a list with the simulated paths, subject-level paths, and/or
+  datasets. If \code{paths = FALSE} and \code{observations = FALSE}, or if
   \code{paths = TRUE} and \code{observations = TRUE}, a list \code{nsim stem}
   paths and datasets, each returned either as a list or array, is returned.
   If \code{subject_paths = TRUE} and \code{method = "gillespie"}, a list of
@@ -63,9 +64,9 @@ If \code{paths = FALSE} and \code{observations = FALSE}, or if
 
   If \code{paths = TRUE} and \code{observations = FALSE}, a list or array of
   simulated population-level paths is returned. If \code{method =
-  "gillespie"} and \code{subject_paths = TRUE}, a list of two arrays is
-  returned, with one array for population-level paths, and another for the
-  subject-level mappings.
+  "gillespie"} and \code{subject_paths = TRUE}, an additional list is
+  returned, containing lists of subject-level mappings. Each sublist contains
+  a vector of subject states at t0, along with a mapped path.
 
   If \code{paths = FALSE} and \code{observations = TRUE}, a list or array of
   simulated datasets is returned.

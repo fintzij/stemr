@@ -28,11 +28,11 @@ census_path <- function(path, census_times, census_columns = NULL, census_matrix
         census_colnames <- path_colnames[census_columns]
 
         if(is.null(census_matrix)) {
-                census_matrix <- get_census_path(path, census_times, census_columns - 1)
+                census_matrix <- build_census_path(path, census_times, census_columns - 1)
                 colnames(census_matrix) <- c("time", census_colnames)
                 return(census_matrix)
 
         } else {
-                # update_census_path(path, census_times, census_columns, census_matrix)
+                retrieve_census_path(census_matrix, path, census_times, census_columns - 1)
         }
 }

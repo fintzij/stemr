@@ -38,7 +38,8 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
         # expand the emission lists if there are any strata specified
         # First, if no strata are specified
         if(all(sapply(sapply(emissions, "[[", "strata"), is.null))) {
-                meas_procs <- emissions
+                strata_specified <- FALSE
+                meas_procs <- vector(mode = "list", length = length(emissions))
 
                 for(k in seq_along(meas_procs)) {
                         meas_procs[[k]] <- vector(mode = "list", length = 7L)
@@ -57,7 +58,7 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                 }
 
         } else {# If strata are specified
-
+                strata_specified <- TRUE
                 meas_procs <- vector(mode = "list", length = length(emissions))
 
                 for(k in seq_along(meas_procs)) {
@@ -97,7 +98,7 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                 }
         }
 
-        if(length(meas_procs) != 1) meas_procs <- unlist(meas_procs, recursive = FALSE)
+        if(strata_specified) meas_procs <- unlist(meas_procs, recursive = FALSE)
 
         # if a dataset or list of datasets is supplied, extract the observation times, combine them and generate the indicator matrix
         if(!is.null(data)) {
@@ -202,7 +203,7 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                         meas_procs[[k]]$rmeasure <- paste0("Rcpp::rnbinom(1,", paste(meas_procs[[k]]$emission_params, collapse = ","), ")")
                         meas_procs[[k]]$dmeasure <- paste0("Rcpp::dnbinom(obs,", paste( meas_procs[[k]]$emission_params, collapse = ","), ",1)")
 
-                } else if(meas_procs[[k]]$distribution == "normal") {
+                } else if(meas_procs[[k]]$distribution == "gaussian") {
 
                         meas_procs[[k]]$rmeasure <- paste0("Rcpp::rnorm(1,", paste(meas_procs[[k]]$emission_params, collapse = ","), ")")
                         meas_procs[[k]]$dmeasure <- paste0("Rcpp::dnorm(obs,", paste(meas_procs[[k]]$emission_params, collapse = ","), ",1)")
@@ -220,6 +221,10 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
         # get the list of vectors of observation times for each measurement process
         obstime_inds <- lapply(meas_procs, FUN = function(proc) match(proc$obstimes, obstimes) - 1)
 
+        # census the time-varying covariates at observation times
+        tcovar_censmat <- build_census_path(dynamics$tcovar, obstimes, seq_along(ncol(dynamics$tcovar) - 1))
+        colnames(tcovar_censmat) <- colnames(dynamics$tcovar)
+
         # generate the measurement process list
         meas_process <- list(meas_procs      = meas_procs,
                              meas_pointers   = meas_pointers,
@@ -229,7 +234,8 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                              obscomp_codes   = obscomp_codes,
                              measproc_indmat = measproc_indmat,
                              meas_inds       = meas_inds,
-                             censusmat       = censusmat)
+                             censusmat       = censusmat,
+                             tcovar_censmat  = tcovar_censmat)
 
         return(meas_process)
 }

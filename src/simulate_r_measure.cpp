@@ -19,7 +19,7 @@ using namespace Rcpp;
 //' @return matrix with a simulated dataset from a stochastic epidemic model.
 //' @export
 // [[Rcpp::export]]
-Rcpp::NumericMatrix simulate_measproc(Rcpp::NumericMatrix& censusmat, Rcpp::LogicalMatrix& measproc_indmat, Rcpp::NumericVector& parameters, Rcpp::NumericVector& constants, Rcpp::NumericMatrix& tcovar, SEXP r_measure_ptr) {
+Rcpp::NumericMatrix simulate_r_measure(Rcpp::NumericMatrix& censusmat, Rcpp::LogicalMatrix& measproc_indmat, Rcpp::NumericVector& parameters, Rcpp::NumericVector& constants, Rcpp::NumericMatrix& tcovar, SEXP r_measure_ptr) {
 
         // Get object dimensions
         Rcpp::IntegerVector obsmat_dims = measproc_indmat.attr("dim");

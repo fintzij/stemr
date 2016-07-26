@@ -52,7 +52,7 @@ seasonality <- function(period = 52, intercept = NULL, trend = NULL, s_params = 
 
         # generate param names
         trend_names <- c("S_INTERCEPT", "S_TREND")[c(!is.null(intercept), !is.null(trend))]
-        s_param_names <- names(s_params) <- paste0(c(trend_names, paste0(rep(c("SIN", "COS"), each = length(period)), period)), ifelse(common_seasonality, "", "_SELF"))
+        s_param_names <- paste0(c(paste0(rep(c("SIN", "COS"), each = length(period)), period)), ifelse(common_seasonality, "", "_SELF"))
 
         # generate sine and cosine terms
         sin_terms <- paste0("sin(", 2*seq(1,nterms), "*M_PI*TIME/", period, ")")
@@ -63,7 +63,11 @@ seasonality <- function(period = 52, intercept = NULL, trend = NULL, s_params = 
                 trend_terms <- c("S_INTERCEPT", "S_TREND*TIME")[c(!is.null(intercept), !is.null(trend))]
         } else {
                 trend_terms <- c("S_INTERCEPT_SELF", "S_TREND_SELF*TIME")[c(!is.null(intercept), !is.null(trend))]
+                if(!is.null(trend_terms)) trend_names <- paste0(trend_names, "_SELF")
         }
+
+        names(s_params) <- c(trend_names, s_param_names)
+
         f <- paste(c(trend_terms, paste(s_param_names, c(sin_terms, cos_terms), sep = "*")), collapse = " + ")
 
         if(log) f <- paste0("exp(",f,")")

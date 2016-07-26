@@ -73,12 +73,10 @@ list with evaluated rate functions and objects for managing the
   functions.} \item{parameters}{named numeric vector of model parameters}
   \item{tcovar}{matrix of time-varying covariates, with column names}
   \item{constants}{named numeric vector of constants, with stratum sizes and
-  population size included} \item{state_initializer}{list of model
-  initializer lists} \item{initdist_params}{named numeric vector of
-  parameters governing the initial distribution of compartment counts}
-  \item{initdist_strata}{numeric vector indicating to which strata the
-  initial distribution parameters belong} \item{fixed_inits}{logical
-  indicating whether the initial distribution parameters are fixed
+  population size included}
+  \item{state_initializer}{list of model initializer lists}
+  \item{initdist_params}{named numeric vector of parameters governing the initial distribution of compartment counts}
+  \item{fixed_inits}{logical indicating whether the initial distribution parameters are fixed
   compartment counts (TRUE) or parameters of a dirichlet distribution
   (FALSE)}
   \item{flow_matrix}{matrix of flow between model compartments associated with each transition event}

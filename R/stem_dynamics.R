@@ -43,12 +43,10 @@
 #'   functions.} \item{parameters}{named numeric vector of model parameters}
 #'   \item{tcovar}{matrix of time-varying covariates, with column names}
 #'   \item{constants}{named numeric vector of constants, with stratum sizes and
-#'   population size included} \item{state_initializer}{list of model
-#'   initializer lists} \item{initdist_params}{named numeric vector of
-#'   parameters governing the initial distribution of compartment counts}
-#'   \item{initdist_strata}{numeric vector indicating to which strata the
-#'   initial distribution parameters belong} \item{fixed_inits}{logical
-#'   indicating whether the initial distribution parameters are fixed
+#'   population size included}
+#'   \item{state_initializer}{list of model initializer lists}
+#'   \item{initdist_params}{named numeric vector of parameters governing the initial distribution of compartment counts}
+#'   \item{fixed_inits}{logical indicating whether the initial distribution parameters are fixed
 #'   compartment counts (TRUE) or parameters of a dirichlet distribution
 #'   (FALSE)}
 #'   \item{flow_matrix}{matrix of flow between model compartments associated with each transition event}
@@ -109,7 +107,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 stop("'TIME' is a reserved word and should not be one of the names of constants.")
         }
 
-        if(!is.null(strata) && (any(sapply(state_initializer, "[[", 2) == TRUE) & any(sapply(state_initializer, "[[", 2) == TRUE))) {
+        if(!is.null(strata) && (any(sapply(state_initializer, "[[", 2) == TRUE) & any(sapply(state_initializer, "[[", 2) == FALSE))) {
                 stop("The initial states in each stratum must either all be fixed, or all be random.")
         }
 
@@ -461,7 +459,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 for(k in seq_along(state_initializer)) {
 
                         # get the relevant strata
-                        if(identical(state_initializer[[k]]$strata, "ALL")) {
+                        if(identical(state_initializer[[k]]$strata, "ALL") || all(state_initializer[[k]]$strata %in% strata)) {
                                 rel_strata <- strata
                         } else {
                                 rel_strata <- state_initializer[[k]]$strata
@@ -482,6 +480,8 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                                 initializer[[k]][[j]]$init_states <- state_initializer[[k]]$init_states
                                 initializer[[k]][[j]]$fixed       <- state_initializer[[k]]$fixed
                                 initializer[[k]][[j]]$strata      <- rel_strata[j]
+                                initializer[[k]][[j]]$codes       <- match(paste(names(initializer[[k]][[j]]$init_states), rel_strata[j], sep = "_"),
+                                                                           names(compartment_codes))
 
                                 if(state_initializer[[k]]$shared_params) {
                                         initializer[[k]][[j]]$param_inds <- param_inds
@@ -494,8 +494,6 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 }
 
                 initializer <- unlist(initializer, recursive = FALSE); initdist_params <- unlist(initdist_params)
-                initdist_strata <- initdist_params;
-                for(s in seq_along(initializer)) initdist_strata[initializer[[s]]$param_inds] <- s
 
                 # determine if initial states are fixed
                 fixed_inits <- all(sapply(initializer, "[[", 2) == TRUE)
@@ -585,7 +583,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
 
                 initializer  <- state_initializer; initdist_params <- state_initializer$init_states
                 initializer$param_inds <- seq_along(initdist_params)
-                initdist_strata <- rep(1, length(initdist_params)); names(initdist_strata) <- names(initdist_params)
+                initializer$codes      <- match(names(initializer$init_states), names(compartment_codes))
 
                 fixed_inits <- state_initializer$fixed
                 strata_sizes <- NULL
@@ -650,7 +648,6 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                          constants        = constants,
                          state_initializer= initializer,
                          initdist_params  = initdist_params,
-                         initdist_strata  = initdist_strata,
                          fixed_inits      = fixed_inits,
                          flow_matrix      = flow_matrix,
                          strata_sizes     = strata_sizes,

@@ -32,7 +32,8 @@
 #'   an array.
 #' @param messages should a message be printed when parsing the rates?
 #'
-#' @return If \code{paths = FALSE} and \code{observations = FALSE}, or if
+#' @return Returns a list with the simulated paths, subject-level paths, and/or
+#'   datasets. If \code{paths = FALSE} and \code{observations = FALSE}, or if
 #'   \code{paths = TRUE} and \code{observations = TRUE}, a list \code{nsim stem}
 #'   paths and datasets, each returned either as a list or array, is returned.
 #'   If \code{subject_paths = TRUE} and \code{method = "gillespie"}, a list of
@@ -40,14 +41,14 @@
 #'
 #'   If \code{paths = TRUE} and \code{observations = FALSE}, a list or array of
 #'   simulated population-level paths is returned. If \code{method =
-#'   "gillespie"} and \code{subject_paths = TRUE}, a list of two arrays is
-#'   returned, with one array for population-level paths, and another for the
-#'   subject-level mappings.
+#'   "gillespie"} and \code{subject_paths = TRUE}, an additional list is
+#'   returned, containing lists of subject-level mappings. Each sublist contains
+#'   a vector of subject states at t0, along with a mapped path.
 #'
 #'   If \code{paths = FALSE} and \code{observations = TRUE}, a list or array of
 #'   simulated datasets is returned.
 #' @export
-simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = FALSE, subject_paths = FALSE, method = "gillespie", t0 = NULL, tmax = NULL, timestep = NULL,  census_times = NULL, paths_as_array = FALSE, datasets_as_array = FALSE, messages = TRUE) {
+simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = FALSE, subject_paths = FALSE, method = "gillespie", t0 = NULL, tmax = NULL, timestep = NULL, census_times = NULL, paths_as_array = FALSE, datasets_as_array = FALSE, messages = TRUE) {
 
         # ensure that the method is correctly specified
         if(!method %in% c("gillespie", "LNA")) {
@@ -108,8 +109,16 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 # generate or copy the initial states
                 if(stem_object$dynamics$fixed_inits) {
 
+                        if(stem_object$dynamics$n_strata == 1) {
+                                param_inds     <- stem_object$dynamics$state_initializer$param_inds
+                                initdist_codes <- stem_object$dynamics$state_initializer$codes
+                        } else {
+                                param_inds     <- unlist(lapply(stem_object$dynamics$state_initializer, function(x) x$param_inds))
+                                initdist_codes <- unlist(lapply(stem_object$dynamics$state_initializer, function(x) x$codes))
+                        }
+
                         # if all initial states are fixed, just copy the initial compartment counts
-                        init_states <- matrix(rep(stem_object$dynamics$initdist_params, nsim), nrow = nsim, byrow = TRUE)
+                        init_states    <- matrix(rep(stem_object$dynamics$initdist_params[param_inds], nsim), nrow = nsim, byrow = TRUE)[,order(initdist_codes), drop = FALSE]
                         colnames(init_states) <- names(stem_object$dynamics$comp_codes)
 
                 } else {
@@ -126,7 +135,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                                 colnames(init_states) <- names(stem_object$dynamics$comp_codes)
 
                                 for(s in seq_len(stem_object$dynamics$n_strata)) {
-                                        init_states[,stem_object$dynamics$state_initializer[[s]]$param_inds] <- as.matrix(t(rmultinom(nsim, stem_object$dynamics$strata_sizes[s], stem_object$dynamics$state_initializer[[s]]$init_states)))
+                                        init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <- as.matrix(t(rmultinom(nsim, stem_object$dynamics$strata_sizes[s], stem_object$dynamics$state_initializer[[s]]$init_states)))
                                 }
                         }
                 }
@@ -220,7 +229,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
 
         if(observations) {
                 datasets         <- vector(mode = "list", length = nsim) # list for storing the datasets
-                already_censused <- !is.na(census_times) && identical(stem_object$measurement_process$obstimes, census_times)
+                already_censused <- !is.null(census_times) && identical(stem_object$measurement_process$obstimes, census_times)
                 measvar_names    <- colnames(stem_object$measurement_process$obsmat)
 
                 # grab the time-varying covariate values at observation times
@@ -233,14 +242,14 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
 
                         for(k in seq_len(nsim)) {
                                 if(paths_as_array) {
-                                        datasets[[k]] <- simulate_measproc(censusmat = census_paths[,,k],
+                                        datasets[[k]] <- simulate_r_measure(censusmat = census_paths[,,k],
                                                                            measproc_indmat = stem_object$measurement_process$measproc_indmat,
                                                                            parameters = stem_object$dynamics$parameters,
                                                                            constants = stem_object$dynamics$constants,
                                                                            tcovar = tcovar_obstimes,
                                                                            r_measure_ptr = stem_object$measurement_process$meas_pointers$r_measure_ptr)
                                 } else {
-                                        datasets[[k]] <- simulate_measproc(censusmat = census_paths[[k]],
+                                        datasets[[k]] <- simulate_r_measure(censusmat = census_paths[[k]],
                                                                            measproc_indmat = stem_object$measurement_process$measproc_indmat,
                                                                            parameters = stem_object$dynamics$parameters,
                                                                            constants = stem_object$dynamics$constants,
@@ -267,7 +276,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                                                                         col_inds  = incidence_codes,
                                                                         row_inds =  stem_object$measurement_process$obstime_inds)
 
-                                datasets[[k]] <- simulate_measproc(censusmat = censusmat,
+                                datasets[[k]] <- simulate_r_measure(censusmat = censusmat,
                                                                    measproc_indmat = stem_object$measurement_process$measproc_indmat,
                                                                    parameters = stem_object$dynamics$parameters,
                                                                    constants = stem_object$dynamics$constants,
@@ -283,5 +292,12 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 }
         }
 
-        return(paths)
+        stem_simulations <- list(paths = NULL, datasets = NULL, subject_paths = NULL)
+
+        if(paths & is.null(census_times))  stem_simulations$paths <- paths_full
+        if(paths & !is.null(census_times)) stem_simulations$paths <- census_paths
+        if(observations)  stem_simulations$datasets      <- datasets
+        if(subject_paths) stem_simulations$subject_paths <- subject_paths
+
+        return(stem_simulations)
 }
