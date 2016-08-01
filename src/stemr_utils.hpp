@@ -22,6 +22,12 @@ void CALL_R_MEASURE(Rcpp::NumericMatrix& obsmat, const Rcpp::LogicalVector& emit
                     const int record_ind, const Rcpp::NumericVector& state, const Rcpp::NumericVector& parameters,
                     const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar, SEXP r_meas_ptr);
 
+// compute and return the hazards
+Rcpp::NumericVector COMPUTE_HAZARD(double t, const Rcpp::NumericVector& state, const Rcpp::NumericVector& parameters, SEXP haz_ptr);
+
+// compute and return the Jacobian matrix
+Rcpp::NumericMatrix COMPUTE_JACOBIAN(double t, const Rcpp::NumericVector& state, const Rcpp::NumericVector& parameters, SEXP jacob_ptr);
+
 // update rates based on transition events or changes in time-varying covariates
 void rate_update_tcovar(Rcpp::LogicalVector& rate_inds, const arma::mat& M, const arma::rowvec I);
 void rate_update_event(Rcpp::LogicalVector& rate_inds, const Rcpp::LogicalMatrix& M, int event_code);

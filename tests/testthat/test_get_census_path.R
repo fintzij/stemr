@@ -15,7 +15,7 @@ test_that("Compartment counts at census times are correctly obtained", {
         strata <- NULL
         t0 <- 0; tmax <- 52
 
-        dynamics <- stem_dynamics(rates = rates, parameters = parameters,state_initializer = state_initializer, compartments=compartments, strata = strata, tcovar = tcovar, messages = FALSE)
+        dynamics <- stem_dynamics(rates = rates, parameters = parameters, state_initializer = state_initializer, tmax = tmax, compartments=compartments, strata = strata, tcovar = tcovar, messages = FALSE)
 
         stem_object <- stem(dynamics = dynamics)
 
