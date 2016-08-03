@@ -19,7 +19,7 @@ typedef void(*r_measure_ptr)(Rcpp::NumericMatrix& obsmat, const Rcpp::LogicalVec
              const int record_ind, const Rcpp::NumericVector& state, const Rcpp::NumericVector& parameters,
              const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar);
 
-typedef Rcpp::NumericVector(*hazard_ptr)(double t, const Rcpp::NumericVector& state, const Rcpp::NumericVector& parameters);
-typedef Rcpp::NumericMatrix(*jacobian_ptr)(double t, const Rcpp::NumericVector& state, const Rcpp::NumericVector& parameters);
+typedef arma::vec(*hazard_ptr)(double t, const arma::vec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar);
+typedef arma::mat(*jacobian_ptr)(double t, const arma::vec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar);
 
 #endif

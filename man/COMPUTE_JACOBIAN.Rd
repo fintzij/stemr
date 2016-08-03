@@ -4,14 +4,14 @@
 \alias{COMPUTE_JACOBIAN}
 \title{Compute the Jacobian by calling the jacobian function via external Xptr.}
 \usage{
-COMPUTE_JACOBIAN(t, state, parameters, jacob_ptr)
+COMPUTE_JACOBIAN(t, state, parameters, constants, tcovar, jacob_ptr)
 }
 \arguments{
 \item{t}{time}
 
-\item{state}{vector of compartment counts and time-varying covariate values}
+\item{state}{vector of compartment counts}
 
-\item{parameters}{vector of model parameters and constants}
+\item{parameters}{vector of model parameters, time-varying covariates, and constants}
 
 \item{jacobian_ptr}{external pointer to function used to compute the jacobian}
 }

@@ -12,7 +12,11 @@
 #'   collection of disease histories)? Only available for exact simulation via
 #'   the Gillespie direct method.
 #' @param method either "gillespie" if simulating via Gillespie's direct method,
-#'   or "LNA" if simulating paths via the Linear Noise Approximation.
+#'   or "lna" if simulating paths via the Linear Noise Approximation.
+#' @param lna_restart Either a logical indicating whether the non-restarting
+#'   version of the LNA (default) should be used, or whether the LNA should be
+#'   restarted at census times. Alternately, a vector of restart times could be
+#'   supplied.
 #' @param t0 the time at which the system is initialized. If not supplied, it is
 #'   taken to be the first observation time if that is available, or otherwise
 #'   0. If supplied, it must be no later than the first observation time.
@@ -23,7 +27,7 @@
 #'   method="gillespie". If not supplied, \code{timestep} will default to
 #'   \code{(tmax - t0)/50}.
 #' @param census_times vector of times at which compartment counts should be
-#'   recorded. Required for \code{method = "LNA"}. If supplied and \code{method
+#'   recorded. Required for \code{method = "lna"}. If supplied and \code{method
 #'   = "gillespie"}, the compartment counts at census times are returned rather
 #'   than the full paths.
 #' @param paths_as_array if TRUE, the simulated paths will be returned as an
@@ -48,15 +52,15 @@
 #'   If \code{paths = FALSE} and \code{observations = TRUE}, a list or array of
 #'   simulated datasets is returned.
 #' @export
-simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = FALSE, subject_paths = FALSE, method = "gillespie", t0 = NULL, tmax = NULL, timestep = NULL, census_times = NULL, paths_as_array = FALSE, datasets_as_array = FALSE, messages = TRUE) {
+simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = FALSE, subject_paths = FALSE, method = "gillespie", lna_restart = FALSE, t0 = NULL, tmax = NULL, timestep = NULL, census_times = NULL, paths_as_array = FALSE, datasets_as_array = FALSE, messages = TRUE) {
 
         # ensure that the method is correctly specified
-        if(!method %in% c("gillespie", "LNA")) {
-                stop("The simulation method must either be 'gillespie' or 'LNA'.")
+        if(!method %in% c("gillespie", "lna")) {
+                stop("The simulation method must either be 'gillespie' or 'lna'.")
         }
 
-        # if LNA, subject paths are not available
-        if(!subject_paths && (method == "LNA")) {
+        # if lna, subject paths are not available
+        if(!subject_paths && (method == "lna")) {
                 warning("Subject-paths are only available when simulating paths when method='gillespie'.")
         }
 
@@ -75,36 +79,38 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 observations <- TRUE
         }
 
-        # if any of t0, tmax, or a timestep was supplied, check if they differ from the parameters supplied in the stem_object$dynamics.
-        # if they differ, reconstruct the tcovar matrix and associated objects
-        rebuild_tcovar <- (!is.null(t0) && t0 != stem_object$dynamics$tcovar[1,1]) ||
-                (!is.null(tmax) && tmax != stem_object$dynamics$tcovar[nrow(stem_object$dynamics$tcovar), 1]) || !is.null(timestep)
-
-        if(rebuild_tcovar) {
-                # get t0 or tmax if it wasn't supplied
-                if(is.null(t0)) t0 <- stem_object$dynamics$tcovar[1,1]
-                if(is.null(tmax)) tmax <- stem_object$dynamics$tcovar[nrow(stem_object$dynamics$tcovar), 1]
-
-                # replace t0 and tmax in the time-varying covariate matrix
-                if(is.null(timestep) && stem_object$dynamics$timevarying) {
-                        timestep <- (tmax - t0)/50
-
-                } else if(is.null(timestep) && !stem_object$dynamics$timevarying){
-                        timestep <- tmax - t0
-                }
-
-                # rebuild the time-varying covariate matrix so that it contains the census intervals
-                stem_object$dynamics$tcovar <- build_tcovar_matrix(tcovar = stem_object$dynamics$.dynamics_args$tcovar, timestep = timestep, t0 = t0, tmax = tmax)
-                stem_object$dynamics$tcovar_codes <- seq_len(ncol(stem_object$dynamics$tcovar) - 1)
-                names(stem_object$dynamics$tcovar_codes) <- colnames(stem_object$dynamics$tcovar)[2:ncol(stem_object$dynamics$tcovar)]
-                stem_object$dynamics$n_tcovar <- ncol(stem_object$dynamics$tcovar) - 1
-                stem_object$dynamics$tcovar_changemat <- build_tcovar_changemat(stem_object$dynamics$tcovar)
-                stem_object$dynamics$tcovar_adjmat <- build_tcovar_adjmat(stem_object$dynamics$rates, stem_object$dynamics$tcovar_codes)
-        }
 
         # build the time varying covariate matrix (includes, at a minimum, the endpoints of the simulation interval)
         # if timestep is null, there are no time-varying covariates
         if(method == "gillespie") {
+
+                # if any of t0, tmax, or a timestep was supplied, check if they differ from the parameters supplied in the stem_object$dynamics.
+                # if they differ, reconstruct the tcovar matrix and associated objects
+                rebuild_tcovar <- (!is.null(t0) && t0 != stem_object$dynamics$tcovar[1,1]) ||
+                        (!is.null(tmax) && tmax != stem_object$dynamics$tcovar[nrow(stem_object$dynamics$tcovar), 1]) || !is.null(timestep)
+
+                if(rebuild_tcovar) {
+                        # get t0 or tmax if it wasn't supplied
+                        if(is.null(t0)) t0 <- stem_object$dynamics$tcovar[1,1]
+                        if(is.null(tmax)) tmax <- stem_object$dynamics$tcovar[nrow(stem_object$dynamics$tcovar), 1]
+
+                        # replace t0 and tmax in the time-varying covariate matrix
+                        if(is.null(timestep) && stem_object$dynamics$timevarying) {
+                                timestep <- (tmax - t0)/50
+
+                        } else if(is.null(timestep) && !stem_object$dynamics$timevarying){
+                                timestep <- tmax - t0
+                        }
+
+                        # rebuild the time-varying covariate matrix so that it contains the census intervals
+                        stem_object$dynamics$tcovar              <- build_tcovar_matrix(tcovar = stem_object$dynamics$.dynamics_args$tcovar,
+                                                                                        timestep = timestep, t0 = t0, tmax = tmax)
+                        stem_object$dynamics$tcovar_codes        <- seq_len(ncol(stem_object$dynamics$tcovar) - 1)
+                        names(stem_object$dynamics$tcovar_codes) <- colnames(stem_object$dynamics$tcovar)[2:ncol(stem_object$dynamics$tcovar)]
+                        stem_object$dynamics$n_tcovar            <- ncol(stem_object$dynamics$tcovar) - 1
+                        stem_object$dynamics$tcovar_changemat    <- build_tcovar_changemat(stem_object$dynamics$tcovar)
+                        stem_object$dynamics$tcovar_adjmat       <- build_tcovar_adjmat(stem_object$dynamics$rates, stem_object$dynamics$tcovar_codes)
+                }
 
                 # generate or copy the initial states
                 if(stem_object$dynamics$fixed_inits) {
@@ -192,39 +198,114 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                         colnames(paths_full[[k]]) <- path_colnames
                 }
 
-        } else if (method == "LNA") {
+                if(!is.null(census_times)) {
+                        census_paths    <- vector(mode = "list", length = nsim)
+                        census_colnames <- c("time", c(names(stem_object$dynamics$comp_codes), names(stem_object$dynamics$incidence_codes)))
 
-        }
+                        # add 2 to the codes b/c 'time' and 'event' are in the full path
+                        census_codes      <- c(stem_object$dynamics$comp_codes, stem_object$dynamics$incidence_codes) + 2
+                        get_incidence <- !is.null(stem_object$dynamics$incidence_codes)
 
-        if(!is.null(census_times)) {
-                census_paths    <- vector(mode = "list", length = nsim)
-                census_colnames <- c("time", c(names(stem_object$dynamics$comp_codes), names(stem_object$dynamics$incidence_codes)))
+                        if(get_incidence) {
+                                incidence_codes       <- stem_object$dynamics$incidence_codes + 1
+                                census_incidence_rows <- rep(list(seq_along(census_times) - 1), length(stem_object$dynamics$incidence_codes))
+                        }
 
-                # add 2 to the codes b/c 'time' and 'event' are in the full path
-                census_codes      <- c(stem_object$dynamics$comp_codes, stem_object$dynamics$incidence_codes) + 2
-                get_incidence <- !is.null(stem_object$dynamics$incidence_codes)
 
-                if(get_incidence) {
-                        incidence_codes       <- stem_object$dynamics$incidence_codes + 1
-                        census_incidence_rows <- rep(list(seq_along(census_times) - 1), length(stem_object$dynamics$incidence_codes))
+                        for(k in seq_len(nsim)) {
+                                # get the census path
+                                census_paths[[k]] <- build_census_path(path = paths_full[[k]], census_times = census_times, census_columns = census_codes)
+
+                                # compute incidence if required. n.b. add 1 to the incidence codes b/c 'time' is in the census path
+                                if(get_incidence) compute_incidence(censusmat = census_paths[[k]], col_inds  = incidence_codes, row_inds  = census_incidence_rows)
+
+                                # assign column names
+                                colnames(census_paths[[k]]) <- census_colnames
+                        }
+
+                        if(paths_as_array) {
+                                census_paths <- array(unlist(census_paths), dim = c(nrow(census_paths[[1]]), ncol(census_paths[[1]]), length(census_paths)))
+                                colnames(census_paths) <- census_colnames
+                        }
                 }
 
+        } else if (method == "lna") {
+
+                # build the time-varying covariate matrix for the LNA
+                if(is.null(stem_object$dynamics$.dynamics_args$tcovar)) {
+
+                        if(is.logical(lna_restart)) {
+                                stem_object$dynamics$lna_tcovar           <- matrix(census_times, nrow = length(census_times), ncol = 2)
+                                colnames(stem_object$dynamics$lna_tcovar) <- c("_time", "TIME")
+                        } else {
+                                lna_tcovar_timeseq <- sort(unique(c(census_times, lna_restart)))
+                                stem_object$dynamics$lna_tcovar           <- matrix(lna_tcovar_timeseq, nrow = length(lna_tcovar_timeseq), ncol = 2)
+                                colnames(stem_object$dynamics$lna_tcovar) <- c("_time", "TIME")
+                        }
+
+                } else {
+
+                        if(is.logical(lna_restart)) {
+                                lna_tcovar_timeseq <- sort(unique(c(census_times, stem_object$dynamics$.dynamics_args$tcovar[,1])))
+                                tcovar_inds <- findInterval(lna_tcovar_timeseq, stem_object$dynamics$.dynamics_args$tcovar[,1])
+
+                                stem_object$dynamics$lna_tcovar <- matrix(c(lna_tcovar_timeseq,
+                                                                            stem_object$dynamics$.dynamics_args$tcovar[tcovar_inds,-1]))
+                                colnames(stem_object$dynamics$lna_tcovar) <- c("_time", names(stem_object$dynamics$tcovar_codes))
+                        }
+                }
+
+                if(stem_object$dynamics$fixed_inits) {
+
+                        if(stem_object$dynamics$n_strata == 1) {
+                                param_inds     <- stem_object$dynamics$state_initializer$param_inds
+                                initdist_codes <- stem_object$dynamics$state_initializer$codes
+                        } else {
+                                param_inds     <- unlist(lapply(stem_object$dynamics$state_initializer, function(x) x$param_inds))
+                                initdist_codes <- unlist(lapply(stem_object$dynamics$state_initializer, function(x) x$codes))
+                        }
+
+                        # if all initial states are fixed, just copy the initial compartment counts
+                        init_states    <- matrix(rep(stem_object$dynamics$initdist_params[param_inds], nsim), nrow = nsim, byrow = TRUE)[,order(initdist_codes), drop = FALSE]
+                        colnames(init_states) <- names(stem_object$dynamics$comp_codes)
+
+                } else {
+                        if(stem_object$dynamics$n_strata == 1) {
+
+                                # simulate the initial compartment counts
+                                init_states <- t(as.matrix(rmultinom(nsim, stem_object$dynamics$popsize, stem_object$dynamics$initdist_params)))
+                                colnames(init_states) <- names(stem_object$dynamics$comp_codes)
+
+                        } else if(stem_object$dynamics$n_strata > 1) {
+
+                                # generate the matrix of initial compartment counts
+                                init_states <- matrix(0, nrow = nsim, ncol = stem_object$dynamics$n_compartments)
+                                colnames(init_states) <- names(stem_object$dynamics$comp_codes)
+
+                                for(s in seq_len(stem_object$dynamics$n_strata)) {
+                                        init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <- as.matrix(t(rmultinom(nsim, stem_object$dynamics$strata_sizes[s], stem_object$dynamics$state_initializer[[s]]$init_states)))
+                                }
+                        }
+                }
+
+                # if there are artificial incidence compartments, copy the
+                # incidence counts and add them to the initial state matrix
+                if(!is.null(stem_object$dynamics$incidence_codes)) {
+                        init_incid <- init_states[, stem_object$dynamics$incidence_sources + 1, drop = FALSE]
+                        colnames(init_incid) <- names(stem_object$dynamics$incidence_codes)
+                        init_states <- cbind(init_states, init_incid)
+                }
+
+                # initialize the list of paths
+                paths_full <- vector(mode = "list", length = nsim)
 
                 for(k in seq_len(nsim)) {
-                        # get the census path
-                        census_paths[[k]] <- build_census_path(path = paths_full[[k]], census_times = census_times, census_columns = census_codes)
-
-                        # compute incidence if required. n.b. add 1 to the incidence codes b/c 'time' is in the census path
-                        if(get_incidence) compute_incidence(censusmat = census_paths[[k]], col_inds  = incidence_codes, row_inds  = census_incidence_rows)
-
-                        # assign column names
-                        colnames(census_paths[[k]]) <- census_colnames
+                        paths_full[[k]] <- simulate_lna(stem_object  = stem_object,
+                                                        census_times = census_times,
+                                                        lna_restart  = lna_restart,
+                                                        init_states  = init_states[k,])
                 }
 
-                if(paths_as_array) {
-                        census_paths <- array(unlist(census_paths), dim = c(nrow(census_paths[[1]]), ncol(census_paths[[1]]), length(census_paths)))
-                        colnames(census_paths) <- census_colnames
-                }
         }
 
         if(observations) {

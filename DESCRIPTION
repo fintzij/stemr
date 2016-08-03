@@ -19,6 +19,7 @@ LazyData: TRUE
 Imports:
     ECctmc,
     deSolve,
+    MASS,
     Ryacas,
     Rcpp (>= 0.12.4)
 LinkingTo: Rcpp,

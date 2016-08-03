@@ -637,7 +637,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 lna_rates   <- get_lna_rates(rate_fcns, param_codes, tcovar_codes, const_codes, c(compartment_codes, incidence_codes))
                 lna_hazards <- lna_rates$hazards
                 rate_derivs <- lna_rates$derivatives
-                lna_ptrs    <- parse_lna(rates = rate_fcns, rate_derivs = rate_derivs, messages = messages)
+                lna_ptrs    <- parse_lna(rates = rate_fcns, hazard_fcns = lna_hazards, rate_derivs = rate_derivs, messages = messages)
         } else {
                 lna_hazards <- rate_derivs <- lna_ptrs <- NULL
         }

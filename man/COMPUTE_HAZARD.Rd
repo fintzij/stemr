@@ -4,14 +4,18 @@
 \alias{COMPUTE_HAZARD}
 \title{Compute the hazards by calling the hazard functions via external Xptr.}
 \usage{
-COMPUTE_HAZARD(t, state, parameters, haz_ptr)
+COMPUTE_HAZARD(t, state, parameters, constants, tcovar, haz_ptr)
 }
 \arguments{
 \item{t}{time}
 
-\item{state}{vector of compartment counts and time-varying covariate values}
+\item{state}{vector of compartment counts}
 
-\item{parameters}{vector of model parameters and constants}
+\item{parameters}{vector of model parameters}
+
+\item{constants}{vector of constants}
+
+\item{vector}{of time-varying covariate values}
 
 \item{hazard_ptr}{external pointer to function used to compute the hazards}
 }

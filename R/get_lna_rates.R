@@ -11,13 +11,12 @@
 #' @export
 get_lna_rates <- function(rates, parameters, tcovar, constants, compartments) {
 
-        params_extended <- c(parameters, constants)
-        state_extended  <- c(compartments, tcovar)
-
         # Underscores will need to be removed and re-inserted at the end.
         # Thus, we create a lookup table for the strings with and without underscores
-        lookup_table      <- data.frame(varname     = c(paste("parameters[",0:(length(params_extended)-1), "]", sep = ""),
-                                                        paste("state[",0:(length(state_extended)-1), "]", sep = "")),
+        lookup_table      <- data.frame(varname     = c(paste("parameters[",0:(length(parameters)-1), "]", sep = ""),
+                                                        paste("constants[", 0:(length(constants)-1), "]", sep = ""),
+                                                        paste("state[",0:(length(compartments)-1), "]", sep = ""),
+                                                        paste("tcovar[", 1:(length(tcovar)), "]", sep = "")),
                                         search_name = c(paste("parameters\\[",0:(length(parameters)-1), "\\]", sep = ""),
                                                         paste("constants\\[",0:(length(constants)-1), "\\]", sep = ""),
                                                         paste("state\\[",0:(length(compartments)-1), "\\]", sep = ""),

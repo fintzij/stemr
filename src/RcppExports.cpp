@@ -59,30 +59,34 @@ BEGIN_RCPP
 END_RCPP
 }
 // COMPUTE_HAZARD
-Rcpp::NumericVector COMPUTE_HAZARD(double t, const Rcpp::NumericVector& state, const Rcpp::NumericVector& parameters, SEXP haz_ptr);
-RcppExport SEXP stemr_COMPUTE_HAZARD(SEXP tSEXP, SEXP stateSEXP, SEXP parametersSEXP, SEXP haz_ptrSEXP) {
+arma::vec COMPUTE_HAZARD(double t, const arma::vec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar, SEXP haz_ptr);
+RcppExport SEXP stemr_COMPUTE_HAZARD(SEXP tSEXP, SEXP stateSEXP, SEXP parametersSEXP, SEXP constantsSEXP, SEXP tcovarSEXP, SEXP haz_ptrSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
     Rcpp::traits::input_parameter< double >::type t(tSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type state(stateSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type state(stateSEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type parameters(parametersSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type constants(constantsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type tcovar(tcovarSEXP);
     Rcpp::traits::input_parameter< SEXP >::type haz_ptr(haz_ptrSEXP);
-    __result = Rcpp::wrap(COMPUTE_HAZARD(t, state, parameters, haz_ptr));
+    __result = Rcpp::wrap(COMPUTE_HAZARD(t, state, parameters, constants, tcovar, haz_ptr));
     return __result;
 END_RCPP
 }
 // COMPUTE_JACOBIAN
-Rcpp::NumericMatrix COMPUTE_JACOBIAN(double t, const Rcpp::NumericVector& state, const Rcpp::NumericVector& parameters, SEXP jacob_ptr);
-RcppExport SEXP stemr_COMPUTE_JACOBIAN(SEXP tSEXP, SEXP stateSEXP, SEXP parametersSEXP, SEXP jacob_ptrSEXP) {
+arma::mat COMPUTE_JACOBIAN(double t, const arma::vec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar, SEXP jacob_ptr);
+RcppExport SEXP stemr_COMPUTE_JACOBIAN(SEXP tSEXP, SEXP stateSEXP, SEXP parametersSEXP, SEXP constantsSEXP, SEXP tcovarSEXP, SEXP jacob_ptrSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
     Rcpp::traits::input_parameter< double >::type t(tSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type state(stateSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type state(stateSEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type parameters(parametersSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type constants(constantsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type tcovar(tcovarSEXP);
     Rcpp::traits::input_parameter< SEXP >::type jacob_ptr(jacob_ptrSEXP);
-    __result = Rcpp::wrap(COMPUTE_JACOBIAN(t, state, parameters, jacob_ptr));
+    __result = Rcpp::wrap(COMPUTE_JACOBIAN(t, state, parameters, constants, tcovar, jacob_ptr));
     return __result;
 END_RCPP
 }
@@ -139,6 +143,19 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type rightmost_closed(rightmost_closedSEXP);
     Rcpp::traits::input_parameter< bool >::type all_inside(all_insideSEXP);
     __result = Rcpp::wrap(find_interval(x, breaks, rightmost_closed, all_inside));
+    return __result;
+END_RCPP
+}
+// lna_odes
+Rcpp::List lna_odes(double t, arma::vec& state, const Rcpp::List& stemr_lnamod);
+RcppExport SEXP stemr_lna_odes(SEXP tSEXP, SEXP stateSEXP, SEXP stemr_lnamodSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< double >::type t(tSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type state(stateSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type stemr_lnamod(stemr_lnamodSEXP);
+    __result = Rcpp::wrap(lna_odes(t, state, stemr_lnamod));
     return __result;
 END_RCPP
 }

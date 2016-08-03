@@ -54,25 +54,27 @@ CALL_R_MEASURE <- function(obsmat, emit_inds, record_ind, state, parameters, con
 #' Compute the hazards by calling the hazard functions via external Xptr.
 #'
 #' @param t time
-#' @param state vector of compartment counts and time-varying covariate values
-#' @param parameters vector of model parameters and constants
+#' @param state vector of compartment counts
+#' @param parameters vector of model parameters
+#' @param constants vector of constants
+#' @param vector of time-varying covariate values
 #' @param hazard_ptr external pointer to function used to compute the hazards
 #'
 #' @export
-COMPUTE_HAZARD <- function(t, state, parameters, haz_ptr) {
-    .Call('stemr_COMPUTE_HAZARD', PACKAGE = 'stemr', t, state, parameters, haz_ptr)
+COMPUTE_HAZARD <- function(t, state, parameters, constants, tcovar, haz_ptr) {
+    .Call('stemr_COMPUTE_HAZARD', PACKAGE = 'stemr', t, state, parameters, constants, tcovar, haz_ptr)
 }
 
 #' Compute the Jacobian by calling the jacobian function via external Xptr.
 #'
 #' @param t time
-#' @param state vector of compartment counts and time-varying covariate values
-#' @param parameters vector of model parameters and constants
+#' @param state vector of compartment counts
+#' @param parameters vector of model parameters, time-varying covariates, and constants
 #' @param jacobian_ptr external pointer to function used to compute the jacobian
 #'
 #' @export
-COMPUTE_JACOBIAN <- function(t, state, parameters, jacob_ptr) {
-    .Call('stemr_COMPUTE_JACOBIAN', PACKAGE = 'stemr', t, state, parameters, jacob_ptr)
+COMPUTE_JACOBIAN <- function(t, state, parameters, constants, tcovar, jacob_ptr) {
+    .Call('stemr_COMPUTE_JACOBIAN', PACKAGE = 'stemr', t, state, parameters, constants, tcovar, jacob_ptr)
 }
 
 #' Construct a matrix containing the compartment counts at a sequence of census times.
@@ -137,6 +139,23 @@ evaluate_d_measure <- function(emitmat, obsmat, statemat, measproc_indmat, param
 #' @export
 find_interval <- function(x, breaks, rightmost_closed, all_inside) {
     .Call('stemr_find_interval', PACKAGE = 'stemr', x, breaks, rightmost_closed, all_inside)
+}
+
+#' Construct a matrix containing the compartment counts at a sequence of census
+#' times.
+#'
+#' @param t time
+#' @param state vector containing the current values of the deterministic,
+#'   stochastic, and variance parts of the LNA
+#' @param stemr_lnamod list containing the stemr LNA model objects, including
+#'   the external pointers to the hazard and jacobian functions (SEXPs), the
+#'   vectors of model parameters, constants, and time-varying covariates, and
+#'   the stoichiometry matrix (arma::mat).
+#'
+#' @return matrix containing the compartment counts at census times.
+#' @export
+lna_odes <- function(t, state, stemr_lnamod) {
+    .Call('stemr_lna_odes', PACKAGE = 'stemr', t, state, stemr_lnamod)
 }
 
 #' Identify which rates to update when a state transition event occurs.
