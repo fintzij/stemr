@@ -60,7 +60,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
         }
 
         # if lna, subject paths are not available
-        if(!subject_paths && (method == "lna")) {
+        if(subject_paths && (method == "lna")) {
                 warning("Subject-paths are only available when simulating paths when method='gillespie'.")
         }
 
@@ -235,23 +235,42 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 if(is.null(stem_object$dynamics$.dynamics_args$tcovar)) {
 
                         if(is.logical(lna_restart)) {
+                        # option 1 - restart times are not possibly different from census times
                                 stem_object$dynamics$lna_tcovar           <- matrix(census_times, nrow = length(census_times), ncol = 2)
                                 colnames(stem_object$dynamics$lna_tcovar) <- c("_time", "TIME")
+
                         } else {
+                        # option 2 - restart times are possibly different from census times
                                 lna_tcovar_timeseq <- sort(unique(c(census_times, lna_restart)))
                                 stem_object$dynamics$lna_tcovar           <- matrix(lna_tcovar_timeseq, nrow = length(lna_tcovar_timeseq), ncol = 2)
                                 colnames(stem_object$dynamics$lna_tcovar) <- c("_time", "TIME")
+
+                                # make sure that the census times include the restart times
+                                census_times <- lna_tcovar_timeseq
                         }
 
                 } else {
 
                         if(is.logical(lna_restart)) {
-                                lna_tcovar_timeseq <- sort(unique(c(census_times, stem_object$dynamics$.dynamics_args$tcovar[,1])))
-                                tcovar_inds <- findInterval(lna_tcovar_timeseq, stem_object$dynamics$.dynamics_args$tcovar[,1])
-
+                        # option 1 - restart times are not possibly different from census times
+                                lna_tcovar_timeseq              <- sort(unique(c(census_times, stem_object$dynamics$.dynamics_args$tcovar[,1])))
+                                tcovar_inds                     <- findInterval(lna_tcovar_timeseq, stem_object$dynamics$.dynamics_args$tcovar[,1])
                                 stem_object$dynamics$lna_tcovar <- matrix(c(lna_tcovar_timeseq,
                                                                             stem_object$dynamics$.dynamics_args$tcovar[tcovar_inds,-1]))
                                 colnames(stem_object$dynamics$lna_tcovar) <- c("_time", names(stem_object$dynamics$tcovar_codes))
+
+                        } else {
+                        # option 2 - restart times are possibly different from census times
+                                lna_tcovar_timeseq              <- sort(unique(c(census_times,
+                                                                                 restart_times,
+                                                                                 stem_object$dynamics$.dynamics_args$tcovar[,1])))
+                                tcovar_inds                     <- findInterval(lna_tcovar_timeseq, stem_object$dynamics$.dynamics_args$tcovar[,1])
+                                stem_object$dynamics$lna_tcovar <- matrix(c(lna_tcovar_timeseq,
+                                                                            stem_object$dynamics$.dynamics_args$tcovar[tcovar_inds,-1]))
+                                colnames(stem_object$dynamics$lna_tcovar) <- c("_time", names(stem_object$dynamics$tcovar_codes))
+
+                                # make sure that the census times include the restart times
+                                census_times <- lna_tcovar_timeseq
                         }
                 }
 

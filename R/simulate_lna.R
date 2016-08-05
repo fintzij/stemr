@@ -13,6 +13,18 @@ simulate_lna <- function(stem_object, census_times, lna_restart, init_states) {
         lna_path[1,]    <- c(census_times[1], init_states)        # assign initial state values
         lna_path[,1]    <- census_times                           # insert the census times
 
+        # pull the incidence codes and compartment codes
+        comp_codes <- stem_object$dynamics$comp_codes + 1
+
+        if(is.null(stem_object$dynamics$incidence_codes)) {
+                incidence_codes <- NULL
+
+        } else {
+                incidence_codes   <- stem_object$dynamics$incidence_codes + 1
+                incidence_sources <- stem_object$dynamics$incidence_sources + 1
+        }
+
+        # if the restarting version is to be used, grab the restart times
         if(lna_restart) {
                 if(is.logical(lna_restart)) {
                         restart_times <- census_times
@@ -45,11 +57,17 @@ simulate_lna <- function(stem_object, census_times, lna_restart, init_states) {
                 t_L <- census_times[k-1]
                 t_R <- census_times[k]
 
+                # retrieve the time-varying covariate values
+                stemr_lnamod$tcovar <- stem_object$dynamics$lna_tcovar[k-1, -1, drop = FALSE]
+
                 # solve the lna
                 lna_soln <- solve_lna(stemr_lnamod, det_proc, innov_proc, t_L, t_R, n_comps)
 
+                # if there are incidence compartments, the noise needs to be simulated just based on the non-incidence variables
                 # simulate the next value - redraw if any components are negative
                 lna_step <- MASS::mvrnorm(1, lna_soln$det_proc + lna_soln$innov_proc, lna_soln$resid_proc)
+
+                # while(any(lna_step < 0) || (!is.null(incidence_codes) && any(lna_step[incidence_codes] < lna_path[k-1,incidence_codes + 1]))) {
                 while(any(lna_step < 0)) {
                         lna_step <- MASS::mvrnorm(1, lna_soln$det_proc + lna_soln$innov_proc, lna_soln$resid_proc)
                 }
@@ -81,7 +99,6 @@ simulate_lna <- function(stem_object, census_times, lna_restart, init_states) {
 
         # if some of the compartments track incidence, compute the incidence
         if(!is.null(stem_object$dynamics$incidence_codes)) {
-                incidence_codes       <- stem_object$dynamics$incidence_codes + 1
                 census_incidence_rows <- rep(list(seq_along(census_times) - 1), length(stem_object$dynamics$incidence_codes))
                 compute_incidence(censusmat = lna_path, col_inds  = incidence_codes, row_inds  = census_incidence_rows)
                 for(i in incidence_codes) lna_path[,i + 1] <- pmax.int(lna_path[,i + 1], 0)
