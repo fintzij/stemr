@@ -316,13 +316,19 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 }
 
                 # initialize the list of paths
-                paths_full <- vector(mode = "list", length = nsim)
+                census_paths <- vector(mode = "list", length = nsim)
 
                 for(k in seq_len(nsim)) {
-                        paths_full[[k]] <- simulate_lna(stem_object  = stem_object,
+                        census_paths[[k]] <- simulate_lna(stem_object  = stem_object,
                                                         census_times = census_times,
                                                         lna_restart  = lna_restart,
                                                         init_states  = init_states[k,])
+                }
+
+                if(paths_as_array) {
+                        census_colnames <- c("time", c(names(stem_object$dynamics$comp_codes), names(stem_object$dynamics$incidence_codes)))
+                        census_paths <- array(unlist(census_paths), dim = c(nrow(census_paths[[1]]), ncol(census_paths[[1]]), length(census_paths)))
+                        colnames(census_paths) <- census_colnames
                 }
 
         }

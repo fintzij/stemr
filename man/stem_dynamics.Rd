@@ -86,7 +86,6 @@ list with evaluated rate functions and objects for managing the
   compartment counts (TRUE) or parameters of a dirichlet distribution
   (FALSE)}
   \item{flow_matrix}{matrix of flow between model compartments associated with each transition event}
-  \item{stemr_ode}{R function that gives an ODE solution}
   \item{lna_hazards}{character vector of rates reformatted for use within the LNA functions}
   \item{rate_derivs}{character vector of partial derivatives of the rate functions
   with respect to model compartments. The partial derivatives are given in compartment-rate order.

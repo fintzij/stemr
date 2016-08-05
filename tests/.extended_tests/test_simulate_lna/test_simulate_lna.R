@@ -1,13 +1,14 @@
-# Extended test for Gillespie forward simulation functions. Tested against the 'GillespieSSA' package.
+# Extended test for LNA simulation functions. Tested against the 'issb' package and the Gillespie simulation functions.
 
-# Simulation test to check that simulate_stem produces the same results as the
-# GillespieSSA package. Three models are simulated: simple SIR (simulation 1),
-# SIRS with seasonality (simulation 2), SIRS with seasonality and two strata.
-# Each of the simulations will produce a plot comparing the trajectories
-# produced by simulate epimodel with the trajectories produced by GillespieSSA.
+# Simulation test to check that simulate_lna produces trajectories that
+# approximate the MJP trajectories. Three models are simulated: simple SIR
+# (simulation 1), SIRS with seasonality (simulation 2), SIRS with seasonality
+# and two strata. Each of the simulations will produce a plot comparing the
+# trajectories produced by simulate epimodel with the trajectories produced by
+# GillespieSSA.
 
 library(stemr)
-library(GillespieSSA)
+library(issb)
 library(doParallel)
 library(doMC)
 library(itertools)
@@ -15,13 +16,11 @@ library(foreach)
 library(iterators)
 library(ggplot2)
 
-args <- commandArgs(TRUE)
-print(args)
-sim_num <- as.numeric(args[1])
 
-# Set up simulation objects ----------------------------------------------------------------
+# Set up simulation objectx -----------------------------------------------
 
-niter <- 100; census_times <- seq(0,52,by=0.1)
+niter <- 1000
+census_times <- seq(0,52,by=0.1)
 
 if(sim_num == 1){
 
@@ -29,24 +28,19 @@ if(sim_num == 1){
         compartments <- c("S","I","R")
         rates <- list(rate("beta * I", "S", "I"),
                       rate("mu", "I", "R"))
-        state_initializer <- stem_initializer(c(S = 150, I = 10, R = 5), fixed = TRUE)
-        parameters <- c(beta = 0.0025, mu = 1/7, rho = 0.5)
+        state_initializer <- stem_initializer(c(S = 1500, I = 10, R = 50), fixed = TRUE)
+        parameters <- c(beta = 0.00025, mu = 1/7, rho = 0.5)
         tcovar <- NULL
         constants <- NULL
         strata <- NULL
         t0 <- 0; tmax <- 52
 
-        dynamics <- stem_dynamics(rates = rates, parameters = parameters,state_initializer = state_initializer, compartments=compartments, strata = strata, tcovar = tcovar, messages = FALSE)
+        dynamics <- stem_dynamics(rates = rates, parameters = parameters,state_initializer = state_initializer, compartments=compartments, strata = strata, tcovar = tcovar, tmax = tmax, messages = TRUE)
 
         stem_object <- stem(dynamics = dynamics)
 
-        # Set up GillespieSSA objects
-        gillespie_initstate <- c(S = 150, I = 10, R = 5)
-        a = c("beta*S*I", "mu*I")
-        nu <- matrix(c(-1,+1,0, 0, -1, +1),nrow=3)
-
         # simulate paths
-        stemr_trajecs <- simulate_stem(stem_object = stem_object,
+        sim1_gillespie_trajecs <- simulate_stem(stem_object = stem_object,
                                        nsim = niter,
                                        paths = TRUE,
                                        observations = FALSE,
@@ -56,26 +50,30 @@ if(sim_num == 1){
                                        tmax = tmax,
                                        census_times = seq(0, 52, by = 0.1),
                                        paths_as_array = FALSE,
-                                       messages = FALSE)$paths
+                                       messages = TRUE)$paths
 
-        nclust = 15
-        cl <- makeForkCluster(nclust)
-        # cl <- makePSOCKcluster(2)
-        registerDoParallel(cl)
+        sim1_lna_norestart <- simulate_stem(stem_object = stem_object,
+                                     nsim = 1,
+                                     paths = TRUE,
+                                     observations = FALSE,
+                                     subject_paths = FALSE,
+                                     method = "lna",
+                                     lna_restart = FALSE,
+                                     t0 = t0,
+                                     tmax = tmax,
+                                     census_times = seq(0, 52, by = 0.1),
+                                     paths_as_array = FALSE,
+                                     messages = TRUE)$paths[[1]]
 
-        gSSA_trajecs <- foreach(j = 1:niter, .packages = c("stemr", "GillespieSSA")) %dopar% {
+        sim1_ode <- stem_ode(stem_object = stem_object,
+                             census_times = census_times,
+                             init_states = c(S = 1500, I = 10, R = 50))
 
-                gSSA_sim <- ssa(gillespie_initstate, a, nu, parameters, tf = tmax)$data
-
-                gSSA_traj <- build_census_path(gSSA_sim, census_times, 1:3)
-
-                return(gSSA_traj)
-        }
 
 } else if(sim_num == 2) {
 
         s_params <- c(0.75, 0.575e-5)
-        initial_state_vec <- c(S = 150, I = 10, R = 5)
+        initial_state_vec <- c(S = 1500, I = 10, R = 50)
         compartments <- c("S","I","R")
         rates <- list(rate("beta * I", "S", "I", seasonality = seasonality(period = 52, intercept = 5e-5, trend = 1e-4, s_params = s_params)),
                       rate("mu", "I", "R"),
@@ -255,77 +253,3 @@ if(sim_num == 1){
                 return(gSSA_traj)
         }
 }
-
-
-#  Generate plots of the results ------------------------------------------
-
-if(sim_num != 3) {
-        # convert lists of censused paths to arrays
-        n_censustimes <- length(census_times)
-        stemr_trajecs <- array(unlist(stemr_trajecs), dim = c(n_censustimes, 4, niter))
-        gSSA_trajecs  <- array(unlist(gSSA_trajecs), dim = c(n_censustimes, 4, niter))
-
-        colnames(stemr_trajecs) <- colnames(gSSA_trajecs) <- c("time", "S", "I", "R")
-
-        results <- data.frame(method = rep(c("stemr", "GillespieSSA"), each = n_censustimes*3),
-                              compartment = rep(c("S","I","R"), each = n_censustimes),
-                              time = census_times,
-                              estimate = 0,
-                              lower = 0,
-                              upper = 0)
-
-        for(s in c("S", "I", "R")) {
-                results$estimate[results$compartment == s & results$method == "stemr"] <- stemr_ests <- apply(stemr_trajecs[,s,,drop = FALSE], 1, mean)
-                results$estimate[results$compartment == s & results$method == "GillespieSSA"] <- gSSA_ests <- apply(gSSA_trajecs[,s,,drop = FALSE], 1, mean)
-
-                results$lower[results$compartment == s & results$method == "stemr"] <-
-                        pmax(0, stemr_ests - 1.96 * apply(stemr_trajecs[,s,,drop = FALSE], 1, sd)/sqrt(niter))
-                results$lower[results$compartment == s & results$method == "GillespieSSA"] <-
-                        pmax(0, gSSA_ests - 1.96 * apply(gSSA_trajecs[,s,,drop = FALSE], 1, sd)/sqrt(niter))
-
-                results$upper[results$compartment == s & results$method == "stemr"] <- stemr_ests + 1.96 * apply(stemr_trajecs[,s,,drop = FALSE], 1, sd)/sqrt(niter)
-                results$upper[results$compartment == s & results$method == "GillespieSSA"] <- gSSA_ests + 1.96 * apply(gSSA_trajecs[,s,,drop = FALSE], 1, sd)/sqrt(niter)
-        }
-
-        pdf(paste("test_simulate_gillespie",sim_num,".pdf", sep = ""))
-
-        ggplot(results, aes(x = time, y = estimate, colour = method, linetype = compartment)) + geom_line(size = 1) + geom_ribbon(data = results, aes(x = time, ymin = lower, ymax = upper, fill = method), alpha = 0.1, size = 0) + labs(y = "Average compartment counts") + theme_bw()
-
-        dev.off()
-
-} else {
-        # convert lists of censused paths to arrays
-        n_censustimes <- length(census_times)
-        stemr_trajecs <- array(unlist(stemr_trajecs), dim = c(n_censustimes, 7, niter))
-        gSSA_trajecs  <- array(unlist(gSSA_trajecs), dim = c(n_censustimes, 7, niter))
-
-        colnames(stemr_trajecs) <- colnames(gSSA_trajecs) <- c("time", "S_male", "S_female","I_male", "I_female","R_male", "R_female")
-
-        results <- data.frame(method = rep(c("stemr", "GillespieSSA"), each = n_censustimes*6),
-                              compartment = rep(c("S_male", "S_female","I_male", "I_female","R_male", "R_female"), each = n_censustimes),
-                              time = census_times,
-                              estimate = 0,
-                              lower = 0,
-                              upper = 0)
-
-        for(s in c("S_male", "S_female","I_male", "I_female","R_male", "R_female")) {
-                results$estimate[results$compartment == s & results$method == "stemr"] <- stemr_ests <- apply(stemr_trajecs[,s,,drop = FALSE], 1, mean)
-                results$estimate[results$compartment == s & results$method == "GillespieSSA"] <- gSSA_ests <- apply(gSSA_trajecs[,s,,drop = FALSE], 1, mean)
-
-                results$lower[results$compartment == s & results$method == "stemr"] <-
-                        pmax(0, stemr_ests - 1.96 * apply(stemr_trajecs[,s,,drop = FALSE], 1, sd)/sqrt(niter))
-                results$lower[results$compartment == s & results$method == "GillespieSSA"] <-
-                        pmax(0, gSSA_ests - 1.96 * apply(gSSA_trajecs[,s,,drop = FALSE], 1, sd)/sqrt(niter))
-
-                results$upper[results$compartment == s & results$method == "stemr"] <- stemr_ests + 1.96 * apply(stemr_trajecs[,s,,drop = FALSE], 1, sd)/sqrt(niter)
-                results$upper[results$compartment == s & results$method == "GillespieSSA"] <- gSSA_ests + 1.96 * apply(gSSA_trajecs[,s,,drop = FALSE], 1, sd)/sqrt(niter)
-        }
-
-
-        pdf(paste("test_simulate_gillespie",sim_num,".pdf", sep = ""))
-
-        ggplot(results, aes(x = time, y = estimate, colour = method, linetype = compartment)) + geom_line(size = 1) + geom_ribbon(data = results, aes(x = time, ymin = lower, ymax = upper, fill = method), alpha = 0.1, size = 0) + labs(y = "Average compartment counts") + theme_bw()
-
-         dev.off()
-}
-

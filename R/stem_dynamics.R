@@ -53,7 +53,6 @@
 #'   compartment counts (TRUE) or parameters of a dirichlet distribution
 #'   (FALSE)}
 #'   \item{flow_matrix}{matrix of flow between model compartments associated with each transition event}
-#'   \item{stemr_ode}{R function that gives an ODE solution}
 #'   \item{lna_hazards}{character vector of rates reformatted for use within the LNA functions}
 #'   \item{rate_derivs}{character vector of partial derivatives of the rate functions
 #'   with respect to model compartments. The partial derivatives are given in compartment-rate order.
@@ -644,8 +643,6 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 lna_hazards <- rate_derivs <- lna_ptrs <- NULL
         }
 
-        # create the R function to generate the ODE path for the model
-        stemr_ode <- construct_ode_function(stem_object)
 
         # create the list determining the stem dynamics
         dynamics <- list(rates            = rate_fcns,
@@ -657,7 +654,6 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                          initdist_params  = initdist_params,
                          fixed_inits      = fixed_inits,
                          flow_matrix      = flow_matrix,
-                         stemr_ode        = stemr_ode,
                          lna_hazards      = lna_hazards,
                          rate_derivs      = rate_derivs,
                          lna_ptrs         = lna_ptrs,
