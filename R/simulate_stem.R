@@ -231,49 +231,41 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
 
         } else if (method == "lna") {
 
-                # build the time-varying covariate matrix for the LNA
-                if(is.null(stem_object$dynamics$.dynamics_args$tcovar)) {
-
-                        if(is.logical(lna_restart)) {
-                        # option 1 - restart times are not possibly different from census times
-                                stem_object$dynamics$lna_tcovar           <- matrix(census_times, nrow = length(census_times), ncol = 2)
-                                colnames(stem_object$dynamics$lna_tcovar) <- c("_time", "TIME")
-
-                        } else {
-                        # option 2 - restart times are possibly different from census times
-                                lna_tcovar_timeseq <- sort(unique(c(census_times, lna_restart)))
-                                stem_object$dynamics$lna_tcovar           <- matrix(lna_tcovar_timeseq, nrow = length(lna_tcovar_timeseq), ncol = 2)
-                                colnames(stem_object$dynamics$lna_tcovar) <- c("_time", "TIME")
-
-                                # make sure that the census times include the restart times
-                                census_times <- lna_tcovar_timeseq
-                        }
-
+                # set the restart times if they were not supplied
+                if(identical(lna_restart, FALSE)) {
+                        restart_times <- range(census_times)
+                        lna_restart   <- FALSE
                 } else {
-
                         if(is.logical(lna_restart)) {
-                        # option 1 - restart times are not possibly different from census times
-                                lna_tcovar_timeseq              <- sort(unique(c(census_times, stem_object$dynamics$.dynamics_args$tcovar[,1])))
-                                tcovar_inds                     <- findInterval(lna_tcovar_timeseq, stem_object$dynamics$.dynamics_args$tcovar[,1])
-                                stem_object$dynamics$lna_tcovar <- matrix(c(lna_tcovar_timeseq,
-                                                                            stem_object$dynamics$.dynamics_args$tcovar[tcovar_inds,-1]))
-                                colnames(stem_object$dynamics$lna_tcovar) <- c("_time", names(stem_object$dynamics$tcovar_codes))
-
+                                restart_times <- census_times
+                                lna_restart   <- TRUE
                         } else {
-                        # option 2 - restart times are possibly different from census times
-                                lna_tcovar_timeseq              <- sort(unique(c(census_times,
-                                                                                 restart_times,
-                                                                                 stem_object$dynamics$.dynamics_args$tcovar[,1])))
-                                tcovar_inds                     <- findInterval(lna_tcovar_timeseq, stem_object$dynamics$.dynamics_args$tcovar[,1])
-                                stem_object$dynamics$lna_tcovar <- matrix(c(lna_tcovar_timeseq,
-                                                                            stem_object$dynamics$.dynamics_args$tcovar[tcovar_inds,-1]))
-                                colnames(stem_object$dynamics$lna_tcovar) <- c("_time", names(stem_object$dynamics$tcovar_codes))
-
-                                # make sure that the census times include the restart times
-                                census_times <- lna_tcovar_timeseq
+                                restart_times <- sort(unique(c(lna_restart, range(census_times))))
+                                lna_restart   <- TRUE
                         }
                 }
 
+                # set the vector of times when the LNA is evaluated
+                lna_times       <- sort(unique(c(census_times, restart_times, stem_object$dynamics$.dynamics_args$tcovar[,1])))
+                lna_restart_vec <- !is.na(match(lna_times, restart_times))
+
+                # generate the matrix of parameters, constants, and time-varying covariates
+                lna_pars <- matrix(0.0, nrow = length(lna_times), ncol = length(stem_object$dynamics$lna_param_codes))
+                colnames(lna_pars) <- c(names(stem_object$dynamics$lna_param_codes))
+
+                # insert parameters, constants, and time-varying covariates
+                parameter_inds <- 1:length(stem_object$dynamics$param_codes)
+                constant_inds  <- (length(parameter_inds)+1):(length(parameter_inds) + length(stem_object$dynamics$const_codes))
+                tcovar_inds  <- (max(constant_inds)+1):ncol(lna_pars)
+                lna_pars[, parameter_inds] <- matrix(stem_object$dynamics$parameters, nrow = nrow(lna_pars), ncol = length(parameter_inds), byrow = T)
+                lna_pars[, constant_inds]  <- matrix(stem_object$dynamics$constants, nrow = nrow(lna_pars), ncol = length(constant_inds), byrow = T)
+
+                if(!is.null(stem_object$dynamics$.dynamics_args$tcovar)) {
+                        tcovar_rowinds          <- findInterval(lna_times, stem_object$dynamics$.dynamics_args$tcovar[,1])
+                        lna_pars[, tcov_inds]   <- stem_object$dynamics$.dynamics_args$tcovar[tcovar_rowinds,-1]
+                }
+
+                # generate the initial values
                 if(stem_object$dynamics$fixed_inits) {
 
                         if(stem_object$dynamics$n_strata == 1) {
@@ -313,23 +305,113 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                         init_incid <- init_states[, stem_object$dynamics$incidence_sources + 1, drop = FALSE]
                         colnames(init_incid) <- names(stem_object$dynamics$incidence_codes)
                         init_states <- cbind(init_states, init_incid)
+                        lna_incidence_codes <- stem_object$dynamics$incidence_codes
+                } else {
+                        lna_incidence_codes <- 0
                 }
 
-                # initialize the list of paths
-                census_paths <- vector(mode = "list", length = nsim)
+                census_paths <- simulate_lna_paths(nsim, lna_times, census_times, lna_pars, restart, lna_restart_vec, init_states, lna_incidence_codes, stem_object$dynamics$lna_ptr)
 
-                for(k in seq_len(nsim)) {
-                        census_paths[[k]] <- simulate_lna(stem_object  = stem_object,
-                                                        census_times = census_times,
-                                                        lna_restart  = lna_restart,
-                                                        init_states  = init_states[k,])
-                }
-
-                if(paths_as_array) {
-                        census_colnames <- c("time", c(names(stem_object$dynamics$comp_codes), names(stem_object$dynamics$incidence_codes)))
-                        census_paths <- array(unlist(census_paths), dim = c(nrow(census_paths[[1]]), ncol(census_paths[[1]]), length(census_paths)))
-                        colnames(census_paths) <- census_colnames
-                }
+                # Old LNA code ------------------------------------------------------------
+                # # build the time-varying covariate matrix for the LNA
+                # if(is.null(stem_object$dynamics$.dynamics_args$tcovar)) {
+                #
+                #         if(is.logical(lna_restart)) {
+                #         # option 1 - restart times are not possibly different from census times
+                #                 stem_object$dynamics$lna_tcovar           <- matrix(census_times, nrow = length(census_times), ncol = 2)
+                #                 colnames(stem_object$dynamics$lna_tcovar) <- c("_time", "TIME")
+                #
+                #         } else {
+                #         # option 2 - restart times are possibly different from census times
+                #                 lna_tcovar_timeseq <- sort(unique(c(census_times, lna_restart)))
+                #                 stem_object$dynamics$lna_tcovar           <- matrix(lna_tcovar_timeseq, nrow = length(lna_tcovar_timeseq), ncol = 2)
+                #                 colnames(stem_object$dynamics$lna_tcovar) <- c("_time", "TIME")
+                #
+                #                 # make sure that the census times include the restart times
+                #                 census_times <- lna_tcovar_timeseq
+                #         }
+                #
+                # } else {
+                #
+                #         if(is.logical(lna_restart)) {
+                #         # option 1 - restart times are not possibly different from census times
+                #                 lna_tcovar_timeseq              <- sort(unique(c(census_times, stem_object$dynamics$.dynamics_args$tcovar[,1])))
+                #                 tcovar_inds                     <- findInterval(lna_tcovar_timeseq, stem_object$dynamics$.dynamics_args$tcovar[,1])
+                #                 stem_object$dynamics$lna_tcovar <- matrix(c(lna_tcovar_timeseq,
+                #                                                             stem_object$dynamics$.dynamics_args$tcovar[tcovar_inds,-1]))
+                #                 colnames(stem_object$dynamics$lna_tcovar) <- c("_time", names(stem_object$dynamics$tcovar_codes))
+                #
+                #         } else {
+                #         # option 2 - restart times are possibly different from census times
+                #                 lna_tcovar_timeseq              <- sort(unique(c(census_times,
+                #                                                                  restart_times,
+                #                                                                  stem_object$dynamics$.dynamics_args$tcovar[,1])))
+                #                 tcovar_inds                     <- findInterval(lna_tcovar_timeseq, stem_object$dynamics$.dynamics_args$tcovar[,1])
+                #                 stem_object$dynamics$lna_tcovar <- matrix(c(lna_tcovar_timeseq,
+                #                                                             stem_object$dynamics$.dynamics_args$tcovar[tcovar_inds,-1]))
+                #                 colnames(stem_object$dynamics$lna_tcovar) <- c("_time", names(stem_object$dynamics$tcovar_codes))
+                #
+                #                 # make sure that the census times include the restart times
+                #                 census_times <- lna_tcovar_timeseq
+                #         }
+                # }
+                #
+                # if(stem_object$dynamics$fixed_inits) {
+                #
+                #         if(stem_object$dynamics$n_strata == 1) {
+                #                 param_inds     <- stem_object$dynamics$state_initializer$param_inds
+                #                 initdist_codes <- stem_object$dynamics$state_initializer$codes
+                #         } else {
+                #                 param_inds     <- unlist(lapply(stem_object$dynamics$state_initializer, function(x) x$param_inds))
+                #                 initdist_codes <- unlist(lapply(stem_object$dynamics$state_initializer, function(x) x$codes))
+                #         }
+                #
+                #         # if all initial states are fixed, just copy the initial compartment counts
+                #         init_states    <- matrix(rep(stem_object$dynamics$initdist_params[param_inds], nsim), nrow = nsim, byrow = TRUE)[,order(initdist_codes), drop = FALSE]
+                #         colnames(init_states) <- names(stem_object$dynamics$comp_codes)
+                #
+                # } else {
+                #         if(stem_object$dynamics$n_strata == 1) {
+                #
+                #                 # simulate the initial compartment counts
+                #                 init_states <- t(as.matrix(rmultinom(nsim, stem_object$dynamics$popsize, stem_object$dynamics$initdist_params)))
+                #                 colnames(init_states) <- names(stem_object$dynamics$comp_codes)
+                #
+                #         } else if(stem_object$dynamics$n_strata > 1) {
+                #
+                #                 # generate the matrix of initial compartment counts
+                #                 init_states <- matrix(0, nrow = nsim, ncol = stem_object$dynamics$n_compartments)
+                #                 colnames(init_states) <- names(stem_object$dynamics$comp_codes)
+                #
+                #                 for(s in seq_len(stem_object$dynamics$n_strata)) {
+                #                         init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <- as.matrix(t(rmultinom(nsim, stem_object$dynamics$strata_sizes[s], stem_object$dynamics$state_initializer[[s]]$init_states)))
+                #                 }
+                #         }
+                # }
+                #
+                # # if there are artificial incidence compartments, copy the
+                # # incidence counts and add them to the initial state matrix
+                # if(!is.null(stem_object$dynamics$incidence_codes)) {
+                #         init_incid <- init_states[, stem_object$dynamics$incidence_sources + 1, drop = FALSE]
+                #         colnames(init_incid) <- names(stem_object$dynamics$incidence_codes)
+                #         init_states <- cbind(init_states, init_incid)
+                # }
+                #
+                # # initialize the list of paths
+                # census_paths <- vector(mode = "list", length = nsim)
+                #
+                # for(k in seq_len(nsim)) {
+                #         census_paths[[k]] <- simulate_lna(stem_object  = stem_object,
+                #                                         census_times = census_times,
+                #                                         lna_restart  = lna_restart,
+                #                                         init_states  = init_states[k,])
+                # }
+                #
+                # if(paths_as_array) {
+                #         census_colnames <- c("time", c(names(stem_object$dynamics$comp_codes), names(stem_object$dynamics$incidence_codes)))
+                #         census_paths <- array(unlist(census_paths), dim = c(nrow(census_paths[[1]]), ncol(census_paths[[1]]), length(census_paths)))
+                #         colnames(census_paths) <- census_colnames
+                # }
 
         }
 

@@ -15,10 +15,10 @@ using namespace Rcpp;
 //'
 //' @export
 // [[Rcpp::export]]
-arma::vec COMPUTE_HAZARD(double t, const arma::vec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar, SEXP haz_ptr) {
+Rcpp::NumericVector CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr) {
 
-        Rcpp::XPtr<hazard_ptr> xpfun(haz_ptr);      // Receive the SEXP and put in Xptr
-        hazard_ptr fun = *xpfun;                    // get function via pointer
+        Rcpp::XPtr<lna_ptr> xpfun(lna_ode_ptr); // Receive the SEXP and put in Xptr
+        lna_ptr fun = *xpfun;                   // get function via pointer
 
-        return fun(t, state, parameters, constants, tcovar);           // Compute the Jacobian and return it
+        return fun(init, start, end, step_size);
 }

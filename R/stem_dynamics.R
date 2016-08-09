@@ -69,6 +69,7 @@
 #'   \item{strata_codes}{named vector of (C++) strata codes}
 #'   \item{incidence_codes}{named vector of (C++) incidence compartment codes (colum location in the path matrix)}
 #'   \item{incidence_sources}{named vector of (C++) codes for compartments corresponding to each incidence compartment}
+#'   \item{lna_param_codes}{named vector of (C++) codes for the concatenated LNA parameters}
 #'   \item{progressive}{logical indicating whether the model is progressive}
 #'   \item{absorbing_states}{logical vector indicating which model compartments are absorbing states}
 #'   \item{rate_adjmat}{adjacency matrix indicating which rates need to be updated when a transition event occurs}
@@ -506,7 +507,9 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 names(strata_sizes) <- sapply(initializer, "[[", 3)
                 popsize <- sum(strata_sizes)
 
-                constants <- c(constants, popsize = popsize, strata_sizes)
+                constants   <- c(constants, popsize = popsize, strata_sizes)
+                const_codes <- c(const_codes, seq(length(const_codes), length(c(popsize, strata_sizes))))
+                names(const_codes) <- names(constants)
 
                 # check that either all parameters are random or that initial state is fixed for each stratum
                 if(!(all(sapply(initializer, function(x) x[[2]] == TRUE)) | all(sapply(initializer, function(x) x[[2]] == FALSE)))) {
@@ -590,6 +593,8 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 popsize     <- sum(initializer$init_states)
 
                 constants <- c(constants, popsize = popsize)
+                const_codes <- c(const_codes, length(const_codes))
+                names(const_codes) <- names(constants)
         }
 
         # construct the flow matrix
@@ -633,14 +638,15 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
         }
 
         # if LNA functions are requested, compile them
-        lna_rates   <- get_lna_rates(rate_fcns, param_codes, tcovar_codes, const_codes, c(compartment_codes, incidence_codes))
-        lna_hazards <- lna_rates$hazards
-        rate_derivs <- lna_rates$derivatives
+        # lna_rates   <- get_lna_rates(rate_fcns, param_codes, tcovar_codes, const_codes, c(compartment_codes, incidence_codes))
+        lna_rates   <- build_lna_rates(rate_fcns, param_codes, const_codes, tcovar_codes, compartment_codes)
 
         if(compile_lna) {
-                lna_ptrs    <- parse_lna(rates = rate_fcns, hazard_fcns = lna_hazards, rate_derivs = rate_derivs, messages = messages)
+                lna_pointer  <- parse_lna_fcns(lna_rates, flow_matrix, messages = messages)
+                # lna_ptrs    <- parse_lna(rates = rate_fcns, hazard_fcns = lna_hazards, rate_derivs = rate_derivs, messages = messages)
         } else {
-                lna_hazards <- rate_derivs <- lna_ptrs <- NULL
+                lna_pointer <- NULL
+                lna_rates   <- list(hazards = NULL, derivatives = NULL, lna_param_codes = NULL)
         }
 
 
@@ -654,9 +660,9 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                          initdist_params  = initdist_params,
                          fixed_inits      = fixed_inits,
                          flow_matrix      = flow_matrix,
-                         lna_hazards      = lna_hazards,
-                         rate_derivs      = rate_derivs,
-                         lna_ptrs         = lna_ptrs,
+                         lna_hazards      = lna_rates$hazards,
+                         rate_derivs      = lna_rates$derivatives,
+                         lna_pointer      = lna_pointer,
                          strata_sizes     = strata_sizes,
                          popsize          = popsize,
                          comp_codes       = compartment_codes,
@@ -664,6 +670,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                          tcovar_codes     = tcovar_codes,
                          const_codes      = const_codes,
                          strata_codes     = strata_codes,
+                         lna_param_codes  = lna_rates$lna_param_codes,
                          incidence_codes  = incidence_codes,
                          incidence_sources= incidence_sources,
                          progressive      = progressive,

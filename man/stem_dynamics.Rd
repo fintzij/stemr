@@ -102,6 +102,7 @@ list with evaluated rate functions and objects for managing the
   \item{strata_codes}{named vector of (C++) strata codes}
   \item{incidence_codes}{named vector of (C++) incidence compartment codes (colum location in the path matrix)}
   \item{incidence_sources}{named vector of (C++) codes for compartments corresponding to each incidence compartment}
+  \item{lna_param_codes}{named vector of (C++) codes for the concatenated LNA parameters}
   \item{progressive}{logical indicating whether the model is progressive}
   \item{absorbing_states}{logical vector indicating which model compartments are absorbing states}
   \item{rate_adjmat}{adjacency matrix indicating which rates need to be updated when a transition event occurs}

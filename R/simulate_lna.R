@@ -21,7 +21,6 @@ simulate_lna <- function(stem_object, census_times, lna_restart, init_states) {
 
         } else {
                 incidence_codes   <- stem_object$dynamics$incidence_codes + 1
-                incidence_sources <- stem_object$dynamics$incidence_sources + 1
         }
 
         # if the restarting version is to be used, grab the restart times

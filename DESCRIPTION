@@ -18,11 +18,11 @@ License: GPL-3
 LazyData: TRUE
 Imports:
     ECctmc,
-    deSolve,
-    MASS,
     Ryacas,
+    odeintr,
     Rcpp (>= 0.12.4)
 LinkingTo: Rcpp,
+    odeintr,
     RcppArmadillo
 RoxygenNote: 5.0.1
 Suggests: knitr,

@@ -53,7 +53,7 @@ if(sim_num == 1){
                                        messages = TRUE)$paths
 
         sim1_lna_norestart <- simulate_stem(stem_object = stem_object,
-                                     nsim = 1,
+                                     nsim = niter,
                                      paths = TRUE,
                                      observations = FALSE,
                                      subject_paths = FALSE,
@@ -63,7 +63,7 @@ if(sim_num == 1){
                                      tmax = tmax,
                                      census_times = seq(0, 52, by = 0.1),
                                      paths_as_array = FALSE,
-                                     messages = TRUE)$paths[[1]]
+                                     messages = TRUE)$paths
 
         sim1_ode <- stem_ode(stem_object = stem_object,
                              census_times = census_times,
@@ -75,7 +75,7 @@ if(sim_num == 1){
         s_params <- c(0.75, 0.575e-5)
         initial_state_vec <- c(S = 1500, I = 10, R = 50)
         compartments <- c("S","I","R")
-        rates <- list(rate("beta * I", "S", "I", seasonality = seasonality(period = 52, intercept = 5e-5, trend = 1e-4, s_params = s_params)),
+        rates <- list(rate("beta * I", "S", "I", seasonality = seasonality(period = 52, intercept = 5e-5, trend = 1e-4, s_params = s_params), incidence = T),
                       rate("mu", "I", "R"),
                       rate("phi", "R", "S"))
         state_initializer <- stem_initializer(initial_state_vec, fixed = TRUE)
@@ -89,18 +89,8 @@ if(sim_num == 1){
 
         stem_object <- stem(dynamics = dynamics)
 
-
-        # Set up GillespieSSA objects
-        gillespie_tcovar <- data.frame(time = seq(0, 52, by = 52/50),
-                                       timevar = 5e-5 + 1e-4 * seq(0, 52, by = 52/50),
-                                       SIN52 = s_params[1]*sin(2*pi*seq(0, 52, by = 52/50)/52),
-                                       COS52 = s_params[2]*cos(2*pi*seq(0, 52, by = 52/50)/52))
-
-        a = c("(beta * I + exp(timevar + SIN52 + COS52)) * S", "mu * I", "phi * R")
-        nu <- matrix(c(-1,+1,0, 0, -1, +1, 1, 0, -1),nrow=3)
-
         # simulate paths
-        stemr_trajecs <- simulate_stem(stem_object = stem_object,
+        sim2_gillespie_trajecs <- simulate_stem(stem_object = stem_object,
                                        nsim = niter,
                                        paths = TRUE,
                                        observations = FALSE,
@@ -112,50 +102,18 @@ if(sim_num == 1){
                                        paths_as_array = FALSE,
                                        messages = FALSE)$paths
 
-        nclust = 15
-        cl <- makeForkCluster(nclust)
-        # cl <- makePSOCKcluster(2)
-        registerDoParallel(cl)
-
-        gSSA_trajecs <- foreach(j = 1:niter, .packages = c("stemr", "GillespieSSA")) %dopar% {
-
-                gillespie_initstate <- initial_state_vec
-                gSSA_sim <- matrix(0, nrow = 1e5, ncol = 4)
-                gSSA_sim[1,] <- c(0, gillespie_initstate)
-                colnames(gSSA_sim) <- c("time", "S", "I", "R")
-
-                subsim_ind <- 2
-
-                for(k in 1:(nrow(gillespie_tcovar) - 1)) {
-                        t0   <- gillespie_tcovar[k, 1]
-                        tmax <- gillespie_tcovar[k+1, 1]
-
-                        params <- c(beta = 0.00025,
-                                    mu = 1/2,
-                                    phi = 3,
-                                    timevar = gillespie_tcovar[k, 2],
-                                    SIN52 = gillespie_tcovar[k, 3],
-                                    COS52 = gillespie_tcovar[k, 4])
-
-                        print(params["timevar"])
-
-                        initstate <- gSSA_sim[subsim_ind-1,-1]
-
-                        subsim <- ssa(initstate, a, nu, params, tf = tmax-t0)$data
-                        subsim <- subsim[subsim[,1] < (tmax-t0),, drop = FALSE]
-                        subsim[,1] <- subsim[,1] + t0
-
-                        gSSA_sim[subsim_ind + (seq_len(nrow(subsim)-1)-1),] <- subsim[-1, , drop = FALSE]
-
-                        subsim_ind <- subsim_ind + nrow(subsim) - 1
-                }
-
-                gSSA_sim <- gSSA_sim[1:(subsim_ind-1),]
-
-                gSSA_traj <- build_census_path(gSSA_sim, census_times, 1:3)
-
-                return(gSSA_traj)
-        }
+        sim2_lna_norestart <- simulate_stem(stem_object = stem_object,
+                                           nsim = niter,
+                                           paths = TRUE,
+                                           observations = FALSE,
+                                           subject_paths = FALSE,
+                                           method = "lna",
+                                           lna_restart = FALSE,
+                                           t0 = t0,
+                                           tmax = tmax,
+                                           census_times = census_times,
+                                           paths_as_array = FALSE,
+                                           messages = FALSE)$paths
 
 
 } else if(sim_num == 3) {

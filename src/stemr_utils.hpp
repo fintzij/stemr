@@ -22,11 +22,14 @@ void CALL_R_MEASURE(Rcpp::NumericMatrix& obsmat, const Rcpp::LogicalVector& emit
                     const int record_ind, const Rcpp::NumericVector& state, const Rcpp::NumericVector& parameters,
                     const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar, SEXP r_meas_ptr);
 
-// compute and return the hazards
-arma::vec COMPUTE_HAZARD(double t, const arma::vec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar, SEXP haz_ptr);
+// // integrate the LNA odes over some time interval
+// Rcpp::NumericVector INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size);
 
-// compute and return the Jacobian matrix
-arma::mat COMPUTE_JACOBIAN(double t, const arma::vec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar, SEXP jacob_ptr);
+// integrate the LNA odes, call via XPtr
+Rcpp::NumericVector CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr);
+
+// set the LNA parameters, call via XPtr
+void CALL_SET_LNA_PARAMS(Rcpp::NumericVector& p, SEXP set_lna_params_ptr);
 
 // update rates based on transition events or changes in time-varying covariates
 void rate_update_tcovar(Rcpp::LogicalVector& rate_inds, const arma::mat& M, const arma::rowvec I);
@@ -49,5 +52,19 @@ void compute_incidence(arma::mat& censusmat, arma::uvec col_inds);
 
 // find the intervals for a vector
 Rcpp::IntegerVector find_interval(Rcpp::NumericVector& x, Rcpp::NumericVector& breaks, bool rightmost_closed, bool all_inside);
+
+// multivariate normal functions
+arma::mat mvrn(int n, const arma::vec& mu, const arma::mat& sigma);
+
+// copy functions to and from the lna ode statevec and the lna drift, residual, and diffusion process objects
+void procs2vec(Rcpp::NumericVector& statevec, arma::vec& drift_proc, arma::vec& resid_proc, arma::mat& diffusion_proc);
+void vec2procs(Rcpp::NumericVector& statevec, arma::vec& drift_proc, arma::vec& resid_proc, arma::mat& diffusion_proc);
+
+
+// // compute and return the hazards
+// arma::vec COMPUTE_HAZARD(double t, const arma::vec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar, SEXP haz_ptr);
+//
+// // compute and return the Jacobian matrix
+// arma::mat COMPUTE_JACOBIAN(double t, const arma::vec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar, SEXP jacob_ptr);
 
 #endif // stemr_UTILITIES_H
