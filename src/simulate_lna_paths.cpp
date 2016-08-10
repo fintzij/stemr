@@ -79,7 +79,8 @@ arma::cube simulate_lna_paths(int nsim, const arma::colvec& lna_times, const arm
                         CALL_SET_LNA_PARAMS(current_params, set_pars_pointer);
 
                         // integrate the LNA
-                        lna_state_vec = CALL_INTEGRATE_STEM_LNA(lna_state_vec, t_L, t_R, 1.0, lna_pointer);
+                        // lna_state_vec = CALL_INTEGRATE_STEM_LNA(lna_state_vec, t_L, t_R, 1.0, lna_pointer);
+                        CALL_INTEGRATE_STEM_LNA(lna_state_vec, t_L, t_R, 1.0, lna_pointer);
 
                         // transfer the elements of the lna_state_vec to the process objects
                         vec2procs(lna_state_vec, drift_process, residual_process, diffusion_process);

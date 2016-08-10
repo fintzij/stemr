@@ -19,7 +19,8 @@ typedef void(*r_measure_ptr)(Rcpp::NumericMatrix& obsmat, const Rcpp::LogicalVec
              const int record_ind, const Rcpp::NumericVector& state, const Rcpp::NumericVector& parameters,
              const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar);
 
-typedef Rcpp::NumericVector(*lna_ptr)(Rcpp::NumericVector& init, double start, double end, double step_size);
+// typedef Rcpp::NumericVector(*lna_ptr)(Rcpp::NumericVector& init, double start, double end, double step_size);
+typedef void(*lna_ptr)(Rcpp::NumericVector& init, double start, double end, double step_size);
 typedef void(*set_pars_ptr)(Rcpp::NumericVector& p);
 
 // typedef arma::vec(*hazard_ptr)(double t, const arma::vec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar);

@@ -26,18 +26,17 @@ BEGIN_RCPP
 END_RCPP
 }
 // CALL_INTEGRATE_STEM_LNA
-Rcpp::NumericVector CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector init, double start, double end, double step_size, SEXP lna_ode_ptr);
+void CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr);
 RcppExport SEXP stemr_CALL_INTEGRATE_STEM_LNA(SEXP initSEXP, SEXP startSEXP, SEXP endSEXP, SEXP step_sizeSEXP, SEXP lna_ode_ptrSEXP) {
 BEGIN_RCPP
-    Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type init(initSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type init(initSEXP);
     Rcpp::traits::input_parameter< double >::type start(startSEXP);
     Rcpp::traits::input_parameter< double >::type end(endSEXP);
     Rcpp::traits::input_parameter< double >::type step_size(step_sizeSEXP);
     Rcpp::traits::input_parameter< SEXP >::type lna_ode_ptr(lna_ode_ptrSEXP);
-    __result = Rcpp::wrap(CALL_INTEGRATE_STEM_LNA(init, start, end, step_size, lna_ode_ptr));
-    return __result;
+    CALL_INTEGRATE_STEM_LNA(init, start, end, step_size, lna_ode_ptr);
+    return R_NilValue;
 END_RCPP
 }
 // CALL_RATE_FCN
@@ -74,11 +73,11 @@ BEGIN_RCPP
 END_RCPP
 }
 // CALL_SET_LNA_PARAMS
-void CALL_SET_LNA_PARAMS(Rcpp::NumericVector p, SEXP set_lna_params_ptr);
+void CALL_SET_LNA_PARAMS(Rcpp::NumericVector& p, SEXP set_lna_params_ptr);
 RcppExport SEXP stemr_CALL_SET_LNA_PARAMS(SEXP pSEXP, SEXP set_lna_params_ptrSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type p(pSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type p(pSEXP);
     Rcpp::traits::input_parameter< SEXP >::type set_lna_params_ptr(set_lna_params_ptrSEXP);
     CALL_SET_LNA_PARAMS(p, set_lna_params_ptr);
     return R_NilValue;

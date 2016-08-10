@@ -30,7 +30,7 @@ CALL_D_MEASURE <- function(emitmat, emit_inds, record_ind, record, state, parame
 #'
 #' @export
 CALL_INTEGRATE_STEM_LNA <- function(init, start, end, step_size, lna_ode_ptr) {
-    .Call('stemr_CALL_INTEGRATE_STEM_LNA', PACKAGE = 'stemr', init, start, end, step_size, lna_ode_ptr)
+    invisible(.Call('stemr_CALL_INTEGRATE_STEM_LNA', PACKAGE = 'stemr', init, start, end, step_size, lna_ode_ptr))
 }
 
 #' Update rates by calling rate functions via Xptr.

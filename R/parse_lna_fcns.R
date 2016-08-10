@@ -57,22 +57,32 @@ parse_lna_fcns <- function(lna_rates, flow_matrix, messages = TRUE) {
 
         # generate the stemr_lna functions that will actually be called
         # stemr_LNA_integrator is equivalent to the _no_record odeintr function, but takes the endpoints of the interval and returns a numeric vector.
-        LNA_integrator <- paste("Rcpp::NumericVector INTEGRATE_STEM_LNA(Rcpp::NumericVector init, double start, double end, double step_size=1.0) {",
-                                      "INTEGRATE_LNA_set_state(init);",
-                                      "odeint::integrate_adaptive(odeintr::stepper, odeintr::sys, odeintr::state, start, end, step_size);",
-                                      "return Rcpp::wrap(INTEGRATE_LNA_get_state());",
-                                      "}\n",
-                                "typedef Rcpp::NumericVector(*lna_ptr)(Rcpp::NumericVector init, double start, double end, double step_size);",
+        # LNA_integrator <- paste("Rcpp::NumericVector INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size=1.0) {",
+        #                               "INTEGRATE_LNA_set_state(init);",
+        #                               "odeint::integrate_adaptive(odeintr::stepper, odeintr::sys, odeintr::state, start, end, step_size);",
+        #                               "return Rcpp::wrap(INTEGRATE_LNA_get_state());",
+        #                               "}\n",
+        #                         "typedef Rcpp::NumericVector(*lna_ptr)(Rcpp::NumericVector& init, double start, double end, double step_size);",
+        #                         "// [[Rcpp::export]]",
+        #                         "Rcpp::XPtr<lna_ptr> LNA_XPtr() {",
+        #                         "return(Rcpp::XPtr<lna_ptr>(new lna_ptr(&INTEGRATE_STEM_LNA)));",
+        #                         "}", sep = "\n")
+        LNA_integrator <- paste("void INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size=1.0) {",
+                                "INTEGRATE_LNA_set_state(init);",
+                                "odeint::integrate_adaptive(odeintr::stepper, odeintr::sys, odeintr::state, start, end, step_size);",
+                                "init = Rcpp::wrap(INTEGRATE_LNA_get_state());",
+                                "}\n",
+                                "typedef void(*lna_ptr)(Rcpp::NumericVector& init, double start, double end, double step_size);",
                                 "// [[Rcpp::export]]",
                                 "Rcpp::XPtr<lna_ptr> LNA_XPtr() {",
                                 "return(Rcpp::XPtr<lna_ptr>(new lna_ptr(&INTEGRATE_STEM_LNA)));",
                                 "}", sep = "\n")
 
         # function to set the LNA parameters, differs from the odeintr function in that it takes a numeric vector, not a std::vector
-        param_setter   <- paste("void SET_LNA_PARAMS(Rcpp::NumericVector p) {",
+        param_setter   <- paste("void SET_LNA_PARAMS(Rcpp::NumericVector& p) {",
                                 "std::copy(p.begin(), p.end(), odeintr::pars.begin());",
                                 "}\n",
-                                "typedef void(*set_pars_ptr)(Rcpp::NumericVector p);",
+                                "typedef void(*set_pars_ptr)(Rcpp::NumericVector& p);",
                                 "// [[Rcpp::export]]",
                                 "Rcpp::XPtr<set_pars_ptr> LNA_set_params_XPtr() {",
                                 "return(Rcpp::XPtr<set_pars_ptr>(new set_pars_ptr(&SET_LNA_PARAMS)));",
