@@ -15,7 +15,7 @@ using namespace Rcpp;
 //'
 //' @export
 // [[Rcpp::export]]
-Rcpp::NumericVector CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr) {
+Rcpp::NumericVector CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector init, double start, double end, double step_size, SEXP lna_ode_ptr) {
 
         Rcpp::XPtr<lna_ptr> xpfun(lna_ode_ptr); // Receive the SEXP and put in Xptr
         lna_ptr fun = *xpfun;                   // get function via pointer

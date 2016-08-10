@@ -26,12 +26,12 @@ BEGIN_RCPP
 END_RCPP
 }
 // CALL_INTEGRATE_STEM_LNA
-Rcpp::NumericVector CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr);
+Rcpp::NumericVector CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector init, double start, double end, double step_size, SEXP lna_ode_ptr);
 RcppExport SEXP stemr_CALL_INTEGRATE_STEM_LNA(SEXP initSEXP, SEXP startSEXP, SEXP endSEXP, SEXP step_sizeSEXP, SEXP lna_ode_ptrSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type init(initSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type init(initSEXP);
     Rcpp::traits::input_parameter< double >::type start(startSEXP);
     Rcpp::traits::input_parameter< double >::type end(endSEXP);
     Rcpp::traits::input_parameter< double >::type step_size(step_sizeSEXP);
@@ -74,11 +74,11 @@ BEGIN_RCPP
 END_RCPP
 }
 // CALL_SET_LNA_PARAMS
-void CALL_SET_LNA_PARAMS(Rcpp::NumericVector& p, SEXP set_lna_params_ptr);
+void CALL_SET_LNA_PARAMS(Rcpp::NumericVector p, SEXP set_lna_params_ptr);
 RcppExport SEXP stemr_CALL_SET_LNA_PARAMS(SEXP pSEXP, SEXP set_lna_params_ptrSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type p(pSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type p(pSEXP);
     Rcpp::traits::input_parameter< SEXP >::type set_lna_params_ptr(set_lna_params_ptrSEXP);
     CALL_SET_LNA_PARAMS(p, set_lna_params_ptr);
     return R_NilValue;
@@ -237,8 +237,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // simulate_lna_paths
-arma::cube simulate_lna_paths(int nsim, const arma::colvec& lna_times, const arma::colvec& census_times, const Rcpp::LogicalVector& census_inds, const Rcpp::LogicalVector& restart_inds, const Rcpp::NumericMatrix& lna_pars, const arma::mat& init_states, const arma::uvec& incidence_codes, const int n_transitions, SEXP lna_pointer);
-RcppExport SEXP stemr_simulate_lna_paths(SEXP nsimSEXP, SEXP lna_timesSEXP, SEXP census_timesSEXP, SEXP census_indsSEXP, SEXP restart_indsSEXP, SEXP lna_parsSEXP, SEXP init_statesSEXP, SEXP incidence_codesSEXP, SEXP n_transitionsSEXP, SEXP lna_pointerSEXP) {
+arma::cube simulate_lna_paths(int nsim, const arma::colvec& lna_times, const arma::colvec& census_times, const Rcpp::LogicalVector& census_inds, const Rcpp::LogicalVector& restart_inds, const Rcpp::NumericMatrix& lna_pars, const arma::mat& init_states, const Rcpp::IntegerVector& incidence_codes, SEXP lna_pointer, SEXP set_pars_pointer);
+RcppExport SEXP stemr_simulate_lna_paths(SEXP nsimSEXP, SEXP lna_timesSEXP, SEXP census_timesSEXP, SEXP census_indsSEXP, SEXP restart_indsSEXP, SEXP lna_parsSEXP, SEXP init_statesSEXP, SEXP incidence_codesSEXP, SEXP lna_pointerSEXP, SEXP set_pars_pointerSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
@@ -249,10 +249,10 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type restart_inds(restart_indsSEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type lna_pars(lna_parsSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type init_states(init_statesSEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type incidence_codes(incidence_codesSEXP);
-    Rcpp::traits::input_parameter< const int >::type n_transitions(n_transitionsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type incidence_codes(incidence_codesSEXP);
     Rcpp::traits::input_parameter< SEXP >::type lna_pointer(lna_pointerSEXP);
-    __result = Rcpp::wrap(simulate_lna_paths(nsim, lna_times, census_times, census_inds, restart_inds, lna_pars, init_states, incidence_codes, n_transitions, lna_pointer));
+    Rcpp::traits::input_parameter< SEXP >::type set_pars_pointer(set_pars_pointerSEXP);
+    __result = Rcpp::wrap(simulate_lna_paths(nsim, lna_times, census_times, census_inds, restart_inds, lna_pars, init_states, incidence_codes, lna_pointer, set_pars_pointer));
     return __result;
 END_RCPP
 }

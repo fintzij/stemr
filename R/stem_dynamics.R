@@ -59,7 +59,7 @@
 #'   So the first n_compartment partial derivatives are the derivatives of the first rate wrt the model
 #'   compartments (including artificial incidence compartments), the next n_compartment derivatives are
 #'   the partial derivatives of the second rate function wrt the compartments, etc.}
-#'   \item{lna_ptrs}{vector of external functions pointers to compiled LNA functions.}
+#'   \item{lna_pointers}{vector of external functions pointers to compiled LNA functions.}
 #'   \item{strata_sizes}{named numeric vector of strata sizes}
 #'   \item{popsize}{population size}
 #'   \item{comp_codes}{named vector of (C++) compartment codes}
@@ -642,7 +642,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
         lna_rates   <- build_lna_rates(rate_fcns, param_codes, const_codes, tcovar_codes, compartment_codes)
 
         if(compile_lna) {
-                lna_pointer  <- parse_lna_fcns(lna_rates, flow_matrix, messages = messages)
+                lna_pointers  <- parse_lna_fcns(lna_rates, flow_matrix, messages = messages)
                 # lna_ptrs    <- parse_lna(rates = rate_fcns, hazard_fcns = lna_hazards, rate_derivs = rate_derivs, messages = messages)
         } else {
                 lna_pointer <- NULL
@@ -662,7 +662,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                          flow_matrix      = flow_matrix,
                          lna_hazards      = lna_rates$hazards,
                          rate_derivs      = lna_rates$derivatives,
-                         lna_pointer      = lna_pointer,
+                         lna_pointers     = lna_pointers,
                          strata_sizes     = strata_sizes,
                          popsize          = popsize,
                          comp_codes       = compartment_codes,
@@ -681,7 +681,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                          tcovar_adjmat    = tcovar_adjmat,
                          tcovar_changemat = tcovar_changemat,
                          n_strata         = n_strata,
-                         n_compartments   = n_compartments,
+                         n_compartments   = ncol(flow_matrix),
                          n_params         = n_params,
                          n_tcovar         = n_tcovar,
                          n_consts         = n_consts,

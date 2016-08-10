@@ -160,16 +160,20 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 # guess the initial dimensions. need an extra column for event times and another for event IDs.
                 if(stem_object$dynamics$progressive & any(stem_object$dynamics$absorbing_states)) {
                         if(stem_object$dynamics$n_strata == 1) {
-                                init_dims <- c(n_rows = sum(stem_object$dynamics$popsize * stem_object$dynamics$n_compartments), n_cols = stem_object$dynamics$n_compartments + length(stem_object$dynamics$incidence_codes) + 2)
+                                init_dims <- c(n_rows = sum(stem_object$dynamics$popsize * stem_object$dynamics$n_compartments),
+                                               n_cols = ncol(stem_object$dynamics$flow_matrix) + 2)
                         } else {
-                                init_dims <- c(n_rows = sum(stem_object$dynamics$strata_sizes * sapply(sapply(stem_object$dynamics$state_initializer, "[[", 4), length)), n_cols = stem_object$dynamics$n_compartments + length(stem_object$dynamics$incidence_codes) + 2)
+                                init_dims <- c(n_rows = sum(stem_object$dynamics$strata_sizes * sapply(sapply(stem_object$dynamics$state_initializer, "[[", 4), length)),
+                                               n_cols = ncol(stem_object$dynamics$flow_matrix) + 2)
 
                         }
                 } else {
                         if(stem_object$dynamics$n_strata == 1) {
-                                init_dims <- c(n_rows = sum(stem_object$dynamics$popsize * stem_object$dynamics$n_compartments) * 3, n_cols = stem_object$dynamics$n_compartments + length(stem_object$dynamics$incidence_codes) + 2)
+                                init_dims <- c(n_rows = sum(stem_object$dynamics$popsize * stem_object$dynamics$n_compartments) * 3,
+                                               n_cols = ncol(stem_object$dynamics$flow_matrix) + 2)
                         } else if(stem_object$dynamics$n_strata > 1) {
-                                init_dims <- c(n_rows = sum(stem_object$dynamics$strata_sizes * sapply(sapply(stem_object$dynamics$state_initializer, "[[", 4), length)) * 3, n_cols = stem_object$dynamics$n_compartments + length(stem_object$dynamics$incidence_codes) + 2)
+                                init_dims <- c(n_rows = sum(stem_object$dynamics$strata_sizes * sapply(sapply(stem_object$dynamics$state_initializer, "[[", 4), length)) * 3,
+                                               n_cols = ncol(stem_object$dynamics$flow_matrix) + 2)
                         }
                 }
 
@@ -217,7 +221,9 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                                 census_paths[[k]] <- build_census_path(path = paths_full[[k]], census_times = census_times, census_columns = census_codes)
 
                                 # compute incidence if required. n.b. add 1 to the incidence codes b/c 'time' is in the census path
-                                if(get_incidence) compute_incidence(censusmat = census_paths[[k]], col_inds  = incidence_codes, row_inds  = census_incidence_rows)
+                                if(get_incidence) compute_incidence(censusmat = census_paths[[k]],
+                                                                    col_inds  = incidence_codes,
+                                                                    row_inds  = census_incidence_rows)
 
                                 # assign column names
                                 colnames(census_paths[[k]]) <- census_colnames
@@ -245,9 +251,10 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                         }
                 }
 
-                # set the vector of times when the LNA is evaluated
+                # set the vectors of times when the LNA is evaluated, restarted, and censused
                 lna_times       <- sort(unique(c(census_times, restart_times, stem_object$dynamics$.dynamics_args$tcovar[,1])))
-                lna_restart_vec <- !is.na(match(lna_times, restart_times))
+                restart_inds    <- !is.na(match(lna_times, restart_times)) # indicator vector for when the LNA is to be restarted
+                census_inds     <- !is.na(match(lna_times, census_times))
 
                 # generate the matrix of parameters, constants, and time-varying covariates
                 lna_pars <- matrix(0.0, nrow = length(lna_times), ncol = length(stem_object$dynamics$lna_param_codes))
@@ -277,7 +284,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                         }
 
                         # if all initial states are fixed, just copy the initial compartment counts
-                        init_states    <- matrix(rep(stem_object$dynamics$initdist_params[param_inds], nsim), nrow = nsim, byrow = TRUE)[,order(initdist_codes), drop = FALSE]
+                        init_states <- matrix(rep(stem_object$dynamics$initdist_params[param_inds], nsim), nrow = nsim, byrow = TRUE)[,order(initdist_codes), drop = FALSE]
                         colnames(init_states) <- names(stem_object$dynamics$comp_codes)
 
                 } else {
@@ -310,7 +317,16 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                         lna_incidence_codes <- 0
                 }
 
-                census_paths <- simulate_lna_paths(nsim, lna_times, census_times, lna_pars, restart, lna_restart_vec, init_states, lna_incidence_codes, stem_object$dynamics$lna_ptr)
+                census_paths <- simulate_lna_paths(nsim             = nsim,
+                                                   lna_times        = lna_times,
+                                                   census_times     = census_times,
+                                                   census_inds      = census_inds,
+                                                   restart_inds     = restart_inds,
+                                                   lna_pars         = lna_pars,
+                                                   init_states      = init_states,
+                                                   incidence_codes  = lna_incidence_codes,
+                                                   lna_pointer      = stem_object$dynamics$lna_pointers$lna_ptr,
+                                                   set_pars_pointer = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
 
                 # Old LNA code ------------------------------------------------------------
                 # # build the time-varying covariate matrix for the LNA

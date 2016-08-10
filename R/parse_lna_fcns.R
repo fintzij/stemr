@@ -10,8 +10,8 @@
 parse_lna_fcns <- function(lna_rates, flow_matrix, messages = TRUE) {
 
         # get the number of rates and the number of compartments
-        n_rates         <- length(lna_rates$hazards)
-        n_compartments  <- length(lna_rates$derivatives) / n_rates
+        n_rates         <- nrow(flow_matrix)
+        n_compartments  <- ncol(flow_matrix)
         n_params        <- length(lna_rates$lna_param_codes)
 
         # construct the stochiometry matrix constructor
@@ -55,13 +55,37 @@ parse_lna_fcns <- function(lna_rates, flow_matrix, messages = TRUE) {
                           drift_ode, resid_ode, diffusion_ode,
                           dxdt_drift, dxdt_resid, dxdt_diffusion, sep = "\n")
 
-        if(messages) {
-                print("Compiling LNA functions.")
-        }
+        # generate the stemr_lna functions that will actually be called
+        # stemr_LNA_integrator is equivalent to the _no_record odeintr function, but takes the endpoints of the interval and returns a numeric vector.
+        LNA_integrator <- paste("Rcpp::NumericVector INTEGRATE_STEM_LNA(Rcpp::NumericVector init, double start, double end, double step_size=1.0) {",
+                                      "INTEGRATE_LNA_set_state(init);",
+                                      "odeint::integrate_adaptive(odeintr::stepper, odeintr::sys, odeintr::state, start, end, step_size);",
+                                      "return Rcpp::wrap(INTEGRATE_LNA_get_state());",
+                                      "}\n",
+                                "typedef Rcpp::NumericVector(*lna_ptr)(Rcpp::NumericVector init, double start, double end, double step_size);",
+                                "// [[Rcpp::export]]",
+                                "Rcpp::XPtr<lna_ptr> LNA_XPtr() {",
+                                "return(Rcpp::XPtr<lna_ptr>(new lna_ptr(&INTEGRATE_STEM_LNA)));",
+                                "}", sep = "\n")
+
+        # function to set the LNA parameters, differs from the odeintr function in that it takes a numeric vector, not a std::vector
+        param_setter   <- paste("void SET_LNA_PARAMS(Rcpp::NumericVector p) {",
+                                "std::copy(p.begin(), p.end(), odeintr::pars.begin());",
+                                "}\n",
+                                "typedef void(*set_pars_ptr)(Rcpp::NumericVector p);",
+                                "// [[Rcpp::export]]",
+                                "Rcpp::XPtr<set_pars_ptr> LNA_set_params_XPtr() {",
+                                "return(Rcpp::XPtr<set_pars_ptr>(new set_pars_ptr(&SET_LNA_PARAMS)));",
+                                "}",sep = "\n")
+
+        # paste the LNA integrator and parameter setting functions together
+        stemr_LNA_code <- paste(LNA_integrator, param_setter, sep = "\n \n")
+
 
         # get the code for the LNA ODEs
         LNA_ODE_code <- odeintr::compile_sys(name = "INTEGRATE_LNA",
                                              sys = LNA_odes,
+                                             sys_dim = n_compartments*2 + n_compartments^2,
                                              pars = n_params,
                                              globals = paste(paste(paste0("static arma::vec drift(", n_compartments,");"),
                                                                    paste0("static arma::vec resid(", n_compartments,");"),
@@ -76,33 +100,23 @@ parse_lna_fcns <- function(lna_rates, flow_matrix, messages = TRUE) {
                                                              "#include <RcppArmadillo.h>",
                                                              "using namespace arma;",
                                                              sep = "\n"),
-                                             footers = paste("// [[Rcpp::export]]",
-                                                             "Rcpp::NumericVector INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size = 1.0) {",
-                                                             "INTEGRATE_LNA_set_state(init);",
-                                                             "odeint::integrate_adaptive(odeintr::stepper, odeintr::sys, odeintr::state, start, end, step_size);",
-                                                             "return Rcpp::as<Rcpp::NumricVector(INTEGRATE_LNA_get_state());",
-                                                             "};\n",
-                                                             "typedef Rcpp::NumericVector(*lna_ptr)(Rcpp::NumericVector& init, double start, double end, double step_size);",
-                                                             "// [[Rcpp::export]]",
-                                                             "Rcpp::XPtr<lna_ptr> LNA_XPtr() {",
-                                                             "return(Rcpp::XPtr<lna_ptr>(new lna_ptr(&INTEGRATE_STEM_LNA)));",
-                                                             "}",
-                                                             "// [[Rcpp::export]]",
-                                                             "void SET_LNA_PARAMS(Rcpp::NumericVector& p) {",
-                                                             "std::copy(p.begin(), p.end(), odeintr::pars.begin());",
-                                                             "}",
-                                                             "typedef void(*set_pars_ptr)(Rcpp::NumericVector& p);",
-                                                             "// [[Rcpp::export]]",
-                                                             "Rcpp::XPtr<set_pars_ptr> LNA_set_params_XPtr() {",
-                                                             "return(Rcpp::XPtr<set_pars_ptr>(new set_pars_ptr(&SET_LNA_PARAMS)));",
-                                                             "}",sep = "\n"),
                                              compile = F) # get the C++ code
 
+        # RcppArmadillo is included, so remove the include tag for Rcpp
         LNA_ODE_code <- gsub("#include <Rcpp.h>", "", LNA_ODE_code)
 
+        # we don't need the odeintr functions exported to the R global environment,
+        # so remove the export attributes
+        LNA_ODE_code <- gsub("// \\[\\[Rcpp::export\\]\\]", "", LNA_ODE_code)
+
+        # paste the stemr LNA ode code to the end of the odeintr generated code
+        LNA_ODE_code <- paste(LNA_ODE_code, stemr_LNA_code, sep = "\n")
+
         # compile the LNA code
+        if(messages) print("Compiling LNA functions.")
         Rcpp::sourceCpp(code = LNA_ODE_code, env = globalenv())
 
+        # get the LNA function pointers
         lna_pointer <- c(lna_ptr = LNA_XPtr(), set_lna_params_ptr = LNA_set_params_XPtr())
 
         return(lna_pointer)

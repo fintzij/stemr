@@ -6,7 +6,7 @@
 model.}
 \usage{
 simulate_lna_paths(nsim, lna_times, census_times, census_inds, restart_inds,
-  lna_pars, init_states, incidence_codes, n_transitions, lna_pointer)
+  lna_pars, init_states, incidence_codes, lna_pointer, set_pars_pointer)
 }
 \arguments{
 \item{nsim}{integer for the number of simulations}
@@ -29,9 +29,10 @@ covariates at each of the lna_times}
 \item{incidence_codes}{vector of incidence codes, or 0 if no incidence
 compartments}
 
-\item{n_transitions}{number of possible transitions in the model}
-
 \item{lna_pointer}{external pointer to LNA integration fcn}
+
+\item{set_pars_pointer}{external pointer to the function for setting the LNA
+parameters.}
 }
 \value{
 array of paths simulated using the LNA.

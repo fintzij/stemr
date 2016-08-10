@@ -92,7 +92,7 @@ list with evaluated rate functions and objects for managing the
   So the first n_compartment partial derivatives are the derivatives of the first rate wrt the model
   compartments (including artificial incidence compartments), the next n_compartment derivatives are
   the partial derivatives of the second rate function wrt the compartments, etc.}
-  \item{lna_ptrs}{vector of external functions pointers to compiled LNA functions.}
+  \item{lna_pointers}{vector of external functions pointers to compiled LNA functions.}
   \item{strata_sizes}{named numeric vector of strata sizes}
   \item{popsize}{population size}
   \item{comp_codes}{named vector of (C++) compartment codes}

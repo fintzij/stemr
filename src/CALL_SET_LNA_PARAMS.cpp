@@ -15,7 +15,7 @@ using namespace Rcpp;
 //'
 //' @export
 // [[Rcpp::export]]
-void CALL_SET_LNA_PARAMS(Rcpp::NumericVector& p, SEXP set_lna_params_ptr) {
+void CALL_SET_LNA_PARAMS(Rcpp::NumericVector p, SEXP set_lna_params_ptr) {
 
         Rcpp::XPtr<set_pars_ptr> xpfun(set_lna_params_ptr); // Receive the SEXP and put in Xptr
         set_pars_ptr fun = *xpfun;                   // get function via pointer

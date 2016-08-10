@@ -260,13 +260,14 @@ retrieve_census_path <- function(censusmat, path, census_times, census_columns) 
 #' @param init_states matrix of initial state vectors
 #' @param incidence_codes vector of incidence codes, or 0 if no incidence
 #'   compartments
-#' @param n_transitions number of possible transitions in the model
 #' @param lna_pointer external pointer to LNA integration fcn
+#' @param set_pars_pointer external pointer to the function for setting the LNA
+#'   parameters.
 #'
 #' @return array of paths simulated using the LNA.
 #' @export
-simulate_lna_paths <- function(nsim, lna_times, census_times, census_inds, restart_inds, lna_pars, init_states, incidence_codes, n_transitions, lna_pointer) {
-    .Call('stemr_simulate_lna_paths', PACKAGE = 'stemr', nsim, lna_times, census_times, census_inds, restart_inds, lna_pars, init_states, incidence_codes, n_transitions, lna_pointer)
+simulate_lna_paths <- function(nsim, lna_times, census_times, census_inds, restart_inds, lna_pars, init_states, incidence_codes, lna_pointer, set_pars_pointer) {
+    .Call('stemr_simulate_lna_paths', PACKAGE = 'stemr', nsim, lna_times, census_times, census_inds, restart_inds, lna_pars, init_states, incidence_codes, lna_pointer, set_pars_pointer)
 }
 
 #' Simulate a data matrix from the measurement process of a stochastic epidemic
