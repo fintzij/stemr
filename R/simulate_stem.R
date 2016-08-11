@@ -269,7 +269,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
 
                 if(!is.null(stem_object$dynamics$.dynamics_args$tcovar)) {
                         tcovar_rowinds          <- findInterval(lna_times, stem_object$dynamics$.dynamics_args$tcovar[,1])
-                        lna_pars[, tcov_inds]   <- stem_object$dynamics$.dynamics_args$tcovar[tcovar_rowinds,-1]
+                        lna_pars[, tcovar_inds] <- stem_object$dynamics$.dynamics_args$tcovar[tcovar_rowinds,-1]
                 }
 
                 # generate the initial values
@@ -312,7 +312,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                         init_incid <- init_states[, stem_object$dynamics$incidence_sources + 1, drop = FALSE]
                         colnames(init_incid) <- names(stem_object$dynamics$incidence_codes)
                         init_states <- cbind(init_states, init_incid)
-                        lna_incidence_codes <- stem_object$dynamics$incidence_codes
+                        lna_incidence_codes <- stem_object$dynamics$incidence_codes + 1 # add 1 b/c of the time column
                 } else {
                         lna_incidence_codes <- 0
                 }
@@ -327,6 +327,8 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                                                    incidence_codes  = lna_incidence_codes,
                                                    lna_pointer      = stem_object$dynamics$lna_pointers$lna_ptr,
                                                    set_pars_pointer = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
+
+                colnames(census_paths) <- c("time", colnames(stem_object$dynamics$flow_matrix))
 
                 # Old LNA code ------------------------------------------------------------
                 # # build the time-varying covariate matrix for the LNA

@@ -11,7 +11,7 @@
 #' @export
 build_lna_rates <- function(rates, param_codes, const_codes, tcovar_codes, compartment_codes) {
 
-        lna_param_codes <- c(param_codes, const_codes + length(param_codes), tcovar_codes + length(param_codes) + length(const_codes))
+        lna_param_codes <- c(param_codes, const_codes + length(param_codes), tcovar_codes + length(param_codes) + length(const_codes)-1)
 
         # Underscores will need to be removed and re-inserted at the end.
         # Thus, we create a lookup table for the strings with and without underscores

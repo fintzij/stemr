@@ -10,10 +10,13 @@ parse_lna_fcns(lna_rates, flow_matrix, messages = TRUE)
 \item{lna_rates}{list containing the strings vectors of ODES for the hazards
 and jacobian matrix, along with the lna parameter codes.}
 
+\item{flow_matrix}{matrix indicating the changes to each compartment per
+event}
+
 \item{messages}{logical; print a message that the rates are being compiled}
 }
 \value{
-External function pointer to the _no_record LNA integrator
+External function pointers for integrating the LNA
 }
 \description{
 Instatiate the C++ rate functions for the LNA using the odeintr package.

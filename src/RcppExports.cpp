@@ -39,6 +39,20 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// CALL_INTEGRATE_STEM_ODE
+void CALL_INTEGRATE_STEM_ODE(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr);
+RcppExport SEXP stemr_CALL_INTEGRATE_STEM_ODE(SEXP initSEXP, SEXP startSEXP, SEXP endSEXP, SEXP step_sizeSEXP, SEXP lna_ode_ptrSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type init(initSEXP);
+    Rcpp::traits::input_parameter< double >::type start(startSEXP);
+    Rcpp::traits::input_parameter< double >::type end(endSEXP);
+    Rcpp::traits::input_parameter< double >::type step_size(step_sizeSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type lna_ode_ptr(lna_ode_ptrSEXP);
+    CALL_INTEGRATE_STEM_ODE(init, start, end, step_size, lna_ode_ptr);
+    return R_NilValue;
+END_RCPP
+}
 // CALL_RATE_FCN
 void CALL_RATE_FCN(Rcpp::NumericVector& rates, const Rcpp::LogicalVector& inds, const arma::rowvec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::rowvec& tcovar, SEXP rate_ptr);
 RcppExport SEXP stemr_CALL_RATE_FCN(SEXP ratesSEXP, SEXP indsSEXP, SEXP stateSEXP, SEXP parametersSEXP, SEXP constantsSEXP, SEXP tcovarSEXP, SEXP rate_ptrSEXP) {
@@ -80,6 +94,17 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type p(pSEXP);
     Rcpp::traits::input_parameter< SEXP >::type set_lna_params_ptr(set_lna_params_ptrSEXP);
     CALL_SET_LNA_PARAMS(p, set_lna_params_ptr);
+    return R_NilValue;
+END_RCPP
+}
+// CALL_SET_ODE_PARAMS
+void CALL_SET_ODE_PARAMS(Rcpp::NumericVector& p, SEXP set_ode_params_ptr);
+RcppExport SEXP stemr_CALL_SET_ODE_PARAMS(SEXP pSEXP, SEXP set_ode_params_ptrSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type p(pSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type set_ode_params_ptr(set_ode_params_ptrSEXP);
+    CALL_SET_ODE_PARAMS(p, set_ode_params_ptr);
     return R_NilValue;
 END_RCPP
 }
@@ -268,6 +293,24 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix& >::type tcovar(tcovarSEXP);
     Rcpp::traits::input_parameter< SEXP >::type r_measure_ptr(r_measure_ptrSEXP);
     __result = Rcpp::wrap(simulate_r_measure(censusmat, measproc_indmat, parameters, constants, tcovar, r_measure_ptr));
+    return __result;
+END_RCPP
+}
+// stem_ode_path
+arma::mat stem_ode_path(const arma::colvec& ode_times, const arma::colvec& census_times, const Rcpp::LogicalVector& census_inds, const Rcpp::NumericMatrix& ode_pars, const Rcpp::NumericVector& init_states, const Rcpp::IntegerVector& incidence_codes, SEXP ode_pointer, SEXP set_pars_pointer);
+RcppExport SEXP stemr_stem_ode_path(SEXP ode_timesSEXP, SEXP census_timesSEXP, SEXP census_indsSEXP, SEXP ode_parsSEXP, SEXP init_statesSEXP, SEXP incidence_codesSEXP, SEXP ode_pointerSEXP, SEXP set_pars_pointerSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< const arma::colvec& >::type ode_times(ode_timesSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type census_times(census_timesSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type census_inds(census_indsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type ode_pars(ode_parsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type init_states(init_statesSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type incidence_codes(incidence_codesSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type ode_pointer(ode_pointerSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type set_pars_pointer(set_pars_pointerSEXP);
+    __result = Rcpp::wrap(stem_ode_path(ode_times, census_times, census_inds, ode_pars, init_states, incidence_codes, ode_pointer, set_pars_pointer));
     return __result;
 END_RCPP
 }

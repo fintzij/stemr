@@ -2,21 +2,21 @@
 % Please edit documentation in R/stem_ode.R
 \name{stem_ode}
 \alias{stem_ode}
-\title{Obtain the deterministic ODE path for a stochastic epidemic model.}
+\title{Return the ODE path for a stochastic epidemic model.}
 \usage{
-stem_ode(stem_object, census_times, init_states)
+stem_ode(stem_object, init_states, census_times)
 }
 \arguments{
-\item{stem_object}{stochastic epidemic model object}
+\item{stem_object}{stochastic epidemic model object list}
 
-\item{census_times}{list of times at which to evaluate the path}
+\item{init_states}{vector of initial compartment counts}
 
-\item{init_states}{initial state}
+\item{census_times}{times at which to evaluate the ode path}
 }
 \value{
-matrix with the ODE path
+matrix with the deterministic path evaluated at census times
 }
 \description{
-Obtain the deterministic ODE path for a stochastic epidemic model.
+Return the ODE path for a stochastic epidemic model.
 }
 

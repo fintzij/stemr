@@ -8,7 +8,6 @@
 # GillespieSSA.
 
 library(stemr)
-library(issb)
 library(doParallel)
 library(doMC)
 library(itertools)
@@ -19,7 +18,7 @@ library(ggplot2)
 
 # Set up simulation objectx -----------------------------------------------
 
-niter <- 1000
+niter <- 5000
 census_times <- seq(0,52,by=0.1)
 
 if(sim_num == 1){
@@ -64,6 +63,19 @@ if(sim_num == 1){
                                      census_times = seq(0, 52, by = 0.1),
                                      paths_as_array = FALSE,
                                      messages = TRUE)$paths
+
+        sim1_lna_restart <- simulate_stem(stem_object = stem_object,
+                                            nsim = niter,
+                                            paths = TRUE,
+                                            observations = FALSE,
+                                            subject_paths = FALSE,
+                                            method = "lna",
+                                            lna_restart = TRUE,
+                                            t0 = t0,
+                                            tmax = tmax,
+                                            census_times = seq(0, 52, by = 0.1),
+                                            paths_as_array = FALSE,
+                                            messages = TRUE)$paths
 
         sim1_ode <- stem_ode(stem_object = stem_object,
                              census_times = census_times,

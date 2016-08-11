@@ -94,14 +94,14 @@ simulate_lna <- function(stem_object, census_times, lna_restart, init_states) {
                 }
         }
 
-        colnames(lna_path) <- c("time", names(stem_object$dynamics$comp_codes), names(stem_object$dynamics$incidence_codes))
-
         # if some of the compartments track incidence, compute the incidence
         if(!is.null(stem_object$dynamics$incidence_codes)) {
                 census_incidence_rows <- rep(list(seq_along(census_times) - 1), length(stem_object$dynamics$incidence_codes))
                 compute_incidence(censusmat = lna_path, col_inds  = incidence_codes, row_inds  = census_incidence_rows)
                 for(i in incidence_codes) lna_path[,i + 1] <- pmax.int(lna_path[,i + 1], 0)
         }
+
+        colnames(lna_path) <- c("time", colnames(stem_object$dynamics$flow_matrix))
 
         return(lna_path)
 }

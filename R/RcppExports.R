@@ -33,6 +33,20 @@ CALL_INTEGRATE_STEM_LNA <- function(init, start, end, step_size, lna_ode_ptr) {
     invisible(.Call('stemr_CALL_INTEGRATE_STEM_LNA', PACKAGE = 'stemr', init, start, end, step_size, lna_ode_ptr))
 }
 
+#' Compute the hazards by calling the hazard functions via external Xptr.
+#'
+#' @param t time
+#' @param state vector of compartment counts
+#' @param parameters vector of model parameters
+#' @param constants vector of constants
+#' @param vector of time-varying covariate values
+#' @param hazard_ptr external pointer to function used to compute the hazards
+#'
+#' @export
+CALL_INTEGRATE_STEM_ODE <- function(init, start, end, step_size, lna_ode_ptr) {
+    invisible(.Call('stemr_CALL_INTEGRATE_STEM_ODE', PACKAGE = 'stemr', init, start, end, step_size, lna_ode_ptr))
+}
+
 #' Update rates by calling rate functions via Xptr.
 #'
 #' @param rates vector of rates to be modified
@@ -77,6 +91,20 @@ CALL_R_MEASURE <- function(obsmat, emit_inds, record_ind, state, parameters, con
 #' @export
 CALL_SET_LNA_PARAMS <- function(p, set_lna_params_ptr) {
     invisible(.Call('stemr_CALL_SET_LNA_PARAMS', PACKAGE = 'stemr', p, set_lna_params_ptr))
+}
+
+#' Compute the hazards by calling the hazard functions via external Xptr.
+#'
+#' @param t time
+#' @param state vector of compartment counts
+#' @param parameters vector of model parameters
+#' @param constants vector of constants
+#' @param vector of time-varying covariate values
+#' @param hazard_ptr external pointer to function used to compute the hazards
+#'
+#' @export
+CALL_SET_ODE_PARAMS <- function(p, set_ode_params_ptr) {
+    invisible(.Call('stemr_CALL_SET_ODE_PARAMS', PACKAGE = 'stemr', p, set_ode_params_ptr))
 }
 
 #' Construct a matrix containing the compartment counts at a sequence of census times.
@@ -286,5 +314,27 @@ simulate_lna_paths <- function(nsim, lna_times, census_times, census_inds, resta
 #' @export
 simulate_r_measure <- function(censusmat, measproc_indmat, parameters, constants, tcovar, r_measure_ptr) {
     .Call('stemr_simulate_r_measure', PACKAGE = 'stemr', censusmat, measproc_indmat, parameters, constants, tcovar, r_measure_ptr)
+}
+
+#' Simulate a data matrix from the measurement process of a stochastic epidemic
+#' model.
+#'
+#' @param ode_times vector of times at which the ODE must be evaluated
+#' @param census_times vector of times at which the ODE should be censused
+#' @param census_inds logical vector the same length as ode_times indicating
+#'   whether the ODE path is censused at each of the ODE times
+#' @param ode_pars numeric matrix of parameters, constants, and time-varying
+#'   covariates at each of the ode_times
+#' @param init_states matrix of initial state vectors
+#' @param incidence_codes vector of incidence codes, or 0 if no incidence
+#'   compartments
+#' @param ode_pointer external pointer to ODE integration fcn
+#' @param set_pars_pointer external pointer to the function for setting the ODE
+#'   parameters.
+#'
+#' @return matrix containing the deterministic ODE path
+#' @export
+stem_ode_path <- function(ode_times, census_times, census_inds, ode_pars, init_states, incidence_codes, ode_pointer, set_pars_pointer) {
+    .Call('stemr_stem_ode_path', PACKAGE = 'stemr', ode_times, census_times, census_inds, ode_pars, init_states, incidence_codes, ode_pointer, set_pars_pointer)
 }
 

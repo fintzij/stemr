@@ -2,10 +2,11 @@
 #'
 #' @param lna_rates list containing the strings vectors of ODES for the hazards
 #'   and jacobian matrix, along with the lna parameter codes.
-#' @param flow_matrix
+#' @param flow_matrix matrix indicating the changes to each compartment per
+#'   event
 #' @param messages logical; print a message that the rates are being compiled
 #'
-#' @return External function pointer to the _no_record LNA integrator
+#' @return External function pointers for integrating the LNA
 #' @export
 parse_lna_fcns <- function(lna_rates, flow_matrix, messages = TRUE) {
 

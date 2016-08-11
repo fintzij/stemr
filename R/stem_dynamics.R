@@ -86,7 +86,7 @@
 #'   }
 #'
 #' @export
-stem_dynamics <- function(rates, parameters, state_initializer, compartments, tcovar = NULL, t0 = NULL, tmax, timestep = NULL, strata = NULL, constants = NULL, adjacency = NULL, messages = TRUE, compile_rates = TRUE, compile_lna = TRUE) {
+stem_dynamics <- function(rates, parameters, state_initializer, compartments, tcovar = NULL, t0 = NULL, tmax, timestep = NULL, strata = NULL, constants = NULL, adjacency = NULL, messages = TRUE, compile_rates = TRUE, compile_lna = TRUE, compile_ode = FALSE) {
 
         # check consistency of specification and throw errors if inconsistent
         if(is.list(compartments) && ("ALL" %in% compartments) && is.null(strata)) {
@@ -645,10 +645,18 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 lna_pointers  <- parse_lna_fcns(lna_rates, flow_matrix, messages = messages)
                 # lna_ptrs    <- parse_lna(rates = rate_fcns, hazard_fcns = lna_hazards, rate_derivs = rate_derivs, messages = messages)
         } else {
-                lna_pointer <- NULL
-                lna_rates   <- list(hazards = NULL, derivatives = NULL, lna_param_codes = NULL)
+                lna_pointers <- NULL
+                lna_rates    <- list(hazards = NULL, derivatives = NULL, lna_param_codes = NULL)
         }
 
+        # compile the functions to solve the ODEs for the stochastic epidemic model
+        if(compile_ode) {
+                ode_rates    <- build_ode_rates(rate_fcns, param_codes, const_codes, tcovar_codes, compartment_codes)
+                ode_pointers <- parse_ode_fcns(ode_rates, flow_matrix, messages = messages)
+        } else {
+                ode_pointers <- NULL
+                ode_rates <- list(hazards = NULL, ode_param_codes = NULL)
+        }
 
         # create the list determining the stem dynamics
         dynamics <- list(rates            = rate_fcns,
@@ -663,6 +671,8 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                          lna_hazards      = lna_rates$hazards,
                          rate_derivs      = lna_rates$derivatives,
                          lna_pointers     = lna_pointers,
+                         ode_pointers     = ode_pointers,
+                         ode_hazards      = ode_rates$ode_hazards,
                          strata_sizes     = strata_sizes,
                          popsize          = popsize,
                          comp_codes       = compartment_codes,
@@ -671,6 +681,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                          const_codes      = const_codes,
                          strata_codes     = strata_codes,
                          lna_param_codes  = lna_rates$lna_param_codes,
+                         ode_param_codes  = ode_rates$ode_param_codes,
                          incidence_codes  = incidence_codes,
                          incidence_sources= incidence_sources,
                          progressive      = progressive,

@@ -1,83 +1,54 @@
-#' Obtain the deterministic ODE path for a stochastic epidemic model.
+#' Return the ODE path for a stochastic epidemic model.
 #'
-#' @param stem_object stochastic epidemic model object
-#' @param census_times list of times at which to evaluate the path
-#' @param init_states initial state
+#' @param stem_object stochastic epidemic model object list
+#' @param init_states vector of initial compartment counts
+#' @param census_times times at which to evaluate the ode path
 #'
-#' @return matrix with the ODE path
+#' @return matrix with the deterministic path evaluated at census times
 #' @export
-stem_ode <- function(stem_object, census_times, init_states) {
+stem_ode <- function(stem_object, init_states, census_times) {
 
-        # initialize the path matrix
-        ode_path        <- matrix(0, nrow = length(census_times), ncol = 1 + length(init_states)) # create matrix
-        ode_path[1,]    <- c(census_times[1], init_states)        # assign initial state values
-        ode_path[,1]    <- census_times                           # insert the census times
+        # set the vectors of times when the LNA is evaluated, restarted, and censused
+        ode_times       <- sort(unique(c(census_times, stem_object$dynamics$.dynamics_args$tcovar[,1])))
+        census_inds     <- !is.na(match(ode_times, census_times))
 
-        # pull the incidence codes and compartment codes
-        comp_codes <- stem_object$dynamics$comp_codes + 1
+        # generate the matrix of parameters, constants, and time-varying covariates
+        ode_pars <- matrix(0.0, nrow = length(ode_times), ncol = length(stem_object$dynamics$ode_param_codes))
+        colnames(ode_pars) <- c(names(stem_object$dynamics$ode_param_codes))
 
-        if(is.null(stem_object$dynamics$incidence_codes)) {
-                incidence_codes <- NULL
+        # insert parameters, constants, and time-varying covariates
+        parameter_inds <- 1:length(stem_object$dynamics$param_codes)
+        constant_inds  <- (length(parameter_inds)+1):(length(parameter_inds) + length(stem_object$dynamics$const_codes))
+        tcovar_inds  <- (max(constant_inds)+1):ncol(ode_pars)
+        ode_pars[, parameter_inds] <- matrix(stem_object$dynamics$parameters, nrow = nrow(ode_pars), ncol = length(parameter_inds), byrow = T)
+        ode_pars[, constant_inds]  <- matrix(stem_object$dynamics$constants, nrow = nrow(ode_pars), ncol = length(constant_inds), byrow = T)
 
-        } else {
-                incidence_codes   <- stem_object$dynamics$incidence_codes + 1
-                incidence_sources <- stem_object$dynamics$incidence_sources + 1
+        if(!is.null(stem_object$dynamics$.dynamics_args$tcovar)) {
+                tcovar_rowinds          <- findInterval(ode_times, stem_object$dynamics$.dynamics_args$tcovar[,1])
+                ode_pars[, tcovar_inds] <- stem_object$dynamics$.dynamics_args$tcovar[tcovar_rowinds,-1]
         }
 
-        # construct the time-varying covariate matrix
-        if(is.null(stem_object$dynamics$.dynamics_args$tcovar)) {
-                        ode_tcovar              <- matrix(census_times, nrow = length(census_times), ncol = 2)
-                        colnames(ode_tcovar)    <- c("_time", "TIME")
-
-        } else {
-                        ode_tcovar_timeseq      <- sort(unique(c(census_times, stem_object$dynamics$.dynamics_args$tcovar[,1])))
-                        tcovar_inds             <- findInterval(ode_tcovar_timeseq, stem_object$dynamics$.dynamics_args$tcovar[,1])
-                        ode_tcovar              <- matrix(c(ode_tcovar_timeseq, stem_object$dynamics$.dynamics_args$tcovar[tcovar_inds,-1]))
-                        colnames(ode_tcovar)    <- c("_time", names(stem_object$dynamics$tcovar_codes))
-        }
-
-        # initialize the deterministic process
-        ode_state <- init_states
-
-        # initialize the model list
-        stemr_odemod    <- list(ode_fcn     = NA,
-                                parameters  = stem_object$dynamics$parameters,
-                                constants   = stem_object$dynamics$constants,
-                                tcovar      = ode_tcovar,
-                                flow_matrix = t(stem_object$dynamics$flow_matrix),
-                                hazard_ptr  = stem_object$dynamics$lna_ptrs$hazard_ptr)
-
-        # create the ODE function
-        ode_fcn <- function(t, ode_state, stemr_odemod = stemr_odemod) {
-                return(list(stemr_odemod$flow_matrix %*% COMPUTE_HAZARD(t, ode_state, stemr_odemod$parameters, stemr_odemod$constants, stemr_odemod$tcovar, stemr_odemod$hazard_ptr)))
-        }
-
-        # insert the ode function into the odemod list
-        stemr_odemod$ode_fcn <- ode_fcn
-
-        for(k in 2:(length(census_times))) {
-
-                # increment the interval endpoints
-                t_L <- census_times[k-1]
-                t_R <- census_times[k]
-
-                # retrieve the time-varying covariate values
-                stemr_odemod$tcovar <- ode_tcovar[k-1, -1, drop = FALSE]
-
-                # solve the odes
-                ode_state <- stem_ode_path(stemr_odemod, ode_state, t_L, t_R)
-
-                # insert the new path into the path matrix
-                ode_path[k,-1] <- ode_state
-        }
-
-        colnames(ode_path) <- c("time", names(stem_object$dynamics$comp_codes), names(stem_object$dynamics$incidence_codes))
-
-        # if some of the compartments track incidence, compute the incidence
+        # if there are artificial incidence compartments, copy the
+        # incidence counts and add them to the initial state matrix
         if(!is.null(stem_object$dynamics$incidence_codes)) {
-                census_incidence_rows <- rep(list(seq_along(census_times) - 1), length(stem_object$dynamics$incidence_codes))
-                compute_incidence(censusmat = ode_path, col_inds  = incidence_codes, row_inds  = census_incidence_rows)
+                init_incid <- init_states[stem_object$dynamics$incidence_sources + 1]
+                names(init_incid) <- names(stem_object$dynamics$incidence_codes)
+                init_states <- c(init_states, init_incid)
+                ode_incidence_codes <- stem_object$dynamics$incidence_codes + 1 # add 1 b/c of time column
+        } else {
+                ode_incidence_codes <- 0
         }
+
+        ode_path <- stem_ode_path(ode_times        = ode_times,
+                                  census_times     = census_times,
+                                  census_inds      = census_inds,
+                                  ode_pars         = ode_pars,
+                                  init_states      = init_states,
+                                  incidence_codes  = ode_incidence_codes,
+                                  ode_pointer      = stem_object$dynamics$ode_pointers$ode_ptr,
+                                  set_pars_pointer = stem_object$dynamics$ode_pointers$set_ode_params_ptr)
+
+        colnames(ode_path) <- c("time",colnames(stem_object$dynamics$flow_matrix))
 
         return(ode_path)
 }
