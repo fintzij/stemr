@@ -469,7 +469,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, ln
                 for(k in seq_along(state_initializer)) {
 
                         # get the relevant strata
-                        if(identical(state_initializer[[k]]$strata, "ALL") || all(state_initializer[[k]]$strata %in% strata)) {
+                        if(identical(state_initializer[[k]]$strata, "ALL") || all(strata %in% state_initializer[[k]]$strata)) {
                                 rel_strata <- strata
                         } else {
                                 rel_strata <- state_initializer[[k]]$strata
@@ -658,16 +658,16 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, ln
                 #                                flow_matrix = flow_matrix, lna_scale = lna_scale)
                 # lna_pointers <- parse_lna_odes(lna_rates, flow_matrix, lna_scale, messages = messages)
         } else {
-                lna_pointers <- NULL
+                lna_pointer  <- NULL
                 lna_rates    <- list(hazards = NULL, derivatives = NULL, lna_param_codes = NULL)
         }
 
         # compile the functions to solve the ODEs for the stochastic epidemic model
         if(compile_ode) {
                 ode_rates    <- build_ode_rates(rate_fcns, param_codes, const_codes, tcovar_codes, compartment_codes)
-                ode_pointers <- parse_ode_fcns(ode_rates, flow_matrix, messages = messages)
+                ode_pointer <- parse_ode_fcns(ode_rates, flow_matrix, messages = messages)
         } else {
-                ode_pointers <- NULL
+                ode_pointer <- NULL
                 ode_rates <- list(hazards = NULL, ode_param_codes = NULL)
         }
 
@@ -684,7 +684,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, ln
                          lna_rates        = lna_rates,
                          lna_scale        = lna_scale,
                          lna_pointer      = lna_pointer,
-                         ode_pointers     = ode_pointers,
+                         ode_pointer      = ode_pointer,
                          ode_hazards      = ode_rates$ode_hazards,
                          strata_sizes     = strata_sizes,
                          popsize          = popsize,

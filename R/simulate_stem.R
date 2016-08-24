@@ -138,7 +138,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                         } else if(stem_object$dynamics$n_strata > 1) {
 
                                 # generate the matrix of initial compartment counts
-                                init_states <- matrix(0, nrow = nsim, ncol = stem_object$dynamics$n_compartments)
+                                init_states <- matrix(0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
                                 colnames(init_states) <- names(stem_object$dynamics$comp_codes)
 
                                 for(s in seq_len(stem_object$dynamics$n_strata)) {
@@ -150,7 +150,8 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 # if there are artificial incidence compartments, copy the
                 # incidence counts and add them to the initial state matrix
                 if(!is.null(stem_object$dynamics$incidence_codes)) {
-                        init_incid <- init_states[, stem_object$dynamics$incidence_sources + 1, drop = FALSE]
+                        # init_incid <- init_states[, stem_object$dynamics$incidence_sources + 1, drop = FALSE]
+                        init_incid <- matrix(0, nrow = nrow(init_states), ncol = length(stem_object$dynamics$incidence_codes))
                         colnames(init_incid) <- names(stem_object$dynamics$incidence_codes)
                         init_states <- cbind(init_states, init_incid)
                 }
@@ -186,7 +187,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 }
 
                 # get the compartment names
-                path_colnames <- c("time", "event", c(names(stem_object$dynamics$comp_codes), names(stem_object$dynamics$incidence_codes)))
+                # path_colnames <- c("time", "event", c(names(stem_object$dynamics$comp_codes), names(stem_object$dynamics$incidence_codes)))
 
                 # simulate the paths
                 for(k in seq_len(nsim)) {
@@ -194,18 +195,18 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                                                               parameters       = stem_object$dynamics$parameters,
                                                               constants        = stem_object$dynamics$constants,
                                                               tcovar           = stem_object$dynamics$tcovar,
-                                                              init_states      = init_states[k,, drop = FALSE],
+                                                              init_states      = init_states[k,],
                                                               rate_adjmat      = stem_object$dynamics$rate_adjmat,
                                                               tcovar_adjmat    = stem_object$dynamics$tcovar_adjmat,
                                                               tcovar_changemat = stem_object$dynamics$tcovar_changemat,
                                                               init_dims        = init_dims,
                                                               rate_ptr         = stem_object$dynamics$rate_ptrs[[1]])
-                        colnames(paths_full[[k]]) <- path_colnames
+                        # colnames(paths_full[[k]]) <- path_colnames
                 }
 
                 if(!is.null(census_times)) {
                         census_paths    <- vector(mode = "list", length = nsim)
-                        census_colnames <- c("time", c(names(stem_object$dynamics$comp_codes), names(stem_object$dynamics$incidence_codes)))
+                        # census_colnames <- c("time", c(names(stem_object$dynamics$comp_codes), names(stem_object$dynamics$incidence_codes)))
 
                         # add 2 to the codes b/c 'time' and 'event' are in the full path
                         census_codes      <- c(stem_object$dynamics$comp_codes, stem_object$dynamics$incidence_codes) + 2
@@ -227,12 +228,12 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                                                                     row_inds  = census_incidence_rows)
 
                                 # assign column names
-                                colnames(census_paths[[k]]) <- census_colnames
+                                # colnames(census_paths[[k]]) <- census_colnames
                         }
 
                         if(paths_as_array) {
                                 census_paths <- array(unlist(census_paths), dim = c(nrow(census_paths[[1]]), ncol(census_paths[[1]]), length(census_paths)))
-                                colnames(census_paths) <- census_colnames
+                                # colnames(census_paths) <- census_colnames
                         }
                 }
 

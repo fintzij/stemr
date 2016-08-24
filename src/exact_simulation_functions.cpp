@@ -37,6 +37,7 @@ arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& p
         flow_dims[1]    = flow.n_cols;
         tcovar_dims[0]  = tcovar.n_rows;
         tcovar_dims[1]  = tcovar.n_cols;
+
         // initialize bookkeeping matrix
         arma::mat path(init_dims[0], init_dims[1]);
         path(0, 1) = -1;
@@ -67,6 +68,10 @@ arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& p
         Rcpp::NumericVector rates(flow_dims[0]);           // initialize vector of rates
         CALL_RATE_FCN(rates, rate_inds, state, parameters, constants, tcovs, rate_ptr); // compute rates
 
+        // vector for storing the event probabilities - Rcpp's sample function modifies probs (and hence rates) in place
+        Rcpp::NumericVector event_probs(flow_dims[0]);
+        event_probs = rates / sum(rates);
+
         // set keep_going and the row index
         bool keep_going = true;
         int ind_start = 1;       // row from which to begin inserting, updated throughout
@@ -94,12 +99,13 @@ arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& p
 
                                 rate_update_tcovar(rate_inds, tcovar_adjmat, tcovar_changemat.row(tcov_ind)); // identify rates that need to be updated
                                 CALL_RATE_FCN(rates, rate_inds, state, parameters, constants, tcovs, rate_ptr); // update the rate functions
+
+                                event_probs = rates / sum(rates); // update event probabilities
                         }
 
                 } else {
-
                         // sample the next event
-                        next_event = Rcpp::RcppArmadillo::sample(events, 1, false, rates);
+                        next_event = Rcpp::RcppArmadillo::sample(events, 1, false, event_probs);
 
                         // update the state vector
                         state = state + flow.row(next_event[0]);
@@ -121,6 +127,8 @@ arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& p
                         // update the rates
                         rate_update_event(rate_inds, rate_adjmat, next_event[0]);                       // identify rates that need to be updated
                         CALL_RATE_FCN(rates, rate_inds, state, parameters, constants, tcovs, rate_ptr); // update the rate functions
+
+                        event_probs = rates / sum(rates); // update the event probabilities
 
                         // if all rates equal zero, stop simulating
                         keep_going = Rcpp::is_true(any(rates != 0));

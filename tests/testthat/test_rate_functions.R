@@ -18,7 +18,7 @@ test_that("Rates are computed properly for a simple system", {
         t0 <- 0; tmax <- 52
 
         # set dynamics
-        dynamics <- stem_dynamics(rates = rates, parameters = parameters, tmax = tmax, state_initializer = state_initializer, compartments=compartments, strata = strata, tcovar = tcovar, compile_lna = F, messages = FALSE)
+        dynamics <- stem_dynamics(rates = rates, parameters = parameters, tmax = tmax, state_initializer = state_initializer, compartments=compartments, strata = strata, tcovar = tcovar, compile_lna = F, compile_ode = F, messages = FALSE)
 
         # initialize stem object
         stem_object <- stem(dynamics = dynamics)

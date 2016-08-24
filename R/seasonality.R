@@ -63,7 +63,7 @@ seasonality <- function(period = 52, intercept = NULL, trend = NULL, s_params = 
                 trend_terms <- c("S_INTERCEPT", "S_TREND*TIME")[c(!is.null(intercept), !is.null(trend))]
         } else {
                 trend_terms <- c("S_INTERCEPT_SELF", "S_TREND_SELF*TIME")[c(!is.null(intercept), !is.null(trend))]
-                if(!is.null(trend_terms)) trend_names <- paste0(trend_names, "_SELF")
+                if(length(trend_terms)!=0) trend_names <- paste0(trend_names, "_SELF")
         }
 
         names(s_params) <- c(trend_names, s_param_names)
