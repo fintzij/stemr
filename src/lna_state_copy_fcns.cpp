@@ -21,6 +21,7 @@ void procs2vec(Rcpp::NumericVector& statevec, arma::vec& driftvec, arma::vec& re
         std::copy(driftvec.begin(), driftvec.end(), statevec.begin());
         std::copy(residvec.begin(), residvec.end(), statevec.begin() + n_comps);
         std::copy(diffmat.begin(), diffmat.end(), statevec.begin() + 2*n_comps);
+
 }
 
 //' Copy the LNA ODE state into the drift, residual, and diffusion processes
@@ -42,4 +43,5 @@ void vec2procs(Rcpp::NumericVector& statevec, arma::vec& driftvec, arma::vec& re
         std::copy(statevec.begin(), statevec.begin() + n_comps, driftvec.begin());
         std::copy(statevec.begin() + n_comps, statevec.begin() + 2*n_comps, residvec.begin());
         std::copy(statevec.begin() + 2*n_comps, statevec.end(), diffmat.begin());
+
 }

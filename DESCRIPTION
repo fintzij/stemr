@@ -20,6 +20,8 @@ Imports:
     ECctmc,
     Ryacas,
     odeintr,
+    deSolve,
+    cOde,
     Rcpp (>= 0.12.4)
 LinkingTo: Rcpp,
     odeintr,

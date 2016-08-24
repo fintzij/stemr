@@ -8,20 +8,32 @@
 # GillespieSSA.
 
 library(stemr)
-library(doParallel)
-library(doMC)
-library(itertools)
-library(foreach)
-library(iterators)
 library(ggplot2)
-
+library(issb)
 
 # Set up simulation objectx -----------------------------------------------
 
-niter <- 5000
+niter <- 500
 census_times <- seq(0,52,by=0.1)
 
 if(sim_num == 1){
+
+        # set up the model in the issb package
+        h = function(x, pars) {
+                hazs = numeric(length(pars))
+                hazs[1] = pars[1]*x[1]*x[2] # S->I
+                hazs[2] = pars[2]*x[2]      # I->R
+                return(hazs)
+        }
+
+        smat = matrix(c(-1,1,0,0,-1,1),nrow=3,ncol=2)
+        rownames(smat) = c("S", "I", "R")
+
+        initial = c(S = 1500, I = 10, R = 50)
+
+        pars = c(0.00025,1/7)
+
+        SIR_mod_issb <- create_model(smat, h, initial, pars)
 
         # Set up stemr objects
         compartments <- c("S","I","R")
@@ -33,8 +45,9 @@ if(sim_num == 1){
         constants <- NULL
         strata <- NULL
         t0 <- 0; tmax <- 52
+        lna_scale <- "log"
 
-        dynamics <- stem_dynamics(rates = rates, parameters = parameters,state_initializer = state_initializer, compartments=compartments, strata = strata, tcovar = tcovar, tmax = tmax, messages = TRUE)
+        dynamics <- stem_dynamics(rates = rates, parameters = parameters,state_initializer = state_initializer, compartments=compartments, strata = strata, tcovar = tcovar, tmax = tmax, lna_scale = lna_scale, messages = TRUE, compile_rates = T, compile_lna = T, compile_ode = F)
 
         stem_object <- stem(dynamics = dynamics)
 
@@ -48,7 +61,7 @@ if(sim_num == 1){
                                        t0 = t0,
                                        tmax = tmax,
                                        census_times = seq(0, 52, by = 0.1),
-                                       paths_as_array = FALSE,
+                                       paths_as_array = TRUE,
                                        messages = TRUE)$paths
 
         sim1_lna_norestart <- simulate_stem(stem_object = stem_object,
@@ -61,28 +74,365 @@ if(sim_num == 1){
                                      t0 = t0,
                                      tmax = tmax,
                                      census_times = seq(0, 52, by = 0.1),
-                                     paths_as_array = FALSE,
+                                     paths_as_array = TRUE,
                                      messages = TRUE)$paths
 
-        sim1_lna_restart <- simulate_stem(stem_object = stem_object,
+        # sim1_lna_restart <- simulate_stem(stem_object = stem_object,
+        #                                     nsim = niter,
+        #                                     paths = TRUE,
+        #                                     observations = FALSE,
+        #                                     subject_paths = FALSE,
+        #                                     method = "lna",
+        #                                     lna_restart = TRUE,
+        #                                     t0 = t0,
+        #                                     tmax = tmax,
+        #                                     census_times = seq(0, 52, by = 0.1),
+        #                                     paths_as_array = TRUE,
+        #                                     messages = TRUE)$paths
+
+        # sim1_ode <- stem_ode(stem_object = stem_object,
+        #                      census_times = census_times,
+        #                      init_states = c(S = 1500, I = 10, R = 50))
+
+        sim1_ode_issb <- deterministic(SIR_mod_issb, 52, 0.1)
+
+        path_quantiles <- data.frame(time = rep(census_times, 3),
+                                     method = rep(c("gillespie", "lna_norestart",
+                                                    # "lna_restart",
+                                                    # "ode",
+                                                    "ode_issb"), each = length(census_times)),
+                                     mean = c(apply(sim1_gillespie_trajecs[,"I",,drop = FALSE], 1, mean),
+                                              apply(sim1_lna_norestart[,"I",,drop = FALSE], 1, mean),
+                                              # apply(sim1_lna_restart[,"I",,drop = FALSE], 1, mean),
+                                              # sim1_ode[,"I"],
+                                              sim1_ode_issb[,"I"]),
+                                     lower = 0,
+                                     upper = 0)
+        path_quantiles$lower <- path_quantiles$mean - 1.96 * c(apply(sim1_gillespie_trajecs[,"I",,drop = FALSE], 1, sd),
+                                                               apply(sim1_lna_norestart[,"I",,drop = FALSE], 1, sd),
+                                                               # apply(sim1_lna_restart[,"I",,drop = FALSE], 1, sd),
+                                                               rep(0, length(census_times))) / sqrt(niter)
+        path_quantiles$upper <- path_quantiles$mean + 1.96 * c(apply(sim1_gillespie_trajecs[,"I",,drop = FALSE], 1, sd),
+                                                               apply(sim1_lna_norestart[,"I",,drop = FALSE], 1, sd),
+                                                               # apply(sim1_lna_restart[,"I",,drop = FALSE], 1, sd),
+                                                               rep(0, length(census_times))) / sqrt(niter)
+        path_quantiles[path_quantiles$method == "lna_norestart",3:5] = exp(path_quantiles[path_quantiles$method == "lna_norestart",3:5])
+        pdf(paste0("test_simulate_lna",sim_num,"popsize_1560", ".pdf"))
+
+        ggplot(path_quantiles, aes(x = time, y = mean, colour = method)) + geom_line(size = 1) + geom_ribbon(data = path_quantiles, aes(x = time, ymin = lower, ymax = upper, fill = method), alpha = 0.1, size = 0) + labs(y = "Average compartment counts", title = "S0 = 1500, I0 = 10, R0 = 50; beta = 0.00025, mu = 1/7") + theme_bw()
+
+        dev.off()
+
+} else if(sim_num == 2){
+
+        # set up the model in the issb package
+        h = function(x, pars) {
+                hazs = numeric(length(pars))
+                hazs[1] = pars[1]*x[1]*x[2] # S->I
+                hazs[2] = pars[2]*x[2]      # I->R
+                return(hazs)
+        }
+
+        smat = matrix(c(-1,1,0,0,-1,1),nrow=3,ncol=2)
+        rownames(smat) = c("S", "I", "R")
+
+        initial = c(S = 15000, I = 100, R = 500)
+
+        pars = c(0.000025,1/7)
+
+        SIR_mod_issb <- create_model(smat, h, initial, pars)
+
+        # Set up stemr objects
+        compartments <- c("S","I","R")
+        rates <- list(rate("beta * I", "S", "I"),
+                      rate("mu", "I", "R"))
+        state_initializer <- stem_initializer(c(S = 15000, I = 100, R = 500), fixed = TRUE)
+        parameters <- c(beta = 0.000025, mu = 1/7, rho = 0.5)
+        tcovar <- NULL
+        constants <- NULL
+        strata <- NULL
+        t0 <- 0; tmax <- 52
+
+        dynamics <- stem_dynamics(rates = rates, parameters = parameters,state_initializer = state_initializer, compartments=compartments, strata = strata, tcovar = tcovar, tmax = tmax, messages = TRUE, compile_rates = T, compile_lna = T, compile_ode = T)
+
+        stem_object <- stem(dynamics = dynamics)
+
+        # simulate paths
+        sim2_gillespie_trajecs <- simulate_stem(stem_object = stem_object,
+                                                nsim = niter,
+                                                paths = TRUE,
+                                                observations = FALSE,
+                                                subject_paths = FALSE,
+                                                method = "gillespie",
+                                                t0 = t0,
+                                                tmax = tmax,
+                                                census_times = seq(0, 52, by = 0.1),
+                                                paths_as_array = TRUE,
+                                                messages = TRUE)$paths
+
+        sim2_lna_norestart <- simulate_stem(stem_object = stem_object,
                                             nsim = niter,
                                             paths = TRUE,
                                             observations = FALSE,
                                             subject_paths = FALSE,
                                             method = "lna",
-                                            lna_restart = TRUE,
+                                            lna_restart = FALSE,
                                             t0 = t0,
                                             tmax = tmax,
                                             census_times = seq(0, 52, by = 0.1),
-                                            paths_as_array = FALSE,
+                                            paths_as_array = TRUE,
                                             messages = TRUE)$paths
 
-        sim1_ode <- stem_ode(stem_object = stem_object,
+        sim2_lna_restart <- simulate_stem(stem_object = stem_object,
+                                          nsim = niter,
+                                          paths = TRUE,
+                                          observations = FALSE,
+                                          subject_paths = FALSE,
+                                          method = "lna",
+                                          lna_restart = TRUE,
+                                          t0 = t0,
+                                          tmax = tmax,
+                                          census_times = seq(0, 52, by = 0.1),
+                                          paths_as_array = TRUE,
+                                          messages = TRUE)$paths
+
+        sim2_ode <- stem_ode(stem_object = stem_object,
+                             census_times = census_times,
+                             init_states = c(S = 15000, I = 100, R = 500))
+
+        sim2_ode_issb <- deterministic(SIR_mod_issb, 52, 0.1)
+
+        path_quantiles <- data.frame(time = rep(census_times, 5),
+                                     method = rep(c("gillespie", "lna_norestart", "lna_restart", "ode", "ode_issb"), each = length(census_times)),
+                                     mean = c(apply(sim2_gillespie_trajecs[,"I",,drop = FALSE], 1, mean),
+                                              apply(sim2_lna_norestart[,"I",,drop = FALSE], 1, mean),
+                                              apply(sim2_lna_restart[,"I",,drop = FALSE], 1, mean),
+                                              sim2_ode[,"I"],
+                                              sim2_ode_issb[,"I"]),
+                                     lower = 0,
+                                     upper = 0)
+        path_quantiles$lower <- path_quantiles$mean - 1.96 * c(apply(sim2_gillespie_trajecs[,"I",,drop = FALSE], 1, sd),
+                                                               apply(sim2_lna_norestart[,"I",,drop = FALSE], 1, sd),
+                                                               apply(sim2_lna_restart[,"I",,drop = FALSE], 1, sd),
+                                                               rep(0, length(census_times)*2)) / sqrt(niter)
+        path_quantiles$upper <- path_quantiles$mean + 1.96 * c(apply(sim2_gillespie_trajecs[,"I",,drop = FALSE], 1, sd),
+                                                               apply(sim2_lna_norestart[,"I",,drop = FALSE], 1, sd),
+                                                               apply(sim2_lna_restart[,"I",,drop = FALSE], 1, sd),
+                                                               rep(0, length(census_times)*2)) / sqrt(niter)
+
+        pdf(paste0("test_simulate_lna",sim_num,"popsize_15600", ".pdf"))
+
+        ggplot(path_quantiles, aes(x = time, y = mean, colour = method)) + geom_line(size = 1) + geom_ribbon(data = path_quantiles, aes(x = time, ymin = lower, ymax = upper, fill = method), alpha = 0.1, size = 0) + labs(y = "Average compartment counts", title = "S0 = 15000, I0 = 100, R0 = 500; beta = 0.000025, mu = 1/7") + theme_bw()
+
+        dev.off()
+
+} else if(sim_num == 3){
+
+        # set up the model in the issb package
+        h = function(x, pars) {
+                hazs = numeric(length(pars))
+                hazs[1] = pars[1]*x[1]*x[2] # S->I
+                hazs[2] = pars[2]*x[2]      # I->R
+                return(hazs)
+        }
+
+        smat = matrix(c(-1,1,0,1,0,-1,1,0),nrow=4,ncol=2)
+        rownames(smat) = c("S", "I", "R", "I_INCIDENCE")
+
+        initial = c(S = 1500, I = 10, R = 50, 10)
+
+        pars = c(0.00025,1/7)
+
+        SIR_mod_issb <- create_model(smat, h, initial, pars)
+
+        # Set up stemr objects
+        compartments <- c("S","I","R")
+        rates <- list(rate("beta * I", "S", "I", incidence = TRUE),
+                      rate("mu", "I", "R"))
+        state_initializer <- stem_initializer(c(S = 1500, I = 10, R = 50), fixed = TRUE)
+        parameters <- c(beta = 0.00025, mu = 1/7, rho = 0.5)
+        tcovar <- NULL
+        constants <- NULL
+        strata <- NULL
+        t0 <- 0; tmax <- 52
+
+        dynamics <- stem_dynamics(rates = rates, parameters = parameters,state_initializer = state_initializer, compartments=compartments, strata = strata, tcovar = tcovar, tmax = tmax, messages = TRUE, compile_rates = T, compile_lna = T, compile_ode = T)
+
+        stem_object <- stem(dynamics = dynamics)
+
+        # simulate paths
+        sim3_gillespie_trajecs <- simulate_stem(stem_object = stem_object,
+                                                nsim = niter,
+                                                paths = TRUE,
+                                                observations = FALSE,
+                                                subject_paths = FALSE,
+                                                method = "gillespie",
+                                                t0 = t0,
+                                                tmax = tmax,
+                                                timestep = 0.1,
+                                                census_times = seq(0, 52, by = 0.1),
+                                                paths_as_array = TRUE,
+                                                messages = TRUE)$paths
+
+        sim3_lna_norestart <- simulate_stem(stem_object = stem_object,
+                                            nsim = 1,
+                                            paths = TRUE,
+                                            observations = FALSE,
+                                            subject_paths = FALSE,
+                                            method = "lna",
+                                            lna_restart = FALSE,
+                                            t0 = t0,
+                                            tmax = tmax,
+                                            census_times = seq(0, 52, by = 0.1),
+                                            paths_as_array = TRUE,
+                                            messages = TRUE)$paths
+
+        sim3_lna_restart <- simulate_stem(stem_object = stem_object,
+                                          nsim = niter,
+                                          paths = TRUE,
+                                          observations = FALSE,
+                                          subject_paths = FALSE,
+                                          method = "lna",
+                                          lna_restart = TRUE,
+                                          t0 = t0,
+                                          tmax = tmax,
+                                          census_times = seq(0, 52, by = 0.1),
+                                          paths_as_array = TRUE,
+                                          messages = TRUE)$paths
+
+        sim3_ode <- stem_ode(stem_object = stem_object,
                              census_times = census_times,
                              init_states = c(S = 1500, I = 10, R = 50))
 
+        sim3_ode_issb <- deterministic(SIR_mod_issb, 52, 0.1)
 
-} else if(sim_num == 2) {
+        path_quantiles <- data.frame(time = rep(census_times, 5),
+                                     method = rep(c("gillespie", "lna_norestart", "lna_restart", "ode", "ode_issb"), each = length(census_times)),
+                                     mean = c(apply(sim3_gillespie_trajecs[,"I",,drop = FALSE], 1, mean),
+                                              apply(sim3_lna_norestart[,"I",,drop = FALSE], 1, mean),
+                                              apply(sim3_lna_restart[,"I",,drop = FALSE], 1, mean),
+                                              sim3_ode[,"I"],
+                                              sim3_ode_issb[,"I"]),
+                                     lower = 0,
+                                     upper = 0)
+        path_quantiles$lower <- path_quantiles$mean - 1.96 * c(apply(sim3_gillespie_trajecs[,"I",,drop = FALSE], 1, sd),
+                                                               apply(sim3_lna_norestart[,"I",,drop = FALSE], 1, sd),
+                                                               apply(sim3_lna_restart[,"I",,drop = FALSE], 1, sd),
+                                                               rep(0, length(census_times)*2)) / sqrt(niter)
+        path_quantiles$upper <- path_quantiles$mean + 1.96 * c(apply(sim3_gillespie_trajecs[,"I",,drop = FALSE], 1, sd),
+                                                               apply(sim3_lna_norestart[,"I",,drop = FALSE], 1, sd),
+                                                               apply(sim3_lna_restart[,"I",,drop = FALSE], 1, sd),
+                                                               rep(0, length(census_times)*2)) / sqrt(niter)
+
+        pdf(paste0("test_simulate_lna_3_popsize_1560", ".pdf"))
+
+        ggplot(path_quantiles, aes(x = time, y = mean, colour = method)) + geom_line(size = 1) + geom_ribbon(data = path_quantiles, aes(x = time, ymin = lower, ymax = upper, fill = method), alpha = 0.1, size = 0) + labs(y = "Average compartment counts", title = "S0 = 1500, I0 = 10, R0 = 50; beta = 0.00025, mu = 1/7") + theme_bw()
+
+        dev.off()
+
+} else if(sim_num == 4){
+
+        h = function(x, pars) {
+                hazs = numeric(length(pars))
+                hazs[1] = pars[1]*x[1]*x[2] # S->I
+                hazs[2] = pars[2]*x[2]      # I->R
+                return(hazs)
+        }
+
+        smat = matrix(c(-1,1,0,1,0,-1,1,0),nrow=4,ncol=2)
+        rownames(smat) = c("S", "I", "R", "I_INCIDENCE")
+
+        initial = c(S = 15000, I = 100, R = 500, 100)
+
+        pars = c(0.000025,1/7)
+
+        SIR_mod_issb <- create_model(smat, h, initial, pars)
+
+        # Set up stemr objects
+        compartments <- c("S","I","R")
+        rates <- list(rate("beta * I", "S", "I", incidence = TRUE),
+                      rate("mu", "I", "R"))
+        state_initializer <- stem_initializer(c(S = 15000, I = 100, R = 500), fixed = TRUE)
+        parameters <- c(beta = 0.000025, mu = 1/7, rho = 0.5)
+        tcovar <- NULL
+        constants <- NULL
+        strata <- NULL
+        t0 <- 0; tmax <- 52
+
+        dynamics <- stem_dynamics(rates = rates, parameters = parameters,state_initializer = state_initializer, compartments=compartments, strata = strata, tcovar = tcovar, tmax = tmax, messages = TRUE, compile_rates = T, compile_lna = T, compile_ode = T)
+
+        stem_object <- stem(dynamics = dynamics)
+
+        # simulate paths
+        sim4_gillespie_trajecs <- simulate_stem(stem_object = stem_object,
+                                                nsim = niter,
+                                                paths = TRUE,
+                                                observations = FALSE,
+                                                subject_paths = FALSE,
+                                                method = "gillespie",
+                                                t0 = t0,
+                                                tmax = tmax,
+                                                census_times = seq(0, 52, by = 0.1),
+                                                paths_as_array = TRUE,
+                                                messages = TRUE)$paths
+
+        sim4_lna_norestart <- simulate_stem(stem_object = stem_object,
+                                            nsim = niter,
+                                            paths = TRUE,
+                                            observations = FALSE,
+                                            subject_paths = FALSE,
+                                            method = "lna",
+                                            lna_restart = FALSE,
+                                            t0 = t0,
+                                            tmax = tmax,
+                                            census_times = seq(0, 52, by = 0.1),
+                                            paths_as_array = TRUE,
+                                            messages = TRUE)$paths
+
+        sim4_lna_restart <- simulate_stem(stem_object = stem_object,
+                                          nsim = niter,
+                                          paths = TRUE,
+                                          observations = FALSE,
+                                          subject_paths = FALSE,
+                                          method = "lna",
+                                          lna_restart = TRUE,
+                                          t0 = t0,
+                                          tmax = tmax,
+                                          census_times = seq(0, 52, by = 0.1),
+                                          paths_as_array = TRUE,
+                                          messages = TRUE)$paths
+
+        sim4_ode <- stem_ode(stem_object = stem_object,
+                             census_times = census_times,
+                             init_states = c(S = 15000, I = 100, R = 500))
+
+        sim4_ode_issb <- deterministic(SIR_mod_issb, 52, 0.1)
+
+        path_quantiles <- data.frame(time = rep(census_times, 5),
+                                     method = rep(c("gillespie", "lna_norestart", "lna_restart", "ode", "ode_issb"), each = length(census_times)),
+                                     mean = c(apply(sim4_gillespie_trajecs[,"I",,drop = FALSE], 1, mean),
+                                              apply(sim4_lna_norestart[,"I",,drop = FALSE], 1, mean),
+                                              apply(sim4_lna_restart[,"I",,drop = FALSE], 1, mean),
+                                              sim4_ode[,"I"],
+                                              sim4_ode_issb[,"I"]),
+                                     lower = 0,
+                                     upper = 0)
+        path_quantiles$lower <- path_quantiles$mean - 1.96 * c(apply(sim4_gillespie_trajecs[,"I",,drop = FALSE], 1, sd),
+                                                               apply(sim4_lna_norestart[,"I",,drop = FALSE], 1, sd),
+                                                               apply(sim4_lna_restart[,"I",,drop = FALSE], 1, sd),
+                                                               rep(0, length(census_times)*2)) / sqrt(niter)
+        path_quantiles$upper <- path_quantiles$mean + 1.96 * c(apply(sim4_gillespie_trajecs[,"I",,drop = FALSE], 1, sd),
+                                                               apply(sim4_lna_norestart[,"I",,drop = FALSE], 1, sd),
+                                                               apply(sim4_lna_restart[,"I",,drop = FALSE], 1, sd),
+                                                               rep(0, length(census_times)*2)) / sqrt(niter)
+
+        pdf(paste0("test_simulate_lna_4_popsize_15600", ".pdf"))
+
+        ggplot(path_quantiles, aes(x = time, y = mean, colour = method)) + geom_line(size = 1) + geom_ribbon(data = path_quantiles, aes(x = time, ymin = lower, ymax = upper, fill = method), alpha = 0.1, size = 0) + labs(y = "Average compartment counts", title = "S0 = 15000, I0 = 100, R0 = 500; beta = 0.000025, mu = 1/7") + theme_bw()
+
+        dev.off()
+
+} else if(sim_num == 3) {
 
         s_params <- c(0.75, 0.575e-5)
         initial_state_vec <- c(S = 1500, I = 10, R = 50)

@@ -1,107 +1,138 @@
 #' Simulate a path using the linear noise approximation
 #'
-#' @param stem_object stochastic epidemic model object
-#' @inheritParams simulate_stem
+#' @param nsim integer for the number of simulations
+#' @param lna_times vector of times at which the LNA must be evaluated
+#' @param census_times vector of times at which the LNA should be censused
+#' @param census_inds logical vector the same length as lna_times indicating
+#'   whether the LNA path is censused at each of the lna times
+#' @param restart_inds logical vector the same length as lna_times indicating
+#'   whether the LNA is to be restarted at each of the lna times
+#' @param lna_pars numeric matrix of parameters, constants, and time-varying
+#'   covariates at each of the lna_times
+#' @param init_states matrix of initial state vectors
+#' @param incidence_codes vector of incidence codes, or 0 if no incidence
+#'   compartments
+#' @param log_scale is the LNA applied on the log scale?
+#' @param flow_matrix flow matrix for the stochastic epidemic model object
+#' @param lna_pointer external pointer to LNA integration fcn
 #'
-#' @return matrix containing a path simulated using the LNA
+#' @return matrix (array if nsim>1) containing a path(s) simulated using the LNA
 #' @export
-simulate_lna <- function(stem_object, census_times, lna_restart, init_states) {
+simulate_lna <- function(nsim, lna_times, census_times, census_inds, restart_inds, lna_pars, init_states, incidence_codes, log_scale, flow_matrix, lna_pointer) {
 
-        # initialize the path matrix and the deterministic, stochastic, and
-        # residual processes
-        lna_path        <- matrix(0, nrow = length(census_times), ncol = 1 + length(init_states)) # create matrix
-        lna_path[1,]    <- c(census_times[1], init_states)        # assign initial state values
-        lna_path[,1]    <- census_times                           # insert the census times
+        # get the dimensions of various objects
+        n_comps <- ncol(init_states)           # number of model compartments
+        n_odes  <- 2*n_comps + n_comps*n_comps # number of ODEs
+        n_times <- length(lna_times)           # number of times at which the LNA must be evaluated
+        n_incidence <- length(incidence_codes) # number of incidence codes
+        n_census_times <- length(census_times) # number of census times
 
-        # pull the incidence codes and compartment codes
-        comp_codes <- stem_object$dynamics$comp_codes + 1
+        # initialize the objects used in each time interval
+        t_L <- lna_times[1]
+        t_R <- lna_times[2]
+        lna_params <- list(parameters = lna_pars[1,], lna_pointer = lna_pointer, stoich = t(flow_matrix))
 
-        if(is.null(stem_object$dynamics$incidence_codes)) {
-                incidence_codes <- NULL
+        # create an armadillo cube to store the simulations
+        lna_paths <- array(0, dim = c(n_census_times, n_comps + 1, nsim))
+        lna_paths[,1,] <- census_times
 
-        } else {
-                incidence_codes   <- stem_object$dynamics$incidence_codes + 1
-        }
+        # full_lna_paths <- array(0, dim = c(n_census_times, n_comps*2 + n_comps^2 + 1, nsim))
 
-        # if the restarting version is to be used, grab the restart times
-        if(lna_restart) {
-                if(is.logical(lna_restart)) {
-                        restart_times <- census_times
-                } else {
-                        restart_times <- c(lna_restart, census_times[length(census_times)])
-                        if(restart_times[1] != census_times[1]) restart_times <- c(census_times[1], restart_times)
+        # initialize the LNA objects - the vector for storing the ODES, the state vector, and the Jacobian
+        lna_state_vec     <- numeric(length = n_odes)                # vector to store the results of the ODEs
+        drift_process     <- numeric(length = n_comps)               # vector for the deterministic drift process
+        residual_process  <- numeric(length = n_comps)               # vector for the residual process
+        diffusion_process <- matrix(as.numeric(0), n_comps, n_comps) # matrix for the diffusion
+
+        # indices in the ODE vector for the drift, residual, and diffusion
+        drift_inds <- seq_len(n_comps);
+        resid_inds <- seq_len(n_comps) + n_comps;
+        diff_inds  <- seq_len(n_comps * n_comps) + 2*n_comps;
+
+        # start simulating the LNA paths
+        for(k in 1:nsim) {
+
+                # set the initial values of the LNA
+                lna_paths[1,-1,k]    <- as.numeric(init_states[k,]); # assign the initial state to the path matrix
+                drift_process        <- as.numeric(init_states[k,]); # assign the initial state to the drift vector
+                residual_process[]   <- 0.0;               # zero out the residual vector
+                diffusion_process[,] <- 0.0;               # zero out the diffusion matrix
+
+                procs2vec(lna_state_vec, drift_process, residual_process, diffusion_process)
+
+                # full_lna_paths[1,,k] <- c(t_L,lna_state_vec)
+
+                # iterate over the time sequence, solving the LNA over each interval
+                for(j in 2:n_times) {
+
+                        # set the times of the interval endpoints
+                        t_L = lna_times[j-1];
+                        t_R = lna_times[j];
+
+                        # set the values of the
+                        lna_params$parameters = as.numeric(lna_pars[j-1,]);
+
+                        # integrate the LNA
+                        lna_state_vec <- deSolve::lsoda(y = lna_state_vec,
+                                                       func = CALL_COMPUTE_LNA,
+                                                       times = c(t_L, t_R),
+                                                       parms = lna_params,
+                                                       maxsteps = 5e4)[2,-1]
+
+                        # transfer the elements of the lna_state_vec to the process objects
+                        vec2procs(lna_state_vec, drift_process, residual_process, diffusion_process)
+
+                        # sample the next value
+                        # lna_step <- drift_process + residual_process
+                        lna_step <- mvrn(1, drift_process + residual_process, diffusion_process)
+                        # lna_step <- MASS:::mvrnorm(1, drift_process + residual_process, diffusion_process)
+
+                        # if any values are negative and the process is on the natural scale, resample them
+                        while(!log_scale && any(lna_step < 0)) {
+                                lna_step <- mvrn(1, drift_process + residual_process, diffusion_process)
+                                # lna_step <- MASS:::mvrnorm(1, drift_process + residual_process, diffusion_process)
+                        }
+
+                        # insert the sampled value into the path if called for
+                        if(census_inds[j]) {
+                                lna_paths[j,-1,k] <- lna_step
+                        }
+
+                        # restart the LNA if called for
+                        if(restart_inds[j]) {
+                                drift_process        <- lna_step[1,]   # restart the deterministic process at the sampled state
+                                # drift_process        <- lna_step   # restart the deterministic process at the sampled state
+                                # full_lna_paths[j,,k] <- c(t_R,lna_state_vec)
+                                residual_process[]   <- 0.0            # set the residual process to zero
+                                diffusion_process[,] <- 0.0            # the diffusion process is set to zero
+                        } else {
+                                # the residual process is the difference between the deterministic
+                                # process and the sampled state and the diffusion process is set to zero
+                                residual_process     <- lna_step[1,] - drift_process
+                                # residual_process     <- lna_step - drift_process
+                                # full_lna_paths[j,,k] <- c(t_R,lna_state_vec)
+
+                                diffusion_process[,] <- 0.0
+                        }
+
+                        # copy the process objects back into the lna state vector
+                        procs2vec(lna_state_vec, drift_process, residual_process, diffusion_process);
                 }
-
-                r <- 2
-                r_time <- restart_times[r]
         }
 
-        # initialize the deterministic, stochastic, and residual processes
-        det_proc        <- init_states                                          # deterministic process
-        innov_proc      <- det_proc * 0                                         # stochastic process
-        resid_proc      <- matrix(0, length(det_proc), length(det_proc))        # residual process
-        n_comps         <- length(stem_object$dynamics$comp_codes) + length(stem_object$dynamics$incidence_codes) # number of model compartments
+        # compute the incidence if necessary
+        if(incidence_codes[1] != 0) {
 
-        # initialize the model list
-        stemr_lnamod    <- list(parameters  = stem_object$dynamics$parameters,
-                                constants   = stem_object$dynamics$constants,
-                                tcovar      = stem_object$dynamics$lna_tcovar[1, -1, drop = FALSE],
-                                flow_matrix = t(stem_object$dynamics$flow_matrix),
-                                hazard_ptr  = stem_object$dynamics$lna_ptrs$hazard_ptr,
-                                jacobian_ptr = stem_object$dynamics$lna_ptrs$jacobian_ptr)
+                # iterate through the path array
+                for(k in 1:nsim) {
+                        lna_paths[2:n_census_times, incidence_codes, k] <- diff(lna_paths[, incidence_codes, k])
 
-        for(k in 2:(length(census_times))) {
-
-                # increment the interval endpoints
-                t_L <- census_times[k-1]
-                t_R <- census_times[k]
-
-                # retrieve the time-varying covariate values
-                stemr_lnamod$tcovar <- stem_object$dynamics$lna_tcovar[k-1, -1, drop = FALSE]
-
-                # solve the lna
-                lna_soln <- solve_lna(stemr_lnamod, det_proc, innov_proc, t_L, t_R, n_comps)
-
-                # if there are incidence compartments, the noise needs to be simulated just based on the non-incidence variables
-                # simulate the next value - redraw if any components are negative
-                lna_step <- MASS::mvrnorm(1, lna_soln$det_proc + lna_soln$innov_proc, lna_soln$resid_proc)
-
-                # while(any(lna_step < 0) || (!is.null(incidence_codes) && any(lna_step[incidence_codes] < lna_path[k-1,incidence_codes + 1]))) {
-                while(any(lna_step < 0)) {
-                        lna_step <- MASS::mvrnorm(1, lna_soln$det_proc + lna_soln$innov_proc, lna_soln$resid_proc)
-                }
-
-                # insert the new path into the path matrix
-                lna_path[k,-1] <- lna_step
-
-                # update the deterministic process, the innovation, and the residual process
-                if(!lna_restart) {
-                        det_proc   <- lna_soln$det_proc
-                        innov_proc <- lna_step - det_proc
-
-                } else if(t_R == r_time){
-                        # restart the LNA
-                        det_proc   <- lna_step
-                        innov_proc <- rep(0, n_comps)
-
-                        # increment to the next restart time
-                        r          <- r+1
-                        r_time     <- restart_times[r]
-
-                } else if(t_R != r_time) {
-                        det_proc   <- lna_soln$det_proc
-                        innov_proc <- lna_step - det_proc
+                        # clamp the slice to make sure there are no negative values if the process is on the linear scale
+                        if(!log_scale) {
+                                lna_paths[,,k] = pmax(lna_paths[,,k], 0.0);
+                        }
                 }
         }
 
-        # if some of the compartments track incidence, compute the incidence
-        if(!is.null(stem_object$dynamics$incidence_codes)) {
-                census_incidence_rows <- rep(list(seq_along(census_times) - 1), length(stem_object$dynamics$incidence_codes))
-                compute_incidence(censusmat = lna_path, col_inds  = incidence_codes, row_inds  = census_incidence_rows)
-                for(i in incidence_codes) lna_path[,i + 1] <- pmax.int(lna_path[,i + 1], 0)
-        }
-
-        colnames(lna_path) <- c("time", colnames(stem_object$dynamics$flow_matrix))
-
-        return(lna_path)
+        return(lna_paths)
 }

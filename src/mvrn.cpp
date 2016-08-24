@@ -28,11 +28,11 @@ arma::mat mvrn(int n, const arma::vec& mu, const arma::mat& sigma) {
         // check that the matrix is positive definite
         double maxval = s.max();
         if(!arma::all(s >= (-1.490116e-08 * sqrt(maxval)))) {
-                Rcpp::stop("sigma is not positive definite");
+                Rcpp::stop("sigma is not numerically positive definite");
         }
 
         // compute the matrix square root
-        arma::mat R = U * arma::diagmat(sqrt(arma::clamp(s, 0.0, maxval))) * V;
+        arma::mat R = U * arma::diagmat(arma::sqrt(arma::clamp(s, 0.0, maxval))) * V;
 
         // simulate the data
         mat X = arma::randn(n, p) * R;

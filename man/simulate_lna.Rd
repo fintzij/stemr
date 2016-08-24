@@ -4,23 +4,38 @@
 \alias{simulate_lna}
 \title{Simulate a path using the linear noise approximation}
 \usage{
-simulate_lna(stem_object, census_times, lna_restart, init_states)
+simulate_lna(nsim, lna_times, census_times, census_inds, restart_inds, lna_pars,
+  init_states, incidence_codes, log_scale, flow_matrix, lna_pointer)
 }
 \arguments{
-\item{stem_object}{stochastic epidemic model object}
+\item{nsim}{integer for the number of simulations}
 
-\item{census_times}{vector of times at which compartment counts should be
-recorded. Required for \code{method = "lna"}. If supplied and \code{method
-= "gillespie"}, the compartment counts at census times are returned rather
-than the full paths.}
+\item{lna_times}{vector of times at which the LNA must be evaluated}
 
-\item{lna_restart}{Either a logical indicating whether the non-restarting
-version of the LNA (default) should be used, or whether the LNA should be
-restarted at census times. Alternately, a vector of restart times could be
-supplied.}
+\item{census_times}{vector of times at which the LNA should be censused}
+
+\item{census_inds}{logical vector the same length as lna_times indicating
+whether the LNA path is censused at each of the lna times}
+
+\item{restart_inds}{logical vector the same length as lna_times indicating
+whether the LNA is to be restarted at each of the lna times}
+
+\item{lna_pars}{numeric matrix of parameters, constants, and time-varying
+covariates at each of the lna_times}
+
+\item{init_states}{matrix of initial state vectors}
+
+\item{incidence_codes}{vector of incidence codes, or 0 if no incidence
+compartments}
+
+\item{log_scale}{is the LNA applied on the log scale?}
+
+\item{flow_matrix}{flow matrix for the stochastic epidemic model object}
+
+\item{lna_pointer}{external pointer to LNA integration fcn}
 }
 \value{
-matrix containing a path simulated using the LNA
+matrix (array if nsim>1) containing a path(s) simulated using the LNA
 }
 \description{
 Simulate a path using the linear noise approximation

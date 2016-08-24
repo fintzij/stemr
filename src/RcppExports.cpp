@@ -7,6 +7,19 @@
 
 using namespace Rcpp;
 
+// CALL_COMPUTE_LNA
+Rcpp::List CALL_COMPUTE_LNA(double t, arma::vec& state, Rcpp::List& parms);
+RcppExport SEXP stemr_CALL_COMPUTE_LNA(SEXP tSEXP, SEXP stateSEXP, SEXP parmsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< double >::type t(tSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type state(stateSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List& >::type parms(parmsSEXP);
+    __result = Rcpp::wrap(CALL_COMPUTE_LNA(t, state, parms));
+    return __result;
+END_RCPP
+}
 // CALL_D_MEASURE
 void CALL_D_MEASURE(Rcpp::NumericMatrix& emitmat, const Rcpp::LogicalVector& emit_inds, const int record_ind, const Rcpp::NumericVector& record, const Rcpp::NumericVector& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar, SEXP d_meas_ptr);
 RcppExport SEXP stemr_CALL_D_MEASURE(SEXP emitmatSEXP, SEXP emit_indsSEXP, SEXP record_indSEXP, SEXP recordSEXP, SEXP stateSEXP, SEXP parametersSEXP, SEXP constantsSEXP, SEXP tcovarSEXP, SEXP d_meas_ptrSEXP) {
@@ -22,34 +35,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type tcovar(tcovarSEXP);
     Rcpp::traits::input_parameter< SEXP >::type d_meas_ptr(d_meas_ptrSEXP);
     CALL_D_MEASURE(emitmat, emit_inds, record_ind, record, state, parameters, constants, tcovar, d_meas_ptr);
-    return R_NilValue;
-END_RCPP
-}
-// CALL_INTEGRATE_STEM_LNA
-void CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr);
-RcppExport SEXP stemr_CALL_INTEGRATE_STEM_LNA(SEXP initSEXP, SEXP startSEXP, SEXP endSEXP, SEXP step_sizeSEXP, SEXP lna_ode_ptrSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type init(initSEXP);
-    Rcpp::traits::input_parameter< double >::type start(startSEXP);
-    Rcpp::traits::input_parameter< double >::type end(endSEXP);
-    Rcpp::traits::input_parameter< double >::type step_size(step_sizeSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type lna_ode_ptr(lna_ode_ptrSEXP);
-    CALL_INTEGRATE_STEM_LNA(init, start, end, step_size, lna_ode_ptr);
-    return R_NilValue;
-END_RCPP
-}
-// CALL_INTEGRATE_STEM_ODE
-void CALL_INTEGRATE_STEM_ODE(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr);
-RcppExport SEXP stemr_CALL_INTEGRATE_STEM_ODE(SEXP initSEXP, SEXP startSEXP, SEXP endSEXP, SEXP step_sizeSEXP, SEXP lna_ode_ptrSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type init(initSEXP);
-    Rcpp::traits::input_parameter< double >::type start(startSEXP);
-    Rcpp::traits::input_parameter< double >::type end(endSEXP);
-    Rcpp::traits::input_parameter< double >::type step_size(step_sizeSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type lna_ode_ptr(lna_ode_ptrSEXP);
-    CALL_INTEGRATE_STEM_ODE(init, start, end, step_size, lna_ode_ptr);
     return R_NilValue;
 END_RCPP
 }
@@ -83,28 +68,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type tcovar(tcovarSEXP);
     Rcpp::traits::input_parameter< SEXP >::type r_meas_ptr(r_meas_ptrSEXP);
     CALL_R_MEASURE(obsmat, emit_inds, record_ind, state, parameters, constants, tcovar, r_meas_ptr);
-    return R_NilValue;
-END_RCPP
-}
-// CALL_SET_LNA_PARAMS
-void CALL_SET_LNA_PARAMS(Rcpp::NumericVector& p, SEXP set_lna_params_ptr);
-RcppExport SEXP stemr_CALL_SET_LNA_PARAMS(SEXP pSEXP, SEXP set_lna_params_ptrSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type p(pSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type set_lna_params_ptr(set_lna_params_ptrSEXP);
-    CALL_SET_LNA_PARAMS(p, set_lna_params_ptr);
-    return R_NilValue;
-END_RCPP
-}
-// CALL_SET_ODE_PARAMS
-void CALL_SET_ODE_PARAMS(Rcpp::NumericVector& p, SEXP set_ode_params_ptr);
-RcppExport SEXP stemr_CALL_SET_ODE_PARAMS(SEXP pSEXP, SEXP set_ode_params_ptrSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type p(pSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type set_ode_params_ptr(set_ode_params_ptrSEXP);
-    CALL_SET_ODE_PARAMS(p, set_ode_params_ptr);
     return R_NilValue;
 END_RCPP
 }
@@ -260,26 +223,6 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// simulate_lna_paths
-arma::cube simulate_lna_paths(int nsim, const arma::colvec& lna_times, const arma::colvec& census_times, const Rcpp::LogicalVector& census_inds, const Rcpp::LogicalVector& restart_inds, const Rcpp::NumericMatrix& lna_pars, const arma::mat& init_states, const Rcpp::IntegerVector& incidence_codes, SEXP lna_pointer, SEXP set_pars_pointer);
-RcppExport SEXP stemr_simulate_lna_paths(SEXP nsimSEXP, SEXP lna_timesSEXP, SEXP census_timesSEXP, SEXP census_indsSEXP, SEXP restart_indsSEXP, SEXP lna_parsSEXP, SEXP init_statesSEXP, SEXP incidence_codesSEXP, SEXP lna_pointerSEXP, SEXP set_pars_pointerSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject __result;
-    Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< int >::type nsim(nsimSEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type lna_times(lna_timesSEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type census_times(census_timesSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type census_inds(census_indsSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type restart_inds(restart_indsSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type lna_pars(lna_parsSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type init_states(init_statesSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type incidence_codes(incidence_codesSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type lna_pointer(lna_pointerSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type set_pars_pointer(set_pars_pointerSEXP);
-    __result = Rcpp::wrap(simulate_lna_paths(nsim, lna_times, census_times, census_inds, restart_inds, lna_pars, init_states, incidence_codes, lna_pointer, set_pars_pointer));
-    return __result;
-END_RCPP
-}
 // simulate_r_measure
 Rcpp::NumericMatrix simulate_r_measure(Rcpp::NumericMatrix& censusmat, Rcpp::LogicalMatrix& measproc_indmat, Rcpp::NumericVector& parameters, Rcpp::NumericVector& constants, Rcpp::NumericMatrix& tcovar, SEXP r_measure_ptr);
 RcppExport SEXP stemr_simulate_r_measure(SEXP censusmatSEXP, SEXP measproc_indmatSEXP, SEXP parametersSEXP, SEXP constantsSEXP, SEXP tcovarSEXP, SEXP r_measure_ptrSEXP) {
@@ -293,24 +236,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix& >::type tcovar(tcovarSEXP);
     Rcpp::traits::input_parameter< SEXP >::type r_measure_ptr(r_measure_ptrSEXP);
     __result = Rcpp::wrap(simulate_r_measure(censusmat, measproc_indmat, parameters, constants, tcovar, r_measure_ptr));
-    return __result;
-END_RCPP
-}
-// stem_ode_path
-arma::mat stem_ode_path(const arma::colvec& ode_times, const arma::colvec& census_times, const Rcpp::LogicalVector& census_inds, const Rcpp::NumericMatrix& ode_pars, const Rcpp::NumericVector& init_states, const Rcpp::IntegerVector& incidence_codes, SEXP ode_pointer, SEXP set_pars_pointer);
-RcppExport SEXP stemr_stem_ode_path(SEXP ode_timesSEXP, SEXP census_timesSEXP, SEXP census_indsSEXP, SEXP ode_parsSEXP, SEXP init_statesSEXP, SEXP incidence_codesSEXP, SEXP ode_pointerSEXP, SEXP set_pars_pointerSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject __result;
-    Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< const arma::colvec& >::type ode_times(ode_timesSEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type census_times(census_timesSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type census_inds(census_indsSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type ode_pars(ode_parsSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type init_states(init_statesSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type incidence_codes(incidence_codesSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type ode_pointer(ode_pointerSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type set_pars_pointer(set_pars_pointerSEXP);
-    __result = Rcpp::wrap(stem_ode_path(ode_times, census_times, census_inds, ode_pars, init_states, incidence_codes, ode_pointer, set_pars_pointer));
     return __result;
 END_RCPP
 }

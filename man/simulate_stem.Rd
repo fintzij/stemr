@@ -28,7 +28,8 @@ or "lna" if simulating paths via the Linear Noise Approximation.}
 \item{lna_restart}{Either a logical indicating whether the non-restarting
 version of the LNA (default) should be used, or whether the LNA should be
 restarted at census times. Alternately, a vector of restart times could be
-supplied.}
+supplied. NOTE: THE RESTARTING LNA IMPLEMENTATION HAS NUMERICAL PROBLEMS
+THAT HAVE NOT YET BEEN FIXED.}
 
 \item{t0}{the time at which the system is initialized. If not supplied, it is
 taken to be the first observation time if that is available, or otherwise

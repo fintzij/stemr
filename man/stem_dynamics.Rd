@@ -5,8 +5,8 @@
 \title{Generate the objects governing the dynamics of a stochastic epidemic model.}
 \usage{
 stem_dynamics(rates, parameters, state_initializer, compartments,
-  tcovar = NULL, t0 = NULL, tmax, timestep = NULL, strata = NULL,
-  constants = NULL, adjacency = NULL, messages = TRUE,
+  lna_scale = "log", tcovar = NULL, t0 = NULL, tmax, timestep = NULL,
+  strata = NULL, constants = NULL, adjacency = NULL, messages = TRUE,
   compile_rates = TRUE, compile_lna = TRUE, compile_ode = FALSE)
 }
 \arguments{
@@ -26,6 +26,10 @@ single stratum, or if there are multiple strata a list of character vectors
 where the name of each character vector is the compartment name and the
 character vector lists the strata to in which the compartment exists. The
 reserved word "ALL" can be used instead of listing all strata.}
+
+\item{lna_scale}{either 'log' (default) or 'linear' if the SDE approximated
+by the LNA is modeled on the log scale or the linear scale. Log
+transforming the SDE removes the positivity constraint on the state space.}
 
 \item{tcovar}{Matrix or data frame of time varying covariates, the first
 column of which contains the times at which covariates change.}
@@ -67,7 +71,8 @@ constants referenced in the rate functions.}
 
 \item{compile_rates}{should the rate functions be compiled? Defaults to TRUE.}
 
-\item{compile_lna}{should the LNA functions be generated and compiled? Defaults to TRUE.}
+\item{compile_lna}{should the LNA functions be generated and compiled?
+Defaults to TRUE.}
 }
 \value{
 list with evaluated rate functions and objects for managing the
@@ -75,44 +80,41 @@ list with evaluated rate functions and objects for managing the
 
   \describe{ \item{rates}{list of parsed rate functions}
   \item{rate_ptrs}{vector of external function pointers to compiled rate
-  functions.}
-  \item{parameters}{named numeric vector of model parameters}
+  functions.} \item{parameters}{named numeric vector of model parameters}
   \item{tcovar}{matrix of time-varying covariates, with column names}
   \item{constants}{named numeric vector of constants, with stratum sizes and
-  population size included}
-  \item{state_initializer}{list of model initializer lists}
-  \item{initdist_params}{named numeric vector of parameters governing the initial distribution of compartment counts}
-  \item{fixed_inits}{logical indicating whether the initial distribution parameters are fixed
-  compartment counts (TRUE) or parameters of a dirichlet distribution
-  (FALSE)}
-  \item{flow_matrix}{matrix of flow between model compartments associated with each transition event}
-  \item{lna_hazards}{character vector of rates reformatted for use within the LNA functions}
-  \item{rate_derivs}{character vector of partial derivatives of the rate functions
-  with respect to model compartments. The partial derivatives are given in compartment-rate order.
-  So the first n_compartment partial derivatives are the derivatives of the first rate wrt the model
-  compartments (including artificial incidence compartments), the next n_compartment derivatives are
-  the partial derivatives of the second rate function wrt the compartments, etc.}
-  \item{lna_pointers}{vector of external functions pointers to compiled LNA functions.}
-  \item{strata_sizes}{named numeric vector of strata sizes}
-  \item{popsize}{population size}
+  population size included} \item{state_initializer}{list of model
+  initializer lists} \item{initdist_params}{named numeric vector of
+  parameters governing the initial distribution of compartment counts}
+  \item{fixed_inits}{logical indicating whether the initial distribution
+  parameters are fixed compartment counts (TRUE) or parameters of a dirichlet
+  distribution (FALSE)} \item{flow_matrix}{matrix of flow between model
+  compartments associated with each transition event}
+  \item{lna_rates}{list with lna pointers and lna code}
+  \item{strata_sizes}{named numeric vector of strata sizes} \item{popsize}{population size}
   \item{comp_codes}{named vector of (C++) compartment codes}
   \item{param_codes}{named vector of (C++) parameter codes}
   \item{tcovar_codes}{named vector of (C++) time-varying covariate codes}
   \item{const_codes}{named vector of (C++) constant codes}
   \item{strata_codes}{named vector of (C++) strata codes}
-  \item{incidence_codes}{named vector of (C++) incidence compartment codes (colum location in the path matrix)}
-  \item{incidence_sources}{named vector of (C++) codes for compartments corresponding to each incidence compartment}
-  \item{lna_param_codes}{named vector of (C++) codes for the concatenated LNA parameters}
-  \item{progressive}{logical indicating whether the model is progressive}
-  \item{absorbing_states}{logical vector indicating which model compartments are absorbing states}
-  \item{rate_adjmat}{adjacency matrix indicating which rates need to be updated when a transition event occurs}
-  \item{timevarying}{logical indicating whether there are any smoothly time-varying covariates in the model (either time, or seasonality)}
-  \item{timecode}{index of column in the time-varying covariate matrix for time (as a variable, not an index)}
-  \item{tcovar_adjmat}{adjacency matrix indicating which rates need to be updated when a time-varying covariate value changes}
-  \item{tcovar_changemat}{indi ator matrix indicating which time-varying covariates change at which time in the tcovar matrix}
-  \item{n_strata}{number of strata}
-  \item{n_compartments}{number of compartments}
-  \item{n_params}{number of model parameters}
+  \item{incidence_codes}{named vector of (C++) incidence compartment codes
+  (colum location in the path matrix)} \item{incidence_sources}{named vector
+  of (C++) codes for compartments corresponding to each incidence
+  compartment} \item{lna_param_codes}{named vector of (C++) codes for the
+  concatenated LNA parameters} \item{progressive}{logical indicating whether
+  the model is progressive} \item{absorbing_states}{logical vector indicating
+  which model compartments are absorbing states} \item{rate_adjmat}{adjacency
+  matrix indicating which rates need to be updated when a transition event
+  occurs} \item{timevarying}{logical indicating whether there are any
+  smoothly time-varying covariates in the model (either time, or
+  seasonality)} \item{timecode}{index of column in the time-varying covariate
+  matrix for time (as a variable, not an index)}
+  \item{tcovar_adjmat}{adjacency matrix indicating which rates need to be
+  updated when a time-varying covariate value changes}
+  \item{tcovar_changemat}{indi ator matrix indicating which time-varying
+  covariates change at which time in the tcovar matrix}
+  \item{n_strata}{number of strata} \item{n_compartments}{number of
+  compartments} \item{n_params}{number of model parameters}
   \item{n_tcovar}{number of time-varying covariates, including time}
   \item{n_consts}{number of constants in the model}
   \item{.dynamics_args}{original arguments supplied to \code{stem_dynamics}}

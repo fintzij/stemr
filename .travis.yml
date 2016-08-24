@@ -6,4 +6,4 @@ warnings_are_errors: true
 sudo: required
 install:
   - Rscript -e 'install.packages("devtools", repos = "http://cran.rstudio.com")'
-  - Rscript -e 'install.packages(c("Rcpp", "RcppArmadillo", "ECctmc", "knitr", "testthat", "rmarkdown"), repos = "http://cran.rstudio.com")'
+  - Rscript -e 'install.packages(c("Rcpp", "RcppArmadillo", "Ryacas", "odeintr", "ECctmc", "knitr", "testthat", "rmarkdown"), repos = "http://cran.rstudio.com")'

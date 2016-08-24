@@ -13,6 +13,9 @@
 #'   where the name of each character vector is the compartment name and the
 #'   character vector lists the strata to in which the compartment exists. The
 #'   reserved word "ALL" can be used instead of listing all strata.
+#' @param lna_scale either 'log' (default) or 'linear' if the SDE approximated
+#'   by the LNA is modeled on the log scale or the linear scale. Log
+#'   transforming the SDE removes the positivity constraint on the state space.
 #' @param tcovar Matrix or data frame of time varying covariates, the first
 #'   column of which contains the times at which covariates change.
 #' @param strata vector of stratum names, required if the "ALL" reserved word is
@@ -35,58 +38,56 @@
 #'   parsed internally, the rate strings will be parsed incorrectly due to the
 #'   partial match.
 #' @param compile_rates should the rate functions be compiled? Defaults to TRUE.
-#' @param compile_lna should the LNA functions be generated and compiled? Defaults to TRUE.
+#' @param compile_lna should the LNA functions be generated and compiled?
+#'   Defaults to TRUE.
 #'
 #' @return list with evaluated rate functions and objects for managing the
 #'   bookkeeping for epidemic paths. The objects in the list are as follows:
 #'
 #'   \describe{ \item{rates}{list of parsed rate functions}
 #'   \item{rate_ptrs}{vector of external function pointers to compiled rate
-#'   functions.}
-#'   \item{parameters}{named numeric vector of model parameters}
+#'   functions.} \item{parameters}{named numeric vector of model parameters}
 #'   \item{tcovar}{matrix of time-varying covariates, with column names}
 #'   \item{constants}{named numeric vector of constants, with stratum sizes and
-#'   population size included}
-#'   \item{state_initializer}{list of model initializer lists}
-#'   \item{initdist_params}{named numeric vector of parameters governing the initial distribution of compartment counts}
-#'   \item{fixed_inits}{logical indicating whether the initial distribution parameters are fixed
-#'   compartment counts (TRUE) or parameters of a dirichlet distribution
-#'   (FALSE)}
-#'   \item{flow_matrix}{matrix of flow between model compartments associated with each transition event}
-#'   \item{lna_hazards}{character vector of rates reformatted for use within the LNA functions}
-#'   \item{rate_derivs}{character vector of partial derivatives of the rate functions
-#'   with respect to model compartments. The partial derivatives are given in compartment-rate order.
-#'   So the first n_compartment partial derivatives are the derivatives of the first rate wrt the model
-#'   compartments (including artificial incidence compartments), the next n_compartment derivatives are
-#'   the partial derivatives of the second rate function wrt the compartments, etc.}
-#'   \item{lna_pointers}{vector of external functions pointers to compiled LNA functions.}
-#'   \item{strata_sizes}{named numeric vector of strata sizes}
-#'   \item{popsize}{population size}
+#'   population size included} \item{state_initializer}{list of model
+#'   initializer lists} \item{initdist_params}{named numeric vector of
+#'   parameters governing the initial distribution of compartment counts}
+#'   \item{fixed_inits}{logical indicating whether the initial distribution
+#'   parameters are fixed compartment counts (TRUE) or parameters of a dirichlet
+#'   distribution (FALSE)} \item{flow_matrix}{matrix of flow between model
+#'   compartments associated with each transition event}
+#'   \item{lna_rates}{list with lna pointers and lna code}
+#'   \item{strata_sizes}{named numeric vector of strata sizes} \item{popsize}{population size}
 #'   \item{comp_codes}{named vector of (C++) compartment codes}
 #'   \item{param_codes}{named vector of (C++) parameter codes}
 #'   \item{tcovar_codes}{named vector of (C++) time-varying covariate codes}
 #'   \item{const_codes}{named vector of (C++) constant codes}
 #'   \item{strata_codes}{named vector of (C++) strata codes}
-#'   \item{incidence_codes}{named vector of (C++) incidence compartment codes (colum location in the path matrix)}
-#'   \item{incidence_sources}{named vector of (C++) codes for compartments corresponding to each incidence compartment}
-#'   \item{lna_param_codes}{named vector of (C++) codes for the concatenated LNA parameters}
-#'   \item{progressive}{logical indicating whether the model is progressive}
-#'   \item{absorbing_states}{logical vector indicating which model compartments are absorbing states}
-#'   \item{rate_adjmat}{adjacency matrix indicating which rates need to be updated when a transition event occurs}
-#'   \item{timevarying}{logical indicating whether there are any smoothly time-varying covariates in the model (either time, or seasonality)}
-#'   \item{timecode}{index of column in the time-varying covariate matrix for time (as a variable, not an index)}
-#'   \item{tcovar_adjmat}{adjacency matrix indicating which rates need to be updated when a time-varying covariate value changes}
-#'   \item{tcovar_changemat}{indi ator matrix indicating which time-varying covariates change at which time in the tcovar matrix}
-#'   \item{n_strata}{number of strata}
-#'   \item{n_compartments}{number of compartments}
-#'   \item{n_params}{number of model parameters}
+#'   \item{incidence_codes}{named vector of (C++) incidence compartment codes
+#'   (colum location in the path matrix)} \item{incidence_sources}{named vector
+#'   of (C++) codes for compartments corresponding to each incidence
+#'   compartment} \item{lna_param_codes}{named vector of (C++) codes for the
+#'   concatenated LNA parameters} \item{progressive}{logical indicating whether
+#'   the model is progressive} \item{absorbing_states}{logical vector indicating
+#'   which model compartments are absorbing states} \item{rate_adjmat}{adjacency
+#'   matrix indicating which rates need to be updated when a transition event
+#'   occurs} \item{timevarying}{logical indicating whether there are any
+#'   smoothly time-varying covariates in the model (either time, or
+#'   seasonality)} \item{timecode}{index of column in the time-varying covariate
+#'   matrix for time (as a variable, not an index)}
+#'   \item{tcovar_adjmat}{adjacency matrix indicating which rates need to be
+#'   updated when a time-varying covariate value changes}
+#'   \item{tcovar_changemat}{indi ator matrix indicating which time-varying
+#'   covariates change at which time in the tcovar matrix}
+#'   \item{n_strata}{number of strata} \item{n_compartments}{number of
+#'   compartments} \item{n_params}{number of model parameters}
 #'   \item{n_tcovar}{number of time-varying covariates, including time}
 #'   \item{n_consts}{number of constants in the model}
 #'   \item{.dynamics_args}{original arguments supplied to \code{stem_dynamics}}
 #'   }
 #'
 #' @export
-stem_dynamics <- function(rates, parameters, state_initializer, compartments, tcovar = NULL, t0 = NULL, tmax, timestep = NULL, strata = NULL, constants = NULL, adjacency = NULL, messages = TRUE, compile_rates = TRUE, compile_lna = TRUE, compile_ode = FALSE) {
+stem_dynamics <- function(rates, parameters, state_initializer, compartments, lna_scale = "log", tcovar = NULL, t0 = NULL, tmax, timestep = NULL, strata = NULL, constants = NULL, adjacency = NULL, messages = TRUE, compile_rates = TRUE, compile_lna = TRUE, compile_ode = FALSE) {
 
         # check consistency of specification and throw errors if inconsistent
         if(is.list(compartments) && ("ALL" %in% compartments) && is.null(strata)) {
@@ -138,10 +139,15 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 }
         }
 
+        if(!lna_scale %in% c("log", "linear")) {
+                stop("The LNA scale must be one of either 'log' or 'linear'.")
+        }
+
         # create a hidden list of user supplied arguments prior to processing
         .dynamics_args <- list(rates             = rates,
                                parameters        = parameters,
                                state_initializer = state_initializer,
+                               lna_scale         = lna_scale,
                                compartments      = compartments,
                                tcovar            = tcovar,
                                t0                = t0,
@@ -179,7 +185,6 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
         }
 
         # check that there are no partial matches among compartment names
-        # parameters
         comp_match <- rep(FALSE, length(compartments))
         for(p in seq_along(compartments)) {
                 comp_match[p] <- any(grepl(compartment_names[p], compartment_names[-p]))
@@ -504,7 +509,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 fixed_inits <- all(sapply(initializer, "[[", 2) == TRUE)
 
                 strata_sizes <- sapply(initializer, function(x) sum(x[[1]]));
-                names(strata_sizes) <- sapply(initializer, "[[", 3)
+                names(strata_sizes) <- paste("popsize_",sapply(initializer, "[[", 3))
                 popsize <- sum(strata_sizes)
 
                 constants   <- c(constants, popsize = popsize, strata_sizes)
@@ -638,12 +643,20 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
         }
 
         # if LNA functions are requested, compile them
-        # lna_rates   <- get_lna_rates(rate_fcns, param_codes, tcovar_codes, const_codes, c(compartment_codes, incidence_codes))
-        lna_rates   <- build_lna_rates(rate_fcns, param_codes, const_codes, tcovar_codes, compartment_codes)
-
         if(compile_lna) {
-                lna_pointers  <- parse_lna_fcns(lna_rates, flow_matrix, messages = messages)
-                # lna_ptrs    <- parse_lna(rates = rate_fcns, hazard_fcns = lna_hazards, rate_derivs = rate_derivs, messages = messages)
+
+                # commands for
+                lna_rates    <- build_lna_fcns(rate_fcns = rate_fcns, param_codes = param_codes, const_codes = const_codes,
+                                               tcovar_codes = tcovar_codes, compartment_codes = c(compartment_codes, incidence_codes),
+                                               flow_matrix = flow_matrix, lna_scale = lna_scale)
+                lna_pointer  <- compile_lna(lna_rates, flow_matrix, lna_scale, messages = messages)
+
+                # commands for doing this with the 'odeintr' package. suffers from stiffness of
+                # the ODEs and lack of numerical approximation of the Jacobian
+                # lna_rates    <- build_lna_odes(rate_fcns = rate_fcns, param_codes = param_codes, const_codes = const_codes,
+                #                                 tcovar_codes = tcovar_codes, compartment_codes = c(compartment_codes, incidence_codes),
+                #                                flow_matrix = flow_matrix, lna_scale = lna_scale)
+                # lna_pointers <- parse_lna_odes(lna_rates, flow_matrix, lna_scale, messages = messages)
         } else {
                 lna_pointers <- NULL
                 lna_rates    <- list(hazards = NULL, derivatives = NULL, lna_param_codes = NULL)
@@ -668,9 +681,9 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                          initdist_params  = initdist_params,
                          fixed_inits      = fixed_inits,
                          flow_matrix      = flow_matrix,
-                         lna_hazards      = lna_rates$hazards,
-                         rate_derivs      = lna_rates$derivatives,
-                         lna_pointers     = lna_pointers,
+                         lna_rates        = lna_rates,
+                         lna_scale        = lna_scale,
+                         lna_pointer      = lna_pointer,
                          ode_pointers     = ode_pointers,
                          ode_hazards      = ode_rates$ode_hazards,
                          strata_sizes     = strata_sizes,

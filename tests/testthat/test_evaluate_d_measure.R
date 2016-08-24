@@ -5,6 +5,7 @@ context("Evaluating the density of the measurement process")
 test_that("Prevalence counts in a simple system are measured correctly", {
         skip_on_cran()
 
+        set.seed(12511)
         compartments <- c("S","I","R")
         rates <- list(rate("beta * I", "S", "I"),
                       rate("mu", "I", "R"))
@@ -15,7 +16,7 @@ test_that("Prevalence counts in a simple system are measured correctly", {
         strata <- NULL
         t0 <- 0; tmax <- 52
 
-        dynamics <- stem_dynamics(rates = rates, parameters = parameters,state_initializer = state_initializer, compartments=compartments, strata = strata, tcovar = tcovar, t0 = t0, tmax = 52, messages = FALSE)
+        dynamics <- stem_dynamics(rates = rates, parameters = parameters, state_initializer = state_initializer, compartments=compartments, strata = strata, tcovar = tcovar, t0 = t0, compile_lna = F, tmax = 52, messages = FALSE)
 
 # Poisson counts ----------------------------------------------------------
 
@@ -131,6 +132,7 @@ test_that("Prevalence counts in a simple system are measured correctly", {
 test_that("Prevalence and incidence counts in a stratified system with two measurement processes are measured correctly", {
         skip_on_cran()
 
+        set.seed(12511)
         strata <- c("male", "female")
         compartments <- list(S = "ALL", I = "ALL", R = "ALL")
         rates <- list(rate("beta * I_SELF + gamma * comp_fcn(I_ADJ, sum)", "S", "I", "ALL", incidence = TRUE,
@@ -145,7 +147,7 @@ test_that("Prevalence and incidence counts in a stratified system with two measu
         constants <- NULL
         t0 <- 0; tmax <- 52
 
-        dynamics <- stem_dynamics(rates = rates, parameters = parameters,state_initializer = state_initializer, compartments=compartments, strata = strata, tcovar = tcovar, t0 = 0, tmax = 52, adjacency = adjacency, messages = FALSE)
+        dynamics <- stem_dynamics(rates = rates, parameters = parameters, state_initializer = state_initializer, compartments=compartments, strata = strata, tcovar = tcovar, t0 = 0, tmax = 52, adjacency = adjacency, compile_lna = F, messages = FALSE)
 
 # Poisson counts ----------------------------------------------------------
 

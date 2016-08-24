@@ -10,3 +10,4 @@
 ^README\.Rmd$
 ^.developement_files/
 ^tests\.extended_tests/
+^.development_files/depracated_files
