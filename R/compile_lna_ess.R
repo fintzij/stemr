@@ -27,7 +27,6 @@ compile_lna_ess <- function(lna_rates, flow_matrix, lna_scale, messages = TRUE) 
         # function title
         first_line <- paste("Rcpp::List lna_ess_fcn(double t, arma::vec& state, Rcpp::NumericVector& parms, arma::mat& stoich) {",
                             "int n_compartments = stoich.n_rows;",
-                            "int n_rates = stoich.n_cols;",
                             "int n_odes = state.n_elem;",
                             "arma::vec drift = state.subvec(0,n_compartments-1);",
                             "arma::vec resid = state.subvec(n_compartments, 2*n_compartments - 1);",

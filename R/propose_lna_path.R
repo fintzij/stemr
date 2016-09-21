@@ -85,21 +85,52 @@ propose_lna_path <- function(parameters, stoich_matrix, lna_pointer, times, init
                 # is not on the log scale
                 if(log_scale) {
                         if(!is.null(incidence_codes)) {
-                                lna_step  <- tmvtnorm::rtmvnorm(1, drift_process[j,] + residual_process[j,], diffusion_process[,,j],
-                                                                lower = c(rep(-Inf, n_prev), path[j-1, incid_codes_path]),
-                                                                algorithm = "rejection")
+                                lna_step <- try(tmvtnorm::rtmvnorm(1, drift_process[j,] + residual_process[j,], diffusion_process[,,j],
+                                                                   lower = c(rep(-Inf, n_prev), path[j-1, incid_codes_path]),
+                                                                   algorithm = "rejection"), silent = TRUE)
+                                if(class(lna_step) == "try-error") {
+                                        diffusion_process[,,j] <- as.matrix(Matrix::nearPD(diffusion_process[,,j],
+                                                                                           ensureSymmetry = TRUE)$mat)
+                                        lna_step <- tmvtnorm::rtmvnorm(1, drift_process[j,] + residual_process[j,],
+                                                                       diffusion_process[,,j],
+                                                                       lower = c(rep(-Inf, n_prev), path[j-1, incid_codes_path]),
+                                                                       algorithm = "rejection")
+                                }
                         } else {
-                                lna_step  <- tmvtnorm::rtmvnorm(1, drift_process[j,] + residual_process[j,], diffusion_process[,,j],
-                                                                algorithm = "rejection")
+                                lna_step  <- try(tmvtnorm::rtmvnorm(1, drift_process[j,] + residual_process[j,], diffusion_process[,,j],
+                                                                algorithm = "rejection"), silent = TRUE)
+                                if(class(lna_step) == "try-error") {
+                                        diffusion_process[,,j] <- as.matrix(Matrix::nearPD(diffusion_process[,,j],
+                                                                                          ensureSymmetry = TRUE)$mat)
+                                        lna_step <- tmvtnorm::rtmvnorm(1, drift_process[j,] + residual_process[j,],
+                                                                       diffusion_process[,,j],
+                                                                       algorithm = "rejection")
+                                        }
                         }
                 } else if(!log_scale) {
                         if(!is.null(incidence_codes)) {
-                                lna_step  <- tmvtnorm::rtmvnorm(1, drift_process[j,] + residual_process[j,], diffusion_process[,,j],
+                                lna_step  <- try(tmvtnorm::rtmvnorm(1, drift_process[j,] + residual_process[j,], diffusion_process[,,j],
                                                                 lower = c(rep(0, n_prev), path[j-1, incid_codes_path]),
-                                                                algorithm = "rejection")
+                                                                algorithm = "rejection"), silent = TRUE)
+                                if(class(lna_step) == "try-error") {
+                                        diffusion_process[,,j] <- as.matrix(Matrix::nearPD(diffusion_process[,,j],
+                                                                                           ensureSymmetry = TRUE)$mat)
+                                        lna_step <- tmvtnorm::rtmvnorm(1, drift_process[j,] + residual_process[j,],
+                                                                       diffusion_process[,,j],
+                                                                       lower = c(rep(0, n_prev), path[j-1, incid_codes_path]),
+                                                                       algorithm = "rejection")
+
+                                }
                         } else {
-                                lna_step  <- tmvtnorm::rtmvnorm(1, drift_process[j,] + residual_process[j,], diffusion_process[,,j],
-                                                                lower = rep(0, n_comps),algorithm = "rejection")
+                                lna_step  <- try(tmvtnorm::rtmvnorm(1, drift_process[j,] + residual_process[j,], diffusion_process[,,j],
+                                                                lower = rep(0, n_comps),algorithm = "rejection"), silent = TRUE)
+                                if(class(lna_step) == "try-error") {
+                                        diffusion_process[,,j] <- as.matrix(Matrix::nearPD(diffusion_process[,,j],
+                                                                                           ensureSymmetry = TRUE)$mat)
+                                        lna_step <- tmvtnorm::rtmvnorm(1, drift_process[j,] + residual_process[j,],
+                                                                       diffusion_process[,,j],
+                                                                       lower = rep(0, n_comps),algorithm = "rejection")
+                                }
                         }
                 }
 

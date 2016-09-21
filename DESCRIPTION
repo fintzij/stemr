@@ -20,6 +20,7 @@ Imports:
     ECctmc,
     Ryacas,
     tmvtnorm,
+    Matrix,
     deSolve,
     Rcpp (>= 0.12.4)
 LinkingTo: Rcpp,

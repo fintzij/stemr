@@ -393,7 +393,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                         censusmat       <- stem_object$measurement_process$censusmat
                         census_codes    <- c(stem_object$dynamics$comp_codes, stem_object$dynamics$incidence_codes) + 2
 
-                        get_incidence <- !is.null(stem_object$dynamics$incidence_codes)
+                        get_incidence   <- !is.null(stem_object$dynamics$incidence_codes)
 
                         if(get_incidence) incidence_codes <- stem_object$dynamics$incidence_codes + 1
 
@@ -406,8 +406,8 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                                         cens_inds <- findInterval(stem_object$measurement_process$obstimes, census_paths[,1,k])
                                         censusmat[,-1] <- census_paths[cens_inds, -1, k]
                                 } else {
-                                        cens_inds <- findInterval(stem_object$measurement_process$obstimes, census_paths[[k]][,1])
-                                        censusmat[,-1] <- paths_full[[k]][cens_inds, census_codes]
+                                        cens_inds <- findInterval(stem_object$measurement_process$obstimes, paths_full[[k]][,1])
+                                        censusmat[,-1] <- paths_full[[k]][cens_inds, census_codes + 1]
                                 }
 
                                 if(get_incidence) compute_incidence(censusmat = censusmat,

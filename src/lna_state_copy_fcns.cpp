@@ -75,8 +75,8 @@ void vec2procmats(Rcpp::NumericVector& statevec, arma::mat& driftmat, arma::mat&
 
         std::copy(statevec.begin() + 2*n_comps, statevec.end(), diffusion_array.slice(row_ind).begin());
 
-        // enforce diagonal dominance by adding
-        diffusion_array.slice(row_ind).diag() += 0.00000001;
+        // enforce diagonal dominance by adding - done now within try statement in the simulation step
+        // diffusion_array.slice(row_ind).diag() += 0.0000001;
 }
 
 //' Insert the lna step into the path matrix
