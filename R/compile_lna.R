@@ -1,4 +1,4 @@
-#' Instatiate the C++ rate functions for the LNA using the odeintr package.
+#' Instatiate the C++ rate functions for the LNA.
 #'
 #' @param lna_rates list containing the strings vectors of ODES for the hazards
 #'   and jacobian matrix, along with the lna parameter codes.
@@ -57,7 +57,7 @@ compile_lna <- function(lna_rates, flow_matrix, lna_scale, messages = TRUE) {
 
         if(lna_scale == "log") {
                 diffusion_ode   <- paste0("lna_out_vec(arma::span(2*n_compartments, n_odes-1)) = arma::vectorise(diffusion * jacobian.t() + ",
-                                          " arma::diagmat(arma::exp(-2*drift)) * stoich * arma::diagmat(rates) * stoich.t() + ",
+                                          " arma::diagmat(arma::exp(-drift)) * stoich * arma::diagmat(rates) * stoich.t() * arma::diagmat(arma::exp(-drift)) + ",
                                           "jacobian * diffusion);")
         } else if(lna_scale == "linear") {
                 diffusion_ode   <- paste0("lna_out_vec(arma::span(2*n_compartments, n_odes-1)) = arma::vectorise(diffusion * jacobian.t() + ",

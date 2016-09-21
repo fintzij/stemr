@@ -5,8 +5,6 @@
 #' @param census_times vector of times at which the LNA should be censused
 #' @param census_inds logical vector the same length as lna_times indicating
 #'   whether the LNA path is censused at each of the lna times
-#' @param restart_inds logical vector the same length as lna_times indicating
-#'   whether the LNA is to be restarted at each of the lna times
 #' @param lna_pars numeric matrix of parameters, constants, and time-varying
 #'   covariates at each of the lna_times
 #' @param init_states matrix of initial state vectors
@@ -18,7 +16,7 @@
 #'
 #' @return matrix (array if nsim>1) containing a path(s) simulated using the LNA
 #' @export
-simulate_lna <- function(nsim, lna_times, census_times, census_inds, restart_inds, lna_pars, init_states, incidence_codes, log_scale, flow_matrix, lna_pointer) {
+simulate_lna <- function(nsim, lna_times, census_times, census_inds, lna_pars, init_states, incidence_codes, log_scale, flow_matrix, lna_pointer) {
 
         # get the dimensions of various objects
         n_comps <- ncol(init_states)           # number of model compartments
@@ -84,13 +82,13 @@ simulate_lna <- function(nsim, lna_times, census_times, census_inds, restart_ind
 
                         # sample the next value
                         # lna_step <- drift_process + residual_process
-                        lna_step <- mvrn(1, drift_process + residual_process, diffusion_process)
-                        # lna_step <- MASS:::mvrnorm(1, drift_process + residual_process, diffusion_process)
+                        lna_step <- mvtnorm::rmvnorm(1, drift_process + residual_process, diffusion_process, method = "svd")
+                        # lna_step <- mvtnorm::rmvnorm(1, drift_process + residual_process, diffusion_process,method = "svd")
 
                         # if any values are negative and the process is on the natural scale, resample them
                         while(!log_scale && any(lna_step < 0)) {
-                                lna_step <- mvrn(1, drift_process + residual_process, diffusion_process)
-                                # lna_step <- MASS:::mvrnorm(1, drift_process + residual_process, diffusion_process)
+                                lna_step <- mvtnorm::rmvnorm(1, drift_process + residual_process, diffusion_process, method = "svd")
+                                # lna_step <- mvtnorm::rmvnorm(1, drift_process + residual_process, diffusion_process,method = "svd")
                         }
 
                         # insert the sampled value into the path if called for
@@ -99,21 +97,21 @@ simulate_lna <- function(nsim, lna_times, census_times, census_inds, restart_ind
                         }
 
                         # restart the LNA if called for
-                        if(restart_inds[j]) {
-                                drift_process        <- lna_step[1,]   # restart the deterministic process at the sampled state
-                                # drift_process        <- lna_step   # restart the deterministic process at the sampled state
-                                # full_lna_paths[j,,k] <- c(t_R,lna_state_vec)
-                                residual_process[]   <- 0.0            # set the residual process to zero
-                                diffusion_process[,] <- 0.0            # the diffusion process is set to zero
-                        } else {
+                        # if(restart_inds[j]) {
+                        #         drift_process        <- lna_step[1,]   # restart the deterministic process at the sampled state
+                        #         # drift_process        <- lna_step   # restart the deterministic process at the sampled state
+                        #         # full_lna_paths[j,,k] <- c(t_R,lna_state_vec)
+                        #         residual_process[]   <- 0.0            # set the residual process to zero
+                        #         diffusion_process[,] <- 0.0            # the diffusion process is set to zero
+                        # } else {
                                 # the residual process is the difference between the deterministic
                                 # process and the sampled state and the diffusion process is set to zero
-                                residual_process     <- lna_step[1,] - drift_process
+                                residual_process     <- lna_step - drift_process
                                 # residual_process     <- lna_step - drift_process
                                 # full_lna_paths[j,,k] <- c(t_R,lna_state_vec)
 
                                 diffusion_process[,] <- 0.0
-                        }
+                        # }
 
                         # copy the process objects back into the lna state vector
                         procs2vec(lna_state_vec, drift_process, residual_process, diffusion_process);
@@ -125,6 +123,7 @@ simulate_lna <- function(nsim, lna_times, census_times, census_inds, restart_ind
 
                 # iterate through the path array
                 for(k in 1:nsim) {
+                        lna_paths[1,incidence_codes,k] <- 0
                         lna_paths[2:n_census_times, incidence_codes, k] <- diff(lna_paths[, incidence_codes, k])
 
                         # clamp the slice to make sure there are no negative values if the process is on the linear scale

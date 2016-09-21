@@ -35,4 +35,5 @@ test_that("Compartment counts at census times are correctly obtained", {
                              10,5,3,4), ncol = 4, byrow = TRUE)
 
         expect_identical(build_census_path(path, 0:10, 2:4), cens_path)
+        expect_identical(build_census_path(path, 1:10, 2:4), cens_path[-1,])
 })

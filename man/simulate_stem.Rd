@@ -5,9 +5,9 @@
 \title{Simulations from a stochastic epidemic model.}
 \usage{
 simulate_stem(stem_object, nsim = 1, paths = FALSE, observations = FALSE,
-  subject_paths = FALSE, method = "gillespie", lna_restart = FALSE,
-  t0 = NULL, tmax = NULL, timestep = NULL, census_times = NULL,
-  paths_as_array = FALSE, datasets_as_array = FALSE, messages = TRUE)
+  subject_paths = FALSE, method = "gillespie", t0 = NULL, tmax = NULL,
+  timestep = NULL, census_times = NULL, paths_as_array = FALSE,
+  datasets_as_array = FALSE, messages = TRUE)
 }
 \arguments{
 \item{nsim}{number of realizations to simulate}
@@ -24,12 +24,6 @@ the Gillespie direct method.}
 
 \item{method}{either "gillespie" if simulating via Gillespie's direct method,
 or "lna" if simulating paths via the Linear Noise Approximation.}
-
-\item{lna_restart}{Either a logical indicating whether the non-restarting
-version of the LNA (default) should be used, or whether the LNA should be
-restarted at census times. Alternately, a vector of restart times could be
-supplied. NOTE: THE RESTARTING LNA IMPLEMENTATION HAS NUMERICAL PROBLEMS
-THAT HAVE NOT YET BEEN FIXED.}
 
 \item{t0}{the time at which the system is initialized. If not supplied, it is
 taken to be the first observation time if that is available, or otherwise

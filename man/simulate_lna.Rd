@@ -4,8 +4,8 @@
 \alias{simulate_lna}
 \title{Simulate a path using the linear noise approximation}
 \usage{
-simulate_lna(nsim, lna_times, census_times, census_inds, restart_inds, lna_pars,
-  init_states, incidence_codes, log_scale, flow_matrix, lna_pointer)
+simulate_lna(nsim, lna_times, census_times, census_inds, lna_pars, init_states,
+  incidence_codes, log_scale, flow_matrix, lna_pointer)
 }
 \arguments{
 \item{nsim}{integer for the number of simulations}
@@ -16,9 +16,6 @@ simulate_lna(nsim, lna_times, census_times, census_inds, restart_inds, lna_pars,
 
 \item{census_inds}{logical vector the same length as lna_times indicating
 whether the LNA path is censused at each of the lna times}
-
-\item{restart_inds}{logical vector the same length as lna_times indicating
-whether the LNA is to be restarted at each of the lna times}
 
 \item{lna_pars}{numeric matrix of parameters, constants, and time-varying
 covariates at each of the lna_times}

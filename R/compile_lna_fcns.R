@@ -74,7 +74,7 @@ compile_lna_fcns <- function(lna_rates, flow_matrix, lna_scale, messages = TRUE)
 
         if(lna_scale == "log") {
                 diffusion_ode   <- paste0("stemr_lna::lna_out_vec(arma::span(2*stemr_lna::n_compartments, stemr_lna::n_odes-1)) = arma::vectorise(stemr_lna::diffusion * stemr_lna::jacobian.t() + ",
-                                          " arma::diagmat(arma::exp(-2*stemr_lna::drift)) * stemr_lna::stoich * arma::diagmat(stemr_lna::rates) * stemr_lna::stoich.t() + ",
+                                          " arma::diagmat(arma::exp(-stemr_lna::drift)) * stemr_lna::stoich * arma::diagmat(stemr_lna::rates) * stemr_lna::stoich.t() * arma::diagmat(arma::exp(-stemr_lna::drift)) + ",
                                           "stemr_lna::jacobian * stemr_lna::diffusion);")
         } else if(lna_scale == "linear") {
                 diffusion_ode   <- paste0("stemr_lna::lna_out_vec(arma::span(2*stemr_lna::n_compartments, stemr_lna::n_odes-1)) = arma::vectorise(stemr_lna::diffusion * stemr_lna::jacobian.t() + ",

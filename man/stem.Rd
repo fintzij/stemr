@@ -4,22 +4,12 @@
 \alias{stem}
 \title{Construct a stem object.}
 \usage{
-stem(stem_object = NULL, dynamics = NULL, measurement_process = NULL,
-  stem_settings = NULL)
+stem(stem_object = NULL, data = NULL, dynamics = NULL,
+  measurement_process = NULL, stem_settings = NULL)
 }
 \arguments{
 \item{stem_object}{an existing stochastic epidemic model object to which
 model settings should be added.}
-
-\item{dynamics}{A list of objects describing the model dynamics, most
-straighforwardly generated using the \code{stem_dynamics} function.}
-
-\item{measurement_process}{list of functions to simulate from or evaluate the
-likelihood of the measurement process. These are most easily generated
-using the \code{stem_measure} function.}
-
-\item{stem_settings}{otional list of inference settings, most
-straightforwardly generated using the \code{stem_control} function.}
 
 \item{data}{a matrix/data frame, or a list of matrices/data frames. All
 columns must be named according to which compartment_strata are measured.
@@ -30,6 +20,16 @@ data was measured at different observation times, a list of matrices or
 data frames must be provided. Again, the first column of each matrix must
 consist of observation times, while subsequent columns must be labeled
 according to which compartments are reflected.}
+
+\item{dynamics}{A list of objects describing the model dynamics, most
+straighforwardly generated using the \code{stem_dynamics} function.}
+
+\item{measurement_process}{list of functions to simulate from or evaluate the
+likelihood of the measurement process. These are most easily generated
+using the \code{stem_measure} function.}
+
+\item{stem_settings}{otional list of inference settings, most
+straightforwardly generated using the \code{stem_control} function.}
 }
 \value{
 returns a \code{stem} object.

@@ -30,8 +30,31 @@ build_obsmat <- function(meas_procs = NULL, datasets = NULL) {
 
         } else if(!is.null(datasets)) {
 
+                # get the observation times
+                if(!is.list(datasets)) {
+                        if(any(is.na(datasets))) {
+                                stop("if the observation times are not the same for all of the observed variables, the datasets must be supplied as a list.")
+                        }
+                        obsmat <- datasets
+
+                } else {
+                        # get the observation times
+                        obstimes <- sort(unique(unlist(lapply(datasets, function(x) x[,1]))))
+
+                        # get the names of the measurement variables
+                        meas_vars <- sapply(lapply(datasets, function(x) x[,-1]), colnames)
+
+                        # initialize the matrix
+                        obsmat           <- matrix(NA, nrow = length(obstimes), ncol = length(meas_vars) + 1)
+                        colnames(obsmat) <- c("time", meas_vars)
+                        obsmat[,"time"]  <- obstimes
+
+                        for(s in seq_along(datasets)) {
+                                vars <- colnames(datasets[[s]][,-1])
+                                obsmat[match(datasets[[s]][,1], obstimes), vars] <- datasets[[s]][,-1]
+                        }
+                }
         }
 
         return(obsmat)
-
 }

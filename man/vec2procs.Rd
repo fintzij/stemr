@@ -17,7 +17,7 @@ vec2procs(statevec, driftvec, residvec, diffmat)
 \item{diffmat}{armadillo matrix for the diffusion process}
 }
 \value{
-modifies the statevec in place
+modifies the ode objects in place
 }
 \description{
 Copy the LNA ODE state into the drift, residual, and diffusion processes

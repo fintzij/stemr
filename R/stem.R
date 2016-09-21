@@ -22,15 +22,13 @@
 #' @return returns a \code{stem} object.
 #' @export
 #'
-stem <- function(stem_object = NULL, dynamics = NULL, measurement_process = NULL, stem_settings = NULL) {
+stem <- function(stem_object = NULL, data = NULL, dynamics = NULL, measurement_process = NULL, stem_settings = NULL) {
 
         if(is.null(stem_object)) {
-                stem_object <- structure(list(data                = NULL,
-                                              dynamics            = NULL,
+                stem_object <- structure(list(dynamics            = NULL,
                                               measurement_process = NULL,
                                               stem_settings       = NULL), class = "stem")
         }
-
 
         if(!is.null(dynamics))            stem_object$dynamics <- dynamics
         if(!is.null(measurement_process)) stem_object$measurement_process <- measurement_process

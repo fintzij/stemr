@@ -2,23 +2,23 @@
 % Please edit documentation in R/RcppExports.R
 \name{procs2vec}
 \alias{procs2vec}
-\title{Copy drift, residual, and diffusion processes into std::vector}
+\title{Copy drift, residual, and diffusion processes into the lna state vector}
 \usage{
 procs2vec(statevec, driftvec, residvec, diffmat)
 }
 \arguments{
 \item{statevec}{vector to be copied into, i.e. the vectorised ODE state}
 
-\item{drift_proc}{armadillo vector for the drift process}
+\item{driftvec}{armadillo vector for the drift process}
 
-\item{resid_proc}{armadillo vector for the residual process}
+\item{residvec}{armadillo vector for the residual process}
 
-\item{diffusion_proc}{armadillo matrix for the diffusion process}
+\item{diffmat}{armadillo matrix for the diffusion process}
 }
 \value{
 modifies the statevec in place
 }
 \description{
-Copy drift, residual, and diffusion processes into std::vector
+Copy drift, residual, and diffusion processes into the lna state vector
 }
 

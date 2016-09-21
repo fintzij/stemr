@@ -1,6 +1,7 @@
 #ifndef stemr_UTILITIES_H
 #define stemr_UTILITIES_H
 
+#include <RcppArmadillo.h>
 #include <algorithm>
 
 using namespace Rcpp;
@@ -24,6 +25,7 @@ void CALL_R_MEASURE(Rcpp::NumericMatrix& obsmat, const Rcpp::LogicalVector& emit
 
 // integrate the LNA odes, call via XPtr
 Rcpp::List CALL_COMPUTE_LNA(double t, arma::vec& state, Rcpp::List& parms);
+Rcpp::List CALL_LNA_ESS(double t, arma::vec& state, Rcpp::List& parms);
 // Rcpp::NumericVector CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr);
 // void CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr);
 
@@ -64,7 +66,12 @@ arma::mat mvrn(int n, const arma::vec& mu, const arma::mat& sigma);
 // copy functions to and from the lna ode statevec and the lna drift, residual, and diffusion process objects
 void procs2vec(Rcpp::NumericVector& statevec, arma::vec& drift_proc, arma::vec& resid_proc, arma::mat& diffusion_proc);
 void vec2procs(Rcpp::NumericVector& statevec, arma::vec& drift_proc, arma::vec& resid_proc, arma::mat& diffusion_proc);
+void procmats2vec(Rcpp::NumericVector& statevec, arma::mat& driftmat, arma::mat& residmat, Rcpp::NumericVector& diffarr, int ind);
+void vec2procmats(Rcpp::NumericVector& statevec, arma::mat& driftmat, arma::mat& residmat, Rcpp::NumericVector& diffarr, int ind);
 
+// functions for converting parameters between their estimation and natural scales
+void to_estimation_scale(Rcpp::NumericVector& natural_params, Rcpp::NumericVector& scaled_params, Rcpp::CharacterVector& scales);
+void from_estimation_scale(Rcpp::NumericVector& natural_params, Rcpp::NumericVector& scaled_params, Rcpp::CharacterVector& scales);
 
 // // compute and return the hazards
 // arma::vec COMPUTE_HAZARD(double t, const arma::vec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar, SEXP haz_ptr);

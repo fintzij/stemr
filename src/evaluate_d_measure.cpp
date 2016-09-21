@@ -9,14 +9,15 @@ using namespace Rcpp;
 //' process density functions via external Xptr.
 //'
 //' @param emitmat matrix of emission probabilities
-//' @param emit_inds logical vector of measurement compartments to simulate
-//' @param record_ind row in the observation and emission matrices
-//' @param record vector of observed counts
-//' @param state numeric vector of latent comaprtment counts
+//' @param obsmat matrix containing the data
+//' @param statemat matrix containing the compartment counts at the observation
+//'   times
+//' @param measproc_indmat logical matrix indicating which compartments are
+//'   observed at every observation time
 //' @param parameters numeric vector of parameter values
 //' @param constants numeric vector of constants
-//' @param tcovar numeric vector of time-varying covariate values
-//' @param r_meas_ptr external pointer to measurement process simulation function
+//' @param tcovar_censusmat numeric vector of time-varying covariate values
+//' @param d_meas_ptr external pointer to measurement process density function
 //'
 //' @export
 // [[Rcpp::export]]

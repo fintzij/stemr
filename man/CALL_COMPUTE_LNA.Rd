@@ -9,9 +9,10 @@ CALL_COMPUTE_LNA(t, state, parms)
 \arguments{
 \item{t}{time}
 
-\item{state}{vector of compartment counts}
+\item{state}{vector containing the drift, residual, and diffusion subvectors}
 
-\item{parameters}{vector of model parameters}
+\item{parms}{list containing the LNA model parameters, stoichiometry matrix,
+and LNA pointer}
 }
 \description{
 Compute the LNA by calling the LNA functions via external Xptr.

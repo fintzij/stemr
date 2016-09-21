@@ -11,21 +11,21 @@ evaluate_d_measure(emitmat, obsmat, statemat, measproc_indmat, parameters,
 \arguments{
 \item{emitmat}{matrix of emission probabilities}
 
+\item{obsmat}{matrix containing the data}
+
+\item{statemat}{matrix containing the compartment counts at the observation
+times}
+
+\item{measproc_indmat}{logical matrix indicating which compartments are
+observed at every observation time}
+
 \item{parameters}{numeric vector of parameter values}
 
 \item{constants}{numeric vector of constants}
 
-\item{emit_inds}{logical vector of measurement compartments to simulate}
+\item{tcovar_censusmat}{numeric vector of time-varying covariate values}
 
-\item{record_ind}{row in the observation and emission matrices}
-
-\item{record}{vector of observed counts}
-
-\item{state}{numeric vector of latent comaprtment counts}
-
-\item{tcovar}{numeric vector of time-varying covariate values}
-
-\item{r_meas_ptr}{external pointer to measurement process simulation function}
+\item{d_meas_ptr}{external pointer to measurement process density function}
 }
 \description{
 Evaluate the log-density of the measurement process by calling measurement

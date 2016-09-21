@@ -5,7 +5,7 @@
 \title{Generate the objects governing the dynamics of a stochastic epidemic model.}
 \usage{
 stem_dynamics(rates, parameters, state_initializer, compartments,
-  lna_scale = "log", tcovar = NULL, t0 = NULL, tmax, timestep = NULL,
+  lna_scale = "log", tcovar = NULL, t0 = 0, tmax, timestep = NULL,
   strata = NULL, constants = NULL, adjacency = NULL, messages = TRUE,
   compile_rates = TRUE, compile_lna = TRUE, compile_ode = FALSE)
 }
@@ -111,8 +111,10 @@ list with evaluated rate functions and objects for managing the
   matrix for time (as a variable, not an index)}
   \item{tcovar_adjmat}{adjacency matrix indicating which rates need to be
   updated when a time-varying covariate value changes}
-  \item{tcovar_changemat}{indi ator matrix indicating which time-varying
+  \item{tcovar_changemat}{indicator matrix indicating which time-varying
   covariates change at which time in the tcovar matrix}
+  \item{t0}{initialization time for the system}
+  \item{tmax}{time until which the system evolves}
   \item{n_strata}{number of strata} \item{n_compartments}{number of
   compartments} \item{n_params}{number of model parameters}
   \item{n_tcovar}{number of time-varying covariates, including time}

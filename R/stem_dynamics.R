@@ -77,8 +77,10 @@
 #'   matrix for time (as a variable, not an index)}
 #'   \item{tcovar_adjmat}{adjacency matrix indicating which rates need to be
 #'   updated when a time-varying covariate value changes}
-#'   \item{tcovar_changemat}{indi ator matrix indicating which time-varying
+#'   \item{tcovar_changemat}{indicator matrix indicating which time-varying
 #'   covariates change at which time in the tcovar matrix}
+#'   \item{t0}{initialization time for the system}
+#'   \item{tmax}{time until which the system evolves}
 #'   \item{n_strata}{number of strata} \item{n_compartments}{number of
 #'   compartments} \item{n_params}{number of model parameters}
 #'   \item{n_tcovar}{number of time-varying covariates, including time}
@@ -87,7 +89,7 @@
 #'   }
 #'
 #' @export
-stem_dynamics <- function(rates, parameters, state_initializer, compartments, lna_scale = "log", tcovar = NULL, t0 = NULL, tmax, timestep = NULL, strata = NULL, constants = NULL, adjacency = NULL, messages = TRUE, compile_rates = TRUE, compile_lna = TRUE, compile_ode = FALSE) {
+stem_dynamics <- function(rates, parameters, state_initializer, compartments, lna_scale = "log", tcovar = NULL, t0 = 0, tmax, timestep = NULL, strata = NULL, constants = NULL, adjacency = NULL, messages = TRUE, compile_rates = TRUE, compile_lna = TRUE, compile_ode = FALSE) {
 
         # check consistency of specification and throw errors if inconsistent
         if(is.list(compartments) && ("ALL" %in% compartments) && is.null(strata)) {
@@ -272,6 +274,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, ln
                 names(const_codes)      <- const_names
         } else {
                 const_codes <- NULL
+                const_names <- NULL
         }
 
         if(!is.null(constants)) {
@@ -509,11 +512,11 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, ln
                 fixed_inits <- all(sapply(initializer, "[[", 2) == TRUE)
 
                 strata_sizes <- sapply(initializer, function(x) sum(x[[1]]));
-                names(strata_sizes) <- paste("popsize_",sapply(initializer, "[[", 3))
+                names(strata_sizes) <- paste0("popsize_",sapply(initializer, "[[", 3))
                 popsize <- sum(strata_sizes)
 
                 constants   <- c(constants, popsize = popsize, strata_sizes)
-                const_codes <- c(const_codes, seq(length(const_codes), length(c(popsize, strata_sizes))))
+                const_codes <- seq_along(c(const_codes, popsize, strata_sizes)) - 1
                 names(const_codes) <- names(constants)
 
                 # check that either all parameters are random or that initial state is fixed for each stratum
@@ -589,16 +592,16 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, ln
                         rate_fcns[[k]][[2]] <- paste0("(", rate_fcns[[k]][[1]], ") * state[", compartment_codes[rate_fcns[[k]][[3]]], "]")
                 }
 
-                initializer  <- state_initializer; initdist_params <- state_initializer$init_states
+                initializer            <- state_initializer; initdist_params <- state_initializer$init_states
                 initializer$param_inds <- seq_along(initdist_params)
                 initializer$codes      <- match(names(initializer$init_states), names(compartment_codes))
 
-                fixed_inits <- state_initializer$fixed
+                fixed_inits  <- state_initializer$fixed
                 strata_sizes <- NULL
-                popsize     <- sum(initializer$init_states)
+                popsize      <- sum(initializer$init_states)
 
-                constants <- c(constants, popsize = popsize)
-                const_codes <- c(const_codes, length(const_codes))
+                constants          <- c(constants, popsize = popsize)
+                const_codes        <- c(const_codes, length(const_codes))
                 names(const_codes) <- names(constants)
         }
 
@@ -610,15 +613,15 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, ln
         incidence_codes <- which(incidence_comps) - 1
         if(length(incidence_codes)) {
                 names(incidence_codes) <- colnames(flow_matrix)[incidence_comps]
-                source_names <- sapply(names(incidence_codes), gsub, pattern = "_INCIDENCE", replacement = "")
-                incidence_sources <- compartment_codes[source_names]
+                source_names           <- sapply(names(incidence_codes), gsub, pattern = "_INCIDENCE", replacement = "")
+                incidence_sources      <- compartment_codes[source_names]
         } else {
-                incidence_codes <- NULL
+                incidence_codes   <- NULL
                 incidence_sources <- NULL
         }
 
         # determine whether the model is progressive and whether there are absorbing states
-        progressive <- is_progressive(flow_matrix)
+        progressive      <- is_progressive(flow_matrix)
         absorbing_states <- which_absorbing(flow_matrix)
 
         # construct the rate adjacency matrix -- specifies which rates need to
@@ -626,14 +629,13 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, ln
         rate_adjmat <- build_rate_adjmat(rate_fcns, compartment_codes)
 
         # build the time-varying covariate matrix so that it contains the census intervals
-        tcovar <- build_tcovar_matrix(tcovar = tcovar, timestep = timestep, t0 = t0, tmax = tmax)
-        tcovar_codes <- seq_len(ncol(tcovar) - 1)
+        tcovar              <- build_tcovar_matrix(tcovar = tcovar, timestep = timestep, t0 = t0, tmax = tmax)
+        tcovar_codes        <- seq_len(ncol(tcovar) - 1)
         names(tcovar_codes) <- colnames(tcovar)[2:ncol(tcovar)]
-        n_tcovar <- ncol(tcovar) - 1
-        tcovar_changemat <- build_tcovar_changemat(tcovar)
-        tcovar_adjmat <- build_tcovar_adjmat(rate_fcns, tcovar_codes)
-
-        timecode <- which(names(tcovar_codes) == "TIME")
+        n_tcovar            <- ncol(tcovar) - 1
+        tcovar_changemat    <- build_tcovar_changemat(tcovar)
+        tcovar_adjmat       <- build_tcovar_adjmat(rate_fcns, tcovar_codes)
+        timecode            <- which(names(tcovar_codes) == "TIME")
 
         # compile the rate functions and get the pointers
         if(compile_rates) {
@@ -650,6 +652,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, ln
                                                tcovar_codes = tcovar_codes, compartment_codes = c(compartment_codes, incidence_codes),
                                                flow_matrix = flow_matrix, lna_scale = lna_scale)
                 lna_pointer  <- compile_lna(lna_rates, flow_matrix, lna_scale, messages = messages)
+                lna_pointer  <- c(lna_pointer, compile_lna_ess(lna_rates, flow_matrix, lna_scale, messages = messages))
 
                 # commands for doing this with the 'odeintr' package. suffers from stiffness of
                 # the ODEs and lack of numerical approximation of the Jacobian
@@ -664,11 +667,11 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, ln
 
         # compile the functions to solve the ODEs for the stochastic epidemic model
         if(compile_ode) {
-                ode_rates    <- build_ode_rates(rate_fcns, param_codes, const_codes, tcovar_codes, compartment_codes)
+                ode_rates   <- build_ode_rates(rate_fcns, param_codes, const_codes, tcovar_codes, compartment_codes)
                 ode_pointer <- parse_ode_fcns(ode_rates, flow_matrix, messages = messages)
         } else {
                 ode_pointer <- NULL
-                ode_rates <- list(hazards = NULL, ode_param_codes = NULL)
+                ode_rates   <- list(hazards = NULL, ode_param_codes = NULL)
         }
 
         # create the list determining the stem dynamics
@@ -704,6 +707,8 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, ln
                          timecode         = timecode,
                          tcovar_adjmat    = tcovar_adjmat,
                          tcovar_changemat = tcovar_changemat,
+                         t0               = t0,
+                         tmax             = tmax,
                          n_strata         = n_strata,
                          n_compartments   = ncol(flow_matrix),
                          n_params         = n_params,

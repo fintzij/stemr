@@ -28,18 +28,20 @@
 #'   conditionally independent.
 #'
 #'   The available emission distributions are the binomial, poisson, negative
-#'   binomial, and gaussian distributions. The user specifies the parameters as
-#'   strings in the canonical order they are presented. Thus, \enumerate{\item
-#'   poisson: lambda \item binomial: size, prob \item negative binomial: size,
-#'   prob \item gaussian: mean, sd}. The \code{strata} argument may either be
-#'   supplied as a character vector of model strata, or may be specified as
-#'   "ALL" to indicate all model strata. The case-sensitive key word, "SELF",
-#'   may be used in the name of the measurement variable and the parameter
-#'   strings in conjunction with the \code{strata} argument to facilitate
-#'   specification of multiple measurement processes. Thus, if there are
-#'   multiple strata whose observations are accrued at the same set of times,
-#'   the user would only need to supply a single emission function since "SELF"
-#'   will be parsed and replaced with the names of the strata.
+#'   binomial, and gaussian distributions. The negative binomial distribution is
+#'   parameterized by its mean and dispersion (mu, size). The user specifies the
+#'   parameters as strings in the canonical order they are presented. Thus,
+#'   \enumerate{\item poisson: lambda \item binomial: size, prob \item negative
+#'   binomial: size, mu. (N.B. the negative binomial emissions are parameterized
+#'   by mean, NOT probability!) \item gaussian: mean, sd}. The \code{strata}
+#'   argument may either be supplied as a character vector of model strata, or
+#'   may be specified as "ALL" to indicate all model strata. The case-sensitive
+#'   key word, "SELF", may be used in the name of the measurement variable and
+#'   the parameter strings in conjunction with the \code{strata} argument to
+#'   facilitate specification of multiple measurement processes. Thus, if there
+#'   are multiple strata whose observations are accrued at the same set of
+#'   times, the user would only need to supply a single emission function since
+#'   "SELF" will be parsed and replaced with the names of the strata.
 #'
 #'   The parameters for each distribution are supplied as character vectors, and
 #'   will typically be functions of model compartments, parameters, time-varying

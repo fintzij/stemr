@@ -4,7 +4,8 @@
 \alias{stem_initializer}
 \title{Determines the initial state probabilities at the first observation time.}
 \usage{
-stem_initializer(init_states, fixed, strata = NULL, shared_params = FALSE)
+stem_initializer(init_states, fixed, strata = NULL, shared_params = FALSE,
+  prior = NULL)
 }
 \arguments{
 \item{init_states}{named vector of initial compartment counts, normalized to
@@ -17,6 +18,9 @@ compartment counts or probabilities applies, possibly "ALL".}
 
 \item{shared_params}{should the compartments that are specified together in
 the strata argument also share parameters? Defaults to FALSE.}
+
+\item{prior}{prior distribution for the initial state probabilities,
+generated via a call to the \code{\link{initdist_prior}} function.}
 }
 \value{
 list of settings used to initialize the initial state at the first
@@ -25,8 +29,10 @@ list of settings used to initialize the initial state at the first
 \description{
 The state of each stratum in the system is initialized at the first
 observation time, either with a vector of compartment counts, or with a
-vector of state probabilities, where it is assumed that \eqn{X(t_1)\sim
-Categorical(\cdot, \mathbf{p}_{t_1})}. The initializer argument in the
+vector of state probabilities, where it is assumed that \deqn{X(t_1)\sim
+Categorical(\cdot, \mathbf{p}_{t_1})}. If simulation or inference is to be
+performed using the linear noise approximation, the normal approximation to
+the multinomial distribution is used. The initializer argument in the
 \code{\link{stem_dynamics}} function is supplied as a list of calls to
 \code{stem_initializer}.
 }

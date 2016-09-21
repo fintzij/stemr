@@ -19,12 +19,10 @@ LazyData: TRUE
 Imports:
     ECctmc,
     Ryacas,
-    odeintr,
+    tmvtnorm,
     deSolve,
-    cOde,
     Rcpp (>= 0.12.4)
 LinkingTo: Rcpp,
-    odeintr,
     RcppArmadillo
 RoxygenNote: 5.0.1
 Suggests: knitr,

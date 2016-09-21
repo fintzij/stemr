@@ -75,7 +75,7 @@ test_that("Prevalence counts in a simple system are measured correctly", {
 
 # Negative binomial counts ---------------------------------------------------------
 
-        emissions <- list(emission("I", "negbinomial", c("I", "rho"), incidence = FALSE, obstimes = seq(0,20,by=2)))
+        emissions <- list(emission("I", "negbinomial", c("I", "I*rho"), incidence = FALSE, obstimes = seq(0,20,by=2)))
         meas_process <- stem_measure(emissions = emissions, dynamics = dynamics, messages = FALSE)
 
         stem_object <- stem(dynamics = dynamics, measurement_process = meas_process)
@@ -95,7 +95,7 @@ test_that("Prevalence counts in a simple system are measured correctly", {
                            d_meas_ptr       = stem_object$measurement_process$meas_pointers$d_measure_ptr)
 
         for(j in seq_len(nrow(emit_mat_manual))) {
-                emit_mat_manual[j, 2] <- dnbinom(stemr_sim$datasets[j,2,1], stemr_sim$paths[j,3,1], stem_object$dynamics$parameters["rho"], log = T)
+                emit_mat_manual[j, 2] <- dnbinom(stemr_sim$datasets[j,2,1], stemr_sim$paths[j,3,1], mu = stemr_sim$paths[j,"I",1] * stem_object$dynamics$parameters["rho"], log = T)
         }
 
         expect_identical(emit_mat_stemr, emit_mat_manual)
@@ -218,8 +218,8 @@ test_that("Prevalence and incidence counts in a stratified system with two measu
 
 # Negative binomial counts ---------------------------------------------------------
 
-        emissions <- list(emission("I_male", "negbinomial", c("I_male", "rho"), incidence = TRUE, obstimes = seq(0,20,by=2)),
-                          emission("I_female", "negbinomial", c("I_female", "rho"), incidence = FALSE, obstimes = seq(1,21, by = 2)))
+        emissions <- list(emission("I_male", "negbinomial", c("I_male", "I_male * rho"), incidence = TRUE, obstimes = seq(0,20,by=2)),
+                          emission("I_female", "negbinomial", c("I_female", "I_female * rho"), incidence = FALSE, obstimes = seq(1,21, by = 2)))
         meas_process <- stem_measure(emissions = emissions, dynamics = dynamics, messages = FALSE)
 
         stem_object <- stem(dynamics = dynamics, measurement_process = meas_process)
@@ -241,9 +241,9 @@ test_that("Prevalence and incidence counts in a stratified system with two measu
 
         for(j in seq_len(nrow(emit_mat_manual))) {
                 if(j %% 2) {
-                        emit_mat_manual[j, 2] <- dnbinom(stemr_sim$datasets[j,2,1], stemr_sim$paths[j,8,1], stem_object$dynamics$parameters["rho"], log = T)
+                        emit_mat_manual[j, 2] <- dnbinom(stemr_sim$datasets[j,2,1], stemr_sim$paths[j,8,1], mu = stemr_sim$paths[j,"I_male_INCIDENCE",1] * stem_object$dynamics$parameters["rho"], log = T)
                 } else {
-                        emit_mat_manual[j, 3] <- dnbinom(stemr_sim$datasets[j,3,1], stemr_sim$paths[j,5,1], stem_object$dynamics$parameters["rho"], log = T)
+                        emit_mat_manual[j, 3] <- dnbinom(stemr_sim$datasets[j,3,1], stemr_sim$paths[j,5,1], mu = stemr_sim$paths[j,"I_female",1] * stem_object$dynamics$parameters["rho"], log = T)
                 }
         }
 

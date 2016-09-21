@@ -9,8 +9,9 @@ using namespace Rcpp;
 //' Compute the LNA by calling the LNA functions via external Xptr.
 //'
 //' @param t time
-//' @param state vector of compartment counts
-//' @param parameters vector of model parameters
+//' @param state vector containing the drift, residual, and diffusion subvectors
+//' @param parms list containing the LNA model parameters, stoichiometry matrix,
+//'   and LNA pointer
 //'
 //' @export
 // [[Rcpp::export]]

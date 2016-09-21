@@ -20,6 +20,7 @@ typedef void(*r_measure_ptr)(Rcpp::NumericMatrix& obsmat, const Rcpp::LogicalVec
              const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar);
 
 typedef Rcpp::List(*compute_lna_ptr)(double t, arma::vec& state, Rcpp::NumericVector& parms, arma::mat& stoich);
+typedef Rcpp::List(*lna_ess_ptr)(double t, arma::vec& state, Rcpp::NumericVector& parms, arma::mat& stoich);
 
 // typedef Rcpp::NumericVector(*lna_ptr)(Rcpp::NumericVector& init, double start, double end, double step_size);
 

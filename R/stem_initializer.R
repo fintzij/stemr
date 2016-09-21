@@ -2,8 +2,10 @@
 #'
 #' The state of each stratum in the system is initialized at the first
 #' observation time, either with a vector of compartment counts, or with a
-#' vector of state probabilities, where it is assumed that \eqn{X(t_1)\sim
-#' Categorical(\cdot, \mathbf{p}_{t_1})}. The initializer argument in the
+#' vector of state probabilities, where it is assumed that \deqn{X(t_1)\sim
+#' Categorical(\cdot, \mathbf{p}_{t_1})}. If simulation or inference is to be
+#' performed using the linear noise approximation, the normal approximation to
+#' the multinomial distribution is used. The initializer argument in the
 #' \code{\link{stem_dynamics}} function is supplied as a list of calls to
 #' \code{stem_initializer}.
 #'
@@ -22,6 +24,8 @@
 #'   compartment counts or probabilities applies, possibly "ALL".
 #' @param shared_params should the compartments that are specified together in
 #'   the strata argument also share parameters? Defaults to FALSE.
+#' @param prior prior distribution for the initial state probabilities,
+#'   generated via a call to the \code{\link{initdist_prior}} function.
 #'
 #' @return list of settings used to initialize the initial state at the first
 #'   observation time.
@@ -38,11 +42,11 @@
 #' list(stem_initializer(c(S=200,I=100,R=700), fixed = TRUE, strata = "adults"),
 #'      stem_initializer(c(S=900,I=50,R=50), fixed=TRUE, strata = c("children",
 #'      "elderly")))
-stem_initializer <- function(init_states, fixed, strata = NULL, shared_params = FALSE) {
+stem_initializer <- function(init_states, fixed, strata = NULL, shared_params = FALSE, prior = NULL) {
 
         if(is.null(names(init_states))) {
                 stop("Compartment names must be specified in each initial probability vector.")
         }
 
-        list(init_states = init_states, fixed = fixed, strata = strata, shared_params = shared_params)
+        list(init_states = init_states, fixed = fixed, strata = strata, shared_params = shared_params, prior = prior)
 }

@@ -121,16 +121,13 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                 obstimes        <- obsmat[,"time"]                              # vector of observation times
                 measproc_indmat <- build_measproc_indmat(obsmat = obsmat)       # indicator matrix for which measurment variables are observed at which times
                 meas_inds       <- which(!is.na(obsmat[,-1, drop = FALSE]), arr.ind = T) - 1  # matrix of C++ indices in the observation matrix which are not NA.
-                meas_inds[,"row"] <- meas_inds[,"row"] - 1
 
         } else if(is.null(data)) {
                 # if a dataset is not supplied, create a template for the observation matrix
                 obsmat          <- build_obsmat(meas_procs = meas_procs)
                 obstimes        <- obsmat[,"time"]
                 measproc_indmat <- build_measproc_indmat(obsmat = obsmat)
-                meas_inds       <- which(!is.na(obsmat[,-1, drop = FALSE]), arr.ind = T)
-                meas_inds[,"row"] <- meas_inds[,"row"] - 1
-
+                meas_inds       <- which(!is.na(obsmat[,-1, drop = FALSE]), arr.ind = T) - 1
         }
 
         # having made the name substitutions and constructed the observation matrix, proceed to make subsitutions for argument vector indices
@@ -200,8 +197,8 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
 
                 } else if(meas_procs[[k]]$distribution == "negbinomial") {
 
-                        meas_procs[[k]]$rmeasure <- paste0("Rcpp::rnbinom(1,", paste(meas_procs[[k]]$emission_params, collapse = ","), ")")
-                        meas_procs[[k]]$dmeasure <- paste0("Rcpp::dnbinom(obs,", paste( meas_procs[[k]]$emission_params, collapse = ","), ",1)")
+                        meas_procs[[k]]$rmeasure <- paste0("Rcpp::rnbinom_mu(1,", paste(meas_procs[[k]]$emission_params, collapse = ","), ")")
+                        meas_procs[[k]]$dmeasure <- paste0("Rcpp::dnbinom_mu(obs,", paste( meas_procs[[k]]$emission_params, collapse = ","), ",1)")
 
                 } else if(meas_procs[[k]]$distribution == "gaussian") {
 
@@ -226,7 +223,8 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
         colnames(tcovar_censmat) <- colnames(dynamics$tcovar)
 
         # generate the measurement process list
-        meas_process <- list(meas_procs      = meas_procs,
+        meas_process <- list(data            = data,
+                             meas_procs      = meas_procs,
                              meas_pointers   = meas_pointers,
                              obstimes        = obstimes,
                              obstime_inds    = obstime_inds,
