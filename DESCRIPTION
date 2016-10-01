@@ -19,7 +19,8 @@ LazyData: TRUE
 Imports:
     ECctmc,
     Ryacas,
-    tmvtnorm,
+    mvtnorm,
+    odeintr,
     Matrix,
     deSolve,
     Rcpp (>= 0.12.4)

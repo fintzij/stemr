@@ -16,7 +16,7 @@
 #' @export
 initialize_lna <- function(lna_parameters, stoich_matrix, lna_pointer, lna_times, initdist_parameters, fixed_inits, param_update_inds, drift_inds, resid_inds, diff_inds, log_scale, incidence_codes, data, measproc_indmat, obstime_inds, d_meas_pointer, parameters, constants, tcovar_censmat, initialization_attempts) {
 
-        path <- propose_lna_path(parameters          = lna_parameters,
+        path <- propose_lna_path(parameters         = lna_parameters,
                                  stoich_matrix       = stoich_matrix,
                                  lna_pointer         = lna_pointer,
                                  times               = lna_times,
@@ -45,7 +45,6 @@ initialize_lna <- function(lna_parameters, stoich_matrix, lna_pointer, lna_times
                 statemat <- path$path
         }
 
-
         if(log_scale) {
                 statemat[,-1] <- exp(statemat[,-1])
         }
@@ -68,17 +67,19 @@ initialize_lna <- function(lna_parameters, stoich_matrix, lna_pointer, lna_times
         keep_going <- (any(is.nan(emitmat)) || any(emitmat == -Inf))
 
         while(attempt <= initialization_attempts && keep_going) {
-                path <- propose_lna_path(parameters        = lna_parameters,
-                                         stoich_matrix     = stoich_matrix,
-                                         lna_pointer       = lna_pointer,
-                                         times             = lna_times,
-                                         lna_initializer   = lna_initializer,
-                                         param_update_inds = param_update_inds,
-                                         drift_inds        = drift_inds,
-                                         resid_inds        = resid_inds,
-                                         diff_inds         = diff_inds,
-                                         log_scale         = log_scale,
-                                         incidence_codes   = incidence_codes)
+
+                path <- propose_lna_path(parameters         = lna_parameters,
+                                         stoich_matrix       = stoich_matrix,
+                                         lna_pointer         = lna_pointer,
+                                         times               = lna_times,
+                                         initdist_parameters = initdist_parameters,
+                                         fixed_inits         = fixed_inits,
+                                         param_update_inds   = param_update_inds,
+                                         drift_inds          = drift_inds,
+                                         resid_inds          = resid_inds,
+                                         diff_inds           = diff_inds,
+                                         log_scale           = log_scale,
+                                         incidence_codes     = incidence_codes)
 
                 if(do_census) {
                         statemat <- path$path[match(data[,1], path$path[,1]),]

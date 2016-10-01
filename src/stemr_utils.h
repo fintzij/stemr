@@ -26,11 +26,12 @@ void CALL_R_MEASURE(Rcpp::NumericMatrix& obsmat, const Rcpp::LogicalVector& emit
 // integrate the LNA odes, call via XPtr
 Rcpp::List CALL_COMPUTE_LNA(double t, arma::vec& state, Rcpp::List& parms);
 Rcpp::List CALL_LNA_ESS(double t, arma::vec& state, Rcpp::List& parms);
+
 // Rcpp::NumericVector CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr);
-// void CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr);
+void CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr);
 
 // set the LNA parameters, call via XPtr
-// void CALL_SET_LNA_PARAMS(Rcpp::NumericVector& p, SEXP set_lna_params_ptr);
+void CALL_SET_LNA_PARAMS(Rcpp::NumericVector& p, SEXP set_lna_params_ptr);
 
 // integrate the stem odes
 // void CALL_INTEGRATE_STEM_ODE(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr);
@@ -61,13 +62,15 @@ void compute_incidence(arma::mat& censusmat, arma::uvec col_inds);
 Rcpp::IntegerVector find_interval(Rcpp::NumericVector& x, Rcpp::NumericVector& breaks, bool rightmost_closed, bool all_inside);
 
 // multivariate normal functions
-arma::mat mvrn(int n, const arma::vec& mu, const arma::mat& sigma);
+arma::mat rmvtn(int n, const arma::rowvec& mu, const arma::mat& sigma);
+arma::vec dmvtn(const arma::mat& x, const arma::rowvec& mu, const arma::mat& sigma, bool logd = false);
 
 // copy functions to and from the lna ode statevec and the lna drift, residual, and diffusion process objects
-void procs2vec(Rcpp::NumericVector& statevec, arma::vec& drift_proc, arma::vec& resid_proc, arma::mat& diffusion_proc);
-void vec2procs(Rcpp::NumericVector& statevec, arma::vec& drift_proc, arma::vec& resid_proc, arma::mat& diffusion_proc);
-void procmats2vec(Rcpp::NumericVector& statevec, arma::mat& driftmat, arma::mat& residmat, Rcpp::NumericVector& diffarr, int ind);
-void vec2procmats(Rcpp::NumericVector& statevec, arma::mat& driftmat, arma::mat& residmat, Rcpp::NumericVector& diffarr, int ind);
+void procs2vec(Rcpp::NumericVector& statevec, arma::mat& drift, arma::mat& resid, Rcpp::NumericVector& diff, int ind);
+void vec2procs(Rcpp::NumericVector& statevec, arma::mat& drift, arma::mat& resid, Rcpp::NumericVector& diff, int ind);
+
+// void procmats2vec(Rcpp::NumericVector& statevec, arma::mat& driftmat, arma::mat& residmat, Rcpp::NumericVector& diffarr, int ind);
+// void vec2procmats(Rcpp::NumericVector& statevec, arma::mat& driftmat, arma::mat& residmat, Rcpp::NumericVector& diffarr, int ind);
 
 // functions for converting parameters between their estimation and natural scales
 void to_estimation_scale(Rcpp::NumericVector& natural_params, Rcpp::NumericVector& scaled_params, Rcpp::CharacterVector& scales);

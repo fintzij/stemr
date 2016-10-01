@@ -38,6 +38,20 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// CALL_INTEGRATE_STEM_LNA
+void CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr);
+RcppExport SEXP stemr_CALL_INTEGRATE_STEM_LNA(SEXP initSEXP, SEXP startSEXP, SEXP endSEXP, SEXP step_sizeSEXP, SEXP lna_ode_ptrSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type init(initSEXP);
+    Rcpp::traits::input_parameter< double >::type start(startSEXP);
+    Rcpp::traits::input_parameter< double >::type end(endSEXP);
+    Rcpp::traits::input_parameter< double >::type step_size(step_sizeSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type lna_ode_ptr(lna_ode_ptrSEXP);
+    CALL_INTEGRATE_STEM_LNA(init, start, end, step_size, lna_ode_ptr);
+    return R_NilValue;
+END_RCPP
+}
 // CALL_LNA_ESS
 Rcpp::List CALL_LNA_ESS(double t, arma::vec& state, Rcpp::List& parms);
 RcppExport SEXP stemr_CALL_LNA_ESS(SEXP tSEXP, SEXP stateSEXP, SEXP parmsSEXP) {
@@ -84,6 +98,17 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// CALL_SET_LNA_PARAMS
+void CALL_SET_LNA_PARAMS(Rcpp::NumericVector& p, SEXP set_lna_params_ptr);
+RcppExport SEXP stemr_CALL_SET_LNA_PARAMS(SEXP pSEXP, SEXP set_lna_params_ptrSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type p(pSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type set_lna_params_ptr(set_lna_params_ptrSEXP);
+    CALL_SET_LNA_PARAMS(p, set_lna_params_ptr);
+    return R_NilValue;
+END_RCPP
+}
 // build_census_path
 arma::mat build_census_path(Rcpp::NumericMatrix& path, Rcpp::NumericVector& census_times, Rcpp::IntegerVector& census_columns);
 RcppExport SEXP stemr_build_census_path(SEXP pathSEXP, SEXP census_timesSEXP, SEXP census_columnsSEXP) {
@@ -107,6 +132,20 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::List& >::type row_inds(row_indsSEXP);
     compute_incidence(censusmat, col_inds, row_inds);
     return R_NilValue;
+END_RCPP
+}
+// convert_lna
+arma::mat convert_lna(const arma::mat& path, const arma::mat& flow_matrix, const arma::rowvec& init_state, bool log_scale);
+RcppExport SEXP stemr_convert_lna(SEXP pathSEXP, SEXP flow_matrixSEXP, SEXP init_stateSEXP, SEXP log_scaleSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type path(pathSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type flow_matrix(flow_matrixSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type init_state(init_stateSEXP);
+    Rcpp::traits::input_parameter< bool >::type log_scale(log_scaleSEXP);
+    rcpp_result_gen = Rcpp::wrap(convert_lna(path, flow_matrix, init_state, log_scale));
+    return rcpp_result_gen;
 END_RCPP
 }
 // evaluate_d_measure
@@ -161,55 +200,58 @@ BEGIN_RCPP
 END_RCPP
 }
 // procs2vec
-void procs2vec(Rcpp::NumericVector& statevec, arma::vec& driftvec, arma::vec& residvec, arma::mat& diffmat);
-RcppExport SEXP stemr_procs2vec(SEXP statevecSEXP, SEXP driftvecSEXP, SEXP residvecSEXP, SEXP diffmatSEXP) {
+void procs2vec(Rcpp::NumericVector& statevec, arma::mat& drift, arma::mat& resid, Rcpp::NumericVector& diff, int ind);
+RcppExport SEXP stemr_procs2vec(SEXP statevecSEXP, SEXP driftSEXP, SEXP residSEXP, SEXP diffSEXP, SEXP indSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type statevec(statevecSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type driftvec(driftvecSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type residvec(residvecSEXP);
-    Rcpp::traits::input_parameter< arma::mat& >::type diffmat(diffmatSEXP);
-    procs2vec(statevec, driftvec, residvec, diffmat);
+    Rcpp::traits::input_parameter< arma::mat& >::type drift(driftSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type resid(residSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type diff(diffSEXP);
+    Rcpp::traits::input_parameter< int >::type ind(indSEXP);
+    procs2vec(statevec, drift, resid, diff, ind);
     return R_NilValue;
 END_RCPP
 }
 // vec2procs
-void vec2procs(Rcpp::NumericVector& statevec, arma::vec& driftvec, arma::vec& residvec, arma::mat& diffmat);
-RcppExport SEXP stemr_vec2procs(SEXP statevecSEXP, SEXP driftvecSEXP, SEXP residvecSEXP, SEXP diffmatSEXP) {
+void vec2procs(Rcpp::NumericVector& statevec, arma::mat& drift, arma::mat& resid, Rcpp::NumericVector& diff, int ind);
+RcppExport SEXP stemr_vec2procs(SEXP statevecSEXP, SEXP driftSEXP, SEXP residSEXP, SEXP diffSEXP, SEXP indSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type statevec(statevecSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type driftvec(driftvecSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type residvec(residvecSEXP);
-    Rcpp::traits::input_parameter< arma::mat& >::type diffmat(diffmatSEXP);
-    vec2procs(statevec, driftvec, residvec, diffmat);
+    Rcpp::traits::input_parameter< arma::mat& >::type drift(driftSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type resid(residSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type diff(diffSEXP);
+    Rcpp::traits::input_parameter< int >::type ind(indSEXP);
+    vec2procs(statevec, drift, resid, diff, ind);
     return R_NilValue;
 END_RCPP
 }
-// vec2procmats
-void vec2procmats(Rcpp::NumericVector& statevec, arma::mat& driftmat, arma::mat& residmat, Rcpp::NumericVector& diffarr, int ind);
-RcppExport SEXP stemr_vec2procmats(SEXP statevecSEXP, SEXP driftmatSEXP, SEXP residmatSEXP, SEXP diffarrSEXP, SEXP indSEXP) {
+// rmvtn
+arma::mat rmvtn(int n, const arma::rowvec& mu, const arma::mat& sigma);
+RcppExport SEXP stemr_rmvtn(SEXP nSEXP, SEXP muSEXP, SEXP sigmaSEXP) {
 BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type statevec(statevecSEXP);
-    Rcpp::traits::input_parameter< arma::mat& >::type driftmat(driftmatSEXP);
-    Rcpp::traits::input_parameter< arma::mat& >::type residmat(residmatSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type diffarr(diffarrSEXP);
-    Rcpp::traits::input_parameter< int >::type ind(indSEXP);
-    vec2procmats(statevec, driftmat, residmat, diffarr, ind);
-    return R_NilValue;
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type sigma(sigmaSEXP);
+    rcpp_result_gen = Rcpp::wrap(rmvtn(n, mu, sigma));
+    return rcpp_result_gen;
 END_RCPP
 }
-// insert_lna_step
-void insert_lna_step(arma::mat& path, arma::rowvec& lna_step, int ind);
-RcppExport SEXP stemr_insert_lna_step(SEXP pathSEXP, SEXP lna_stepSEXP, SEXP indSEXP) {
+// dmvtn
+arma::vec dmvtn(const arma::mat& x, const arma::rowvec& mu, const arma::mat& sigma, bool logd);
+RcppExport SEXP stemr_dmvtn(SEXP xSEXP, SEXP muSEXP, SEXP sigmaSEXP, SEXP logdSEXP) {
 BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::mat& >::type path(pathSEXP);
-    Rcpp::traits::input_parameter< arma::rowvec& >::type lna_step(lna_stepSEXP);
-    Rcpp::traits::input_parameter< int >::type ind(indSEXP);
-    insert_lna_step(path, lna_step, ind);
-    return R_NilValue;
+    Rcpp::traits::input_parameter< const arma::mat& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type sigma(sigmaSEXP);
+    Rcpp::traits::input_parameter< bool >::type logd(logdSEXP);
+    rcpp_result_gen = Rcpp::wrap(dmvtn(x, mu, sigma, logd));
+    return rcpp_result_gen;
 END_RCPP
 }
 // pars2lnapars
@@ -221,6 +263,25 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::rowvec& >::type parameters(parametersSEXP);
     pars2lnapars(lnapars, parameters);
     return R_NilValue;
+END_RCPP
+}
+// propose_lna
+Rcpp::List propose_lna(const arma::colvec& lna_times, const Rcpp::NumericMatrix& lna_pars, const Rcpp::LogicalVector& param_update_inds, const arma::vec& initdist_inds, const arma::mat& flow_matrix, const bool fixed_inits, bool log_scale, SEXP lna_pointer, SEXP set_pars_pointer);
+RcppExport SEXP stemr_propose_lna(SEXP lna_timesSEXP, SEXP lna_parsSEXP, SEXP param_update_indsSEXP, SEXP initdist_indsSEXP, SEXP flow_matrixSEXP, SEXP fixed_initsSEXP, SEXP log_scaleSEXP, SEXP lna_pointerSEXP, SEXP set_pars_pointerSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::colvec& >::type lna_times(lna_timesSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type lna_pars(lna_parsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type param_update_inds(param_update_indsSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type initdist_inds(initdist_indsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type flow_matrix(flow_matrixSEXP);
+    Rcpp::traits::input_parameter< const bool >::type fixed_inits(fixed_initsSEXP);
+    Rcpp::traits::input_parameter< bool >::type log_scale(log_scaleSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type lna_pointer(lna_pointerSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type set_pars_pointer(set_pars_pointerSEXP);
+    rcpp_result_gen = Rcpp::wrap(propose_lna(lna_times, lna_pars, param_update_inds, initdist_inds, flow_matrix, fixed_inits, log_scale, lna_pointer, set_pars_pointer));
+    return rcpp_result_gen;
 END_RCPP
 }
 // rate_update_event

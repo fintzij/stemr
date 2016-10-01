@@ -1,0 +1,14 @@
+Incidence iteration 100
+Incidence iteration 200
+Incidence iteration 300
+Incidence iteration 400
+Incidence iteration 500
+Incidence iteration 600
+Incidence iteration 700
+Incidence iteration 800
+Incidence iteration 900
+Incidence iteration 1000
+Incidence iteration 1100
+Incidence iteration 1200
+Incidence iteration 1300
+Incidence iteration 1400

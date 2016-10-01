@@ -25,8 +25,8 @@ typedef Rcpp::List(*lna_ess_ptr)(double t, arma::vec& state, Rcpp::NumericVector
 // typedef Rcpp::NumericVector(*lna_ptr)(Rcpp::NumericVector& init, double start, double end, double step_size);
 
 // odeintr pointers
-// typedef void(*lna_ptr)(Rcpp::NumericVector& init, double start, double end, double step_size);
-// typedef void(*set_pars_ptr)(Rcpp::NumericVector& p);
+typedef void(*lna_ptr)(Rcpp::NumericVector& init, double start, double end, double step_size);
+typedef void(*set_pars_ptr)(Rcpp::NumericVector& p);
 
 // original deSolve pointers
 // typedef arma::vec(*hazard_ptr)(double t, const arma::vec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar);

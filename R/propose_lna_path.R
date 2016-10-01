@@ -49,6 +49,7 @@ propose_lna_path <- function(parameters, stoich_matrix, lna_pointer, times, init
         if(fixed_inits) {
                 path[1,-1]        <- initdist_parameters
                 drift_process[1,] <- path[1,-1]
+                residual_path[1,] <- path[1,-1] - drift_process[1,]
         } else {
                 stop("Random initial state not yet implemented.")
         }
@@ -67,7 +68,7 @@ propose_lna_path <- function(parameters, stoich_matrix, lna_pointer, times, init
                 t_R = times[j]
 
                 # set the values of the
-                if(param_update_inds[j]) lna_params$parameters = as.numeric(lna_pars[j-1,]);
+                if(param_update_inds[j]) lna_params$parameters = as.numeric(parameters[j-1,]);
 
                 # integrate the LNA
                 lna_state_vec <- deSolve::lsoda(y = lna_state_vec,
@@ -78,7 +79,9 @@ propose_lna_path <- function(parameters, stoich_matrix, lna_pointer, times, init
 
                 # transfer the elements of the lna_state_vec to the drift,
                 # residual, and diffusion process objects
-                vec2procmats(lna_state_vec, drift_process, residual_process, diffusion_process, j)
+                drift_process[j,]      <- lna_state_vec[drift_inds]
+                residual_process[j,]   <- lna_state_vec[resid_inds]
+                diffusion_process[,,j] <- lna_state_vec[diff_inds] + diag(1e-8, n_comps)
 
                 # sample the next value ensure that there is not negative
                 # incidence and that there are no negative values if the process
@@ -134,12 +137,13 @@ propose_lna_path <- function(parameters, stoich_matrix, lna_pointer, times, init
                         }
                 }
 
-                insert_lna_step(path, lna_step, j)                                # insert the path into the path matrix
+                path[j,-1]                <- lna_step                             # insert the path into the path matrix
                 lna_state_vec[resid_inds] <- lna_step - lna_state_vec[drift_inds] # set the residual term
                 lna_state_vec[diff_inds]  <- 0.0                                  # zero out the diffusion process
         }
 
         return(list(path = path,
+                    residual_path = path[,-1] - drift_process,
                     drift_process = drift_process,
                     residual_process = residual_process,
                     diffusion_process = diffusion_process))

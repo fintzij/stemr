@@ -5,7 +5,7 @@
 \title{Copy the LNA ODE state into the drift, residual, and diffusion processes
 vectors}
 \usage{
-vec2procs(statevec, driftvec, residvec, diffmat)
+vec2procs(statevec, drift, resid, diff, ind)
 }
 \arguments{
 \item{statevec}{vector to be copied into, i.e. the vectorised ODE state}

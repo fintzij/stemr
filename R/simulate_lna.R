@@ -19,33 +19,32 @@
 simulate_lna <- function(nsim, lna_times, census_times, census_inds, lna_pars, init_states, incidence_codes, log_scale, flow_matrix, lna_pointer) {
 
         # get the dimensions of various objects
-        n_comps <- ncol(init_states)           # number of model compartments
-        n_odes  <- 2*n_comps + n_comps*n_comps # number of ODEs
-        n_times <- length(lna_times)           # number of times at which the LNA must be evaluated
-        n_incidence <- length(incidence_codes) # number of incidence codes
-        n_census_times <- length(census_times) # number of census times
+        # get number of times, compartments, and ODEs
+        n_comps    <- ncol(flow_matrix)
+        n_odes     <- 2*n_comps + n_comps^2
+        n_times    <- length(lna_times)
+        n_census_times <- length(census_times)
+
+        if(incidence_codes[1] != 0) {
+                incid_codes_step <- incidence_codes + 1
+                incid_codes_path <- incidence_codes + 2
+                n_prev  <- n_comps - length(incidence_codes)
+        }
+
+        # create an armadillo cube to store the simulations
+        lna_paths <- array(0, dim = c(n_census_times, n_comps + 1, nsim))
+        lna_paths[,1,] <- census_times
 
         # initialize the objects used in each time interval
         t_L <- lna_times[1]
         t_R <- lna_times[2]
         lna_params <- list(parameters = lna_pars[1,], lna_pointer = lna_pointer, stoich = t(flow_matrix))
 
-        # create an armadillo cube to store the simulations
-        lna_paths <- array(0, dim = c(n_census_times, n_comps + 1, nsim))
-        lna_paths[,1,] <- census_times
-
-        # full_lna_paths <- array(0, dim = c(n_census_times, n_comps*2 + n_comps^2 + 1, nsim))
-
         # initialize the LNA objects - the vector for storing the ODES, the state vector, and the Jacobian
         lna_state_vec     <- numeric(length = n_odes)                # vector to store the results of the ODEs
         drift_process     <- numeric(length = n_comps)               # vector for the deterministic drift process
         residual_process  <- numeric(length = n_comps)               # vector for the residual process
         diffusion_process <- matrix(as.numeric(0), n_comps, n_comps) # matrix for the diffusion
-
-        # indices in the ODE vector for the drift, residual, and diffusion
-        drift_inds <- seq_len(n_comps);
-        resid_inds <- seq_len(n_comps) + n_comps;
-        diff_inds  <- seq_len(n_comps * n_comps) + 2*n_comps;
 
         # start simulating the LNA paths
         for(k in 1:nsim) {
@@ -57,8 +56,6 @@ simulate_lna <- function(nsim, lna_times, census_times, census_inds, lna_pars, i
                 diffusion_process[,] <- 0.0;               # zero out the diffusion matrix
 
                 procs2vec(lna_state_vec, drift_process, residual_process, diffusion_process)
-
-                # full_lna_paths[1,,k] <- c(t_L,lna_state_vec)
 
                 # iterate over the time sequence, solving the LNA over each interval
                 for(j in 2:n_times) {
@@ -80,15 +77,52 @@ simulate_lna <- function(nsim, lna_times, census_times, census_inds, lna_pars, i
                         # transfer the elements of the lna_state_vec to the process objects
                         vec2procs(lna_state_vec, drift_process, residual_process, diffusion_process)
 
-                        # sample the next value
-                        # lna_step <- drift_process + residual_process
-                        lna_step <- mvtnorm::rmvnorm(1, drift_process + residual_process, diffusion_process, method = "svd")
-                        # lna_step <- mvtnorm::rmvnorm(1, drift_process + residual_process, diffusion_process,method = "svd")
+                        # enforce diagonal dominance
+                        diffusion_process <- diffusion_process + diag(1e-8, n_comps)
 
-                        # if any values are negative and the process is on the natural scale, resample them
-                        while(!log_scale && any(lna_step < 0)) {
-                                lna_step <- mvtnorm::rmvnorm(1, drift_process + residual_process, diffusion_process, method = "svd")
-                                # lna_step <- mvtnorm::rmvnorm(1, drift_process + residual_process, diffusion_process,method = "svd")
+                        # sample the next value
+                        if(log_scale) {
+                                if(incidence_codes[1] != 0) {
+                                        lna_step <- try(tmvtnorm::rtmvnorm(1, drift_process + residual_process, diffusion_process,
+                                                                           lower = c(rep(-Inf, n_prev),lna_paths[j-1,incid_codes_path,k]),
+                                                                           algorithm = "rejection"), silent = TRUE)
+                                        if(class(lna_step) == "try-error") {
+                                                diffusion_process <-as.matrix(Matrix::nearPD(diffusion_process,ensureSymmetry = TRUE)$mat)
+                                                lna_step <- tmvtnorm::rtmvnorm(1, drift_process + residual_process, diffusion_process,
+                                                                               lower = c(rep(-Inf, n_prev),
+                                                                                         lna_paths[j-1,incidence_codes_path,k]),
+                                                                               algorithm = "rejection")
+                                        }
+                                } else {
+                                        lna_step  <- try(tmvtnorm::rtmvnorm(1, drift_process + residual_process, diffusion_process,
+                                                                            algorithm = "rejection"), silent = TRUE)
+                                        if(class(lna_step) == "try-error") {
+                                                diffusion_process <-as.matrix(Matrix::nearPD(diffusion_process,ensureSymmetry = TRUE)$mat)
+                                                lna_step <- tmvtnorm::rtmvnorm(1, drift_process + residual_process, diffusion_process,
+                                                                               algorithm = "rejection")
+                                        }
+                                }
+                        } else if(!log_scale) {
+                                if(incidence_codes[1] != 0) {
+                                        lna_step  <- try(tmvtnorm::rtmvnorm(1, drift_process + residual_process, diffusion_process,
+                                                                            lower = c(rep(0, n_prev), path[j-1, incid_codes_path, k]),
+                                                                            algorithm = "rejection"), silent = TRUE)
+                                        if(class(lna_step) == "try-error") {
+                                                diffusion_process <-as.matrix(Matrix::nearPD(diffusion_process,ensureSymmetry = TRUE)$mat)
+                                                lna_step <- tmvtnorm::rtmvnorm(1, drift_process + residual_process, diffusion_process,
+                                                                               lower = c(rep(0, n_prev), path[j-1, incid_codes_path, k]),
+                                                                               algorithm = "rejection")
+
+                                        }
+                                } else {
+                                        lna_step  <- try(tmvtnorm::rtmvnorm(1, drift_process + residual_process, diffusion_process,
+                                                                            lower = rep(0, n_comps),algorithm = "rejection"), silent = TRUE)
+                                        if(class(lna_step) == "try-error") {
+                                                diffusion_process <-as.matrix(Matrix::nearPD(diffusion_process,ensureSymmetry = TRUE)$mat)
+                                                lna_step <- tmvtnorm::rtmvnorm(1, drift_process + residual_process, diffusion_process,
+                                                                               lower = rep(0, n_comps),algorithm = "rejection")
+                                        }
+                                }
                         }
 
                         # insert the sampled value into the path if called for
@@ -96,22 +130,8 @@ simulate_lna <- function(nsim, lna_times, census_times, census_inds, lna_pars, i
                                 lna_paths[j,-1,k] <- lna_step
                         }
 
-                        # restart the LNA if called for
-                        # if(restart_inds[j]) {
-                        #         drift_process        <- lna_step[1,]   # restart the deterministic process at the sampled state
-                        #         # drift_process        <- lna_step   # restart the deterministic process at the sampled state
-                        #         # full_lna_paths[j,,k] <- c(t_R,lna_state_vec)
-                        #         residual_process[]   <- 0.0            # set the residual process to zero
-                        #         diffusion_process[,] <- 0.0            # the diffusion process is set to zero
-                        # } else {
-                                # the residual process is the difference between the deterministic
-                                # process and the sampled state and the diffusion process is set to zero
-                                residual_process     <- lna_step - drift_process
-                                # residual_process     <- lna_step - drift_process
-                                # full_lna_paths[j,,k] <- c(t_R,lna_state_vec)
-
-                                diffusion_process[,] <- 0.0
-                        # }
+                        residual_process     <- c(lna_step - drift_process)
+                        diffusion_process[,] <- 0.0
 
                         # copy the process objects back into the lna state vector
                         procs2vec(lna_state_vec, drift_process, residual_process, diffusion_process);
@@ -125,11 +145,6 @@ simulate_lna <- function(nsim, lna_times, census_times, census_inds, lna_pars, i
                 for(k in 1:nsim) {
                         lna_paths[1,incidence_codes,k] <- 0
                         lna_paths[2:n_census_times, incidence_codes, k] <- diff(lna_paths[, incidence_codes, k])
-
-                        # clamp the slice to make sure there are no negative values if the process is on the linear scale
-                        if(!log_scale) {
-                                lna_paths[,,k] = pmax(lna_paths[,,k], 0.0);
-                        }
                 }
         }
 

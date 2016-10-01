@@ -267,7 +267,7 @@ for(j in 2:iterations) {
 }
 
 gillespie_paths <- simulate_stem(stem_object = stem_object,
-                                 nsim = iterations,
+                                 nsim = iterations/thin_latent_paths,
                                  paths = TRUE, 
                                  observations = TRUE,
                                  method = "gillespie",

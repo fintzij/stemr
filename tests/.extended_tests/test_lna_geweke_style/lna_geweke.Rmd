@@ -6,18 +6,18 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+library(stemr)
+setwd("C:/Users/Jonathan/Google Drive/UW/Year 3 +/Dissertation/Code/stemr/tests/.extended_tests/test_lna_geweke_style")
 ```
 
 ## Description
 This test implements a Geweke type test to ascertain that the LNA targets the correct joint distribution of the latent process and the data. For a fixed set of model parameters, the procedure alternates between updating the latent process given the current dataset, $\mathrm{\mathbf{X}}|\mathrm{\mathbf{Y}}$, and sampling a new dataset given the current path of the latent process. Updates to the latent process are carried out via elliptical slice sampling. We carry out the procedure for the simple SIR model under two different measurement processes, negative binomial prevalence and negative binomial incidence. The pointwise distributions for the latent LNA paths and the data sampled from them are compared to the pointwise distributions of latent paths simulated exactly via Gillespie's direct algorithm along with datasets simulated from those paths.
 
 ```{r, include = FALSE}
-library(stemr)
-setwd("C:/Users/Jonathan/Google Drive/UW/Year 3 +/Dissertation/Code/stemr/tests/.extended_tests/test_lna_geweke_style")
-
 # number of iterations and objects to store the paths
-iterations   <- 10000
+iterations        <- 50000
+thin_latent_paths <- 100
 
 # set up model
 compartments <- c("S","I","R")
@@ -41,6 +41,17 @@ measurement_process <- stem_measure(emissions = emissions, dynamics = dynamics, 
 # create the stem object
 stem_object <- stem(dynamics = dynamics, measurement_process = measurement_process)
 
+# exact simulation
+exact_paths <- simulate_stem(stem_object = stem_object,
+                                 nsim = iterations / thin_latent_paths,
+                                 paths = TRUE, 
+                                 observations = TRUE,
+                                 method = "gillespie",
+                                 census_times = 0:tmax,
+                                 paths_as_array = TRUE,
+                                 datasets_as_array = TRUE,
+                                 messages = TRUE)
+
 # simulate an initial LNA path and a dataset
 stem_data <- simulate_stem(stem_object = stem_object, method = "lna", paths = TRUE, observations = T, tmax = tmax, nsim = 1, census_times = 0:tmax)
 true_path <- stem_data$paths[[1]]
@@ -51,244 +62,329 @@ measurement_process <- stem_measure(emissions = emissions, dynamics = dynamics, 
 stem_object <- stem(stem_object = stem_object, measurement_process = measurement_process)
 
 # extract the model objects from the stem_object
-.flow_matrix            <- stem_object$dynamics$flow_matrix
-.stoich_matrix          <- t(.flow_matrix)
-.lna_pointer            <- stem_object$dynamics$lna_pointer$lna_ptr
-.lna_scale              <- stem_object$dynamics$lna_scale
-.log_scale              <- .lna_scale == "log"
-.parameters             <- stem_object$dynamics$parameters
-.constants              <- stem_object$dynamics$constants
-.initdist_parameters    <- stem_object$dynamics$initdist_params
-.n_compartments         <- ncol(.flow_matrix)
-.n_rates                <- nrow(.flow_matrix)
-.n_odes                 <- 2*.n_rates + .n_rates^2
-.comp_codes             <- stem_object$dynamics$comp_codes
-.incidence_codes        <- stem_object$dynamics$incidence_codes
-.incidence_sources      <- stem_object$dynamics$incidence_sources
-.n_incidence            <- length(.incidence_codes)
-.fixed_inits            <- stem_object$dynamics$fixed_inits
-.n_strata               <- stem_object$dynamics$n_strata
-.param_inds             <- stem_object$dynamics$state_initializer$param_inds
-.initdist_codes         <- stem_object$dynamics$state_initializer$codes
+flow_matrix            <- stem_object$dynamics$flow_matrix
+stoich_matrix          <- t(flow_matrix)
+lna_pointer            <- stem_object$dynamics$lna_pointer$lna_ptr
+lna_ess_pointer        <- stem_object$dynamics$lna_pointer$lna_ess_ptr
+lna_scale              <- stem_object$dynamics$lna_scale
+log_scale              <- lna_scale == "log"
+parameters             <- stem_object$dynamics$parameters
+constants              <- stem_object$dynamics$constants
+initdist_parameters    <- stem_object$dynamics$initdist_params
+n_compartments         <- ncol(flow_matrix)
+n_rates                <- nrow(flow_matrix)
+n_odes                 <- 2*n_rates + n_rates^2
+comp_codes             <- stem_object$dynamics$comp_codes
+incidence_codes        <- stem_object$dynamics$incidence_codes
+incidence_sources      <- stem_object$dynamics$incidence_sources
+n_incidence            <- length(incidence_codes)
+fixed_inits            <- stem_object$dynamics$fixed_inits
+n_strata               <- stem_object$dynamics$n_strata
+
+# initial distribtion objects
+param_inds     <- stem_object$dynamics$state_initializer$param_inds
+initdist_codes <- stem_object$dynamics$state_initializer$codes
 
 # reorder the initial distribution parameters
-.initdist_parameters    <- as.numeric(.initdist_parameters[order(.initdist_codes)])
+initdist_parameters <- as.numeric(initdist_parameters[order(initdist_codes)])
 
-# create the initializer function
-.lna_initializer        <- build_lna_initializer(.initdist_parameters,
-                                                 .comp_codes,
-                                                 .incidence_codes,
-                                                 .incidence_sources,
-                                                 .log_scale,
-                                                 .fixed_inits)
+if(log_scale) {
+        # since the LNA is on the log scale, make sure no compartment is initialized at log(0)
+        initdist_parameters[initdist_parameters == 0] <- 1
+        if(!is.null(incidence_codes)) {
+                initdist_parameters <- c(initdist_parameters, initdist_parameters[incidence_sources + 1])
+        }
+        
+        initdist_parameters <- log(initdist_parameters) # take the log add the names
+        names(initdist_parameters) <- c(names(stem_object$dynamics$comp_codes),
+                                        names(stem_object$dynamics$incidence_codes))
+} else {
+        if(!is.null(incidence_codes)) {
+                initdist_parameters <- c(initdist_parameters, initdist_parameters[incidence_sources + 1])
+        }# add the names
+        names(initdist_parameters) <- c(names(stem_object$dynamics$comp_codes), 
+                                        names(stem_object$dynamics$incidence_codes))
+}
 
-.data                   <- stem_object$measurement_process$data
-.measproc_indmat        <- stem_object$measurement_process$measproc_indmat
-.d_meas_pointer         <- stem_object$measurement_process$meas_pointers$d_measure_ptr
-.obstimes               <- .data[,1]
-.obstime_inds           <- stem_object$measurement_process$obstime_inds
-.tcovar_censmat         <- stem_object$measurement_process$tcovar_censmat
-.emit_mat_cur           <- cbind(.obstimes, matrix(0.0,
-                                                   nrow = nrow(stem_object$measurement_process$measproc_indmat),
-                                                   ncol = ncol(stem_object$measurement_process$measproc_indmat),
-                                                   dimnames = list(NULL,
-                                                                   colnames(stem_object$measurement_process$measproc_indmat))))
-.emit_mat_new           <- cbind(.obstimes, matrix(0.0,
-                                                   nrow = nrow(stem_object$measurement_process$measproc_indmat),
-                                                   ncol = ncol(stem_object$measurement_process$measproc_indmat),
-                                                   dimnames = list(NULL,
-                                                                   colnames(stem_object$measurement_process$measproc_indmat))))
+# more objects
+data                    <- stem_object$measurement_process$data
+measproc_indmat         <- stem_object$measurement_process$measproc_indmat
+d_meas_pointer          <- stem_object$measurement_process$meas_pointers$d_measure_ptr
+obstimes                <- data[,1]
+obstime_inds            <- stem_object$measurement_process$obstime_inds
+tcovar_censmat          <- stem_object$measurement_process$tcovar_censmat
 
-# generate other derived objects
-.lna_times              <- sort(unique(c(.obstimes,
+lna_times               <- sort(unique(c(obstimes,
                                        stem_object$dynamics$.dynamics_args$tcovar[,1],
                                        stem_object$dynamics$t0,
                                        stem_object$dynamics$tmax)))
-.n_times                <- length(.lna_times)
-.n_census_times         <- length(.obstimes)
-.param_update_inds      <- is.na(match(.lna_times, .obstimes))
-.drift_inds             <- seq_len(.n_compartments);
-.resid_inds             <- seq_len(.n_compartments) + .n_compartments;
-.diff_inds              <- seq_len(.n_compartments * .n_compartments) + 2*.n_compartments;
-.do_census              <- !identical(.lna_times, .data[,1])
-.do_incidence           <- !is.null(.incidence_codes)
+n_times                 <- length(lna_times)
+n_census_times          <- length(obstimes)
+param_update_inds       <- is.na(match(lna_times, obstimes))
+drift_inds              <- seq_len(n_compartments);
+resid_inds              <- seq_len(n_compartments) + n_compartments;
+diff_inds               <- seq_len(n_compartments * n_compartments) + 2*n_compartments;
+do_census               <- !identical(lna_times, data[,1])
+do_incidence            <- !is.null(incidence_codes)
 
 # matrix for storing the LNA parameters
-.lna_parameters         <- matrix(0.0, nrow = length(.lna_times), ncol = length(stem_object$dynamics$lna_param_codes),
+lna_parameters         <- matrix(0.0, nrow = length(lna_times), ncol = length(stem_object$dynamics$lna_param_codes),
                                   dimnames = list(NULL,names(stem_object$dynamics$lna_param_codes)))
 
 # insert the lna parameters
-pars2lnapars(.lna_parameters, .parameters)
+pars2lnapars(lna_parameters, parameters)
 
 # get column indices for constants and time-varying covariates
-.const_inds             <- seq_along(stem_object$dynamics$const_codes) + length(stem_object$dynamics$param_codes)
-.tcovar_inds            <- (max(.const_inds)+1):ncol(.lna_parameters)
+const_inds             <- seq_along(stem_object$dynamics$const_codes) + length(stem_object$dynamics$param_codes)
+tcovar_inds            <- (max(const_inds)+1):ncol(lna_parameters)
 
 # insert the constants
-.lna_parameters[,.const_inds] <- matrix(stem_object$dynamics$constants,
-                                  nrow = nrow(.lna_parameters),
-                                  ncol = length(.const_inds), byrow = T)
+lna_parameters[,const_inds] <- matrix(stem_object$dynamics$constants,
+                                  nrow = nrow(lna_parameters),
+                                  ncol = length(const_inds), byrow = T)
 
 # insert time varying covariates
-if(!is.null(stem_object$dynamics$.dynamics_args$tcovar)) {
-        .tcovar_rowinds                 <- findInterval(.lna_times, stem_object$dynamics$.dynamics_args$tcovar[,1])
-        .lna_parameters[, .tcovar_inds] <- stem_object$dynamics$.dynamics_args$tcovar[.tcovar_rowinds,-1]
+if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
+        tcovar_rowinds                 <- findInterval(lna_times, stem_object$dynamics$.dynamics_args$tcovar[,1])
+        lna_parameters[, tcovar_inds] <- stem_object$dynamics$.dynamics_args$tcovar[tcovar_rowinds,-1]
 }
 
 # initialize the latent path
-.path <- initialize_lna(lna_parameters    = .lna_parameters,
-                        stoich_matrix     = .stoich_matrix,
-                        lna_pointer       = .lna_pointer,
-                        lna_times         = .lna_times,
-                        lna_initializer   = .lna_initializer,
-                        param_update_inds = .param_update_inds,
-                        drift_inds        = .drift_inds,
-                        resid_inds        = .resid_inds,
-                        diff_inds         = .diff_inds,
-                        log_scale         = .log_scale,
-                        incidence_codes   = .incidence_codes,
-                        data              = .data,
-                        measproc_indmat   = .measproc_indmat,
-                        obstime_inds      = .obstime_inds,
-                        d_meas_pointer    = .d_meas_pointer,
-                        parameters        = .parameters,
-                        constants         = .constants,
-                        tcovar_censmat    = .tcovar_censmat,
-                        initialization_attempts = 500)
+path <- initialize_lna(lna_parameters      = lna_parameters,
+                       stoich_matrix       = stoich_matrix,
+                       lna_pointer         = lna_pointer,
+                       lna_times           = lna_times,
+                       initdist_parameters = initdist_parameters,
+                       fixed_inits         = fixed_inits,
+                       param_update_inds   = param_update_inds,
+                       drift_inds          = drift_inds,
+                       resid_inds          = resid_inds,
+                       diff_inds           = diff_inds,
+                       log_scale           = log_scale,
+                       incidence_codes     = incidence_codes,
+                       data                = data,
+                       measproc_indmat     = measproc_indmat,
+                       obstime_inds        = obstime_inds,
+                       d_meas_pointer      = d_meas_pointer,
+                       parameters          = parameters,
+                       constants           = constants,
+                       tcovar_censmat      = tcovar_censmat,
+                       initialization_attempts = 500)
 
 # matrix in which to store the emission probabilities
-.emitmat <- cbind(.data[,1,drop = F], matrix(0.0, nrow = nrow(.measproc_indmat), 
-                                             ncol = ncol(.measproc_indmat), 
-                                             dimnames = list(NULL, colnames(.measproc_indmat))))
+emitmat <- cbind(data[,1,drop = F], matrix(0.0, nrow = nrow(measproc_indmat), ncol = ncol(measproc_indmat), 
+                                           dimnames = list(NULL, colnames(measproc_indmat))))
 
 # does the path need to be censused at observation times (e.g. if there
 # are time-varying covariates that change at times other than
 # observation times)
-.do_census    <- !identical(.lna_times, .data[,1])
-.do_incidence <- !is.null(.incidence_codes)
-
-if(.do_census) {
-        .statemat <- .path$path$path[match(data[,1], path$path[,1]),]
+if(do_census) {
+        statemat <- path$path$path[match(data[,1], path$path[,1]),]
 } else {
-        .statemat <- .path$path$path
+        statemat <- path$path$path
 }
 
-if(.log_scale) {
-        .statemat[,-1] <- exp(.statemat[,-1])
+if(log_scale) {
+        statemat[,-1] <- exp(statemat[,-1])
 }
 
-if(.do_incidence) {
-        compute_incidence(.statemat, .incidence_codes+1, row_inds = .obstime_inds)
+if(do_incidence) {
+        compute_incidence(statemat, incidence_codes+1, row_inds = obstime_inds)
 }
 
 # Now do the Geweke test part
-.latent_paths      <- vector(mode = "list", length = iterations / 100)
-.latent_paths[[1]] <- .statemat
-.datasets          <- vector(mode = "list", length = iterations / 100)
-.datasets[[1]]     <- .data
-.emitmat           <- .data
-        
-.censusmat       <- stem_object$measurement_process$censusmat
-.census_codes    <- c(stem_object$dynamics$comp_codes, stem_object$dynamics$incidence_codes) + 2
+censusmat       <- stem_object$measurement_process$censusmat
+census_codes    <- c(stem_object$dynamics$comp_codes, stem_object$dynamics$incidence_codes) + 2
 
-.measvar_names   <- colnames(stem_object$measurement_process$obsmat)
+measvar_names   <- colnames(stem_object$measurement_process$obsmat)
 
 # grab the time-varying covariate values at observation times
-.tcovar_obstimes <- build_census_path(path          = stem_object$dynamics$tcovar,
+tcovar_obstimes <- build_census_path(path           = stem_object$dynamics$tcovar,
                                      census_times   = stem_object$measurement_process$obstimes,
                                      census_columns = 1:(ncol(stem_object$dynamics$tcovar)-1))
-colnames(.tcovar_obstimes) <- colnames(stem_object$dynamics$tcovar)
+colnames(tcovar_obstimes) <- colnames(stem_object$dynamics$tcovar)
 
-for(j in 2:iterations) {
+
+# set up objects to store the latent paths
+latent_paths      <- vector(mode = "list", length = iterations / thin_latent_paths)
+latent_paths[[1]] <- statemat
+datasets          <- vector(mode = "list", length = iterations / thin_latent_paths)
+datasets[[1]]     <- data
+emitmat           <- data
+
+
+for(k in 2:iterations) {
         
-        if(j%%100 == 0) print(j)
-        
-        # update the paths given the data
-        .path <- update_lna_path(path_cur          = .path,
-                                 lna_parameters    = .lna_parameters,
-                                 stoich_matrix     = .stoich_matrix,
-                                 lna_pointer       = .lna_pointer,
-                                 lna_times         = .lna_times,
-                                 lna_initializer   = .lna_initializer,
-                                 param_update_inds = .param_update_inds,
-                                 drift_inds        = .drift_inds,
-                                 resid_inds        = .resid_inds,
-                                 diff_inds         = .diff_inds,
-                                 log_scale         = .log_scale,
-                                 incidence_codes   = .incidence_codes,
-                                 data              = .data,
-                                 measproc_indmat   = .measproc_indmat,
-                                 obstime_inds      = .obstime_inds,
-                                 d_meas_pointer    = .d_meas_pointer,
-                                 parameters        = .parameters,
-                                 constants         = .constants,
-                                 tcovar_censmat    = .tcovar_censmat,
-                                 fixed_inits       = .fixed_inits,
-                                 do_census         = .do_census,
-                                 do_incidence      = .do_incidence)
-
-        .statemat <- .path$path$path
-
-        if(.log_scale) {
-                .statemat[,-1] <- exp(.statemat[,-1])
+        if(k%%100 == 0) {
+                cat(paste0("Prevalence iteration ", k), sep = "\n", file = "lna_geweke.txt", append = TRUE)
         }
+                
+        
+        path <- update_lna_path(path_cur            = path,
+                                lna_parameters      = lna_parameters,
+                                stoich_matrix       = stoich_matrix,
+                                lna_ess_pointer     = lna_ess_pointer,
+                                lna_times           = lna_times,
+                                initdist_parameters = initdist_parameters,
+                                fixed_inits         = fixed_inits,
+                                param_update_inds   = param_update_inds,
+                                drift_inds          = drift_inds,
+                                resid_inds          = resid_inds,
+                                log_scale           = log_scale,
+                                incidence_codes     = incidence_codes,
+                                data                = data,
+                                measproc_indmat     = measproc_indmat,
+                                obstime_inds        = obstime_inds,
+                                d_meas_pointer      = d_meas_pointer,
+                                parameters          = parameters,
+                                constants           = constants,
+                                tcovar_censmat      = tcovar_censmat,
+                                do_census           = do_census,
+                                do_incidence        = do_incidence)
+        
+        statemat <- path$path$path
 
-        if(.do_incidence) {
-                compute_incidence(.statemat, .incidence_codes+1, row_inds = .obstime_inds)
+        statemat[,-1] <- exp(statemat[,-1])
+        
+
+        if(do_incidence) {
+                compute_incidence(statemat, incidence_codes+1, row_inds = obstime_inds)
         }
         
-        .data <- simulate_r_measure(censusmat = .statemat,
+        data <- simulate_r_measure(censusmat = statemat,
                                     measproc_indmat = stem_object$measurement_process$measproc_indmat,
                                     parameters = stem_object$dynamics$parameters,
                                     constants = stem_object$dynamics$constants,
-                                    tcovar = .tcovar_obstimes,
+                                    tcovar = tcovar_obstimes,
                                     r_measure_ptr = stem_object$measurement_process$meas_pointers$r_measure_ptr)
         
-        colnames(.data) <- .measvar_names
+        colnames(data) <- measvar_names
         
         # recompute the emission probabilities given the new dataset
-        evaluate_d_measure(emitmat          = .emitmat,
-                           obsmat           = .data,
-                           statemat         = .statemat,
-                           measproc_indmat  = .measproc_indmat,
-                           parameters       = .parameters,
-                           constants        = .constants,
-                           tcovar_censusmat = .tcovar_censmat,
-                           d_meas_ptr       = .d_meas_pointer)
+        evaluate_d_measure(emitmat          = emitmat,
+                           obsmat           = data,
+                           statemat         = statemat,
+                           measproc_indmat  = measproc_indmat,
+                           parameters       = parameters,
+                           constants        = constants,
+                           tcovar_censusmat = tcovar_censmat,
+                           d_meas_ptr       = d_meas_pointer)
 
         # compute the data log likelihood
-        .path$data_log_lik <- sum(.emitmat[,-1][.measproc_indmat])
+        path$data_log_lik <- sum(emitmat[,-1][measproc_indmat])
         
         # save the new path and the new dataset
-        if(j %% 100 == 0) {
-                .latent_paths[[j]] <- .statemat
-                .datasets[[j]]     <- .data
+        if(k %% thin_latent_paths == 0) {
+                latent_paths[[k/thin_latent_paths]] <- path$path$path
+                datasets[[k/thin_latent_paths]] <- data
         }
 }
 
-gillespie_paths <- simulate_stem(stem_object = stem_object,
-                                 nsim = iterations,
-                                 paths = TRUE, 
-                                 observations = TRUE,
-                                 method = "gillespie",
-                                 census_times = .lna_times,
-                                 paths_as_array = TRUE,
-                                 datasets_as_array = TRUE,
-                                 messages = TRUE)
+# compile the results
+stemr_paths <- array(unlist(latent_paths), dim = c(nrow(latent_paths[[1]]), ncol(latent_paths[[1]]), length(latent_paths)))
+colnames(stemr_paths) <- c("time", "S", "I", "R")
+gillespie_paths <- exact_paths$paths
+
+I_stemr <- stemr_paths[,"I",]
+I_exact <- gillespie_paths[,"I",]
+
+library(mcmc)
+library(ggplot2)
+
+results_comp <- data.frame(method = rep(c("stemr", "gillespie"), each = 53),
+                           time = rep(0:52, 2), mean = 0, mcse = 0, lower = 0, upper = 0)
+results_comp[results_comp$method == "stemr","mean"] <- rowMeans(I_stemr)
+results_comp[results_comp$method == "gillespie","mean"] <- rowMeans(I_exact)
+stemr_vars <- rep(0, nrow(I_stemr))
+
+for(k in 1:length(stemr_vars)) {
+          stemr_vars[k] <- initseq(I_stemr[k,])$var.pos
+}
+
+results_comp[results_comp$method == "stemr","mcse"] <- sqrt(stemr_vars)/sqrt(nrow(I_stemr))
+results_comp[results_comp$method == "gillespie","mcse"] <- apply(I_exact, 1, sd)/sqrt(nrow(I_exact))
+
+# 95% intervals
+results_comp[results_comp$method == "stemr", "lower"] <- exp(results_comp[results_comp$method == "stemr","mean"] - 
+                                                                     1.96 * results_comp[results_comp$method == "stemr","mcse"])
+results_comp[results_comp$method == "stemr", "upper"] <- exp(results_comp[results_comp$method == "stemr","mean"] + 
+                                                                     1.96 * results_comp[results_comp$method == "stemr","mcse"])
+results_comp[results_comp$method == "stemr", "mean"] <- exp(results_comp[results_comp$method == "stemr", "mean"])
+
+results_comp[results_comp$method == "gillespie", "lower"] <- results_comp[results_comp$method == "gillespie","mean"] - 
+                                                                     1.96 * results_comp[results_comp$method == "gillespie","mcse"]
+results_comp[results_comp$method == "gillespie", "upper"] <- results_comp[results_comp$method == "gillespie","mean"] + 
+                                                                     1.96 * results_comp[results_comp$method == "gillespie","mcse"]
+# produce the plot
+pdf("lna_geweke_prevalence.pdf")
+print(ggplot(results_comp, aes(x = time, y = mean, colour = method)) + geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2) + geom_line()  + labs(x = "time", y = "I", title = "Pointwise prevalence from prevalence data - mean and MCSE bands"))
 
 
-# library(mcmc)
-# results_comp <- data.frame(method = rep(c("stemr", "gillespie"), each = 53), time = rep(0:52, 2), count = 0, mcse = 0)
-# results_comp[results_comp$method == "stemr","count"] <- rowMeans(BDAepimodel_results)
-# results_comp[results_comp$method == "gillespie","count"] <- rowMeans(Gillespie_results)
-# BDAepimodel_vars <- rep(0, nrow(BDAepimodel_results))
-# for(k in 1:length(BDAepimodel_vars)) {
-#           if(k%%50 == 0) print(k) 
-#           BDAepimodel_vars[k] <- initseq(BDAepimodel_results[k,])$var.pos
-# }
-# 
-# results_comp[results_comp$method == "BDAepimodel","mcse"] <- sqrt(BDAepimodel_vars)/sqrt(niter)
-# results_comp[results_comp$method == "Gillespie","mcse"] <- apply(Gillespie_results, 1, sd)/sqrt(niter)
+# quantiles plot
+results_quantile <- data.frame(method = rep(c("stemr", "gillespie"), each = 53),
+                           time = rep(0:52, 2), 
+                           med = c(apply(I_stemr, 1, quantile, 0.5), apply(I_exact, 1, quantile, 0.5)),
+                           lower = c(apply(I_stemr, 1, quantile, 0.025), apply(I_exact, 1, quantile, 0.025)), 
+                           upper = c(apply(I_stemr, 1, quantile, 0.975), apply(I_exact, 1, quantile, 0.975)))
+results_quantile[results_quantile$method == "stemr", 3:5] <- exp(results_quantile[results_quantile$method == "stemr", 3:5])
+
+print(ggplot(results_quantile, aes(x = time, y = med, colour = method)) + geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2) + geom_line()  + labs(x = "time", y = "I", title = "Pointwise prevalence from prevalence data - median and 95% quantile bands"))
+
+# plot datasets
+dat_stemr <- array(unlist(datasets), dim = c(53, 2, length(datasets)))[,2,]
+dat_exact <- exact_paths$datasets[,2,]
+
+dat_comp <- data.frame(method = rep(c("stemr", "gillespie"), each = 53),
+                           time = rep(0:52, 2), mean = 0, mcse = 0, lower = 0, upper = 0)
+dat_comp[dat_comp$method == "stemr","mean"] <- rowMeans(dat_stemr)
+dat_comp[dat_comp$method == "gillespie","mean"] <- rowMeans(dat_exact)
+stemr_dat_vars <- rep(0, nrow(I_stemr))
+
+for(k in 1:length(stemr_vars)) {
+          stemr_dat_vars[k] <- initseq(dat_stemr[k,])$var.pos
+}
+
+dat_comp[dat_comp$method == "stemr","mcse"] <- sqrt(stemr_dat_vars)/sqrt(nrow(I_stemr))
+dat_comp[dat_comp$method == "gillespie","mcse"] <- apply(dat_exact, 1, sd)/sqrt(nrow(I_exact))
+
+dat_comp[dat_comp$method == "stemr", "lower"] <- dat_comp[dat_comp$method == "stemr","mean"] - 
+                                                                     1.96 * dat_comp[dat_comp$method == "stemr","mcse"]
+dat_comp[dat_comp$method == "stemr", "upper"] <- dat_comp[dat_comp$method == "stemr","mean"] + 
+                                                                     1.96 * dat_comp[dat_comp$method == "stemr","mcse"]
+dat_comp[dat_comp$method == "gillespie", "lower"] <- dat_comp[dat_comp$method == "gillespie","mean"] - 
+                                                                     1.96 * dat_comp[dat_comp$method == "gillespie","mcse"]
+dat_comp[dat_comp$method == "gillespie", "upper"] <- dat_comp[dat_comp$method == "gillespie","mean"] + 
+                                                                     1.96 * dat_comp[dat_comp$method == "gillespie","mcse"]
+
+print(ggplot(dat_comp, aes(x = time, y = mean, colour = method)) + geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2) + geom_line()  + labs(x = "time", y = "I", title = "Pointwise prevalence data - mean and MCSE bands"))
+
+
+# checking that the sampling process has the expected variability at all observation times
+nsim = 1000
+testdat <- vector("list", length = nsim)
+for(j in seq_along(testdat)) {
+        testdat[[j]] <- simulate_r_measure(censusmat = statemat,
+                                    measproc_indmat = stem_object$measurement_process$measproc_indmat,
+                                    parameters = stem_object$dynamics$parameters,
+                                    constants = stem_object$dynamics$constants,
+                                    tcovar = tcovar_obstimes,
+                                    r_measure_ptr = stem_object$measurement_process$meas_pointers$r_measure_ptr)
+}
+testdat_res <- array(unlist(testdat), dim = c(53, 2, nsim))[,2,]
+testdat_quants <- data.frame(time = rep(0:52, 2),
+                             method = rep(c("stemr", "theoretical"), each = 53),
+                             med = 0,
+                             lower = 0,
+                             upper = 0)
+testdat_quants[testdat_quants$method == "stemr", "med"] <- apply(testdat_res, 1, quantile, 0.5)
+testdat_quants[testdat_quants$method == "stemr", "lower"] <- apply(testdat_res, 1, quantile, 0.025)
+testdat_quants[testdat_quants$method == "stemr", "upper"] <- apply(testdat_res, 1, quantile, 0.975)
+testdat_quants[testdat_quants$method == "theoretical", "med"] <- qnbinom(0.5, size = statemat[,3], mu = statemat[,3]*0.5)
+testdat_quants[testdat_quants$method == "theoretical", "lower"] <- qnbinom(0.025, size = statemat[,3], mu = statemat[,3]*0.5)
+testdat_quants[testdat_quants$method == "theoretical", "upper"] <- qnbinom(0.975, size = statemat[,3], mu = statemat[,3]*0.5)
+
+print(ggplot(testdat_quants, aes(x = time, y = med, fill = method)) + geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2)  + labs(x = "time", y = "I", title = "Pointwise prevalence data fixed latent proc - median and 95% quantiles"))
+dev.off()
 
 ```
 

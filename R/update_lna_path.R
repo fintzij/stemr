@@ -10,9 +10,10 @@
 update_lna_path <- function(path_cur, lna_parameters, stoich_matrix, lna_ess_pointer, lna_times, initdist_parameters, fixed_inits, param_update_inds, drift_inds, resid_inds, log_scale, incidence_codes, data, measproc_indmat, obstime_inds, d_meas_pointer, parameters, constants, tcovar_censmat, do_census, do_incidence) {
 
         # matrix in which to store the emission probabilities
-        emitmat <- cbind(data[, 1, drop = F], matrix(0.0, nrow = nrow(measproc_indmat),
-                                                   ncol = ncol(measproc_indmat), dimnames = list(NULL, colnames(measproc_indmat))))
-        pathmat <- matrix(0.0, nrow = nrow(path_cur$path$path), ncol = ncol(path_cur$path$path))
+        emitmat     <- matrix(0.0, nrow = nrow(measproc_indmat), ncol = ncol(measproc_indmat)+1,
+                              dimnames = list(NULL, c("time", colnames(measproc_indmat))))
+        emitmat[,1] <- data[,1]
+        pathmat     <- matrix(0.0, nrow = nrow(path_cur$path$path), ncol = ncol(path_cur$path$path))
         pathmat[,1] <- lna_times
 
         # propose a new path
@@ -37,8 +38,7 @@ update_lna_path <- function(path_cur, lna_parameters, stoich_matrix, lna_ess_poi
         lower <- theta - 2*pi; upper <- theta
 
         # construct the first proposal
-        resmat <- cos(theta) * path_cur$path$residual_process + sin(theta) * path_prop$residual_process
-        pathmat[, -1] <- path_prop$drift_process + resmat
+        pathmat[, -1] <- path_prop$drift_process + cos(theta)*path_cur$path$residual_path + sin(theta)*path_prop$residual_path
 
         # does the path_new need to be censused at observation times (e.g. if there
         # are time-varying covariates that change at times other than
@@ -72,11 +72,8 @@ update_lna_path <- function(path_cur, lna_parameters, stoich_matrix, lna_ess_poi
         data_log_lik_prop <- sum(emitmat[,-1][measproc_indmat])
         if(is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
 
-        attempts <- 1
-
         # accept or reject the proposal
         while(data_log_lik_prop < threshold) {
-                attempts <- attempts + 1
 
                 # shrink the bracket
                 if(theta < 0) {
@@ -89,8 +86,7 @@ update_lna_path <- function(path_cur, lna_parameters, stoich_matrix, lna_ess_poi
                 theta <- runif(1, lower, upper)
 
                 # construct the next proposal
-                resmat <- cos(theta) * path_cur$path$residual_process + sin(theta) * path_prop$residual_process
-                pathmat[, -1] <- path_prop$drift_process + resmat
+                pathmat[, -1] <- path_prop$drift_process + cos(theta)*path_cur$path$residual_path + sin(theta)*path_prop$residual_path
 
                 # does the path_new need to be censused at observation times (e.g. if there
                 # are time-varying covariates that change at times other than
@@ -126,6 +122,7 @@ update_lna_path <- function(path_cur, lna_parameters, stoich_matrix, lna_ess_poi
         }
 
         return(list(path = list(path = pathmat,
+                                residual_path = resmat,
                                 drift_process = path_cur$path$drift_process,
                                 residual_process = resmat,
                                 diffusion_process=path_cur$path$diffusion_process),

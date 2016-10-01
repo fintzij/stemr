@@ -2,7 +2,8 @@
 % Please edit documentation in R/compile_lna.R
 \name{compile_lna}
 \alias{compile_lna}
-\title{Instatiate the C++ rate functions for the LNA.}
+\title{Instatiate the C++ rate functions for the LNA with integration done using
+deSolve.}
 \usage{
 compile_lna(lna_rates, flow_matrix, lna_scale, messages = TRUE)
 }
@@ -21,6 +22,7 @@ event}
 External function pointers for integrating the LNA
 }
 \description{
-Instatiate the C++ rate functions for the LNA.
+Instatiate the C++ rate functions for the LNA with integration done using
+deSolve.
 }
 

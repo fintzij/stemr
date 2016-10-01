@@ -1,6 +1,6 @@
 // [[Rcpp::depends(RcppArmadillo)]]
 #include "stemr_types.h"
-#include "stemr_utils.hpp"
+#include "stemr_utils.h"
 
 using namespace arma;
 using namespace Rcpp;

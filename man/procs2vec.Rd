@@ -4,7 +4,7 @@
 \alias{procs2vec}
 \title{Copy drift, residual, and diffusion processes into the lna state vector}
 \usage{
-procs2vec(statevec, driftvec, residvec, diffmat)
+procs2vec(statevec, drift, resid, diff, ind)
 }
 \arguments{
 \item{statevec}{vector to be copied into, i.e. the vectorised ODE state}

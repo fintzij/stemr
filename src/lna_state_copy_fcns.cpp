@@ -13,15 +13,21 @@ using namespace arma;
 //' @return modifies the statevec in place
 //' @export
 // [[Rcpp::export]]
-void procs2vec(Rcpp::NumericVector& statevec, arma::vec& driftvec, arma::vec& residvec, arma::mat& diffmat) {
+void procs2vec(Rcpp::NumericVector& statevec, arma::mat& drift, arma::mat& resid, Rcpp::NumericVector& diff, int ind) {
 
-        int n_comps = driftvec.n_elem;
+        int n_comps = drift.n_cols;
+        Rcpp::IntegerVector arr_dims = diff.attr("dim");
+
+        // instatiate the diffusion array
+        arma::cube diffusion(diff.begin(), arr_dims[0], arr_dims[1], arr_dims[2], false);
 
         // make the copies
-        std::copy(driftvec.begin(), driftvec.end(), statevec.begin());
-        std::copy(residvec.begin(), residvec.end(), statevec.begin() + n_comps);
-        std::copy(diffmat.begin(), diffmat.end(), statevec.begin() + 2*n_comps);
+        for(int j=0; j < n_comps; ++j) {
+                statevec[j]         = drift(ind, j);
+                statevec[j+n_comps] = resid(ind, j);
+        }
 
+        std::copy(diffusion.slice(ind).begin(), diffusion.slice(ind).end(), statevec.begin() + 2*n_comps);
 }
 
 //' Copy the LNA ODE state into the drift, residual, and diffusion processes
@@ -35,64 +41,70 @@ void procs2vec(Rcpp::NumericVector& statevec, arma::vec& driftvec, arma::vec& re
 //' @return modifies the ode objects in place
 //' @export
 // [[Rcpp::export]]
-void vec2procs(Rcpp::NumericVector& statevec, arma::vec& driftvec, arma::vec& residvec, arma::mat& diffmat) {
+void vec2procs(Rcpp::NumericVector& statevec, arma::mat& drift, arma::mat& resid, Rcpp::NumericVector& diff, int ind) {
 
-        int n_comps  = driftvec.n_elem;
-
-        // make the copies
-        std::copy(statevec.begin(), statevec.begin() + n_comps, driftvec.begin());
-        std::copy(statevec.begin() + n_comps, statevec.begin() + 2*n_comps, residvec.begin());
-        std::copy(statevec.begin() + 2*n_comps, statevec.end(), diffmat.begin());
-
-}
-
-//' Copy the LNA ODE state vector into the drift, residual, and diffusion
-//' processes matrices, imposing diagonal dominance for the diffusion matrix
-//'
-//' @param statevec vector to be copied into, i.e. the vectorised ODE state
-//' @param driftmat armadillo matrix for the drift process
-//' @param residmat armadillo matrix for the residual process
-//' @param diffarr armadillo cube for the diffusion process
-//' @param ind row index in the ODE matrices (slice in diffusion cube)
-//'
-//' @return modifies the ode objects in place
-//' @export
-// [[Rcpp::export]]
-void vec2procmats(Rcpp::NumericVector& statevec, arma::mat& driftmat, arma::mat& residmat, Rcpp::NumericVector& diffarr, int ind) {
-
-        int row_ind = ind - 1;
-        int n_comps = driftmat.n_cols;
-        Rcpp::IntegerVector arr_dims = diffarr.attr("dim");
+        int n_comps = drift.n_cols;
+        Rcpp::IntegerVector arr_dims = diff.attr("dim");
 
         // instatiate the diffusion array
-        arma::cube diffusion_array(diffarr.begin(), arr_dims[0], arr_dims[1], arr_dims[2], false);
+        arma::cube diffusion(diff.begin(), arr_dims[0], arr_dims[1], arr_dims[2], false);
 
         // make the copies
         for(int j=0; j < n_comps; ++j) {
-                driftmat(row_ind, j) = statevec[j];
-                residmat(row_ind, j) = statevec[j+n_comps];
+                drift(ind, j) = statevec[j];
+                resid(ind, j) = statevec[j+n_comps];
         }
 
-        std::copy(statevec.begin() + 2*n_comps, statevec.end(), diffusion_array.slice(row_ind).begin());
-
-        // enforce diagonal dominance by adding - done now within try statement in the simulation step
-        // diffusion_array.slice(row_ind).diag() += 0.0000001;
+        std::copy(statevec.begin() + 2*n_comps, statevec.end(), diffusion.slice(ind).begin());
 }
 
-//' Insert the lna step into the path matrix
-//'
-//' @param path matrix containing the full LNA path
-//' @param lna_step vector containing the sampled states
-//' @param ind row index
-//'
-//' @return modifies the path matrix in place
-//' @export
-// [[Rcpp::export]]
-void insert_lna_step(arma::mat& path, arma::rowvec& lna_step, int ind) {
-
-        int row_ind = ind-1;
-        path(row_ind, arma::span(1, path.n_cols-1)) = lna_step;
-}
+// //' Copy the LNA ODE state vector into the drift, residual, and diffusion
+// //' processes matrices, imposing diagonal dominance for the diffusion matrix
+// //'
+// //' @param statevec vector to be copied into, i.e. the vectorised ODE state
+// //' @param driftmat armadillo matrix for the drift process
+// //' @param residmat armadillo matrix for the residual process
+// //' @param diffarr armadillo cube for the diffusion process
+// //' @param ind row index in the ODE matrices (slice in diffusion cube)
+// //'
+// //' @return modifies the ode objects in place
+// //' @export
+// // [[Rcpp::export]]
+// void vec2procmats(Rcpp::NumericVector& statevec, arma::mat& driftmat, arma::mat& residmat, Rcpp::NumericVector& diffarr, int ind) {
+//
+//         int row_ind = ind - 1;
+//         int n_comps = driftmat.n_cols;
+//         Rcpp::IntegerVector arr_dims = diffarr.attr("dim");
+//
+//         // instatiate the diffusion array
+//         arma::cube diffusion_array(diffarr.begin(), arr_dims[0], arr_dims[1], arr_dims[2], false);
+//
+//         // make the copies
+//         for(int j=0; j < n_comps; ++j) {
+//                 driftmat(row_ind, j) = statevec[j];
+//                 residmat(row_ind, j) = statevec[j+n_comps];
+//         }
+//
+//         std::copy(statevec.begin() + 2*n_comps, statevec.end(), diffusion_array.slice(row_ind).begin());
+//
+//         // enforce diagonal dominance by adding 1e-7
+//         diffusion_array.slice(row_ind).diag() += 0.0000001;
+// }
+//
+// //' Insert the lna step into the path matrix
+// //'
+// //' @param path matrix containing the full LNA path
+// //' @param lna_step vector containing the sampled states
+// //' @param ind row index
+// //'
+// //' @return modifies the path matrix in place
+// //' @export
+// // [[Rcpp::export]]
+// void insert_lna_step(arma::mat& path, arma::rowvec& lna_step, int ind) {
+//
+//         int row_ind = ind-1;
+//         path(row_ind, arma::span(1, path.n_cols-1)) = lna_step;
+// }
 
 // //' insert the next step of the residual process into the residual process matrix
 // //'

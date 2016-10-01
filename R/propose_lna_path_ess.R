@@ -85,31 +85,14 @@ propose_lna_path_ess <- function(path_cur, parameters, stoich_matrix, lna_ess_po
                 # sample the next value ensure that there is not negative
                 # incidence and that there are no negative values if the process
                 # is not on the log scale
-                if(log_scale) {
-                        if(!is.null(incidence_codes)) {
-                                lna_step  <- tmvtnorm::rtmvnorm(1, drift_process[j,] + residual_process[j,], diffusion_process[,,j],
-                                                                lower = c(rep(-Inf, n_prev), path[j-1, incid_codes_path]),
-                                                                algorithm = "rejection")
-                        } else {
-                                lna_step  <- tmvtnorm::rtmvnorm(1, drift_process[j,] + residual_process[j,], diffusion_process[,,j],
-                                                                algorithm = "rejection")
-                        }
-                } else if(!log_scale) {
-                        if(!is.null(incidence_codes)) {
-                                lna_step  <- tmvtnorm::rtmvnorm(1, drift_process[j,] + residual_process[j,], diffusion_process[,,j],
-                                                                lower = c(rep(0, n_prev), path[j-1, incid_codes_path]),
-                                                                algorithm = "rejection")
-                        } else {
-                                lna_step  <- tmvtnorm::rtmvnorm(1, drift_process[j,] + residual_process[j,], diffusion_process[,,j],
-                                                                lower = rep(0, n_comps),algorithm = "rejection")
-                        }
-                }
+                lna_step <- mvtnorm::rmvnorm(1, drift_process[j,] + residual_process[j,], diffusion_process[,,j])
 
-                insert_lna_step(path, lna_step, j)                                # insert the path into the path matrix
-                lna_state_vec[resid_inds] <- lna_step - lna_state_vec[drift_inds] # set the residual term
+                path[j,-1]                <- lna_step                             # insert the path into the path matrix
+                lna_state_vec[resid_inds] <- lna_step - drift_process[j,]         # adjust the residual process
         }
 
         return(list(path = path,
+                    residual_path = path[,-1] - drift_process,
                     drift_process = drift_process,
                     residual_process = residual_process,
                     diffusion_process = diffusion_process))

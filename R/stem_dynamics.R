@@ -637,6 +637,30 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, ln
         tcovar_adjmat       <- build_tcovar_adjmat(rate_fcns, tcovar_codes)
         timecode            <- which(names(tcovar_codes) == "TIME")
 
+        # generate the initial distribution
+        if(n_strata == 1) {
+                param_inds     <- initializer$param_inds # initial distribution parameter indices
+                initdist_codes <- initializer$codes # codes, by compartment then stratum
+        } else {
+                param_inds     <- unlist(lapply(initializer, function(x) x$param_inds))
+                initdist_codes <- unlist(lapply(initializer, function(x) x$codes))
+        }
+
+        # reorder the initial distribution parameters
+        initdist_parameters        <- as.numeric(initdist_params[order(initdist_codes)])
+        names(initdist_parameters) <- paste0(names(compartment_codes), "_0")
+
+        # add the initial state parameters either to the parameters or to the constants
+        if(fixed_inits) {
+                constants          <- c(constants, initdist_parameters)
+                const_codes        <- c(const_codes, seq_along(initdist_codes) + length(const_codes) - 1)
+                names(const_codes) <- names(constants)
+        } else {
+                parameters         <- c(parameters, initdist_parameters)
+                param_codes        <- c(param_codes, seq_along(initdist_codes) + length(param_codes) - 1)
+                names(param_codes) <- names(parameters)
+        }
+
         # compile the rate functions and get the pointers
         if(compile_rates) {
                 rate_ptrs <- parse_rates(rates = rate_fcns, messages = messages)
@@ -647,12 +671,40 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, ln
         # if LNA functions are requested, compile them
         if(compile_lna) {
 
-                # commands for
-                lna_rates    <- build_lna_fcns(rate_fcns = rate_fcns, param_codes = param_codes, const_codes = const_codes,
-                                               tcovar_codes = tcovar_codes, compartment_codes = c(compartment_codes, incidence_codes),
-                                               flow_matrix = flow_matrix, lna_scale = lna_scale)
-                lna_pointer  <- compile_lna(lna_rates, flow_matrix, lna_scale, messages = messages)
-                lna_pointer  <- c(lna_pointer, compile_lna_ess(lna_rates, flow_matrix, lna_scale, messages = messages))
+                # remove the incidence codes from the flow matrix, we don't need them
+                if(!is.null(incidence_codes)) {
+                        flow_matrix_lna     <- flow_matrix[,-c(incidence_codes+1)]
+                        incidence_codes_lna <- if(nrow(flow_matrix) == 1) {
+                                        0
+                                } else {
+                                        which(sapply(rate_fcns, "[[", "incidence")) - 1
+                                }
+                } else {
+                        flow_matrix_lna       <- flow_matrix
+                        incidence_codes_lna   <- NULL
+                }
+
+                # odeintr rates and pointers, done on the event counts
+                # first translate the rates into rates on the counting processes
+                lna_rates <- rate_fcns_4_lna(rate_fcns = rate_fcns, compartment_codes = compartment_codes, flow_matrix = flow_matrix_lna)
+
+                lna_comp_codes <- lna_rates$lna_comp_codes
+                lna_rates      <- lna_rates$lna_rates
+
+                lna_rates      <- parse_lna_rates(lna_rates = lna_rates, param_codes = param_codes, const_codes = const_codes,
+                                                  tcovar_codes = tcovar_codes, lna_comp_codes = lna_comp_codes, lna_scale = lna_scale)
+
+                lna_pointer    <- load_lna(lna_rates = lna_rates, lna_scale = lna_scale, messages = messages)
+
+                # get the C++ indices for the initial distribution parameters in the lna_pars matrix
+                lna_initdist_inds <- sapply(paste0(names(compartment_codes), "_0"), grep, names(lna_rates$lna_param_codes)) - 1
+
+                # commands for using deSolve
+                # lna_rates    <- build_lna_fcns(rate_fcns = rate_fcns, param_codes = param_codes, const_codes = const_codes,
+                #                                tcovar_codes = tcovar_codes, compartment_codes = c(compartment_codes, incidence_codes),
+                #                                flow_matrix = flow_matrix, lna_scale = lna_scale)
+                # lna_pointer  <- compile_lna(lna_rates, flow_matrix, lna_scale, messages = messages)
+                # lna_pointer  <- c(lna_pointer, compile_lna_ess(lna_rates, flow_matrix, lna_scale, messages = messages))
 
                 # commands for doing this with the 'odeintr' package. suffers from stiffness of
                 # the ODEs and lack of numerical approximation of the Jacobian
@@ -663,6 +715,8 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, ln
         } else {
                 lna_pointer  <- NULL
                 lna_rates    <- list(hazards = NULL, derivatives = NULL, lna_param_codes = NULL)
+                lna_initdist_inds <- NULL
+                lna_comp_codes <- NULL
         }
 
         # compile the functions to solve the ODEs for the stochastic epidemic model
@@ -675,46 +729,50 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, ln
         }
 
         # create the list determining the stem dynamics
-        dynamics <- list(rates            = rate_fcns,
-                         rate_ptrs        = rate_ptrs,
-                         parameters       = parameters,
-                         tcovar           = tcovar,
-                         constants        = constants,
-                         state_initializer= initializer,
-                         initdist_params  = initdist_params,
-                         fixed_inits      = fixed_inits,
-                         flow_matrix      = flow_matrix,
-                         lna_rates        = lna_rates,
-                         lna_scale        = lna_scale,
-                         lna_pointer      = lna_pointer,
-                         ode_pointer      = ode_pointer,
-                         ode_hazards      = ode_rates$ode_hazards,
-                         strata_sizes     = strata_sizes,
-                         popsize          = popsize,
-                         comp_codes       = compartment_codes,
-                         param_codes      = param_codes,
-                         tcovar_codes     = tcovar_codes,
-                         const_codes      = const_codes,
-                         strata_codes     = strata_codes,
-                         lna_param_codes  = lna_rates$lna_param_codes,
-                         ode_param_codes  = ode_rates$ode_param_codes,
-                         incidence_codes  = incidence_codes,
-                         incidence_sources= incidence_sources,
-                         progressive      = progressive,
-                         absorbing_states = absorbing_states,
-                         rate_adjmat      = rate_adjmat,
-                         timevarying      = timevarying,
-                         timecode         = timecode,
-                         tcovar_adjmat    = tcovar_adjmat,
-                         tcovar_changemat = tcovar_changemat,
-                         t0               = t0,
-                         tmax             = tmax,
-                         n_strata         = n_strata,
-                         n_compartments   = ncol(flow_matrix),
-                         n_params         = n_params,
-                         n_tcovar         = n_tcovar,
-                         n_consts         = n_consts,
-                         .dynamics_args   = .dynamics_args)
+        dynamics <- list(rates               = rate_fcns,
+                         rate_ptrs           = rate_ptrs,
+                         parameters          = parameters,
+                         tcovar              = tcovar,
+                         constants           = constants,
+                         state_initializer   = initializer,
+                         initdist_params     = initdist_params,
+                         fixed_inits         = fixed_inits,
+                         flow_matrix         = flow_matrix,
+                         flow_matrix_lna     = flow_matrix_lna,
+                         lna_initdist_inds   = lna_initdist_inds,
+                         incidence_codes_lna = incidence_codes_lna,
+                         lna_rates           = lna_rates,
+                         lna_scale           = lna_scale,
+                         lna_pointer         = lna_pointer,
+                         ode_pointer         = ode_pointer,
+                         ode_hazards         = ode_rates$ode_hazards,
+                         strata_sizes        = strata_sizes,
+                         popsize             = popsize,
+                         comp_codes          = compartment_codes,
+                         param_codes         = param_codes,
+                         tcovar_codes        = tcovar_codes,
+                         const_codes         = const_codes,
+                         strata_codes        = strata_codes,
+                         lna_param_codes     = lna_rates$lna_param_codes,
+                         ode_param_codes     = ode_rates$ode_param_codes,
+                         lna_comp_codes      = lna_comp_codes,
+                         incidence_codes     = incidence_codes,
+                         incidence_sources   = incidence_sources,
+                         progressive         = progressive,
+                         absorbing_states    = absorbing_states,
+                         rate_adjmat         = rate_adjmat,
+                         timevarying         = timevarying,
+                         timecode            = timecode,
+                         tcovar_adjmat       = tcovar_adjmat,
+                         tcovar_changemat    = tcovar_changemat,
+                         t0                  = t0,
+                         tmax                = tmax,
+                         n_strata            = n_strata,
+                         n_compartments      = ncol(flow_matrix),
+                         n_params            = n_params,
+                         n_tcovar            = n_tcovar,
+                         n_consts            = n_consts,
+                         .dynamics_args      = .dynamics_args)
 
         return(dynamics)
 }

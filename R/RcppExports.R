@@ -31,6 +31,20 @@ CALL_D_MEASURE <- function(emitmat, emit_inds, record_ind, record, state, parame
     invisible(.Call('stemr_CALL_D_MEASURE', PACKAGE = 'stemr', emitmat, emit_inds, record_ind, record, state, parameters, constants, tcovar, d_meas_ptr))
 }
 
+#' Compute the hazards by calling the hazard functions via external Xptr.
+#'
+#' @param t time
+#' @param state vector of compartment counts
+#' @param parameters vector of model parameters
+#' @param constants vector of constants
+#' @param vector of time-varying covariate values
+#' @param hazard_ptr external pointer to function used to compute the hazards
+#'
+#' @export
+CALL_INTEGRATE_STEM_LNA <- function(init, start, end, step_size, lna_ode_ptr) {
+    invisible(.Call('stemr_CALL_INTEGRATE_STEM_LNA', PACKAGE = 'stemr', init, start, end, step_size, lna_ode_ptr))
+}
+
 #' Compute the LNA by calling the LNA functions via external Xptr.
 #'
 #' @param t time
@@ -75,6 +89,20 @@ CALL_R_MEASURE <- function(obsmat, emit_inds, record_ind, state, parameters, con
     invisible(.Call('stemr_CALL_R_MEASURE', PACKAGE = 'stemr', obsmat, emit_inds, record_ind, state, parameters, constants, tcovar, r_meas_ptr))
 }
 
+#' Compute the hazards by calling the hazard functions via external Xptr.
+#'
+#' @param t time
+#' @param state vector of compartment counts
+#' @param parameters vector of model parameters
+#' @param constants vector of constants
+#' @param vector of time-varying covariate values
+#' @param hazard_ptr external pointer to function used to compute the hazards
+#'
+#' @export
+CALL_SET_LNA_PARAMS <- function(p, set_lna_params_ptr) {
+    invisible(.Call('stemr_CALL_SET_LNA_PARAMS', PACKAGE = 'stemr', p, set_lna_params_ptr))
+}
+
 #' Construct a matrix containing the compartment counts at a sequence of census times.
 #'
 #' @param path matrix containing the path to be censused.
@@ -99,6 +127,23 @@ build_census_path <- function(path, census_times, census_columns) {
 #' @export
 compute_incidence <- function(censusmat, col_inds, row_inds) {
     invisible(.Call('stemr_compute_incidence', PACKAGE = 'stemr', censusmat, col_inds, row_inds))
+}
+
+#' Convert an LNA path from the counting process on transition events to the
+#' compartment densities on their natural scale.
+#'
+#' @param path matrix containing the LNA path in terms of the counting
+#'   processes on transition events
+#' @param flow_matrix stoichiometry matrix (the transpose of the flow matrix)
+#' @param init_state initial compartment counts on the natural scale
+#' @param log_scale was the lna path computed on the log scale?
+#'
+#' The process can be re-expressed by left-multiplying each row in the path
+#' matrix by the stoichiometry matrix: \eqn{X_t = A'\phi(t, N_t)}.
+#'
+#' @export
+convert_lna <- function(path, flow_matrix, init_state, log_scale) {
+    .Call('stemr_convert_lna', PACKAGE = 'stemr', path, flow_matrix, init_state, log_scale)
 }
 
 #' Evaluate the log-density of the measurement process by calling measurement
@@ -174,8 +219,8 @@ find_interval <- function(x, breaks, rightmost_closed, all_inside) {
 #'
 #' @return modifies the statevec in place
 #' @export
-procs2vec <- function(statevec, driftvec, residvec, diffmat) {
-    invisible(.Call('stemr_procs2vec', PACKAGE = 'stemr', statevec, driftvec, residvec, diffmat))
+procs2vec <- function(statevec, drift, resid, diff, ind) {
+    invisible(.Call('stemr_procs2vec', PACKAGE = 'stemr', statevec, drift, resid, diff, ind))
 }
 
 #' Copy the LNA ODE state into the drift, residual, and diffusion processes
@@ -188,35 +233,36 @@ procs2vec <- function(statevec, driftvec, residvec, diffmat) {
 #'
 #' @return modifies the ode objects in place
 #' @export
-vec2procs <- function(statevec, driftvec, residvec, diffmat) {
-    invisible(.Call('stemr_vec2procs', PACKAGE = 'stemr', statevec, driftvec, residvec, diffmat))
+vec2procs <- function(statevec, drift, resid, diff, ind) {
+    invisible(.Call('stemr_vec2procs', PACKAGE = 'stemr', statevec, drift, resid, diff, ind))
 }
 
-#' Copy the LNA ODE state vector into the drift, residual, and diffusion
-#' processes matrices, imposing diagonal dominance for the diffusion matrix
+#' Produce samples from a multivariate normal density using the Cholesky
+#' decomposition
 #'
-#' @param statevec vector to be copied into, i.e. the vectorised ODE state
-#' @param driftmat armadillo matrix for the drift process
-#' @param residmat armadillo matrix for the residual process
-#' @param diffarr armadillo cube for the diffusion process
-#' @param ind row index in the ODE matrices (slice in diffusion cube)
+#' @param n number of samples
+#' @param mu mean vector
+#' @param sigma covariance matrix
 #'
-#' @return modifies the ode objects in place
+#' (source: http://gallery.rcpp.org/articles/simulate-multivariate-normal/)
+#'
 #' @export
-vec2procmats <- function(statevec, driftmat, residmat, diffarr, ind) {
-    invisible(.Call('stemr_vec2procmats', PACKAGE = 'stemr', statevec, driftmat, residmat, diffarr, ind))
+rmvtn <- function(n, mu, sigma) {
+    .Call('stemr_rmvtn', PACKAGE = 'stemr', n, mu, sigma)
 }
 
-#' Insert the lna step into the path matrix
+#' Multivariate normal density
 #'
-#' @param path matrix containing the full LNA path
-#' @param lna_step vector containing the sampled states
-#' @param ind row index
+#' @param x matrix of draws for which to evaluate the density
+#' @param mu mean vector of the distribution
+#' @param sigma covariance matrix
+#' @param logd should the log be returned
 #'
-#' @return modifies the path matrix in place
+#' (source: http://gallery.rcpp.org/articles/dmvnorm_arma/)
+#'
 #' @export
-insert_lna_step <- function(path, lna_step, ind) {
-    invisible(.Call('stemr_insert_lna_step', PACKAGE = 'stemr', path, lna_step, ind))
+dmvtn <- function(x, mu, sigma, logd = FALSE) {
+    .Call('stemr_dmvtn', PACKAGE = 'stemr', x, mu, sigma, logd)
 }
 
 #' Identify which rates to update when a state transition event occurs.
@@ -228,6 +274,32 @@ insert_lna_step <- function(path, lna_step, ind) {
 #' @export
 pars2lnapars <- function(lnapars, parameters) {
     invisible(.Call('stemr_pars2lnapars', PACKAGE = 'stemr', lnapars, parameters))
+}
+
+#' Simulate a data matrix from the measurement process of a stochastic epidemic
+#' model.
+#'
+#' @param lna_times vector of times at which the LNA must be evaluated
+#' @param lna_pars numeric matrix of parameters, constants, and time-varying
+#'   covariates at each of the lna_times
+#' @param param_update_inds logical vector indicating at which of the times the
+#'   LNA parameters need to be updated.
+#' @param initdist_inds indices of columns corresponding to the initial
+#'   distribution parameters in the lna_pars matrix
+#' @param flow_matrix original flow matrix giving the changes to compartments
+#'   from each reaction
+#' @param fixed_inits are the initial states fixed?
+#' @param log_scale is the LNA applied on the log scale?
+#' @param lna_pointer external pointer to LNA integration fcn
+#' @param set_pars_pointer external pointer to the function for setting the LNA
+#'   parameters.
+#'
+#' @return array with slices containing the LNA path, the path of the residual
+#'   process, the drift process, the residual process (conditional means), and
+#'   diffusion process.
+#' @export
+propose_lna <- function(lna_times, lna_pars, param_update_inds, initdist_inds, flow_matrix, fixed_inits, log_scale, lna_pointer, set_pars_pointer) {
+    .Call('stemr_propose_lna', PACKAGE = 'stemr', lna_times, lna_pars, param_update_inds, initdist_inds, flow_matrix, fixed_inits, log_scale, lna_pointer, set_pars_pointer)
 }
 
 #' Identify which rates to update when a state transition event occurs.

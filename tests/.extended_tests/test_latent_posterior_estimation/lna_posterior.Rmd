@@ -6,16 +6,16 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+library(stemr)
+setwd("C:/Users/Jonathan/Google Drive/UW/Year 3 +/Dissertation/Code/stemr/tests/.extended_tests/test_latent_posterior_estimation")
+
 ```
 
 ## Description
 This test attempts to use the LNA to estimate the posterior distribution of the latent process in the fixed parameter case. Updates to the latent process are carried out via elliptical slice sampling. We carry out the procedure for the simple SIR model under two different measurement processes, negative binomial prevalence and negative binomial incidence.
 
 ```{r, include = FALSE}
-library(stemr)
-setwd("C:/Users/Jonathan/Google Drive/UW/Year 3 +/Dissertation/Code/stemr/tests/.extended_tests/test_latent_posterior_estimation")
-
 # number of iterations and objects to store the paths
 iterations        <- 100000
 thin_latent_paths <- 100
@@ -225,20 +225,21 @@ for(k in 1:length(vars)) {
 results$mcse <- sqrt(vars) / sqrt(ncol(I_paths))
 
 # produce the plot
-ggplot(results, aes(x = time, y = exp(mean))) + geom_ribbon(aes(ymin = exp(mean - 1.96 * mcse), ymax = exp(mean + 1.96 * mcse)), alpha = 0.2) + geom_line() + geom_line(data = as.data.frame(true_path), aes(x = time, y = I), colour = "red") + labs(x = "time", y = "I", title = "Pointwise prevalence from prevalence data - mean and MCSE bands")
+pdf("lna_post_fixedpars_prev.pdf")
+print(ggplot(results, aes(x = time, y = exp(mean))) + geom_ribbon(aes(ymin = exp(mean - 1.96 * mcse), ymax = exp(mean + 1.96 * mcse)), alpha = 0.2) + geom_line() + geom_line(data = as.data.frame(true_path), aes(x = time, y = I), colour = "red") + labs(x = "time", y = "I", title = "Pointwise prevalence from prevalence data - mean and MCSE bands"))
 
-ggplot(results_quantiles, aes(x = time, y = exp(med))) + geom_ribbon(aes(ymin = exp(lower), ymax = exp(upper)), alpha = 0.2) + geom_line() + geom_line(data = as.data.frame(true_path), aes(x = time, y = I), colour = "red") + labs(x = "time", y = "I", title = "Pointwise prevalence from prevalence data - quantiles")
+print(ggplot(results_quantiles, aes(x = time, y = exp(med))) + geom_ribbon(aes(ymin = exp(lower), ymax = exp(upper)), alpha = 0.2) + geom_line() + geom_line(data = as.data.frame(true_path), aes(x = time, y = I), colour = "red") + labs(x = "time", y = "I", title = "Pointwise prevalence from prevalence data - quantiles"))
+dev.off()
 
 ```
 
 
 ```{r, include = FALSE}
-
 # number of iterations and objects to store the paths
-iterations        <- 100000
+iterations        <- 50000
 thin_latent_paths <- 100
 
-# set up model
+# set up models
 compartments <- c("S","I","R")
 rates <- list(rate("beta * I", "S", "I", incidence = TRUE),
               rate("mu", "I", "R"))
@@ -447,10 +448,9 @@ for(k in 1:length(vars)) {
 results$mcse <- sqrt(vars) / sqrt(ncol(I_paths))
 
 # produce the plot
-ggplot(results, aes(x = time, y = exp(mean))) + geom_ribbon(aes(ymin = exp(mean - 1.96 * mcse), ymax = exp(mean + 1.96 * mcse)), alpha = 0.2) + geom_line() + geom_line(data = as.data.frame(true_path), aes(x = time, y = I), colour = "red") + labs(x = "time", y = "I", title = "Pointwise prevalence from incidence data - mean and MCSE bands")
+pdf("lna_post_fixedpars_incid.pdf")
+print(ggplot(results, aes(x = time, y = exp(mean))) + geom_ribbon(aes(ymin = exp(mean - 1.96 * mcse), ymax = exp(mean + 1.96 * mcse)), alpha = 0.2) + geom_line() + geom_line(data = as.data.frame(true_path), aes(x = time, y = I), colour = "red") + labs(x = "time", y = "I", title = "Pointwise prevalence from incidence data - mean and MCSE bands"))
 
-ggplot(results_quantiles, aes(x = time, y = exp(med))) + geom_ribbon(aes(ymin = exp(lower), ymax = exp(upper)), alpha = 0.2) + geom_line() + geom_line(data = as.data.frame(true_path), aes(x = time, y = I), colour = "red") + labs(x = "time", y = "I", title = "Pointwise prevalence from incidence data - quantiles")
-
+print(ggplot(results_quantiles, aes(x = time, y = exp(med))) + geom_ribbon(aes(ymin = exp(lower), ymax = exp(upper)), alpha = 0.2) + geom_line() + geom_line(data = as.data.frame(true_path), aes(x = time, y = I), colour = "red") + labs(x = "time", y = "I", title = "Pointwise prevalence from incidence data - quantiles"))
+dev.off()
 ```
-
-

@@ -1,4 +1,5 @@
-#' Instatiate the C++ rate functions for the LNA.
+#' Instatiate the C++ rate functions for the LNA with integration done using
+#' deSolve.
 #'
 #' @param lna_rates list containing the strings vectors of ODES for the hazards
 #'   and jacobian matrix, along with the lna parameter codes.
