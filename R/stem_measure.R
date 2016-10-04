@@ -165,9 +165,9 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
 
                 # make the substitutions for the compartment codes
                 if(meas_procs[[s]]$incidence) {
-                        for(t in seq_along(dynamics$incidence_sources)) {
-                                code_name <- names(dynamics$incidence_sources)[t]
-                                code      <- dynamics$incidence_codes[t] + 1
+                        for(t in seq_along(dynamics$incidence_codes_lna)) {
+                                code_name <- names(dynamics$incidence_codes_lna)[t]
+                                code      <- dynamics$incidence_codes_lna[t] + 1
                                 meas_procs[[s]]$emission_params <- sapply(meas_procs[[s]]$emission_params, gsub,
                                                                           pattern = code_name, replacement = paste0("state[",code,"]"))
                         }

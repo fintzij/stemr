@@ -5,14 +5,12 @@
 #' @param const_codes named numeric vector of constant codes
 #' @param tcovar_codes named numeric vector of time-varying covariate codes
 #' @param lna_comp_codes named numeric vector of LNA compartment codes
-#' @param lna_scale either "log" or "linear"
 #'
 #' @return string snippets for the LNA that can be compiled
 #' @export
-parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, lna_comp_codes, lna_scale) {
+parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, lna_comp_codes) {
 
         lna_param_codes <- c(param_codes, const_codes + length(param_codes), tcovar_codes + length(param_codes) + length(const_codes)-1)
-        log_scale       <- lna_scale == "log"
 
         lookup_table <- data.frame(varname     = c(paste("pars[", lna_param_codes, "]", sep = ""),
                                                    paste("x[", lna_comp_codes, "]", sep = "")),
@@ -21,7 +19,6 @@ parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, l
                                                    names(tcovar_codes),
                                                    names(lna_comp_codes)),
                                    code        = NA,
-                                   log_code    = NA,
                                    stringsAsFactors = FALSE)
 
         # get indices for which rows correspond to the compartments
@@ -32,37 +29,22 @@ parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, l
         time_ind  <- match("t", lookup_table[,1])
 
         # generate the code strings
-        lookup_table$code <- lookup_table$log_code <- replicate(nrow(lookup_table),
-                                                                paste(sample(c(letters, LETTERS), 15, replace = TRUE), collapse = ""),
-                                                                simplify = T)
-        lookup_table$log_code[comp_inds] <- paste0("(exp(", lookup_table$log_code[comp_inds], ") - 1)")
+        lookup_table$code <- replicate(nrow(lookup_table),
+                                       paste(sample(c(letters, LETTERS), 15, replace = TRUE), collapse = ""),
+                                       simplify = T)
 
 
         # make the substitutions in the rate strings
         for(s in seq_along(lna_rates)) {
                 for(j in seq_len(nrow(lookup_table))) {
-                        if(log_scale) {
-                                lna_rates[s] <- gsub(pattern = lookup_table[j,"search_name"],
-                                                     replacement = lookup_table[j,"log_code"], x = lna_rates[s])
-                        } else if(!log_scale) {
-                                lna_rates[s] <- gsub(pattern = lookup_table[j,"search_name"],
-                                                     replacement = lookup_table[j,"code"], x = lna_rates[s])
-                        }
+                        lna_rates[s] <- gsub(pattern = lookup_table[j,"search_name"],
+                                             replacement = lookup_table[j,"code"], x = lna_rates[s])
                 }
         }
 
         # generate hazards and derivatives for the Jacobian
         hazards     <- lna_rates
         derivatives <- vector(mode = "list", length = length(hazards))
-
-        # if the lna is on the log scale, paste in the extra terms from Ito's formula
-        if(lna_scale == "log") {
-                for(r in seq_along(hazards)) {
-                        hazards[r] <- paste0(paste0("(exp(", lookup_table[comp_inds[r], "code"],"))^(-1)*("), hazards[r], ")",
-                                             paste0(" - 0.5 * (exp(", lookup_table[comp_inds[r], "code"],"))^(-2)*("), hazards[r], ")")
-                        # hazards[r] <- as.character(Ryacas::yacas(Ryacas::Simplify(hazards[r])))
-                }
-        }
 
         # generate symbolic expressions for the rates and other objects
         rate_syms   <- lapply(hazards, function(x) (parse(text = x)))
@@ -126,8 +108,6 @@ parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, l
                 }
                 lna_rates[s] <- sub_powers(lna_rates[s])
         }
-
-        # make sure that any power operators are converted to valid C++ syntax - i.e. a^b -> pow(a,b)
 
         return(list(rates = lna_rates, derivatives = derivatives, lna_param_codes = lna_param_codes))
 }

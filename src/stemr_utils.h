@@ -25,7 +25,6 @@ void CALL_R_MEASURE(Rcpp::NumericMatrix& obsmat, const Rcpp::LogicalVector& emit
 
 // integrate the LNA odes, call via XPtr
 Rcpp::List CALL_COMPUTE_LNA(double t, arma::vec& state, Rcpp::List& parms);
-Rcpp::List CALL_LNA_ESS(double t, arma::vec& state, Rcpp::List& parms);
 
 // Rcpp::NumericVector CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr);
 void CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr);
@@ -65,16 +64,24 @@ Rcpp::IntegerVector find_interval(Rcpp::NumericVector& x, Rcpp::NumericVector& b
 arma::mat rmvtn(int n, const arma::rowvec& mu, const arma::mat& sigma);
 arma::vec dmvtn(const arma::mat& x, const arma::rowvec& mu, const arma::mat& sigma, bool logd = false);
 
-// copy functions to and from the lna ode statevec and the lna drift, residual, and diffusion process objects
-void procs2vec(Rcpp::NumericVector& statevec, arma::mat& drift, arma::mat& resid, Rcpp::NumericVector& diff, int ind);
-void vec2procs(Rcpp::NumericVector& statevec, arma::mat& drift, arma::mat& resid, Rcpp::NumericVector& diff, int ind);
-
-// void procmats2vec(Rcpp::NumericVector& statevec, arma::mat& driftmat, arma::mat& residmat, Rcpp::NumericVector& diffarr, int ind);
-// void vec2procmats(Rcpp::NumericVector& statevec, arma::mat& driftmat, arma::mat& residmat, Rcpp::NumericVector& diffarr, int ind);
-
 // functions for converting parameters between their estimation and natural scales
 void to_estimation_scale(Rcpp::NumericVector& natural_params, Rcpp::NumericVector& scaled_params, Rcpp::CharacterVector& scales);
 void from_estimation_scale(Rcpp::NumericVector& natural_params, Rcpp::NumericVector& scaled_params, Rcpp::CharacterVector& scales);
+
+// convert the lna from the counting process on transition events to its natural state space
+arma::mat convert_lna(const arma::mat& path, const arma::mat& flow_matrix, const arma::rowvec& init_state);
+void convert_lna2(const arma::mat& path, const arma::mat& flow_matrix, const arma::rowvec& init_state, arma::mat& statemat);
+
+// compute the lna density
+// retintegrating all LNA ODEs - required after updating parameters
+Rcpp::List lna_density(const Rcpp::List& path, const arma::colvec& lna_times, const Rcpp::NumericMatrix& lna_pars,
+                       const Rcpp::LogicalVector& param_update_inds, const arma::mat& flow_matrix,
+                       SEXP lna_pointer, SEXP set_pars_pointer);
+
+// reintegrating just the drift and residual ODEs - sufficient after elliptical slice sampling
+Rcpp::List lna_density2(const Rcpp::List& path, const arma::colvec& lna_times, const Rcpp::NumericMatrix& lna_pars,
+                       const Rcpp::LogicalVector& param_update_inds, const arma::mat& flow_matrix,
+                       SEXP lna_pointer, SEXP set_pars_pointer);
 
 // // compute and return the hazards
 // arma::vec COMPUTE_HAZARD(double t, const arma::vec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar, SEXP haz_ptr);

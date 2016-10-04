@@ -23,79 +23,53 @@
 stem_inference_lna <- function(stem_object, iterations, prior_density, kernels, estimation_scales, thin_params, thin_latent_proc, initialization_attempts = 500, messages) {
 
         # extract the model objects from the stem_object
-        flow_matrix            <- stem_object$dynamics$flow_matrix
-        stoich_matrix          <- t(flow_matrix)
-        lna_pointer            <- stem_object$dynamics$lna_pointer$lna_ptr
-        lna_ess_pointer        <- stem_object$dynamics$lna_pointer$lna_ess_ptr
-        lna_scale              <- stem_object$dynamics$lna_scale
-        log_scale              <- lna_scale == "log"
+        flow_matrix            <- stem_object$dynamics$flow_matrix_lna
+        lna_pointer            <- stem_object$dynamics$lna_pointers$lna_pointer
+        lna_pointer_ess        <- stem_object$dynamics$lna_pointers$lna_pointer_ess
+        lna_set_pars_pointer   <- stem_object$dynamics$lna_pointers$lna_set_pars_ptr
         parameters             <- stem_object$dynamics$parameters
         constants              <- stem_object$dynamics$constants
         initdist_parameters    <- stem_object$dynamics$initdist_params
+        lna_initdist_inds      <- stem_object$dynamics$lna_initdist_inds
         n_compartments         <- ncol(flow_matrix)
         n_rates                <- nrow(flow_matrix)
         n_odes                 <- 2*n_rates + n_rates^2
-        comp_codes             <- stem_object$dynamics$comp_codes
-        incidence_codes        <- stem_object$dynamics$incidence_codes
-        incidence_sources      <- stem_object$dynamics$incidence_sources
+        comp_codes             <- stem_object$dynamics$lna_comp_codes
+        incidence_codes        <- stem_object$dynamics$incidence_codes_lna
         n_incidence            <- length(incidence_codes)
         fixed_inits            <- stem_object$dynamics$fixed_inits
         n_strata               <- stem_object$dynamics$n_strata
 
         # set up MCMC objects
-        parameter_samples <- matrix(00, nrow = 1 + floor(iterations / thin_params), ncol = length(stem_object$dynamics$parameters))
+        parameter_samples <- matrix(0.0, nrow = 1 + floor(iterations / thin_params),
+                                    ncol = length(stem_object$dynamics$parameters))
         acceptances       <- matrix(0, nrow = iterations + 1, ncol = length(stem_object$dynamics$parameters))
         latent_paths      <- vector(mode = "list", length = 1 + floor(iterations / thin_latent_proc))
-        latent_log_lik    <- double(1 + floor(iterations / thin_params))
+        lna_log_lik       <- double(1 + floor(iterations / thin_params))
         data_log_lik      <- double(1 + floor(iterations / thin_params))
         log_prior         <- double(1 + floor(iterations / thin_params))
 
-        # create the initialization function
-        if(fixed_inits) {
-
-                if(n_strata == 1) {
-                        param_inds     <- stem_object$dynamics$state_initializer$param_inds # initial distribution parameter indices
-                        initdist_codes <- stem_object$dynamics$state_initializer$codes # codes, by compartment then stratum
-                } else {
-                        param_inds     <- unlist(lapply(stem_object$dynamics$state_initializer, function(x) x$param_inds))
-                        initdist_codes <- unlist(lapply(stem_object$dynamics$state_initializer, function(x) x$codes))
-                }
-
-                # reorder the initial distribution parameters
-                initdist_parameters <- as.numeric(initdist_parameters[order(initdist_codes)])
-
-                # create the initialization parameters
-                if(log_scale) {
-                        # since the LNA is on the log scale, make sure no compartment is initialized at log(0)
-                        initdist_parameters[initdist_parameters == 0] <- 1
-                        if(!is.null(incidence_codes)) {
-                                initdist_parameters <- c(initdist_parameters, initdist_parameters[incidence_sources + 1])
-                        }
-
-                        # take the log
-                        initdist_parameters <- log(initdist_parameters)
-
-                        # add the names
-                        names(initdist_parameters) <- c(names(stem_object$dynamics$comp_codes),
-                                                        names(stem_object$dynamics$incidence_codes))
-                } else {
-
-                        if(!is.null(incidence_codes)) {
-                                initdist_parameters <- c(initdist_parameters, initdist_parameters[incidence_sources + 1])
-                        }
-
-                        # add the names
-                        names(initdist_parameters) <- c(names(stem_object$dynamics$comp_codes),
-                                                        names(stem_object$dynamics$incidence_codes))
-                }
-
-                # there is no kernel for the initial state parameters
-                initdist_kernel <- NULL
-
-        } else {
-                warning("The case for non-fixed initial distribution parameters is not yet implemented.")
-                initdist_parameters <- NULL
-        }
+        # depracated code for initialization function         # create the initialization function
+        # if(fixed_inits) {
+        #
+        #         if(n_strata == 1) {
+        #                 param_inds     <- stem_object$dynamics$state_initializer$param_inds # initial distribution parameter indices
+        #                 initdist_codes <- stem_object$dynamics$state_initializer$codes # codes, by compartment then stratum
+        #         } else {
+        #                 param_inds     <- unlist(lapply(stem_object$dynamics$state_initializer, function(x) x$param_inds))
+        #                 initdist_codes <- unlist(lapply(stem_object$dynamics$state_initializer, function(x) x$codes))
+        #         }
+        #
+        #         # reorder the initial distribution parameters
+        #         initdist_parameters <- as.numeric(initdist_parameters[order(initdist_codes)])
+        #
+        #         # there is no kernel for the initial state parameters
+        #         initdist_kernel <- NULL
+        #
+        # } else {
+        #         warning("The case for non-fixed initial distribution parameters is not yet implemented.")
+        #         initdist_parameters <- NULL
+        # }
 
         # compute the prior density of the parameters
         log_prior[1] <- prior_density(parameters)
@@ -126,9 +100,6 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernels, 
         n_times                 <- length(lna_times)
         n_census_times          <- length(obstimes)
         param_update_inds       <- is.na(match(lna_times, obstimes))
-        drift_inds              <- seq_len(n_compartments);
-        resid_inds              <- seq_len(n_compartments) + n_compartments;
-        diff_inds               <- seq_len(n_compartments * n_compartments) + 2*n_compartments;
         do_census               <- !identical(lna_times, data[,1])
         do_incidence            <- !is.null(incidence_codes)
 
@@ -151,36 +122,40 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernels, 
         # insert time varying covariates
         if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
                 tcovar_rowinds                 <- findInterval(lna_times, stem_object$dynamics$.dynamics_args$tcovar[,1])
-                lna_parameters[, tcovar_inds] <- stem_object$dynamics$.dynamics_args$tcovar[tcovar_rowinds,-1]
+                lna_parameters[, tcovar_inds]  <- stem_object$dynamics$.dynamics_args$tcovar[tcovar_rowinds,-1]
         }
 
         # initialize the latent path
-        path <- initialize_lna(lna_parameters      = lna_parameters,
-                               stoich_matrix       = stoich_matrix,
-                               lna_pointer         = lna_pointer,
-                               lna_times           = lna_times,
-                               initdist_parameters = initdist_parameters,
-                               fixed_inits         = fixed_inits,
-                               param_update_inds   = param_update_inds,
-                               drift_inds          = drift_inds,
-                               resid_inds          = resid_inds,
-                               diff_inds           = diff_inds,
-                               log_scale           = log_scale,
-                               incidence_codes     = incidence_codes,
-                               data                = data,
-                               measproc_indmat     = measproc_indmat,
-                               obstime_inds        = obstime_inds,
-                               d_meas_pointer      = d_meas_pointer,
-                               parameters          = parameters,
-                               constants           = constants,
-                               tcovar_censmat      = tcovar_censmat,
+        path <- initialize_lna(lna_parameters          = lna_parameters,
+                               flow_matrix             = flow_matrix,
+                               lna_pointer             = lna_pointer,
+                               lna_set_pars_pointer    = lna_set_pars_pointer,
+                               lna_times               = lna_times,
+                               fixed_inits             = fixed_inits,
+                               param_update_inds       = param_update_inds,
+                               incidence_codes         = incidence_codes,
+                               data                    = data,
+                               measproc_indmat         = measproc_indmat,
+                               obstime_inds            = obstime_inds,
+                               d_meas_pointer          = d_meas_pointer,
+                               parameters              = parameters,
+                               constants               = constants,
+                               tcovar_censmat          = tcovar_censmat,
                                initialization_attempts = initialization_attempts)
 
         # save the current observed data log-likelihood and compute the
         # likelihood of the latent LNA path
-        data_log_lik[1]   <- path$data_log_lik
-        latent_log_lik[1] <- compute_lna_density(path = path$path, fixed_inits = fixed_inits,
-                                                 log_scale = log_scale, incidence_codes = incidence_codes)
+        path <- lna_density2(path              = path,
+                             lna_times         = lna_times,
+                             lna_pars          = lna_parameters,
+                             param_update_inds = param_update_inds,
+                             flow_matrix       = flow_matrix,
+                             lna_pointer_ess   = lna_pointer_ess,
+                             set_pars_pointer  = lna_set_pars_pointer)
+
+        # save the data log-likelihood and the lna log-likelihood
+        data_log_lik[1] <- path$data_log_lik
+        lna_log_lik[1]  <- path$lna_log_lik
 
         # begin the MCMC
         start.time <- Sys.time()
@@ -191,18 +166,17 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernels, 
                         print(k)
                 }
 
-                # propose a new path
+                # update the path via elliptical slice sampling
                 path <- update_lna_path(path_cur            = path,
                                         lna_parameters      = lna_parameters,
                                         stoich_matrix       = stoich_matrix,
                                         lna_ess_pointer     = lna_ess_pointer,
                                         lna_times           = lna_times,
-                                        initdist_parameters = initdist_parameters,
+                                        lna_initdist_inds   = lna_initdist_inds,
                                         fixed_inits         = fixed_inits,
                                         param_update_inds   = param_update_inds,
                                         drift_inds          = drift_inds,
                                         resid_inds          = resid_inds,
-                                        log_scale           = log_scale,
                                         incidence_codes     = incidence_codes,
                                         data                = data,
                                         measproc_indmat     = measproc_indmat,

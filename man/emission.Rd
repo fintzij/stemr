@@ -20,8 +20,7 @@ variable in a dataset to be simulated.}
 generally a function of model compartments and parameters.}
 
 \item{incidence}{do the data represent incidence counts (as opposed to
-prevalence counts)? defaults to FALSE. If true, the incidence compartments
-will be used.}
+prevalence counts)? defaults to FALSE.}
 
 \item{obstimes}{numeric vector of observation times, required if the
 measurement process is to be simulated from.}
@@ -65,6 +64,16 @@ function.
   times, the user would only need to supply a single emission function since
   "SELF" will be parsed and replaced with the names of the strata.
 
+  If the data consist of incidence counts, the counts of transition events
+  must be identified in terms of the transitions that are being counted, in
+  the form from2to - i.e. the 'from' and 'to' compartments separated by the
+  number 2. For example, in the case of incidence data for the SIR model, the
+  data are counts of transitions from the S compartment to the I compartment.
+  Therefore, when referencing incidence in the emission distribution, we
+  write S2I as the total number of infection events, of which some portion
+  are detected. If the emission distribution is defined for multiple strata,
+  it is still permissible to use the "_SELF" keyword - e.g. S_SELF2I_SELF.
+
   The parameters for each distribution are supplied as character vectors, and
   will typically be functions of model compartments, parameters, time-varying
   covariates, and constants. As in specification of the rate functions, the
@@ -73,7 +82,7 @@ function.
   here: \enumerate{\item \code{emission("prevalence", "binomial", c("I",
   "rho"))}: the observed variable, names "prevalence" is a binomial sample of
   the number of individuals in compartment "I", with sampling probability
-  "rho". \item \code{emission("I_SELF", "binomial", c("I_SELF", "rho"),
+  "rho". \item \code{emission("I_SELF", "binomial", c("S_SELF2I_SELF", "rho"),
   incidence = TRUE, strata = "ALL")}: the observed incidence for each stratum
   is a binomial sample of the true incidence in that stratum.}
 }

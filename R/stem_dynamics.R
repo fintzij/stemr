@@ -13,9 +13,6 @@
 #'   where the name of each character vector is the compartment name and the
 #'   character vector lists the strata to in which the compartment exists. The
 #'   reserved word "ALL" can be used instead of listing all strata.
-#' @param lna_scale either 'log' (default) or 'linear' if the SDE approximated
-#'   by the LNA is modeled on the log scale or the linear scale. Log
-#'   transforming the SDE removes the positivity constraint on the state space.
 #' @param tcovar Matrix or data frame of time varying covariates, the first
 #'   column of which contains the times at which covariates change.
 #' @param strata vector of stratum names, required if the "ALL" reserved word is
@@ -89,7 +86,7 @@
 #'   }
 #'
 #' @export
-stem_dynamics <- function(rates, parameters, state_initializer, compartments, lna_scale = "log", tcovar = NULL, t0 = 0, tmax, timestep = NULL, strata = NULL, constants = NULL, adjacency = NULL, messages = TRUE, compile_rates = TRUE, compile_lna = TRUE, compile_ode = FALSE) {
+stem_dynamics <- function(rates, parameters, state_initializer, compartments, tcovar = NULL, t0 = 0, tmax, timestep = NULL, strata = NULL, constants = NULL, adjacency = NULL, messages = TRUE, compile_rates = TRUE, compile_lna = TRUE, compile_ode = FALSE) {
 
         # check consistency of specification and throw errors if inconsistent
         if(is.list(compartments) && ("ALL" %in% compartments) && is.null(strata)) {
@@ -141,15 +138,10 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, ln
                 }
         }
 
-        if(!lna_scale %in% c("log", "linear")) {
-                stop("The LNA scale must be one of either 'log' or 'linear'.")
-        }
-
         # create a hidden list of user supplied arguments prior to processing
         .dynamics_args <- list(rates             = rates,
                                parameters        = parameters,
                                state_initializer = state_initializer,
-                               lna_scale         = lna_scale,
                                compartments      = compartments,
                                tcovar            = tcovar,
                                t0                = t0,
@@ -673,45 +665,50 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, ln
 
                 # remove the incidence codes from the flow matrix, we don't need them
                 if(!is.null(incidence_codes)) {
-                        flow_matrix_lna     <- flow_matrix[,-c(incidence_codes+1)]
+                        flow_matrix_lna           <- flow_matrix[,-c(incidence_codes+1)]
+                        rownames(flow_matrix_lna) <- paste0(sapply(rate_fcns, "[[", "from"),"2",
+                                                            sapply(rate_fcns, "[[", "to"))
+
                         incidence_codes_lna <- if(nrow(flow_matrix) == 1) {
                                         0
                                 } else {
                                         which(sapply(rate_fcns, "[[", "incidence")) - 1
                                 }
+                        names(incidence_codes_lna) <- rownames(flow_matrix_lna)[incidence_codes_lna + 1]
+
                 } else {
                         flow_matrix_lna       <- flow_matrix
+                        rownames(flow_matrix_lna) <- paste0(sapply(rate_fcns, "[[", "from"),"2",
+                                                            sapply(rate_fcns, "[[", "to"))
                         incidence_codes_lna   <- NULL
                 }
 
                 # odeintr rates and pointers, done on the event counts
                 # first translate the rates into rates on the counting processes
-                lna_rates <- rate_fcns_4_lna(rate_fcns = rate_fcns, compartment_codes = compartment_codes, flow_matrix = flow_matrix_lna)
+                lna_rates <- rate_fcns_4_lna(rate_fcns = rate_fcns,
+                                             compartment_codes = compartment_codes,
+                                             flow_matrix = flow_matrix_lna)
 
-                lna_comp_codes <- lna_rates$lna_comp_codes
-                lna_rates      <- lna_rates$lna_rates
+                lna_comp_codes  <- lna_rates$lna_comp_codes
+                lna_rates       <- lna_rates$lna_rates
 
-                lna_rates      <- parse_lna_rates(lna_rates = lna_rates, param_codes = param_codes, const_codes = const_codes,
-                                                  tcovar_codes = tcovar_codes, lna_comp_codes = lna_comp_codes, lna_scale = lna_scale)
+                lna_rates       <- parse_lna_rates(lna_rates = lna_rates, param_codes = param_codes,
+                                                  const_codes = const_codes, tcovar_codes = tcovar_codes,
+                                                  lna_comp_codes = lna_comp_codes)
 
-                lna_pointer    <- load_lna(lna_rates = lna_rates, lna_scale = lna_scale, messages = messages)
+                # compile the LNA functions
+                lna_pointer     <- load_lna(lna_rates = lna_rates, messages = messages)
+                lna_pointer_ess <- load_lna_ess(lna_rates = lna_rates, messages = messages)
+
+                lna_pointers    <- list(lna_pointer      = lna_pointer$lna_ptr,
+                                        lna_pointer_ess  = lna_pointer_ess$lna_ess_ptr,
+                                        lna_set_pars_ptr = lna_pointer$set_lna_params_ptr,
+                                        lna_code         = lna_pointer$LNA_code,
+                                        lna_ess_code     = lna_pointer_ess$LNA_ess_code)
 
                 # get the C++ indices for the initial distribution parameters in the lna_pars matrix
-                lna_initdist_inds <- sapply(paste0(names(compartment_codes), "_0"), grep, names(lna_rates$lna_param_codes)) - 1
-
-                # commands for using deSolve
-                # lna_rates    <- build_lna_fcns(rate_fcns = rate_fcns, param_codes = param_codes, const_codes = const_codes,
-                #                                tcovar_codes = tcovar_codes, compartment_codes = c(compartment_codes, incidence_codes),
-                #                                flow_matrix = flow_matrix, lna_scale = lna_scale)
-                # lna_pointer  <- compile_lna(lna_rates, flow_matrix, lna_scale, messages = messages)
-                # lna_pointer  <- c(lna_pointer, compile_lna_ess(lna_rates, flow_matrix, lna_scale, messages = messages))
-
-                # commands for doing this with the 'odeintr' package. suffers from stiffness of
-                # the ODEs and lack of numerical approximation of the Jacobian
-                # lna_rates    <- build_lna_odes(rate_fcns = rate_fcns, param_codes = param_codes, const_codes = const_codes,
-                #                                 tcovar_codes = tcovar_codes, compartment_codes = c(compartment_codes, incidence_codes),
-                #                                flow_matrix = flow_matrix, lna_scale = lna_scale)
-                # lna_pointers <- parse_lna_odes(lna_rates, flow_matrix, lna_scale, messages = messages)
+                lna_initdist_inds <- sapply(paste0(names(compartment_codes), "_0"),
+                                            grep, names(lna_rates$lna_param_codes)) - 1
         } else {
                 lna_pointer  <- NULL
                 lna_rates    <- list(hazards = NULL, derivatives = NULL, lna_param_codes = NULL)
@@ -742,8 +739,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, ln
                          lna_initdist_inds   = lna_initdist_inds,
                          incidence_codes_lna = incidence_codes_lna,
                          lna_rates           = lna_rates,
-                         lna_scale           = lna_scale,
-                         lna_pointer         = lna_pointer,
+                         lna_pointers        = lna_pointers,
                          ode_pointer         = ode_pointer,
                          ode_hazards         = ode_rates$ode_hazards,
                          strata_sizes        = strata_sizes,

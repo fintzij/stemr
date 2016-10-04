@@ -4,37 +4,21 @@
 \alias{initialize_lna}
 \title{Initialize the latent LNA path}
 \usage{
-initialize_lna(lna_parameters, stoich_matrix, lna_pointer, lna_times,
-  initdist_parameters, fixed_inits, param_update_inds, drift_inds, resid_inds,
-  diff_inds, log_scale, incidence_codes, data, measproc_indmat, obstime_inds,
-  d_meas_pointer, parameters, constants, tcovar_censmat,
-  initialization_attempts)
+initialize_lna(lna_parameters, flow_matrix, lna_pointer, lna_set_pars_pointer,
+  lna_times, fixed_inits, param_update_inds, incidence_codes, data,
+  measproc_indmat, obstime_inds, d_meas_pointer, parameters, constants,
+  tcovar_censmat, initialization_attempts)
 }
 \arguments{
-\item{stoich_matrix}{the stoichiometry matrix, i.e. the transpose of the flow
-matrix.}
+\item{flow_matrix}{original flow matrix giving the changes to compartments
+from each reaction}
 
-\item{lna_pointer}{external pointer to the LNA function}
+\item{lna_pointer}{external pointer to LNA integration fcn}
 
-\item{initdist_parameters}{vector of parameters for the initial state}
-
-\item{fixed_inits}{is the initial state fixed or random?}
+\item{lna_times}{vector of times at which the LNA must be evaluated}
 
 \item{param_update_inds}{logical vector indicating at which of the times the
 LNA parameters need to be updated.}
-
-\item{drift_inds}{vector of indices corresponding to the drift process within
-the vector holding the ODEs}
-
-\item{resid_inds}{vector of indices corresponding to the residual process
-within the vector holding the ODEs}
-
-\item{diff_inds}{vector of indices corresponding to the diffusion process
-within the vector holding the ODEs}
-
-\item{log_scale}{logical}
-
-\item{incidence_codes}{vector of incidence codes}
 
 \item{data}{matrix containing the data}
 
@@ -52,6 +36,8 @@ variable is recorded}
 \item{tcovar_censmat}{time-varying covariates at observation times}
 
 \item{initialization_attempts}{maximum number of initialization attempts}
+
+\item{incidence_codes_lna}{vector of incidence codes}
 }
 \value{
 list containing an initial latent path along with the ODEs

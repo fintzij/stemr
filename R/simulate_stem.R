@@ -269,123 +269,47 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                         lna_pars[, tcovar_inds] <- stem_object$dynamics$.dynamics_args$tcovar[tcovar_rowinds,-1]
                 }
 
-                # generate the initial values - in the odeintr implementation
-                # these are parameters or constants and thus already in the
-                # lna_pars matrix                 # if(stem_object$dynamics$fixed_inits) {
-                #
-                #         if(stem_object$dynamics$n_strata == 1) {
-                #                 param_inds     <- stem_object$dynamics$state_initializer$param_inds
-                #                 initdist_codes <- stem_object$dynamics$state_initializer$codes
-                #         } else {
-                #                 param_inds     <- unlist(lapply(stem_object$dynamics$state_initializer, function(x) x$param_inds))
-                #                 initdist_codes <- unlist(lapply(stem_object$dynamics$state_initializer, function(x) x$codes))
-                #         }
-                #
-                #         # if all initial states are fixed, just copy the initial compartment counts
-                #         init_states <- matrix(rep(stem_object$dynamics$initdist_params[param_inds], nsim), nrow = nsim, byrow = TRUE)[,order(initdist_codes), drop = FALSE]
-                #         colnames(init_states) <- names(stem_object$dynamics$comp_codes)
-                #
-                # } else {
-                #         if(stem_object$dynamics$n_strata == 1) {
-                #
-                #                 # simulate the initial compartment counts
-                #                 # init_states <- t(as.matrix(rmultinom(nsim, stem_object$dynamics$popsize, stem_object$dynamics$initdist_params)))
-                #                 init_probs <- stem_object$dynamics$initdist_params / sum(stem_object$dynamics$initdist_params)
-                #                 init_states <- as.matrix(mvtnorm::rmvnorm(nsim,
-                #                                               stem_object$dynamics$initdist_params,
-                #                                               stem_object$dynamics$popsize * outer(init_probs, init_probs),
-                #                                               method = "svd"))
-                #
-                #                 while(any(init_states < 0)) {
-                #                         init_states <- as.matrix(mvtnorm::rmvnorm(nsim,
-                #                                                       stem_object$dynamics$initdist_params,
-                #                                                       stem_object$dynamics$popsize * outer(init_probs, init_probs),
-                #                                                       method = "svd"))
-                #                 }
-                #
-                #                 colnames(init_states) <- names(stem_object$dynamics$comp_codes)
-                #
-                #         } else if(stem_object$dynamics$n_strata > 1) {
-                #
-                #                 # generate the matrix of initial compartment counts
-                #                 init_states <- matrix(0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
-                #                 colnames(init_states) <- c(names(stem_object$dynamics$comp_codes))
-                #
-                #                 for(s in seq_len(stem_object$dynamics$n_strata)) {
-                #                         init_probs <- stem_object$dynamics$state_initializer[[s]]$init_states / sum(stem_object$dynamics$state_initializer[[s]]$init_states)
-                #                         init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <-
-                #                                 as.matrix(mvtnorm::rmvnorm(nsim,
-                #                                                stem_object$dynamics$strata_sizes[s] * init_probs,
-                #                                                stem_object$dynamics$strata_sizes[s] * outer(init_probs, init_probs),
-                #                                                method = "svd"))
-                #
-                #                         while(any(init_states[,stem_object$dynamics$state_initializer[[s]]$codes] < 0)) {
-                #                                 init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <-
-                #                                         as.matrix(mvtnorm::rmvnorm(nsim,
-                #                                                        stem_object$dynamics$strata_sizes[s] * init_probs,
-                #                                                        stem_object$dynamics$strata_sizes[s] * outer(init_probs, init_probs),
-                #                                                        method = "svd"))
-                #                         }
-                #                         # init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <- as.matrix(t(rmultinom(nsim, stem_object$dynamics$strata_sizes[s], stem_object$dynamics$state_initializer[[s]]$init_states)))
-                #                 }
-                #         }
-                # }
-                #
-                # # if there are artificial incidence compartments, copy the
-                # # incidence counts and add them to the initial state matrix
-                # if(!is.null(stem_object$dynamics$incidence_codes)) {
-                #         init_incid <- init_states[, stem_object$dynamics$incidence_sources + 1, drop = FALSE]
-                #         # init_incid <- matrix(0, nrow = nrow(init_states), ncol = length(stem_object$dynamics$incidence_codes))
-                #         colnames(init_incid) <- names(stem_object$dynamics$incidence_codes)
-                #         init_states <- cbind(init_states, init_incid)
-                #         # init_states[,stem_object$dynamics$incidence_codes + 1] <-
-                #         #         init_states[, stem_object$dynamics$incidence_sources + 1, drop = FALSE]
-                #         lna_incidence_codes <- stem_object$dynamics$incidence_codes + 2 # add 1 b/c of the time column and change from C++ to R indexing
-                # } else {
-                #         lna_incidence_codes <- 0
-                # }
-                #
-                # # if the LNA is on the log scale, log transform the initial states after adding a bit of noise
-                # if(stem_object$dynamics$lna_scale == "log") {
-                #         if(any(init_states == 0) & messages) warning("Initializing a compartment count on the log-scale with a count of less than 1 leads to numerical instability. The count will be re-initialized at 1.")
-                #         init_states[which(init_states < 1)] <- 1
-                #         init_states <- log(init_states)
-                # }
-
                 # generate some auxilliary objects
                 param_update_inds <- is.na(match(lna_times, census_times))
 
                 # simulate the LNA paths
                 census_paths <- vector(mode = "list", length = nsim)
+                lna_paths    <- vector(mode = "list", length = nsim)
+
+                # set the initial state if it is fixed
+                if(stem_object$dynamics$fixed_inits) {
+                        init_state <- lna_pars[1, stem_object$dynamics$lna_initdist_inds + 1]
+                }
 
                 for(k in seq_len(nsim)) {
+
+                        if(!stem_object$dynamics$fixed_inits) {
+                               stop("Non-fixed initial state not yet implemented for the LNA.")
+                        }
+
                         census_paths[[k]] <- propose_lna(lna_times,
                                                          lna_pars,
                                                          param_update_inds,
-                                                         stem_object$dynamics$lna_initdist_inds,
                                                          stem_object$dynamics$flow_matrix_lna,
-                                                         stem_object$dynamics$fixed_inits,
-                                                         stem_object$dynamics$lna_scale == "log",
-                                                         stem_object$dynamics$lna_pointer$lna_ptr,
-                                                         stem_object$dynamics$lna_pointer$set_lna_params_ptr)$path
-                }
-                census_paths <- simulate_lna(nsim             = nsim,
-                                             lna_times        = lna_times,
-                                             census_times     = census_times,
-                                             census_inds      = census_inds,
-                                             lna_pars         = lna_pars,
-                                             init_states      = init_states,
-                                             incidence_codes  = lna_incidence_codes,
-                                             log_scale        = stem_object$dynamics$lna_scale == "log",
-                                             flow_matrix      = stem_object$dynamics$flow_matrix,
-                                             lna_pointer      = stem_object$dynamics$lna_pointer$lna_ptr)
+                                                         stem_object$dynamics$lna_pointers$lna_pointer,
+                                                         stem_object$dynamics$lna_pointers$lna_set_pars_ptr)$lna_path
 
-                colnames(census_paths) <- c("time", colnames(stem_object$dynamics$flow_matrix))
+                        lna_paths[[k]] <- convert_lna(census_paths[[k]],
+                                                      stem_object$dynamics$flow_matrix_lna,
+                                                      init_state)
+                }
+
+                census_paths <- array(unlist(census_paths),
+                                      dim = c(nrow(census_paths[[1]]), ncol(census_paths[[1]]), nsim))
+
+                colnames(census_paths) <- c("time", rownames(stem_object$dynamics$flow_matrix_lna))
         }
 
         if(observations) {
                 datasets         <- vector(mode = "list", length = nsim) # list for storing the datasets
-                already_censused <- !is.null(census_times) && identical(stem_object$measurement_process$obstimes, census_times)
+                already_censused <- !is.null(census_times) &&
+                        identical(stem_object$measurement_process$obstimes, census_times) &&
+                        !is.null(stem_object$dynamics$incidence_codes)
                 measvar_names    <- colnames(stem_object$measurement_process$obsmat)
 
                 # grab the time-varying covariate values at observation times
@@ -395,10 +319,6 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 colnames(tcovar_obstimes) <- colnames(stem_object$dynamics$tcovar)
 
                 if(already_censused) {
-
-                        if(method == "lna" && lna_scale == "log") {
-                                census_paths[,-1,] <- exp(census_paths[,-1,, drop = F])
-                        }
 
                         for(k in seq_len(nsim)) {
                                 if(paths_as_array || method == "lna") {
@@ -423,27 +343,53 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
 
                 } else if(!already_censused) {
 
-                        censusmat       <- stem_object$measurement_process$censusmat
-                        census_codes    <- c(stem_object$dynamics$comp_codes, stem_object$dynamics$incidence_codes) + 2
+                        if(method == "gillespie") {
+                                # should incidence be computed?
+                                get_incidence   <- !is.null(stem_object$dynamics$incidence_codes)
+                                if(get_incidence) incidence_codes <- stem_object$dynamics$incidence_codes + 1
 
-                        get_incidence   <- !is.null(stem_object$dynamics$incidence_codes)
+                                # column codes in the path matrix for compartments to be censused
+                                census_codes    <- c(stem_object$dynamics$comp_codes,
+                                                     stem_object$dynamics$incidence_codes) + 2
+                                censusmat       <- stem_object$measurement_process$censusmat
 
-                        if(get_incidence) incidence_codes <- stem_object$dynamics$incidence_codes + 1
+                        } else {
+                                # should incidence be computed?
+                                get_incidence   <- !is.null(stem_object$dynamics$incidence_codes_lna)
+                                if(get_incidence) incidence_codes <- stem_object$dynamics$incidence_codes_lna + 1
 
-                        if(method == "lna" && lna_scale == "log") {
-                                census_paths[,-1,] <- exp(census_paths[,-1,, drop = F])
+                                # column codes in the path matrix for compartments to be censused
+                                census_codes    <- c(stem_object$dynamics$lna_comp_codes) + 1
+                                censusmat       <- matrix(0.0, nrow = length(stem_object$measurement_process$obstimes),
+                                                          ncol = length(census_codes) + 1)
+                                censusmat[,1]   <- stem_object$measurement_process$obstimes
+                                colnames(censusmat) <- c("time", rownames(stem_object$dynamics$flow_matrix_lna))
                         }
 
                         for(k in seq_len(nsim)) {
 
                                 if(paths_as_array || !is.null(census_times) || method == "lna") {
-                                        cens_inds <- findInterval(stem_object$measurement_process$obstimes, census_paths[,1,k])
+                                        # get the state at the observation times
+                                        cens_inds <- findInterval(stem_object$measurement_process$obstimes,
+                                                                  census_paths[,1,k])
+
+                                        # fill out the census matrix
                                         censusmat[,-1] <- census_paths[cens_inds, -1, k]
 
+                                        # compute the incidence if appropriate
+                                        if(get_incidence) compute_incidence(censusmat = censusmat,
+                                                                            col_inds = incidence_codes,
+                                                                            row_inds =  stem_object$measurement_process$obstime_inds)
+
                                 } else {
-                                        cens_inds <- findInterval(stem_object$measurement_process$obstimes, paths_full[[k]][,1])
+                                        # get the state at the observation times
+                                        cens_inds <- findInterval(stem_object$measurement_process$obstimes,
+                                                                  paths_full[[k]][,1])
+
+                                        # fill out the census matrix
                                         censusmat[,-1] <- paths_full[[k]][cens_inds, census_codes + 1]
 
+                                        # compute the incidence if appropriate
                                         if(get_incidence) compute_incidence(censusmat = censusmat,
                                                                             col_inds = incidence_codes,
                                                                             row_inds =  stem_object$measurement_process$obstime_inds)
@@ -465,16 +411,26 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 }
         }
 
+        # put the lna paths back in a list if appropriate
         if(method == "lna" && !paths_as_array || (!is.null(census_times) && !paths_as_array)) {
                 census_paths <- lapply(seq_len(nsim), function(x) census_paths[,,x])
         }
 
+
+
         stem_simulations <- list(paths = NULL, datasets = NULL, subject_paths = NULL)
 
-        if(paths & is.null(census_times))  stem_simulations$paths <- paths_full
-        if(paths & !is.null(census_times)) stem_simulations$paths <- census_paths
-        if(observations)  stem_simulations$datasets      <- datasets
-        if(subject_paths) stem_simulations$subject_paths <- subject_paths
+        if(paths & is.null(census_times)) {
+                stem_simulations$paths <- paths_full
+        } else {
+                if(method == "lna") {
+                        stem_simulations$paths <- lna_paths
+                } else {
+                        stem_simulations$paths <- census_paths
+                }
+        }
+        if(observations)                   stem_simulations$datasets      <- datasets
+        if(subject_paths)                  stem_simulations$subject_paths <- subject_paths
 
         return(stem_simulations)
 }

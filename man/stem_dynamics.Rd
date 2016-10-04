@@ -5,8 +5,8 @@
 \title{Generate the objects governing the dynamics of a stochastic epidemic model.}
 \usage{
 stem_dynamics(rates, parameters, state_initializer, compartments,
-  lna_scale = "log", tcovar = NULL, t0 = 0, tmax, timestep = NULL,
-  strata = NULL, constants = NULL, adjacency = NULL, messages = TRUE,
+  tcovar = NULL, t0 = 0, tmax, timestep = NULL, strata = NULL,
+  constants = NULL, adjacency = NULL, messages = TRUE,
   compile_rates = TRUE, compile_lna = TRUE, compile_ode = FALSE)
 }
 \arguments{
@@ -26,10 +26,6 @@ single stratum, or if there are multiple strata a list of character vectors
 where the name of each character vector is the compartment name and the
 character vector lists the strata to in which the compartment exists. The
 reserved word "ALL" can be used instead of listing all strata.}
-
-\item{lna_scale}{either 'log' (default) or 'linear' if the SDE approximated
-by the LNA is modeled on the log scale or the linear scale. Log
-transforming the SDE removes the positivity constraint on the state space.}
 
 \item{tcovar}{Matrix or data frame of time varying covariates, the first
 column of which contains the times at which covariates change.}

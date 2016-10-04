@@ -5,7 +5,7 @@
 \title{Parse the LNA rates so they can be compiled.}
 \usage{
 parse_lna_rates(lna_rates, param_codes, const_codes, tcovar_codes,
-  lna_comp_codes, lna_scale)
+  lna_comp_codes)
 }
 \arguments{
 \item{lna_rates}{character vector of LNA rates}
@@ -17,8 +17,6 @@ parse_lna_rates(lna_rates, param_codes, const_codes, tcovar_codes,
 \item{tcovar_codes}{named numeric vector of time-varying covariate codes}
 
 \item{lna_comp_codes}{named numeric vector of LNA compartment codes}
-
-\item{lna_scale}{either "log" or "linear"}
 }
 \value{
 string snippets for the LNA that can be compiled
