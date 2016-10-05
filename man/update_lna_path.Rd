@@ -4,13 +4,16 @@
 \alias{update_lna_path}
 \title{Sample a new LNA path via elliptical slice sampling.}
 \usage{
-update_lna_path(path_cur, lna_parameters, stoich_matrix, lna_ess_pointer,
+update_lna_path(path_cur, lna_parameters, flow_matrix, lna_ess_pointer,
   lna_times, lna_initdist_inds, param_update_inds, incidence_codes, data,
   measproc_indmat, obstime_inds, d_meas_pointer, parameters, constants,
   tcovar_censmat, do_census, do_incidence)
 }
 \arguments{
 \item{path_cur}{list with the current LNA path along with its moments}
+
+\item{flow_matrix}{original flow matrix giving the changes to compartments
+from each reaction}
 
 \item{lna_times}{vector of times at which the LNA must be evaluated}
 

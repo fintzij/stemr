@@ -8,7 +8,7 @@
 #' @return list with an updated LNA path along with its ODEs, the observed data
 #'   log-likelihood, and the lna log-likelihood.
 #' @export
-update_lna_path <- function(path_cur, lna_parameters, stoich_matrix, lna_ess_pointer, lna_times, lna_initdist_inds, param_update_inds, incidence_codes, data, measproc_indmat, obstime_inds, d_meas_pointer, parameters, constants, tcovar_censmat, do_census, do_incidence) {
+update_lna_path <- function(path_cur, lna_parameters, flow_matrix, lna_ess_pointer, lna_times, lna_initdist_inds, param_update_inds, incidence_codes, data, measproc_indmat, obstime_inds, d_meas_pointer, parameters, constants, tcovar_censmat, do_census, do_incidence) {
 
         # matrix in which to store the emission probabilities
         emitmat     <- matrix(0.0, nrow = nrow(measproc_indmat), ncol = ncol(measproc_indmat)+1,
@@ -81,7 +81,7 @@ update_lna_path <- function(path_cur, lna_parameters, stoich_matrix, lna_ess_poi
         if(is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
 
         # accept or reject the proposal
-        while((data_log_lik_prop < threshold) && (lower != upper)) {
+        while((data_log_lik_prop < threshold) && (abs(upper - lower)>.Machine$double.eps)) {
 
                 # shrink the bracket
                 if(theta < 0) {

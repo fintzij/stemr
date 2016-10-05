@@ -167,42 +167,24 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernels, 
                 }
 
                 # update the path via elliptical slice sampling
-                path <- update_lna_path(path_cur            = path,
-                                        lna_parameters      = lna_parameters,
-                                        stoich_matrix       = stoich_matrix,
-                                        lna_ess_pointer     = lna_ess_pointer,
-                                        lna_times           = lna_times,
-                                        lna_initdist_inds   = lna_initdist_inds,
-                                        fixed_inits         = fixed_inits,
-                                        param_update_inds   = param_update_inds,
-                                        drift_inds          = drift_inds,
-                                        resid_inds          = resid_inds,
-                                        incidence_codes     = incidence_codes,
-                                        data                = data,
-                                        measproc_indmat     = measproc_indmat,
-                                        obstime_inds        = obstime_inds,
-                                        d_meas_pointer      = d_meas_pointer,
-                                        parameters          = parameters,
-                                        constants           = constants,
-                                        tcovar_censmat      = tcovar_censmat,
-                                        do_census           = do_census,
-                                        do_incidence        = do_incidence)
+                path <- update_lna_path(path_cur          = path,
+                                        lna_parameters    = lna_parameters,
+                                        flow_matrix       = flow_matrix,
+                                        lna_ess_pointer   = lna_ess_pointer,
+                                        lna_times         = lna_times,
+                                        lna_initdist_inds = lna_initdist_inds,
+                                        param_update_inds = param_update_inds,
+                                        incidence_codes   = incidence_codes,
+                                        data              = data,
+                                        measproc_indmat   = measproc_indmat,
+                                        obstime_inds      = obstime_inds,
+                                        d_meas_pointer    = d_meas_pointer,
+                                        parameters        = parameters,
+                                        constants         = constants,
+                                        tcovar_censmat    = tcovar_censmat,
+                                        do_census         = do_census,
+                                        do_incidence      = do_incidence)
 
-                compute_lna_density(path = path$path, fixed_inits = fixed_inits,
-                                    log_scale = log_scale, incidence_codes = incidence_codes)
-
-                compute_lna_density2(path              = path$path,
-                                     parameters        = lna_parameters,
-                                     stoich_matrix     = stoich_matrix,
-                                     lna_pointer       = lna_pointer,
-                                     times             = lna_times,
-                                     param_update_inds = param_update_inds,
-                                     drift_inds        = drift_inds,
-                                     resid_inds        = resid_inds,
-                                     diff_inds         = diff_inds,
-                                     log_scale         = log_scale,
-                                     incidence_codes   = incidence_codes,
-                                     fixed_inits       = fixed_inits)
         }
 
 }
