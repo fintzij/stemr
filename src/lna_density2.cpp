@@ -46,6 +46,7 @@ Rcpp::List lna_density2(const Rcpp::List& path, const arma::colvec& lna_times, c
 
         // initialize the LNA objects - the vector for storing the ODES, the state vector, and the Jacobian
         Rcpp::NumericVector lna_state_vec(n_odes);        // vector to store the results of the ODEs
+        arma::rowvec res_vec(n_comps);                    // vector to store the results of the ODEs
         arma::mat lna_path           = path["lna_path"];  // path
         arma::mat residual_path      = path["res_path"];  // residual path
         arma::mat drift_process      = path["drift"];     // drift process
@@ -55,6 +56,7 @@ Rcpp::List lna_density2(const Rcpp::List& path, const arma::colvec& lna_times, c
 
         // indices at which the residual and diffusion elements of lna_state vec start
         int resid_start = n_comps;
+        int resid_end   = 2*n_comps - 1;
 
         // initialize the LNA log likelihood
         double lna_log_lik = 0;
@@ -76,9 +78,7 @@ Rcpp::List lna_density2(const Rcpp::List& path, const arma::colvec& lna_times, c
                 CALL_INTEGRATE_STEM_LNA(lna_state_vec, t_L, t_R, 1.0, lna_pointer_ess);
 
                 // transfer the elements of the lna_state_vec to the process objects
-                for(int k=0; k < n_comps; ++k) {
-                        residual_process(j, k) = lna_state_vec[k+n_comps];
-                }
+                residual_process.row(j) = Rcpp::as<arma::rowvec>(lna_state_vec).subvec(resid_start, resid_end);
 
                 // sample the next state
                 lna_log_lik += dmvtn(residual_path(j, arma::span(1, n_comps)),
@@ -86,9 +86,12 @@ Rcpp::List lna_density2(const Rcpp::List& path, const arma::colvec& lna_times, c
                                      diffusion_process.slice(j), true)[0];
 
                 // copy the current value of the residual path to the LNA state vector
-                for(int s=0; s < n_comps; ++s) {
-                        lna_state_vec[resid_start + s] = residual_path(j, s+1);
-                }
+                res_vec = residual_path(j, arma::span(1, n_comps));
+                std::copy(res_vec.begin(), res_vec.end(), lna_state_vec.begin() + resid_start);
+
+                // for(int i=0; i < n_comps; ++i) {
+                //         lna_state_vec[resid_start + i] = residual_path(j, 1 + i);
+                // }
         }
 
         // return the paths

@@ -21,7 +21,49 @@ sim_num <- as.numeric(args[1])
 
 # Set up simulation objects ----------------------------------------------------------------
 
-niter <- 100; census_times <- seq(0,52,by=0.1)
+niter <- 100; census_times <- seq(0,52,by=1)
+
+# test gillespie simulation for large population
+compartments <- c("S","I","R")
+rates <- list(rate("beta * I", "S", "I", incidence = TRUE),
+              rate("mu", "I", "R"))
+init_state = c(S = 500, I = 10, R = 50)
+state_initializer <- stem_initializer(c(S = 50000, I = 10, R = 50), fixed = T)
+parameters <- c(beta = 0.001, mu = 1/7, rho = 0.5)
+tcovar <- NULL
+constants <- NULL
+strata <- NULL
+t0 <- 0; tmax <- 52
+timestep <- NULL
+adjacency <- NULL
+messages <- T
+census_times = 0:tmax
+
+# compile dynamics
+dynamics <- stem_dynamics(rates = rates, parameters = parameters, tmax = tmax, state_initializer = state_initializer, compartments=compartments, strata = strata, tcovar = tcovar, messages = TRUE, compile_ode = F, compile_rates = T)
+
+stem_object <- stem(dynamics = dynamics)
+
+stemr_trajecs <-
+        simulate_stem(
+                stem_object = stem_object,
+                method = "gillespie",
+                paths = TRUE,
+                observations = F,
+                tmax = tmax,
+                nsim = niter,
+                census_times = 0:tmax
+        )$paths
+
+# Set up GillespieSSA objects
+gillespie_initstate <- c(infections = 1, recoveries = 0)
+gillespie_params <- c(beta = 0.001, mu = 1/7, initsusc = 500, initinfecs = 10)
+a = c("beta*(initsusc - infections)*(initinfecs + infections - recoveries)", "mu*(initinfecs + infections - recoveries)")
+nu <- diag(1,2)
+
+gSSA_sim <- ssa(gillespie_initstate, a, nu, gillespie_params, tf = tmax, censusInterval = 1)$data
+gSSA_traj <- build_census_path(gSSA_sim, census_times, 1:2)
+
 
 if(sim_num == 1){
 

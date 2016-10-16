@@ -2,47 +2,71 @@
 % Please edit documentation in R/initialize_lna.R
 \name{initialize_lna}
 \alias{initialize_lna}
-\title{Initialize the latent LNA path}
+\title{Initialize the LNA path}
 \usage{
-initialize_lna(lna_parameters, flow_matrix, lna_pointer, lna_set_pars_pointer,
-  lna_times, fixed_inits, param_update_inds, incidence_codes, data,
+initialize_lna(data, lna_parameters, censusmat, emitmat, flow_matrix,
+  lna_pointer, lna_set_pars_pointer, lna_times, lna_initdist_inds,
+  param_update_inds, incidence_codes, census_incidence_codes, census_indices,
   measproc_indmat, obstime_inds, d_meas_pointer, parameters, constants,
-  tcovar_censmat, initialization_attempts)
+  tcovar_censmat, do_prevalence, do_incidence, initialization_attempts)
 }
 \arguments{
-\item{flow_matrix}{original flow matrix giving the changes to compartments
-from each reaction}
+\item{data}{matrix containing the dataset}
 
-\item{lna_pointer}{external pointer to LNA integration fcn}
+\item{lna_parameters}{parameters, contants, time-varying covariates at LNA
+times}
 
-\item{lna_times}{vector of times at which the LNA must be evaluated}
+\item{censusmat}{template matrix for the LNA path and incidence at the
+observation times}
 
-\item{param_update_inds}{logical vector indicating at which of the times the
-LNA parameters need to be updated.}
+\item{emitmat}{matrix in which to store the log-emission probabilities}
 
-\item{data}{matrix containing the data}
+\item{flow_matrix}{LNA flow matrix (no incidence)}
 
-\item{measproc_indmat}{matrix indicating which compartments are measured}
+\item{lna_pointer}{external LNA pointer}
 
-\item{obstime_inds}{list of indices indicating at which rows each measured
-variable is recorded}
+\item{lna_set_pars_pointer}{pointer for setting the LNA parameters}
 
-\item{d_meas_pointer}{external pointer to density function}
+\item{lna_times}{times at whicht eh LNA should be evaluated}
+
+\item{lna_initdist_inds}{C++ column indices in the LNA parameter matrix for
+the initial state}
+
+\item{param_update_inds}{logical vector indicating when to update the
+parameters}
+
+\item{incidence_codes}{C++ indices for LNA count process compartments for
+which incidence is to be computed}
+
+\item{census_incidence_codes}{C++ indices for columns in the census matrix
+containing incidence data}
+
+\item{census_indices}{C++ row indices of LNA times when the path is to be
+censused}
+
+\item{measproc_indmat}{logical matrix for evaluating the measuement process}
+
+\item{obstime_inds}{list of C++ indices indicating when each measurement
+process is evaluated}
+
+\item{d_meas_pointer}{external pointer for the measurement process function}
 
 \item{parameters}{vector of model parameters}
 
-\item{constants}{vector of constants}
+\item{constants}{vector of model constants}
 
-\item{tcovar_censmat}{time-varying covariates at observation times}
+\item{tcovar_censmat}{time-varying covariates at LNA times}
 
-\item{initialization_attempts}{maximum number of initialization attempts}
+\item{do_prevalence}{should prevalence be computed?}
 
-\item{incidence_codes_lna}{vector of incidence codes}
+\item{do_incidence}{should incidence be computed?}
+
+\item{initialization_attempts}{number of initialization attempts}
 }
 \value{
-list containing an initial latent path along with the ODEs
+LNA path along with paths of its ODEs and its data log-likelihood
 }
 \description{
-Initialize the latent LNA path
+Initialize the LNA path
 }
 

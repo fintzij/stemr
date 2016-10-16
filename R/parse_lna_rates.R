@@ -12,7 +12,7 @@ parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, l
 
         lna_param_codes <- c(param_codes, const_codes + length(param_codes), tcovar_codes + length(param_codes) + length(const_codes)-1)
 
-        lookup_table <- data.frame(varname     = c(paste("pars[", lna_param_codes, "]", sep = ""),
+        lookup_table <- data.frame(varname     = c(paste("odeintr::pars[", lna_param_codes, "]", sep = ""),
                                                    paste("x[", lna_comp_codes, "]", sep = "")),
                                    search_name = c(names(param_codes),
                                                    names(const_codes),

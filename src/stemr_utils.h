@@ -26,7 +26,7 @@ void CALL_R_MEASURE(Rcpp::NumericMatrix& obsmat, const Rcpp::LogicalVector& emit
 // integrate the LNA odes, call via XPtr
 Rcpp::List CALL_COMPUTE_LNA(double t, arma::vec& state, Rcpp::List& parms);
 
-// Rcpp::NumericVector CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr);
+// Rcpp::NumericVector CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector init, double start, double end, double step_size, SEXP lna_ode_ptr);
 void CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr);
 
 // set the LNA parameters, call via XPtr
@@ -51,11 +51,14 @@ Rcpp::NumericMatrix simulate_r_measure(const Rcpp::NumericMatrix& censusmat, con
 // build a census matrix with compartment counts at observation times
 arma::mat build_census_path(Rcpp::NumericMatrix& path, Rcpp::NumericVector& census_times, Rcpp::IntegerVector& census_columns);
 
+// census the lna path matrix, possibly computing prevalence and filling out cumulative incidence
+void census_lna(const arma::mat& path, arma::mat& census_path, const arma::uvec& census_inds, const arma::mat& flow_matrix_lna, bool do_prevalence,  const arma::rowvec& init_state, const arma::vec& incidence_codes_lna);
+
 // update a census matrix with compartment counts at observation times
 void retrieve_census_path(arma::mat& cencusmat, Rcpp::NumericMatrix& path, Rcpp::NumericVector& census_times, Rcpp::IntegerVector& census_columns);
 
 // update the incidence in an existing census matrix
-void compute_incidence(arma::mat& censusmat, arma::uvec col_inds);
+void compute_incidence(arma::mat& censusmat, arma::uvec& col_inds, Rcpp::List& row_inds);
 
 // find the intervals for a vector
 Rcpp::IntegerVector find_interval(Rcpp::NumericVector& x, Rcpp::NumericVector& breaks, bool rightmost_closed, bool all_inside);

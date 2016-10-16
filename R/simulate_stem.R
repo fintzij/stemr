@@ -151,8 +151,6 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                         init_states <- cbind(init_states, init_incid)
                 }
 
-
-
                 # guess the initial dimensions. need an extra column for event times and another for event IDs.
                 if(stem_object$dynamics$progressive & any(stem_object$dynamics$absorbing_states)) {
                         if(stem_object$dynamics$n_strata == 1) {
@@ -208,7 +206,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                                                        names(stem_object$dynamics$incidence_codes)))
 
                         # add 2 to the codes b/c 'time' and 'event' are in the full path
-                        census_codes      <- c(stem_object$dynamics$comp_codes, stem_object$dynamics$incidence_codes) + 2
+                        census_codes  <- c(stem_object$dynamics$comp_codes, stem_object$dynamics$incidence_codes) + 2
                         get_incidence <- !is.null(stem_object$dynamics$incidence_codes)
 
                         if(get_incidence) {
@@ -232,7 +230,8 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
 
                                 # get the census path
                                 census_paths[[k]] <- build_census_path(path = path_full,
-                                                                       census_times = census_times, census_columns = census_codes)
+                                                                       census_times = census_times,
+                                                                       census_columns = census_codes)
 
                                 # compute incidence if required. n.b. add 1 to the incidence codes b/c 'time' is in the census path
                                 if(get_incidence) compute_incidence(censusmat = census_paths[[k]],
@@ -314,8 +313,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 colnames(tcovar_obstimes) <- colnames(stem_object$dynamics$tcovar)
 
                 # if incidence, the incidence codes are not null
-                do_incidence <- !is.null(stem_object$dynamics$incidence_codes) ||
-                        !is.null(stem_object$dynamics$incidence_codes_lna)
+                do_incidence <- !is.null(stem_object$dynamics$incidence_codes)
 
                 # census if computing incidence or if computing prevalence and the obstimes != census_times
                 do_census <- do_incidence || (!is.null(census_times) &&
@@ -333,19 +331,25 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                         censusmat       <- stem_object$measurement_process$censusmat
 
                         for(k in seq_len(nsim)) {
-                                # get the state at the observation times
-                                cens_inds <- findInterval(stem_object$measurement_process$obstimes,
-                                                          paths_full[[k]][,1])
 
-                                # fill out the census matrix
-                                censusmat[,-1] <- paths_full[[k]][cens_inds, census_codes + 1]
+                                if(is.null(census_times)) {
+                                        # get the state at the observation times
+                                        cens_inds <- findInterval(stem_object$measurement_process$obstimes,
+                                                                  paths_full[[k]][,1])
 
-                                # compute the incidence if appropriate
-                                if(get_incidence) compute_incidence(censusmat = censusmat,
-                                                                    col_inds = incidence_codes,
-                                                                    row_inds =  stem_object$measurement_process$obstime_inds)
+                                        # fill out the census matrix
+                                        censusmat[,-1] <- paths_full[[k]][cens_inds, census_codes + 1]
+
+                                        # compute the incidence if appropriate
+                                        if(get_incidence) compute_incidence(censusmat = censusmat,
+                                                                            col_inds = incidence_codes,
+                                                                            row_inds =  stem_object$measurement_process$obstime_inds)
+                                } else {
+                                        censusmat <- census_paths[,,k]
+                                }
+
                                 # simulate the data
-                                datasets[[k]] <- simulate_r_measure(censusmat = censusmat,
+                                datasets[[k]] <- simulate_r_measure(censusmat = censusmat[,-1],
                                                                     measproc_indmat = stem_object$measurement_process$measproc_indmat,
                                                                     parameters = stem_object$dynamics$parameters,
                                                                     constants = stem_object$dynamics$constants,
@@ -362,52 +366,40 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                         constants       <- stem_object$dynamics$parameters
                         tcovar          <- tcovar_obstimes
                         r_measure_ptr   <- stem_object$measurement_process$meas_pointers$r_measure_ptr
-                        cens_inds       <- findInterval(stem_object$measurement_process$obstimes, census_times)
+                        cens_inds       <- findInterval(stem_object$measurement_process$obstimes, census_times) - 1
+                        do_prevalence   <- stem_object$measurement_process$lna_prevalence
+                        do_incidence    <- stem_object$measurement_process$lna_incidence
+                        incidence_codes <- stem_object$measurement_process$incidence_codes_lna
+                        obstime_inds    <- stem_object$measurement_process$obstime_inds
+                        pathmat         <- stem_object$measurement_process$censusmat
+                        flow_matrix_lna <- stem_object$dynamics$flow_matrix_lna
+                        cens_incid_codes<- incidence_codes + ncol(pathmat) - 2
 
-                        if(do_incidence) {
+                        for(k in seq_len(nsim)) {
 
-                                incidence_codes <- stem_object$dynamics$incidence_codes_lna + 1
-                                obstime_inds    <- stem_object$measurement_process$obstime_inds
-                                pathmat         <- matrix(0.0,
-                                                          nrow = length(stem_object$measurement_process$obstimes),
-                                                          ncol = ncol(census_paths))
-                                pathmat[,1]   <- stem_object$measurement_process$obstimes
+                                # fill out the census matrix
+                                census_lna(path                = census_paths[,,k],
+                                           census_path         = pathmat,
+                                           census_inds         = cens_inds,
+                                           flow_matrix_lna     = flow_matrix_lna,
+                                           do_prevalence       = do_prevalence,
+                                           init_state          = init_state,
+                                           incidence_codes_lna = incidence_codes)
 
-                                for(k in seq_len(nsim)) {
-
-                                        # fill out the census matrix
-                                        pathmat[,-1] <- census_paths[cens_inds, -1, k]
-
-                                        # compute incidence
-                                        compute_incidence(pathmat, incidence_codes, obstime_inds)
-
-                                        # simulate the dataset
-                                        datasets[[k]] <- simulate_r_measure(pathmat,
-                                                                            measproc_indmat,
-                                                                            parameters,
-                                                                            constants,
-                                                                            tcovar,
-                                                                            r_measure_ptr)
-                                        colnames(datasets[[k]]) <- measvar_names
+                                if(do_incidence) {
+                                        compute_incidence(censusmat = pathmat,
+                                                          col_inds  = cens_incid_codes,
+                                                          row_inds  = obstime_inds)
                                 }
 
-                        } else if(!do_incidence) {
-
-                                for(k in seq_len(nsim)) {
-                                        if(do_census) {
-                                                pathmat <- lna_paths[[k]][cens_inds,]
-                                        } else {
-                                                pathmat <- lna_paths[[k]]
-                                        }
-
-                                        datasets[[k]] <- simulate_r_measure(pathmat,
-                                                                            measproc_indmat,
-                                                                            parameters,
-                                                                            constants,
-                                                                            tcovar,
-                                                                            r_measure_ptr)
-                                        colnames(datasets[[k]]) <- measvar_names
-                                }
+                                # simulate the dataset
+                                datasets[[k]] <- simulate_r_measure(pathmat,
+                                                                    measproc_indmat,
+                                                                    parameters,
+                                                                    constants,
+                                                                    tcovar,
+                                                                    r_measure_ptr)
+                                colnames(datasets[[k]]) <- measvar_names
                         }
                 }
 

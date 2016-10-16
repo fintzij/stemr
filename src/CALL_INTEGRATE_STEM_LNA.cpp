@@ -11,7 +11,7 @@ using namespace Rcpp;
 //' @param parameters vector of model parameters
 //' @param constants vector of constants
 //' @param vector of time-varying covariate values
-//' @param hazard_ptr external pointer to function used to compute the hazards
+//' @param hazard_ptr external pointer to the LNA functions
 //'
 //' @export
 // [[Rcpp::export]]
@@ -20,5 +20,5 @@ void CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end
         Rcpp::XPtr<lna_ptr> xpfun(lna_ode_ptr); // Receive the SEXP and put in Xptr
         lna_ptr fun = *xpfun;                   // get function via pointer
 
-        fun(init, start, end, step_size);
+        return fun(init, start, end, step_size);
 }

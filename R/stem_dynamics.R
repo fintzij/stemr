@@ -601,12 +601,12 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
         flow_matrix <- build_flowmat(rate_fcns, compartment_names)
 
         # recreate the incidence compartment codes
-        incidence_comps <- grepl("INCIDENCE", colnames(flow_matrix))
+        incidence_comps <- !is.na(match(colnames(flow_matrix), rownames(flow_matrix)))
         incidence_codes <- which(incidence_comps) - 1
         if(length(incidence_codes)) {
                 names(incidence_codes) <- colnames(flow_matrix)[incidence_comps]
-                source_names           <- sapply(names(incidence_codes), gsub, pattern = "_INCIDENCE", replacement = "")
-                incidence_sources      <- compartment_codes[source_names]
+                incidence_sources      <- sapply(names(incidence_codes),
+                                                 function(x) compartment_codes[which(flow_matrix[x,] == -1)])
         } else {
                 incidence_codes   <- NULL
                 incidence_sources <- NULL
@@ -668,19 +668,10 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                         flow_matrix_lna           <- flow_matrix[,-c(incidence_codes+1)]
                         rownames(flow_matrix_lna) <- paste0(sapply(rate_fcns, "[[", "from"),"2",
                                                             sapply(rate_fcns, "[[", "to"))
-
-                        incidence_codes_lna <- if(nrow(flow_matrix) == 1) {
-                                        0
-                                } else {
-                                        which(sapply(rate_fcns, "[[", "incidence")) - 1
-                                }
-                        names(incidence_codes_lna) <- rownames(flow_matrix_lna)[incidence_codes_lna + 1]
-
                 } else {
                         flow_matrix_lna       <- flow_matrix
                         rownames(flow_matrix_lna) <- paste0(sapply(rate_fcns, "[[", "from"),"2",
                                                             sapply(rate_fcns, "[[", "to"))
-                        incidence_codes_lna   <- NULL
                 }
 
                 # odeintr rates and pointers, done on the event counts
@@ -703,6 +694,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 lna_pointers    <- list(lna_pointer      = lna_pointer$lna_ptr,
                                         lna_pointer_ess  = lna_pointer_ess$lna_ess_ptr,
                                         lna_set_pars_ptr = lna_pointer$set_lna_params_ptr,
+                                        lna_ess_set_pars_ptr = lna_pointer_ess$set_lna_ess_params_ptr,
                                         lna_code         = lna_pointer$LNA_code,
                                         lna_ess_code     = lna_pointer_ess$LNA_ess_code)
 
@@ -737,7 +729,6 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                          flow_matrix         = flow_matrix,
                          flow_matrix_lna     = flow_matrix_lna,
                          lna_initdist_inds   = lna_initdist_inds,
-                         incidence_codes_lna = incidence_codes_lna,
                          lna_rates           = lna_rates,
                          lna_pointers        = lna_pointers,
                          ode_pointer         = ode_pointer,

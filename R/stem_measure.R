@@ -5,6 +5,9 @@
 #'   \code{\link{emission}} function.
 #' @param dynamics processed list of objects governing the model dynamics,
 #'   returned by the \code{\link{stem_dynamics}} function.
+#' @param method either "lna" or "bda" depending on whether the measurement
+#'   process is to be compiled for inference with the LNA or with exact Bayesian
+#'   data augmentation.
 #' @param data matrix/data frame, or a list of matrices/data frames. All columns
 #'   must be named according to which compartment_strata are measured. The first
 #'   column must consist of observation times, t_1,...,t_L. If data on all
@@ -16,16 +19,26 @@
 #'   which compartment being measured.
 #' @param messages should compilation messages be printed? defaults to true.
 #'
-#' @return list with evaluated measurement process functions and objects. The list contains the following objects:
-#' \describe{\item{meas_procs}{list of parsed measurement process functions}
-#'           \item{meas_pointers}{external pointers to compiled functions to simulate from and evaluate the density of the measurement process}
-#'           \item{obstimes}{complete vector of observation times}
-#'           \item{obstime_inds}{list of indices (C++) of observation times for each of the measurement variables}
-#'           \item{obsmat}{either a template for an observation matrix, or an observation matrix that combines the supplied list of observation matrices}
-#'           \item{obscomp_codes}{named numeric vector of measurement variable codes}
-#'           \item{measproc_indmat}{indicator matrix for which measurement variables are measured at which observation times}
-#'           \item{meas_inds}{indices (C++) of elements in the observation matrix that correspond to measurements (non-NAs)}
-#'           \item{censusmat}{template matrix for storing the compartment counts at observation times}}
+#' @return list with evaluated measurement process functions and objects. The
+#'   list contains the following objects: \describe{\item{meas_procs}{list of
+#'   parsed measurement process functions} \item{meas_pointers}{external
+#'   pointers to compiled functions to simulate from and evaluate the density of
+#'   the measurement process} \item{obstimes}{complete vector of observation
+#'   times} \item{obstime_inds}{list of indices (C++) of observation times for
+#'   each of the measurement variables} \item{obsmat}{either a template for an
+#'   observation matrix, or an observation matrix that combines the supplied
+#'   list of observation matrices} \item{obscomp_codes}{named numeric vector of
+#'   measurement variable codes} \item{measproc_indmat}{indicator matrix for
+#'   which measurement variables are measured at which observation times}
+#'   \item{meas_inds}{indices (C++) of elements in the observation matrix that
+#'   correspond to measurements (non-NAs)} \item{censusmat}{template matrix for
+#'   storing the compartment counts at observation times}
+#'   \item{tcovar_censmat}{matrix with time-varying coviates censused at
+#'   observation times} \item{lna_prevalence}{indicator for whether prevalence
+#'   is computed in the LNA} \item{lna_incidence}{indicator for whether
+#'   incidence is computed in the LNA} \item{incidence_codes_lna}{C++ column
+#'   indices for LNA count processes on transition events for which incidence is
+#'   to be computed}}
 #' @export
 stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
 
@@ -165,12 +178,14 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
 
                 # make the substitutions for the compartment codes
                 if(meas_procs[[s]]$incidence) {
-                        for(t in seq_along(dynamics$incidence_codes_lna)) {
-                                code_name <- names(dynamics$incidence_codes_lna)[t]
-                                code      <- dynamics$incidence_codes_lna[t] + 1
+
+                        for(t in seq_along(dynamics$incidence_codes)) {
+                                code_name <- names(dynamics$incidence_codes)[t]
+                                code      <- dynamics$incidence_codes[t] + 1
                                 meas_procs[[s]]$emission_params <- sapply(meas_procs[[s]]$emission_params, gsub,
                                                                           pattern = code_name, replacement = paste0("state[",code,"]"))
                         }
+
                 } else {
                         for(t in seq_along(dynamics$comp_codes)) {
                                 code_name <- names(dynamics$comp_codes)[t]
@@ -211,7 +226,8 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
         meas_pointers <- parse_meas_procs(meas_procs, messages = messages)
 
         # initialize a matrix for storing the compartment counts at observation times
-        censusmat <- matrix(0, nrow = length(obstimes), ncol = length(dynamics$comp_codes) + length(dynamics$incidence_codes) + 1)
+        censusmat <- matrix(0.0, nrow = length(obstimes),
+                            ncol = length(dynamics$comp_codes) + length(dynamics$incidence_codes) + 1)
         colnames(censusmat) <- c("time", names(dynamics$comp_codes), names(dynamics$incidence_codes))
         censusmat[,"time"] <- obstimes
 
@@ -221,6 +237,23 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
         # census the time-varying covariates at observation times
         tcovar_censmat <- build_census_path(dynamics$tcovar, obstimes, seq_len(ncol(dynamics$tcovar) - 1))
         colnames(tcovar_censmat) <- colnames(dynamics$tcovar)
+
+        # incidence and prevalence codes for the LNA. if prevalence is required
+        # for any of the measurement processes, compute prevalence (otherwise
+        # leave the entries in the census matrix uninitialized)
+        lna_prevalence <- any(sapply(meas_procs, "[[", "incidence") == FALSE)
+        lna_incidence  <- any(sapply(meas_procs, "[[", "incidence"))
+
+        # identify reactions for which incidence needs to be computed
+        if(lna_incidence) {
+                rate_names <- rownames(dynamics$flow_matrix_lna)
+
+                # C++ column indices of LNA count compartments for which incidence is desired
+                incidence_codes_lna <- which(!is.na(match(rate_names, colnames(censusmat))))
+                names(incidence_codes_lna) <- rate_names[incidence_codes_lna]
+        } else {
+                incidence_codes_lna <- -1
+        }
 
         # generate the measurement process list
         meas_process <- list(data            = data,
@@ -233,7 +266,10 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                              measproc_indmat = measproc_indmat,
                              meas_inds       = meas_inds,
                              censusmat       = censusmat,
-                             tcovar_censmat  = tcovar_censmat)
+                             tcovar_censmat  = tcovar_censmat,
+                             lna_prevalence  = lna_prevalence,
+                             lna_incidence   = lna_incidence,
+                             incidence_codes_lna = incidence_codes_lna)
 
         return(meas_process)
 }

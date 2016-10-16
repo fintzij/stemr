@@ -17,8 +17,11 @@ This test attempts to use the LNA to estimate the posterior distribution of the 
 
 ```{r, include = FALSE, cache = TRUE}
 # number of iterations and objects to store the paths
-iterations        <- 100000
-thin_latent_paths <- 100
+cat("Starting prevalence simulation.", sep = "\n", file = "lna_post_fixedpars.txt", append = FALSE)
+
+iterations       <- 10000
+thin_latent_proc <- 100
+thin_params      <- 1
 
 # set up model
 compartments <- c("S","I","R")
@@ -64,6 +67,7 @@ flow_matrix            <- stem_object$dynamics$flow_matrix_lna
 lna_pointer            <- stem_object$dynamics$lna_pointers$lna_pointer
 lna_pointer_ess        <- stem_object$dynamics$lna_pointers$lna_pointer_ess
 lna_set_pars_pointer   <- stem_object$dynamics$lna_pointers$lna_set_pars_ptr
+censusmat              <- stem_object$measurement_process$censusmat
 parameters             <- stem_object$dynamics$parameters
 constants              <- stem_object$dynamics$constants
 initdist_parameters    <- stem_object$dynamics$initdist_params
@@ -72,8 +76,12 @@ n_compartments         <- ncol(flow_matrix)
 n_rates                <- nrow(flow_matrix)
 n_odes                 <- 2*n_rates + n_rates^2
 comp_codes             <- stem_object$dynamics$lna_comp_codes
-incidence_codes        <- stem_object$dynamics$incidence_codes_lna
-n_incidence            <- length(incidence_codes)
+do_prevalence          <- stem_object$measurement_process$lna_prevalence
+do_incidence           <- stem_object$measurement_process$lna_incidence
+incidence_codes        <- stem_object$measurement_process$incidence_codes_lna
+n_incidence            <- ifelse(incidence_codes[1] == -1, 0, length(incidence_codes))
+census_incidence_codes <- incidence_codes + ncol(censusmat) - 2
+names(census_incidence_codes) <- names(incidence_codes)
 fixed_inits            <- stem_object$dynamics$fixed_inits
 n_strata               <- stem_object$dynamics$n_strata
 
@@ -84,31 +92,19 @@ d_meas_pointer          <- stem_object$measurement_process$meas_pointers$d_measu
 obstimes                <- data[,1]
 obstime_inds            <- stem_object$measurement_process$obstime_inds
 tcovar_censmat          <- stem_object$measurement_process$tcovar_censmat
-emit_mat_cur            <- cbind(obstimes, matrix(0.0,
-                                                   nrow = nrow(stem_object$measurement_process$measproc_indmat),
-                                                   ncol = ncol(stem_object$measurement_process$measproc_indmat),
-                                                   dimnames = list(NULL,
-                                                                   colnames(stem_object$measurement_process$measproc_indmat))))
-emit_mat_new            <- cbind(obstimes, matrix(0.0,
-                                                   nrow = nrow(stem_object$measurement_process$measproc_indmat),
-                                                   ncol = ncol(stem_object$measurement_process$measproc_indmat),
-                                                   dimnames = list(NULL,
-                                                                   colnames(stem_object$measurement_process$measproc_indmat))))
 
 # generate other derived objects
-lna_times               <- sort(unique(c(obstimes,
-                                       stem_object$dynamics$.dynamics_args$tcovar[,1],
-                                       stem_object$dynamics$t0,
-                                       stem_object$dynamics$tmax)))
-n_times                 <- length(lna_times)
-n_census_times          <- length(obstimes)
-param_update_inds       <- is.na(match(lna_times, obstimes))
-do_census               <- !identical(lna_times, data[,1])
-do_incidence            <- !is.null(incidence_codes)
+lna_times         <- sort(unique(c(obstimes, stem_object$dynamics$.dynamics_args$tcovar[,1],
+                                   stem_object$dynamics$t0, stem_object$dynamics$tmax)))
+n_times           <- length(lna_times)
+n_census_times    <- length(obstimes)
+param_update_inds <- is.na(match(lna_times, obstimes))
+census_indices    <- findInterval(obstimes, lna_times) - 1
 
 # matrix for storing the LNA parameters
-lna_parameters         <- matrix(0.0, nrow = length(lna_times), ncol = length(stem_object$dynamics$lna_param_codes),
-                                  dimnames = list(NULL,names(stem_object$dynamics$lna_param_codes)))
+lna_parameters  <- matrix(0.0, nrow = length(lna_times),
+                          ncol = length(stem_object$dynamics$lna_param_codes),
+                          dimnames = list(NULL,names(stem_object$dynamics$lna_param_codes)))
 
 # insert the lna parameters
 pars2lnapars(lna_parameters, parameters)
@@ -119,8 +115,8 @@ tcovar_inds            <- (max(const_inds)+1):ncol(lna_parameters)
 
 # insert the constants
 lna_parameters[,const_inds] <- matrix(stem_object$dynamics$constants,
-                                  nrow = nrow(lna_parameters),
-                                  ncol = length(const_inds), byrow = T)
+                                      nrow = nrow(lna_parameters),
+                                      ncol = length(const_inds), byrow = T)
 
 # insert time varying covariates
 if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
@@ -128,41 +124,77 @@ if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
         lna_parameters[, tcovar_inds]  <- stem_object$dynamics$.dynamics_args$tcovar[tcovar_rowinds,-1]
 }
 
+# matrix in which to store the emission probabilities
+emitmat <- cbind(data[, 1, drop = F],
+                 matrix(
+                         0.0,
+                         nrow = nrow(measproc_indmat),
+                         ncol = ncol(measproc_indmat),
+                         dimnames = list(NULL, colnames(measproc_indmat))
+                 ))
+
+pathmat <- cbind(lna_times,
+                 matrix(
+                         0.0,
+                         nrow = length(lna_times),
+                         ncol = nrow(flow_matrix),
+                         dimnames = list(NULL, c(rownames(flow_matrix)))
+                 ))
+
+# set up MCMC objects
+latent_paths      <-
+        array(0.0, dim = c(
+                length(lna_times),
+                1 + nrow(flow_matrix),
+                1 + floor(iterations / thin_latent_proc)
+        ))
+
+lna_log_lik       <- double(1 + floor(iterations / thin_params))
+data_log_lik      <- double(1 + floor(iterations / thin_params))
+log_prior         <- double(1 + floor(iterations / thin_params))
+
 # initialize the latent path
-path <- initialize_lna(lna_parameters          = lna_parameters,
-                       flow_matrix             = flow_matrix,
-                       lna_pointer             = lna_pointer,
-                       lna_set_pars_pointer    = lna_set_pars_pointer,
-                       lna_times               = lna_times,
-                       fixed_inits             = fixed_inits,
-                       param_update_inds       = param_update_inds,
-                       incidence_codes         = incidence_codes,
-                       data                    = data,
-                       measproc_indmat         = measproc_indmat,
-                       obstime_inds            = obstime_inds,
-                       d_meas_pointer          = d_meas_pointer,
-                       parameters              = parameters,
-                       constants               = constants,
-                       tcovar_censmat          = tcovar_censmat,
-                       initialization_attempts = 500)
+path <- initialize_lna(
+        data                    = data,
+        lna_parameters          = lna_parameters,
+        censusmat               = censusmat,
+        emitmat                 = emitmat,
+        flow_matrix             = flow_matrix,
+        lna_pointer             = lna_pointer,
+        lna_set_pars_pointer    = lna_set_pars_pointer,
+        lna_times               = lna_times,
+        lna_initdist_inds       = lna_initdist_inds,
+        param_update_inds       = param_update_inds,
+        incidence_codes         = incidence_codes,
+        census_incidence_codes  = census_incidence_codes,
+        census_indices          = census_indices,
+        measproc_indmat         = measproc_indmat,
+        obstime_inds            = obstime_inds,
+        d_meas_pointer          = d_meas_pointer,
+        parameters              = parameters,
+        constants               = constants,
+        tcovar_censmat          = tcovar_censmat,
+        do_prevalence           = do_prevalence,
+        do_incidence            = do_incidence,
+        initialization_attempts = 500
+)
 
-path <- lna_density2(path              = path,
-                     lna_times         = lna_times,
-                     lna_pars          = lna_parameters,
-                     param_update_inds = param_update_inds,
-                     flow_matrix       = flow_matrix,
-                     lna_pointer_ess   = lna_pointer_ess,
-                     set_pars_pointer  = lna_set_pars_pointer)
+# save the current observed data log-likelihood and compute the
+# likelihood of the latent LNA path
+path <- lna_density2(
+        path              = path,
+        lna_times         = lna_times,
+        lna_pars          = lna_parameters,
+        param_update_inds = param_update_inds,
+        flow_matrix       = flow_matrix,
+        lna_pointer_ess   = lna_pointer_ess,
+        set_pars_pointer  = lna_set_pars_pointer
+)
 
-# save the data log-likelihood and the lna log-likelihood
-data_log_lik <- double(iterations + 1)
-lna_log_lik <- double(iterations + 1)
-data_log_lik[1] <- path$data_log_lik
-lna_log_lik[1]  <- path$lna_log_lik
-
-# set up objects to store the latent paths
-latent_paths <- vector(mode = "list", length = iterations / 100)
-latent_paths[[1]] <- convert_lna(path$lna_path, flow_matrix, init_state)
+# save the initial path, data log-likelihood and the lna log-likelihood
+latent_paths[,,1] <- path$lna_path
+data_log_lik[1]   <- path$data_log_lik
+lna_log_lik[1]    <- path$lna_log_lik
 
 for(k in 2:iterations) {
         
@@ -172,36 +204,57 @@ for(k in 2:iterations) {
         }
                 
         
-        path <- update_lna_path(path_cur  = path,
-                        lna_parameters    = lna_parameters,
-                        flow_matrix       = flow_matrix,
-                        lna_ess_pointer   = lna_ess_pointer,
-                        lna_times         = lna_times,
-                        lna_initdist_inds = lna_initdist_inds,
-                        param_update_inds = param_update_inds,
-                        incidence_codes   = incidence_codes,
-                        data              = data,
-                        measproc_indmat   = measproc_indmat,
-                        obstime_inds      = obstime_inds,
-                        d_meas_pointer    = d_meas_pointer,
-                        parameters        = parameters,
-                        constants         = constants,
-                        tcovar_censmat    = tcovar_censmat,
-                        do_census         = do_census,
-                        do_incidence      = do_incidence)
+        path <- update_lna_path(
+                        path_cur                = path,
+                        data                    = data,
+                        lna_parameters          = lna_parameters,
+                        pathmat                 = pathmat,
+                        censusmat               = censusmat,
+                        emitmat                 = emitmat,
+                        flow_matrix             = flow_matrix,
+                        lna_pointer             = lna_pointer,
+                        lna_set_pars_pointer    = lna_set_pars_pointer,
+                        lna_times               = lna_times,
+                        lna_initdist_inds       = lna_initdist_inds,
+                        param_update_inds       = param_update_inds,
+                        incidence_codes         = incidence_codes,
+                        census_incidence_codes  = census_incidence_codes,
+                        census_indices          = census_indices,
+                        measproc_indmat         = measproc_indmat,
+                        obstime_inds            = obstime_inds,
+                        d_meas_pointer          = d_meas_pointer,
+                        parameters              = parameters,
+                        constants               = constants,
+                        tcovar_censmat          = tcovar_censmat,
+                        do_prevalence           = do_prevalence,
+                        do_incidence            = do_incidence
+                )
         
         data_log_lik[k] <- path$data_log_lik
         lna_log_lik[k]  <- path$lna_log_lik
         
-        if(k %% thin_latent_paths == 0) {
-                latent_paths[[k/thin_latent_paths]] <- convert_lna(path$lna_path, flow_matrix, init_state)
+        if(k %% thin_latent_proc == 0) {
+                latent_paths[,,k/thin_latent_proc] <- path$lna_path
         }
 }
 
 library(mcmc)
 library(ggplot2)
 
-paths <- array(unlist(latent_paths), dim = c(nrow(latent_paths[[1]]), ncol(latent_paths[[1]]), length(latent_paths)))
+paths <- array(0.0, dim = c(nrow(censusmat), ncol(censusmat), iterations/thin_latent_proc + 1))
+
+for(k in 1:dim(paths)[3]) {
+        census_lna(
+                path                = latent_paths[,,k],
+                census_path         = censusmat,
+                census_inds         = census_indices,
+                flow_matrix_lna     = flow_matrix,
+                do_prevalence       = TRUE,
+                init_state          = init_state,
+                incidence_codes_lna = incidence_codes
+        )
+        paths[,,k] <- censusmat
+}
 colnames(paths) <- c("time", "S", "I", "R")
 
 # paths of the I compartment
@@ -234,9 +287,12 @@ dev.off()
 ```{r, include = FALSE, cache = TRUE}
 rm(list=ls())
 library(stemr)
+cat("Starting incidence simulation.", sep = "\n", file = "lna_post_fixedpars.txt", append = FALSE)
+
 # number of iterations and objects to store the paths
-iterations        <- 100000
-thin_latent_paths <- 100
+iterations       <- 100000
+thin_latent_proc <- 100
+thin_params      <- 1
 
 # set up model
 compartments <- c("S","I","R")
@@ -259,19 +315,21 @@ census_times = 0:tmax
 dynamics <- stem_dynamics(rates = rates, parameters = parameters, tmax = tmax, state_initializer = state_initializer, compartments=compartments, strata = strata, tcovar = tcovar, messages = TRUE, compile_ode = F, compile_rates = T)
 
 # compile the measurement process
-emissions <- list(emission("cases", "negbinomial", c("S2I", "S2I * rho"), incidence = TRUE, obstimes = seq(1,tmax,by=1)))
+emissions <- list(emission("I", "negbinomial", c("S2I", "S2I * rho"), incidence = TRUE, obstimes = seq(1,tmax,by=1)))
 
 measurement_process <- stem_measure(emissions = emissions, dynamics = dynamics, messages = T)
-stem_object <- stem(dynamics = dynamics, measurement_process = measurement_process)
+stem_object <- stem(dynamics = dynamics, measurement_process = measurement_process) 
 
 stem_data <- simulate_stem(stem_object = stem_object, method = "lna", paths = TRUE, observations = T, tmax = tmax, nsim = 1, census_times = 0:tmax)
 
 # grab the dataset
-true_path_incid <- stem_data$paths[[1]]; 
-true_path_incid[2:nrow(true_path_incid),-1] <- diff(true_path_incid[,-1]); 
-true_path_incid <- true_path_incid[-1,] 
-true_path_prev <- stem_data$natural_paths[[1]]; colnames(true_path_prev) <- c("time", "S", "I", "R")
+true_path_prev <- stem_data$natural_paths[[1]]
+true_path_incid <- stem_data$paths[[1]]
 dat <- stem_data$datasets[[1]]
+
+colnames(true_path_prev) <- c("time", "S", "I", "R")
+colnames(true_path_incid) <- c("time", "S2I", "I2R")
+colnames(dat) <- c("time", "I")
 
 # recompile the measurement process
 measurement_process <- stem_measure(emissions = emissions, dynamics = dynamics, data = dat)
@@ -282,6 +340,7 @@ flow_matrix            <- stem_object$dynamics$flow_matrix_lna
 lna_pointer            <- stem_object$dynamics$lna_pointers$lna_pointer
 lna_pointer_ess        <- stem_object$dynamics$lna_pointers$lna_pointer_ess
 lna_set_pars_pointer   <- stem_object$dynamics$lna_pointers$lna_set_pars_ptr
+censusmat              <- stem_object$measurement_process$censusmat
 parameters             <- stem_object$dynamics$parameters
 constants              <- stem_object$dynamics$constants
 initdist_parameters    <- stem_object$dynamics$initdist_params
@@ -290,8 +349,12 @@ n_compartments         <- ncol(flow_matrix)
 n_rates                <- nrow(flow_matrix)
 n_odes                 <- 2*n_rates + n_rates^2
 comp_codes             <- stem_object$dynamics$lna_comp_codes
-incidence_codes        <- stem_object$dynamics$incidence_codes_lna
-n_incidence            <- length(incidence_codes)
+do_prevalence          <- stem_object$measurement_process$lna_prevalence
+do_incidence           <- stem_object$measurement_process$lna_incidence
+incidence_codes        <- stem_object$measurement_process$incidence_codes_lna
+n_incidence            <- ifelse(incidence_codes[1] == -1, 0, length(incidence_codes))
+census_incidence_codes <- incidence_codes + ncol(censusmat) - 2
+names(census_incidence_codes) <- names(incidence_codes)
 fixed_inits            <- stem_object$dynamics$fixed_inits
 n_strata               <- stem_object$dynamics$n_strata
 
@@ -302,31 +365,19 @@ d_meas_pointer          <- stem_object$measurement_process$meas_pointers$d_measu
 obstimes                <- data[,1]
 obstime_inds            <- stem_object$measurement_process$obstime_inds
 tcovar_censmat          <- stem_object$measurement_process$tcovar_censmat
-emit_mat_cur            <- cbind(obstimes, matrix(0.0,
-                                                   nrow = nrow(stem_object$measurement_process$measproc_indmat),
-                                                   ncol = ncol(stem_object$measurement_process$measproc_indmat),
-                                                   dimnames = list(NULL,
-                                                                   colnames(stem_object$measurement_process$measproc_indmat))))
-emit_mat_new            <- cbind(obstimes, matrix(0.0,
-                                                   nrow = nrow(stem_object$measurement_process$measproc_indmat),
-                                                   ncol = ncol(stem_object$measurement_process$measproc_indmat),
-                                                   dimnames = list(NULL,
-                                                                   colnames(stem_object$measurement_process$measproc_indmat))))
 
 # generate other derived objects
-lna_times               <- sort(unique(c(obstimes,
-                                       stem_object$dynamics$.dynamics_args$tcovar[,1],
-                                       stem_object$dynamics$t0,
-                                       stem_object$dynamics$tmax)))
-n_times                 <- length(lna_times)
-n_census_times          <- length(obstimes)
-param_update_inds       <- is.na(match(lna_times, obstimes))
-do_census               <- !identical(lna_times, data[,1])
-do_incidence            <- !is.null(incidence_codes)
+lna_times         <- sort(unique(c(obstimes, stem_object$dynamics$.dynamics_args$tcovar[,1],
+                                   stem_object$dynamics$t0, stem_object$dynamics$tmax)))
+n_times           <- length(lna_times)
+n_census_times    <- length(obstimes)
+param_update_inds <- is.na(match(lna_times, obstimes))
+census_indices    <- findInterval(obstimes, lna_times) - 1
 
 # matrix for storing the LNA parameters
-lna_parameters         <- matrix(0.0, nrow = length(lna_times), ncol = length(stem_object$dynamics$lna_param_codes),
-                                  dimnames = list(NULL,names(stem_object$dynamics$lna_param_codes)))
+lna_parameters  <- matrix(0.0, nrow = length(lna_times),
+                          ncol = length(stem_object$dynamics$lna_param_codes),
+                          dimnames = list(NULL,names(stem_object$dynamics$lna_param_codes)))
 
 # insert the lna parameters
 pars2lnapars(lna_parameters, parameters)
@@ -337,8 +388,8 @@ tcovar_inds            <- (max(const_inds)+1):ncol(lna_parameters)
 
 # insert the constants
 lna_parameters[,const_inds] <- matrix(stem_object$dynamics$constants,
-                                  nrow = nrow(lna_parameters),
-                                  ncol = length(const_inds), byrow = T)
+                                      nrow = nrow(lna_parameters),
+                                      ncol = length(const_inds), byrow = T)
 
 # insert time varying covariates
 if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
@@ -346,92 +397,147 @@ if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
         lna_parameters[, tcovar_inds]  <- stem_object$dynamics$.dynamics_args$tcovar[tcovar_rowinds,-1]
 }
 
+# matrix in which to store the emission probabilities
+emitmat <- cbind(data[, 1, drop = F],
+                 matrix(
+                         0.0,
+                         nrow = nrow(measproc_indmat),
+                         ncol = ncol(measproc_indmat),
+                         dimnames = list(NULL, colnames(measproc_indmat))
+                 ))
+
+pathmat <- cbind(lna_times,
+                 matrix(
+                         0.0,
+                         nrow = length(lna_times),
+                         ncol = nrow(flow_matrix),
+                         dimnames = list(NULL, c(rownames(flow_matrix)))
+                 ))
+
+# set up MCMC objects
+latent_paths      <-
+        array(0.0, dim = c(
+                length(lna_times),
+                1 + nrow(flow_matrix),
+                1 + floor(iterations / thin_latent_proc)
+        ))
+
+lna_log_lik       <- double(1 + floor(iterations / thin_params))
+data_log_lik      <- double(1 + floor(iterations / thin_params))
+log_prior         <- double(1 + floor(iterations / thin_params))
+
 # initialize the latent path
-path <- initialize_lna(lna_parameters          = lna_parameters,
-                       flow_matrix             = flow_matrix,
-                       lna_pointer             = lna_pointer,
-                       lna_set_pars_pointer    = lna_set_pars_pointer,
-                       lna_times               = lna_times,
-                       fixed_inits             = fixed_inits,
-                       param_update_inds       = param_update_inds,
-                       incidence_codes         = incidence_codes,
-                       data                    = data,
-                       measproc_indmat         = measproc_indmat,
-                       obstime_inds            = obstime_inds,
-                       d_meas_pointer          = d_meas_pointer,
-                       parameters              = parameters,
-                       constants               = constants,
-                       tcovar_censmat          = tcovar_censmat,
-                       initialization_attempts = 500)
+path <- initialize_lna(
+        data                    = data,
+        lna_parameters          = lna_parameters,
+        censusmat               = censusmat,
+        emitmat                 = emitmat,
+        flow_matrix             = flow_matrix,
+        lna_pointer             = lna_pointer,
+        lna_set_pars_pointer    = lna_set_pars_pointer,
+        lna_times               = lna_times,
+        lna_initdist_inds       = lna_initdist_inds,
+        param_update_inds       = param_update_inds,
+        incidence_codes         = incidence_codes,
+        census_incidence_codes  = census_incidence_codes,
+        census_indices          = census_indices,
+        measproc_indmat         = measproc_indmat,
+        obstime_inds            = obstime_inds,
+        d_meas_pointer          = d_meas_pointer,
+        parameters              = parameters,
+        constants               = constants,
+        tcovar_censmat          = tcovar_censmat,
+        do_prevalence           = do_prevalence,
+        do_incidence            = do_incidence,
+        initialization_attempts = 500
+)
 
-path <- lna_density2(path              = path,
-                     lna_times         = lna_times,
-                     lna_pars          = lna_parameters,
-                     param_update_inds = param_update_inds,
-                     flow_matrix       = flow_matrix,
-                     lna_pointer_ess   = lna_pointer_ess,
-                     set_pars_pointer  = lna_set_pars_pointer)
+# save the current observed data log-likelihood and compute the
+# likelihood of the latent LNA path
+path <- lna_density2(
+        path              = path,
+        lna_times         = lna_times,
+        lna_pars          = lna_parameters,
+        param_update_inds = param_update_inds,
+        flow_matrix       = flow_matrix,
+        lna_pointer_ess   = lna_pointer_ess,
+        set_pars_pointer  = lna_set_pars_pointer
+)
 
-# save the data log-likelihood and the lna log-likelihood
-data_log_lik <- double(iterations + 1)
-lna_log_lik <- double(iterations + 1)
-data_log_lik[1] <- path$data_log_lik
-lna_log_lik[1]  <- path$lna_log_lik
-
-# set up objects to store the latent paths
-latent_paths_prevalence <- latent_paths_incidence <- vector(mode = "list", length = iterations / 100)
-latent_paths_incidence[[1]]  <- path$lna_path[-1,];
-latent_paths_incidence[[1]][,-1] <- diff(path$lna_path[,-1])
-latent_paths_prevalence[[1]] <- convert_lna(path$lna_path, flow_matrix, init_state)
-
-cat("Starting incidence", sep = "\n", file = "lna_post_fixedpars.txt", append = T) 
+# save the initial path, data log-likelihood and the lna log-likelihood
+latent_paths[,,1] <- path$lna_path
+data_log_lik[1]   <- path$data_log_lik
+lna_log_lik[1]    <- path$lna_log_lik
 
 for(k in 2:iterations) {
         
         if(k%%1000 == 0) {
+                # print(k)
                 cat(paste0("Incidence iteration ", k), sep = "\n", file = "lna_post_fixedpars.txt", append = TRUE)
         }
                 
         
-        path <- update_lna_path(path_cur  = path,
-                        lna_parameters    = lna_parameters,
-                        flow_matrix       = flow_matrix,
-                        lna_ess_pointer   = lna_ess_pointer,
-                        lna_times         = lna_times,
-                        lna_initdist_inds = lna_initdist_inds,
-                        param_update_inds = param_update_inds,
-                        incidence_codes   = incidence_codes,
-                        data              = data,
-                        measproc_indmat   = measproc_indmat,
-                        obstime_inds      = obstime_inds,
-                        d_meas_pointer    = d_meas_pointer,
-                        parameters        = parameters,
-                        constants         = constants,
-                        tcovar_censmat    = tcovar_censmat,
-                        do_census         = do_census,
-                        do_incidence      = do_incidence)
+        path <- update_lna_path(
+                        path_cur                = path,
+                        data                    = data,
+                        lna_parameters          = lna_parameters,
+                        pathmat                 = pathmat,
+                        censusmat               = censusmat,
+                        emitmat                 = emitmat,
+                        flow_matrix             = flow_matrix,
+                        lna_pointer             = lna_pointer,
+                        lna_set_pars_pointer    = lna_set_pars_pointer,
+                        lna_times               = lna_times,
+                        lna_initdist_inds       = lna_initdist_inds,
+                        param_update_inds       = param_update_inds,
+                        incidence_codes         = incidence_codes,
+                        census_incidence_codes  = census_incidence_codes,
+                        census_indices          = census_indices,
+                        measproc_indmat         = measproc_indmat,
+                        obstime_inds            = obstime_inds,
+                        d_meas_pointer          = d_meas_pointer,
+                        parameters              = parameters,
+                        constants               = constants,
+                        tcovar_censmat          = tcovar_censmat,
+                        do_prevalence           = do_prevalence,
+                        do_incidence            = do_incidence
+                )
         
         data_log_lik[k] <- path$data_log_lik
         lna_log_lik[k]  <- path$lna_log_lik
         
-        if(k %% thin_latent_paths == 0) {
-                latent_paths_incidence[[k/thin_latent_paths]] <- diff(path$lna_path)
-                latent_paths_incidence[[k/thin_latent_paths]][,1] <- 1:52
-                latent_paths_prevalence[[k/thin_latent_paths]] <- convert_lna(path$lna_path, flow_matrix, init_state)
+        if(k %% thin_latent_proc == 0) {
+                latent_paths[,,k/thin_latent_proc] <- path$lna_path
         }
 }
 
 library(mcmc)
 library(ggplot2)
 
-paths_prev <- array(unlist(latent_paths_prevalence), dim = c(nrow(latent_paths_prevalence[[1]]), ncol(latent_paths_prevalence[[1]]), length(latent_paths_prevalence)))
-colnames(paths_prev) <- c("time", "S", "I", "R")
-paths_incid <- array(unlist(latent_paths_incidence), dim = c(nrow(latent_paths_incidence[[1]]), ncol(latent_paths_incidence[[1]]), length(latent_paths_incidence)))
-colnames(paths_incid) <- c("time", "S2I", "I2R")
+paths <- array(0.0, dim = c(nrow(censusmat) + 1, ncol(censusmat), iterations/thin_latent_proc + 1))
+censusmat <- rbind(c(rep(0,5)), censusmat) 
+
+for(k in 1:dim(paths)[3]) {
+        census_lna(
+                path                = latent_paths[,,k],
+                census_path         = censusmat,
+                census_inds         = 0:52,
+                flow_matrix_lna     = flow_matrix,
+                do_prevalence       = TRUE,
+                init_state          = init_state,
+                incidence_codes_lna = incidence_codes
+        )
+        paths[,,k] <- censusmat
+}
+colnames(paths) <- c("time", "S", "I", "R", "S2I")
+colnames(latent_paths) <- c("time", "S2I", "I2R")
+
+library(mcmc)
+library(ggplot2)
 
 # paths of the I compartment
-I_paths_prev <- paths_prev[,"I",]
-I_paths_incid <- paths_incid[,"S2I",]
+I_paths_prev <- paths[,"I",]
+I_paths_incid <- latent_paths[,"S2I",]
 
 # matrix for storing results
 results_prev <- data.frame(time = 0:52, mean = rowMeans(I_paths_prev), mcse = 0)
@@ -439,8 +545,8 @@ results_quantiles_prev <- data.frame(time  = 0:52, med   = apply(I_paths_prev, 1
                                      lower = apply(I_paths_prev, 1, quantile, 0.025),
                                      upper = apply(I_paths_prev, 1, quantile, 0.975))
 
-results_incid <- data.frame(time = 1:52, mean = rowMeans(I_paths_incid), mcse = 0)
-results_quantiles_incid <- data.frame(time  = 1:52, med   = apply(I_paths_incid, 1, median), 
+results_incid <- data.frame(time = 0:52, mean = rowMeans(I_paths_incid), mcse = 0)
+results_quantiles_incid <- data.frame(time  = 0:52, med   = apply(I_paths_incid, 1, median), 
                                      lower = apply(I_paths_incid, 1, quantile, 0.025),
                                      upper = apply(I_paths_incid, 1, quantile, 0.975))
 

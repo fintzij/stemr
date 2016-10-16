@@ -26,10 +26,8 @@ arma::mat convert_lna(const arma::mat& path, const arma::mat& flow_matrix, const
         arma::mat conv_path(n_times, n_comps + 1, arma::fill::zeros);
         conv_path.col(0) = path.col(0);
 
-        // fill out the path
-        for(int j = 0; j < n_times; ++j) {
-                conv_path(j, arma::span(1, n_comps)) = path(j, arma::span(1, n_rates)) * flow_matrix + init_state;
-        }
+        // transform the LNA path
+        conv_path.cols(1, n_comps) = arma::repmat(init_state, n_times, 1) + path.cols(1, n_rates) * flow_matrix;
 
         return conv_path;
 }

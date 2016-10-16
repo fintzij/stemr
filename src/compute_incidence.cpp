@@ -1,6 +1,5 @@
 // [[Rcpp::depends(RcppArmadillo)]]
-#include "stemr_types.h"
-#include "stemr_utils.h"
+#include "RcppArmadillo.h"
 
 using namespace arma;
 using namespace Rcpp;
@@ -17,7 +16,7 @@ using namespace Rcpp;
 // [[Rcpp::export]]
 void compute_incidence(arma::mat& censusmat, arma::uvec& col_inds, Rcpp::List& row_inds) {
 
-        int n_vars = col_inds.n_elem;           // number of incidence variables
+        int n_vars = col_inds.size();           // number of incidence variables
         int last_row = censusmat.n_rows - 1;    // index of the final row in the census matrix
 
         for(int k=0; k < n_vars; ++k) {

@@ -6,7 +6,7 @@
 model.}
 \usage{
 propose_lna_ess(path_cur, lna_times, lna_pars, param_update_inds, flow_matrix,
-  lna_pointer_ess, set_pars_pointer)
+  lna_pointer_ess, set_ess_pars_pointer)
 }
 \arguments{
 \item{path_cur}{list containing the LNA objects for the current path}
@@ -22,14 +22,14 @@ LNA parameters need to be updated.}
 \item{flow_matrix}{original flow matrix giving the changes to compartments
 from each reaction}
 
-\item{set_pars_pointer}{external pointer to the function for setting the LNA
-parameters.}
-
 \item{init_state}{rowvec giving the initial compartment counts}
 
 \item{log_scale}{is the LNA applied on the log scale?}
 
 \item{lna_pointer}{external pointer to LNA integration fcn}
+
+\item{set_pars_pointer}{external pointer to the function for setting the LNA
+parameters.}
 }
 \value{
 array with slices containing the LNA path, the path of the residual

@@ -46,6 +46,7 @@ Rcpp::List lna_density(const Rcpp::List& path, const arma::colvec& lna_times, co
 
         // initialize the LNA objects - the vector for storing the ODES, the state vector, and the Jacobian
         Rcpp::NumericVector lna_state_vec(n_odes);        // vector to store the results of the ODEs
+        arma::rowvec res_vec(n_comps);                    // vector to store the results of the ODEs
         arma::mat lna_path           = path["lna_path"];  // path
         arma::mat residual_path      = path["res_path"];  // residual path
         arma::mat drift_process      = path["drift"];     // drift process
@@ -77,30 +78,33 @@ Rcpp::List lna_density(const Rcpp::List& path, const arma::colvec& lna_times, co
                 CALL_INTEGRATE_STEM_LNA(lna_state_vec, t_L, t_R, 1.0, lna_pointer);
 
                 // transfer the elements of the lna_state_vec to the process objects
-                for(int k=0; k < n_comps; ++k) {
-                        drift_process(j, k)    = lna_state_vec[k];
-                        residual_process(j, k) = lna_state_vec[k+n_comps];
-                }
-                std::copy(lna_state_vec.begin() + 2*n_comps, lna_state_vec.end(), diffusion_process.slice(j).begin());
+                drift_process.row(j) = Rcpp::as<arma::rowvec>(lna_state_vec).subvec(0,resid_start-1);
+                residual_process.row(j) = Rcpp::as<arma::rowvec>(lna_state_vec).subvec(resid_start, diff_start-1);
+                diffusion_process.slice(j) = arma::reshape(Rcpp::as<arma::rowvec>(lna_state_vec).subvec(diff_start, n_odes-1), n_comps, n_comps);
 
-                // enforce diagonal dominance on the diffusion process and ensure its symmetry
-                diffusion_process.slice(j).diag() += 0.0000001;
+                // ensure symmetry to correct small numerical errors
                 diffusion_process.slice(j) = arma::symmatu(diffusion_process.slice(j));
 
-                // sample the next state
+                // evaluate the density of the next state
                 lna_log_lik += dmvtn(lna_path(j, arma::span(1, n_comps)),
                                      drift_process.row(j) + residual_process.row(j),
                                      diffusion_process.slice(j), true)[0];
 
-                // set the residual path
-                residual_path(j, arma::span(1,n_comps)) = lna_path(j, arma::span(1, n_comps)) - drift_process.row(j);
+                // compute the residual and copy the residual into the LNA state vector
+                res_vec = lna_step.row(0) - drift_process.row(j);
+                std::copy(res_vec.begin(), res_vec.end(), lna_state_vec.begin() + resid_start);
 
-                // copy the current value of the residual path to the LNA state vector
-                for(int s=0; s < n_comps; ++s) {
-                        lna_state_vec[resid_start + s] = residual_path(j, s+1);
-                }
+                // residual_path(j, arma::span(1,n_comps)) = lna_path(j, arma::span(1, n_comps)) - drift_process.row(j);
+                // for(int i=0; i < n_comps; ++i) {
+                //         lna_state_vec[resid_start + i] = residual_path(j, 1 + i);
+                // }
+
+                // set the diffusion elements in the LNA state vector to 0
                 std::fill(lna_state_vec.begin() + diff_start, lna_state_vec.end(), 0);
         }
+
+        // compute the new residual path
+        residual_path.cols(1, n_comps) = lna_path.cols(1, n_comps) - drift_process;
 
         // return the paths
         return Rcpp::List::create(Rcpp::Named("lna_path")     = lna_path,

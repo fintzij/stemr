@@ -1,0 +1,206 @@
+---
+title: "LNA_vs_Gillespie"
+author: "Jon Fintzi"
+date: "October 9, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = T)
+setwd("C:/Users/Jonathan/Google Drive/UW/Year 3 +/Dissertation/Code/stemr/tests/.extended_tests/test_LNA_vs_MJP")
+library(stemr)
+library(issb)
+library(ggplot2)
+iterations <- 1000
+
+```
+
+## This vignette compares the pointwise distribution of the count process LNA to the pointwise distribution of the MJP. Both incidence and prevalence are compared. 
+
+```{r, include=F, cache = T}
+# obtain the MJP paths and stemr_lna_transform
+
+compartments <- c("S","I","R")
+rates <- list(rate("beta * I", "S", "I", incidence = FALSE),
+              rate("mu", "I", "R"))
+state_initializer <- stem_initializer(c(S = 50000, I = 10, R = 50), fixed = T)
+parameters <- c(beta = 0.00001, mu = 1/7, rho = 0.5)
+tcovar <- NULL
+constants <- NULL
+strata <- NULL
+t0 <- 0; tmax <- 52
+timestep <- NULL
+adjacency <- NULL
+messages <- T
+nsim = 1
+census_times = seq(t0, tmax, by = 0.25)
+
+dynamics <- stem_dynamics(rates = rates, parameters = parameters, tmax = tmax, state_initializer = state_initializer, compartments=compartments, strata = strata, tcovar = tcovar, messages = TRUE, compile_ode = F, compile_rates = T)
+
+stem_object <- stem(dynamics = dynamics)
+
+mjp_paths <- simulate_stem(stem_object = stem_object, method = "gillespie", paths = TRUE, observations = F, tmax = tmax, nsim = iterations, census_times = 0:tmax)$paths
+
+stemr_lna <- simulate_stem(stem_object = stem_object, method = "lna", paths = TRUE, observations = F, tmax = tmax, nsim = iterations, paths_as_array = T, census_times = 0:tmax)
+
+stemr_lna_count   <- stemr_lna$paths 
+stemr_lna_natural <- stemr_lna$natural_paths
+```
+
+```{r, include = FALSE, cache = T}
+# set up issb count LNA
+# function for computing the hazards - expected change in cumulative number of events
+# x = (N_{S_I}, N_{IR}); pars = (beta, mu, S_0, I_0, R_0)
+h_count = function(x, pars) {
+   hazs = numeric(length(x))
+   hazs[1] = pars[1]*(pars[3] - x[1]) * (pars[4] + x[1] - x[2])
+   hazs[2] = pars[2]*(pars[4] + x[1] - x[2])
+   return(hazs)
+}
+
+# jacobian matrix
+f_count = get_f = function(x, pars)
+{
+   fmat = matrix(0, nrow=2, ncol=2)
+   fmat[1,1] = pars[1]*(pars[3] - pars[4] - 2*x[1] + x[2])
+   fmat[1,2] = pars[1]*(-pars[3] + x[1])
+   fmat[2,1] = pars[2]
+   fmat[2,2] = -pars[2]
+   return(fmat)
+}
+
+# stoichiometry matrix
+smat_count = diag(1,2)
+rownames(smat_count) = c("N_SI", "N_IR")
+
+# initial condition
+initial_count = c(0, 0)
+
+# parameter values
+pars_count = c(beta = 0.00001, mu = 1/7, S0 = 50000, I0 = 10, R0 = 50)
+
+# flow matrix
+flow_matrix <- matrix(c(-1,1,0,0,-1,1), nrow = 2, byrow = T)
+
+# create the model object
+model_count = create_model(smat_count, h_count, initial_count, pars_count, f_count)
+
+issb_count <- array(0.0, dim = c(length(seq(0,tmax)), 3, iterations))
+issb_transformed <- array(0.0, dim = c(length(seq(0,tmax)), 4, iterations))
+for(k in seq_len(iterations)) {
+        if(k%%100 == 0) print(k)
+        issb_count[,,k] <-  lna(model_count, maxtime=tmax, ddt=1)
+        issb_transformed[,,k] <- convert_lna(issb_count[,,k], flow_matrix = flow_matrix, c(50000,10,50))
+}
+
+```
+
+```{r, include=F, cache=T}
+h_nat = function(x, pars) {
+   hazs = numeric(length(pars))
+   hazs[1] = pars[1]*x[1]*x[2]
+   hazs[2] = pars[2]*x[2]
+   return(hazs)
+}
+
+# jacobian matrix
+f_nat = get_f = function(x, pars)
+{
+   fmat = matrix(0, nrow=2, ncol=3)
+   fmat[1,1] = pars[1] * x[2]
+   fmat[1,2] = pars[1] * x[1]
+   fmat[2,2] = pars[2]
+   return(fmat)
+}
+
+# stoichiometry matrix
+smat_nat = matrix(c(-1,1,0,0,-1,1), ncol = 2)
+rownames(smat_nat) = c("S", "I", "R")
+
+# initial condition
+initial_nat = c(50000,10,50)
+
+# parameter values
+pars_nat = c(beta = 0.00001, mu = 1/7)
+
+# create the model object
+model_nat = create_model(smat_nat, h_nat, initial_nat, pars_nat, f_nat)
+
+# run the LNA
+issb_nat <- array(0.0, dim = c(length(seq(0,tmax)), 4, iterations))
+for(k in seq_len(iterations)) {
+        if(k%%100 == 0) print(k)
+        issb_nat[,,k] <-  lna(model_nat, maxtime=tmax, ddt=1)
+}
+```
+
+```{r, include = F, cache=T}
+# compare the stemr_count paths to the issb_count paths
+sim_dims_counts <- c(length(seq(0,tmax)), 3, iterations)
+stemr_count_paths <- array(unlist(stemr_lna_count), dim = sim_dims_counts)
+issb_count_paths  <- array(unlist(issb_count), dim = sim_dims_counts)
+
+stemr_N_SI <- stemr_count_paths[,2,, drop = F]
+issb_N_SI  <- issb_count_paths[,2,, drop = F]
+
+results_count <- data.frame(method = rep(c("stemr_LNA_count","issb_LNA_count"), each = length(seq(0,tmax))),
+                      time = rep(0:tmax, 2),
+                      mean = c(apply(stemr_N_SI, 1, mean),
+                               apply(issb_N_SI, 1, mean)),
+                      med  = c(apply(stemr_N_SI, 1, median),
+                               apply(issb_N_SI, 1, median)),
+                      mcse = c(apply(stemr_N_SI, 1, function(x) sd(x) / sqrt(iterations)),
+                               apply(issb_N_SI, 1, function(x) sd(x) / sqrt(iterations))),
+                      lower = c(apply(stemr_N_SI, 1, quantile, probs = 0.025),
+                               apply(issb_N_SI, 1, quantile, probs = 0.025)),
+                      upper = c(apply(stemr_N_SI, 1, quantile, probs = 0.975),
+                               apply(issb_N_SI, 1, quantile, probs = 0.975)))
+
+
+```
+
+
+```{r, include=F, cache = T}
+# collate the paths and plot the results
+sim_dims <- c(length(seq(0,tmax)), 4, iterations)
+stemr_nat <- array(unlist(stemr_lna_natural), dim = sim_dims)
+mjp_paths   <- array(unlist(mjp_paths), dim = sim_dims)
+issb_count  <- array(unlist(issb_transformed), dim = sim_dims)
+issb_nat    <- array(unlist(issb_nat), dim = sim_dims)
+
+stemr_lna_count <- stemr_nat[,3,]
+mjp_count       <- mjp_paths[,3,]
+issb_lna_count  <- issb_count[,3,]
+issb_lna_nat    <- issb_nat[,3,]
+
+results <- data.frame(method = rep(c("stemr_LNA_transformed", "MJP", "issb_LNA_transformed", "issb_LNA_natural"),
+                                   each = length(seq(0,tmax))),
+                      time = rep(seq(0,tmax), 4),
+                      mean = c(apply(stemr_lna_count, 1, mean),
+                               apply(mjp_count, 1, mean),
+                               apply(issb_lna_count, 1, mean),
+                               apply(issb_lna_nat, 1, mean)),
+                      med  = c(apply(stemr_lna_count, 1, median),
+                               apply(mjp_count, 1, median),
+                               apply(issb_lna_count, 1, median),
+                               apply(issb_lna_nat, 1, median)),
+                      mcse = c(apply(stemr_lna_count, 1, function(x) sd(x)/sqrt(iterations)),
+                               apply(mjp_count, 1, function(x) sd(x)/sqrt(iterations)),
+                               apply(issb_lna_count, 1, function(x) sd(x)/sqrt(iterations)),
+                               apply(issb_lna_nat, 1, function(x) sd(x)/sqrt(iterations))),
+                      lower = c(apply(stemr_lna_count, 1, quantile, probs = 0.025),
+                               apply(mjp_count, 1, quantile, probs = 0.025),
+                               apply(issb_lna_count, 1, quantile, probs = 0.025),
+                               apply(issb_lna_nat, 1, quantile, probs = 0.025)),
+                      upper = c(apply(stemr_lna_count, 1, quantile, probs = 0.975),
+                               apply(mjp_count, 1, quantile, probs = 0.975),
+                               apply(issb_lna_count, 1, quantile, probs = 0.975),
+                               apply(issb_lna_nat, 1, quantile, probs = 0.975)))
+
+# produce the plots
+pdf("stemr_counts_vs_issb_counts_0_52_1000iters.pdf")
+print(ggplot(results_count, aes(x = time, y = med, fill = method, colour = method)) + geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.1) + geom_line()  + labs(x = "time", y = "I", title = "Pointwise distribution of cumulative incidence - median and 95% bands"))
+
+print(ggplot(results, aes(x = time, y = med, fill = method, colour = method)) + geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.1) + geom_line()  + labs(x = "time", y = "I", title = "Pointwise distribution of prevalence - median and 95% bands"))
+dev.off()
+```

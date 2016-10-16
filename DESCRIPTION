@@ -19,10 +19,7 @@ LazyData: TRUE
 Imports:
     ECctmc,
     Ryacas,
-    mvtnorm,
     odeintr,
-    Matrix,
-    deSolve,
     Rcpp (>= 0.12.4)
 LinkingTo: Rcpp,
     RcppArmadillo

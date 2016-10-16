@@ -25,18 +25,32 @@ observation times, while subsequent columns must be labeled according to
 which compartment being measured.}
 
 \item{messages}{should compilation messages be printed? defaults to true.}
+
+\item{method}{either "lna" or "bda" depending on whether the measurement
+process is to be compiled for inference with the LNA or with exact Bayesian
+data augmentation.}
 }
 \value{
-list with evaluated measurement process functions and objects. The list contains the following objects:
-\describe{\item{meas_procs}{list of parsed measurement process functions}
-          \item{meas_pointers}{external pointers to compiled functions to simulate from and evaluate the density of the measurement process}
-          \item{obstimes}{complete vector of observation times}
-          \item{obstime_inds}{list of indices (C++) of observation times for each of the measurement variables}
-          \item{obsmat}{either a template for an observation matrix, or an observation matrix that combines the supplied list of observation matrices}
-          \item{obscomp_codes}{named numeric vector of measurement variable codes}
-          \item{measproc_indmat}{indicator matrix for which measurement variables are measured at which observation times}
-          \item{meas_inds}{indices (C++) of elements in the observation matrix that correspond to measurements (non-NAs)}
-          \item{censusmat}{template matrix for storing the compartment counts at observation times}}
+list with evaluated measurement process functions and objects. The
+  list contains the following objects: \describe{\item{meas_procs}{list of
+  parsed measurement process functions} \item{meas_pointers}{external
+  pointers to compiled functions to simulate from and evaluate the density of
+  the measurement process} \item{obstimes}{complete vector of observation
+  times} \item{obstime_inds}{list of indices (C++) of observation times for
+  each of the measurement variables} \item{obsmat}{either a template for an
+  observation matrix, or an observation matrix that combines the supplied
+  list of observation matrices} \item{obscomp_codes}{named numeric vector of
+  measurement variable codes} \item{measproc_indmat}{indicator matrix for
+  which measurement variables are measured at which observation times}
+  \item{meas_inds}{indices (C++) of elements in the observation matrix that
+  correspond to measurements (non-NAs)} \item{censusmat}{template matrix for
+  storing the compartment counts at observation times}
+  \item{tcovar_censmat}{matrix with time-varying coviates censused at
+  observation times} \item{lna_prevalence}{indicator for whether prevalence
+  is computed in the LNA} \item{lna_incidence}{indicator for whether
+  incidence is computed in the LNA} \item{incidence_codes_lna}{C++ column
+  indices for LNA count processes on transition events for which incidence is
+  to be computed}}
 }
 \description{
 Generate a list of objects governing the measurement process for a stochastic

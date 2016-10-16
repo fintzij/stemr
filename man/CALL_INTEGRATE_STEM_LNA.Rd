@@ -17,7 +17,7 @@ CALL_INTEGRATE_STEM_LNA(init, start, end, step_size, lna_ode_ptr)
 
 \item{vector}{of time-varying covariate values}
 
-\item{hazard_ptr}{external pointer to function used to compute the hazards}
+\item{hazard_ptr}{external pointer to the LNA functions}
 }
 \description{
 Compute the hazards by calling the hazard functions via external Xptr.
