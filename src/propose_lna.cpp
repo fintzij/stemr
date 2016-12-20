@@ -18,6 +18,8 @@ using namespace arma;
 //' @param lna_pointer external pointer to LNA integration fcn
 //' @param set_pars_pointer external pointer to the function for setting the LNA
 //'   parameters.
+//' @param enforce_monotonicity should monotinicity in the sample paths of the
+//'  LNA counting processes be enforced?
 //'
 //' @return array with slices containing the LNA path, the path of the residual
 //'   process, the drift process, the residual process (conditional means), and
@@ -26,7 +28,7 @@ using namespace arma;
 // [[Rcpp::export]]
 Rcpp::List propose_lna(const arma::colvec& lna_times, const Rcpp::NumericMatrix& lna_pars,
                        const Rcpp::LogicalVector& param_update_inds, const arma::mat& flow_matrix,
-                       SEXP lna_pointer, SEXP set_pars_pointer) {
+                       SEXP lna_pointer, SEXP set_pars_pointer, bool enforce_monotonicity) {
 
         // get the dimensions of various objects
         int n_comps = flow_matrix.n_rows;         // number of model compartments = number of rates
@@ -87,8 +89,8 @@ Rcpp::List propose_lna(const arma::colvec& lna_times, const Rcpp::NumericMatrix&
 
                 // // if any values are negative resample the next state
                 // // n.b. unlike in the ESS we need to check that the path is monotonically increasing
-                while(arma::any(lna_path(j, arma::span(1, n_comps)) < 0) ||
-                      arma::any(lna_path(j, arma::span(1, n_comps)) < lna_path(j-1, arma::span(1,n_comps)))) {
+                while(enforce_monotonicity && (arma::any(lna_path(j, arma::span(1, n_comps)) < 0) ||
+                      arma::any(lna_path(j, arma::span(1, n_comps)) < lna_path(j-1, arma::span(1,n_comps))))) {
 
                         lna_step = rmvtn(1, (residual_process.row(j)), diffusion_process.slice(j));
                         lna_path(j, arma::span(1, n_comps)) = drift_process.row(j) + lna_step.row(0);

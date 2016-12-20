@@ -455,16 +455,17 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                         }
                 }
 
-
                 # unpack the initialization lists
-                initializer <- vector(mode = "list", length = length(state_initializer))
+                initializer     <- vector(mode = "list", length = length(state_initializer))
                 initdist_params <- vector(mode = "list", length = length(state_initializer))
+                initdist_priors <- vector(mode = "list", length = length(state_initializer))
                 param_inds <- 0
 
                 for(k in seq_along(state_initializer)) {
 
                         # get the relevant strata
-                        if(identical(state_initializer[[k]]$strata, "ALL") || all(strata %in% state_initializer[[k]]$strata)) {
+                        if (identical(state_initializer[[k]]$strata, "ALL") ||
+                            all(strata %in% state_initializer[[k]]$strata)) {
                                 rel_strata <- strata
                         } else {
                                 rel_strata <- state_initializer[[k]]$strata
@@ -474,31 +475,28 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                         initializer[[k]] <- vector(mode = "list", length = length(rel_strata))
 
                         # handle initial parameters
-                        if(state_initializer[[k]]$shared_params) {
-                                initdist_params[[k]] <- state_initializer[[k]]$init_states
-                                param_inds <- max(param_inds) + seq_along(state_initializer[[k]]$init_states)
-                        } else {
-                                initdist_params[[k]] <- vector(mode = "list", length = length(rel_strata))
-                        }
+                        initdist_params[[k]] <- vector(mode = "list", length = length(rel_strata))
+                        initdist_priors[[k]] <- vector(mode = "list", length = length(rel_strata))
 
                         for(j in seq_along(initializer[[k]])) {
                                 initializer[[k]][[j]]$init_states <- state_initializer[[k]]$init_states
+                                initializer[[k]][[j]]$prior       <- state_initializer[[k]]$prior
                                 initializer[[k]][[j]]$fixed       <- state_initializer[[k]]$fixed
                                 initializer[[k]][[j]]$strata      <- rel_strata[j]
-                                initializer[[k]][[j]]$codes       <- match(paste(names(initializer[[k]][[j]]$init_states), rel_strata[j], sep = "_"),
-                                                                           names(compartment_codes))
+                                initializer[[k]][[j]]$codes       <-
+                                        match(paste(names(initializer[[k]][[j]]$init_states), rel_strata[j], sep = "_"),
+                                              names(compartment_codes))
 
-                                if(state_initializer[[k]]$shared_params) {
-                                        initializer[[k]][[j]]$param_inds <- param_inds
-                                } else {
-                                        initdist_params[[k]][[j]] <- state_initializer[[k]]$init_states
-                                        param_inds <- max(param_inds) + seq_along(state_initializer[[k]]$init_states)
-                                        initializer[[k]][[j]]$param_inds <- param_inds
-                                }
+                                initdist_params[[k]][[j]] <- state_initializer[[k]]$init_states
+                                initdist_priors[[k]][[j]] <- state_initializer[[k]]$prior
+                                param_inds <- max(param_inds) + seq_along(state_initializer[[k]]$init_states)
+                                initializer[[k]][[j]]$param_inds <- param_inds
                         }
                 }
 
-                initializer <- unlist(initializer, recursive = FALSE); initdist_params <- unlist(initdist_params)
+                initializer     <- unlist(initializer, recursive = FALSE);
+                initdist_params <- unlist(initdist_params)
+                initdist_priors <- unlist(initdist_priors)
 
                 # determine if initial states are fixed
                 fixed_inits <- all(sapply(initializer, "[[", 2) == TRUE)
@@ -512,7 +510,8 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 names(const_codes) <- names(constants)
 
                 # check that either all parameters are random or that initial state is fixed for each stratum
-                if(!(all(sapply(initializer, function(x) x[[2]] == TRUE)) | all(sapply(initializer, function(x) x[[2]] == FALSE)))) {
+                if (!(all(sapply(initializer, function(x) x$fixed == TRUE)) ||
+                      all(sapply(initializer, function(x) x$fixed == FALSE)))) {
                         stop("All of the initial state parameters must either be fixed, or all must be random.")
                 }
 
@@ -584,7 +583,9 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                         rate_fcns[[k]][[2]] <- paste0("(", rate_fcns[[k]][[1]], ") * state[", compartment_codes[rate_fcns[[k]][[3]]], "]")
                 }
 
-                initializer            <- state_initializer; initdist_params <- state_initializer$init_states
+                initializer            <- state_initializer
+                initdist_params        <- state_initializer$init_states
+                initdist_priors        <- state_initializer$prior
                 initializer$param_inds <- seq_along(initdist_params)
                 initializer$codes      <- match(names(initializer$init_states), names(compartment_codes))
 
@@ -640,6 +641,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
 
         # reorder the initial distribution parameters
         initdist_parameters        <- as.numeric(initdist_params[order(initdist_codes)])
+        initdist_priors            <- as.numeric(initdist_priors[order(initdist_codes)])
         names(initdist_parameters) <- paste0(names(compartment_codes), "_0")
 
         # add the initial state parameters either to the parameters or to the constants
@@ -724,7 +726,8 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                          tcovar              = tcovar,
                          constants           = constants,
                          state_initializer   = initializer,
-                         initdist_params     = initdist_params,
+                         initdist_params     = initdist_parameters,
+                         initdist_priors     = initdist_priors,
                          fixed_inits         = fixed_inits,
                          flow_matrix         = flow_matrix,
                          flow_matrix_lna     = flow_matrix_lna,

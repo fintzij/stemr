@@ -19,8 +19,8 @@ This test attempts to use the LNA to estimate the posterior distribution of the 
 # number of iterations and objects to store the paths
 cat("Starting prevalence simulation.", sep = "\n", file = "lna_post_fixedpars.txt", append = FALSE)
 
-iterations       <- 10000
-thin_latent_proc <- 100
+iterations       <- 5000000
+thin_latent_proc <- 1000
 thin_params      <- 1
 
 # set up model
@@ -29,7 +29,7 @@ rates <- list(rate("beta * I", "S", "I", incidence = FALSE),
               rate("mu", "I", "R"))
 init_state = c(50000,10,50)
 state_initializer <- stem_initializer(c(S = 50000, I = 10, R = 50), fixed = T)
-parameters <- c(beta = 0.00001, mu = 1/7, rho = 0.5)
+parameters <- c(beta = 0.00001, mu = 1/7, rho = 0.1)
 tcovar <- NULL
 constants <- NULL
 strata <- NULL
@@ -67,6 +67,7 @@ flow_matrix            <- stem_object$dynamics$flow_matrix_lna
 lna_pointer            <- stem_object$dynamics$lna_pointers$lna_pointer
 lna_pointer_ess        <- stem_object$dynamics$lna_pointers$lna_pointer_ess
 lna_set_pars_pointer   <- stem_object$dynamics$lna_pointers$lna_set_pars_ptr
+lna_ess_set_pars_ptr   <- stem_object$dynamics$lna_pointers$lna_ess_set_pars_ptr
 censusmat              <- stem_object$measurement_process$censusmat
 parameters             <- stem_object$dynamics$parameters
 constants              <- stem_object$dynamics$constants
@@ -188,7 +189,7 @@ path <- lna_density2(
         param_update_inds = param_update_inds,
         flow_matrix       = flow_matrix,
         lna_pointer_ess   = lna_pointer_ess,
-        set_pars_pointer  = lna_set_pars_pointer
+        lna_ess_set_pars_ptr  = lna_ess_set_pars_ptr
 )
 
 # save the initial path, data log-likelihood and the lna log-likelihood
@@ -203,32 +204,31 @@ for(k in 2:iterations) {
                 cat(paste0("Prevalence iteration ", k), sep = "\n", file = "lna_post_fixedpars.txt", append = TRUE)
         }
                 
-        
         path <- update_lna_path(
-                        path_cur                = path,
-                        data                    = data,
-                        lna_parameters          = lna_parameters,
-                        pathmat                 = pathmat,
-                        censusmat               = censusmat,
-                        emitmat                 = emitmat,
-                        flow_matrix             = flow_matrix,
-                        lna_pointer             = lna_pointer,
-                        lna_set_pars_pointer    = lna_set_pars_pointer,
-                        lna_times               = lna_times,
-                        lna_initdist_inds       = lna_initdist_inds,
-                        param_update_inds       = param_update_inds,
-                        incidence_codes         = incidence_codes,
-                        census_incidence_codes  = census_incidence_codes,
-                        census_indices          = census_indices,
-                        measproc_indmat         = measproc_indmat,
-                        obstime_inds            = obstime_inds,
-                        d_meas_pointer          = d_meas_pointer,
-                        parameters              = parameters,
-                        constants               = constants,
-                        tcovar_censmat          = tcovar_censmat,
-                        do_prevalence           = do_prevalence,
-                        do_incidence            = do_incidence
-                )
+                                path_cur               = path,
+                                data                   = data,
+                                lna_parameters         = lna_parameters,
+                                pathmat                = pathmat,
+                                censusmat              = censusmat,
+                                emitmat                = emitmat,
+                                flow_matrix            = flow_matrix,
+                                lna_pointer_ess        = lna_pointer_ess,
+                                lna_ess_set_pars_ptr   = lna_ess_set_pars_ptr,
+                                lna_times              = lna_times,
+                                lna_initdist_inds      = lna_initdist_inds,
+                                param_update_inds      = param_update_inds,
+                                incidence_codes        = incidence_codes,
+                                census_incidence_codes = census_incidence_codes,
+                                census_indices         = census_indices,
+                                measproc_indmat        = measproc_indmat,
+                                obstime_inds           = obstime_inds,
+                                d_meas_pointer         = d_meas_pointer,
+                                parameters             = parameters,
+                                constants              = constants,
+                                tcovar_censmat         = tcovar_censmat,
+                                do_prevalence          = do_prevalence,
+                                do_incidence           = do_incidence
+                )   
         
         data_log_lik[k] <- path$data_log_lik
         lna_log_lik[k]  <- path$lna_log_lik
@@ -277,7 +277,7 @@ for(k in 1:length(vars)) {
 results$mcse <- sqrt(vars) / sqrt(ncol(I_paths))
 
 # produce the plot
-pdf("lna_post_prev.pdf")
+pdf("lna_post_prev_rho_1.pdf")
 print(ggplot(results, aes(x = time, y = mean)) + geom_ribbon(aes(ymin = mean - 1.96 * mcse, ymax = mean + 1.96 * mcse), alpha = 0.2) + geom_line() + geom_line(data = as.data.frame(true_path), aes(x = time, y = I), colour = "red") + labs(x = "time", y = "I", title = "Pointwise prevalence from prevalence data - mean and MCSE bands"))
 
 print(ggplot(results_quantiles, aes(x = time, y = med)) + geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2) + geom_line() + geom_line(data = as.data.frame(true_path), aes(x = time, y = I), colour = "red") + labs(x = "time", y = "I", title = "Pointwise prevalence from prevalence data - quantiles"))
@@ -290,8 +290,8 @@ library(stemr)
 cat("Starting incidence simulation.", sep = "\n", file = "lna_post_fixedpars.txt", append = FALSE)
 
 # number of iterations and objects to store the paths
-iterations       <- 100000
-thin_latent_proc <- 100
+iterations       <- 5000000
+thin_latent_proc <- 1000
 thin_params      <- 1
 
 # set up model
@@ -300,7 +300,7 @@ rates <- list(rate("beta * I", "S", "I", incidence = TRUE),
               rate("mu", "I", "R"))
 init_state = c(50000,10,50)
 state_initializer <- stem_initializer(c(S = 50000, I = 10, R = 50), fixed = T)
-parameters <- c(beta = 0.00001, mu = 1/7, rho = 0.5)
+parameters <- c(beta = 0.00001, mu = 1/7, rho = 0.01)
 tcovar <- NULL
 constants <- NULL
 strata <- NULL
@@ -340,6 +340,7 @@ flow_matrix            <- stem_object$dynamics$flow_matrix_lna
 lna_pointer            <- stem_object$dynamics$lna_pointers$lna_pointer
 lna_pointer_ess        <- stem_object$dynamics$lna_pointers$lna_pointer_ess
 lna_set_pars_pointer   <- stem_object$dynamics$lna_pointers$lna_set_pars_ptr
+lna_ess_set_pars_ptr   <- stem_object$dynamics$lna_pointers$lna_ess_set_pars_ptr
 censusmat              <- stem_object$measurement_process$censusmat
 parameters             <- stem_object$dynamics$parameters
 constants              <- stem_object$dynamics$constants
@@ -461,7 +462,7 @@ path <- lna_density2(
         param_update_inds = param_update_inds,
         flow_matrix       = flow_matrix,
         lna_pointer_ess   = lna_pointer_ess,
-        set_pars_pointer  = lna_set_pars_pointer
+        lna_ess_set_pars_ptr = lna_ess_set_pars_ptr
 )
 
 # save the initial path, data log-likelihood and the lna log-likelihood
@@ -478,30 +479,30 @@ for(k in 2:iterations) {
                 
         
         path <- update_lna_path(
-                        path_cur                = path,
-                        data                    = data,
-                        lna_parameters          = lna_parameters,
-                        pathmat                 = pathmat,
-                        censusmat               = censusmat,
-                        emitmat                 = emitmat,
-                        flow_matrix             = flow_matrix,
-                        lna_pointer             = lna_pointer,
-                        lna_set_pars_pointer    = lna_set_pars_pointer,
-                        lna_times               = lna_times,
-                        lna_initdist_inds       = lna_initdist_inds,
-                        param_update_inds       = param_update_inds,
-                        incidence_codes         = incidence_codes,
-                        census_incidence_codes  = census_incidence_codes,
-                        census_indices          = census_indices,
-                        measproc_indmat         = measproc_indmat,
-                        obstime_inds            = obstime_inds,
-                        d_meas_pointer          = d_meas_pointer,
-                        parameters              = parameters,
-                        constants               = constants,
-                        tcovar_censmat          = tcovar_censmat,
-                        do_prevalence           = do_prevalence,
-                        do_incidence            = do_incidence
-                )
+                                path_cur               = path,
+                                data                   = data,
+                                lna_parameters         = lna_parameters,
+                                pathmat                = pathmat,
+                                censusmat              = censusmat,
+                                emitmat                = emitmat,
+                                flow_matrix            = flow_matrix,
+                                lna_pointer_ess        = lna_pointer_ess,
+                                lna_ess_set_pars_ptr   = lna_ess_set_pars_ptr,
+                                lna_times              = lna_times,
+                                lna_initdist_inds      = lna_initdist_inds,
+                                param_update_inds      = param_update_inds,
+                                incidence_codes        = incidence_codes,
+                                census_incidence_codes = census_incidence_codes,
+                                census_indices         = census_indices,
+                                measproc_indmat        = measproc_indmat,
+                                obstime_inds           = obstime_inds,
+                                d_meas_pointer         = d_meas_pointer,
+                                parameters             = parameters,
+                                constants              = constants,
+                                tcovar_censmat         = tcovar_censmat,
+                                do_prevalence          = do_prevalence,
+                                do_incidence           = do_incidence
+                )     
         
         data_log_lik[k] <- path$data_log_lik
         lna_log_lik[k]  <- path$lna_log_lik
@@ -565,7 +566,7 @@ for(k in 1:length(vars_incid)) {
 results_prev$mcse <- sqrt(vars_prev) / sqrt(ncol(I_paths_prev))
 results_incid$mcse <- sqrt(vars_incid) / sqrt(ncol(I_paths_incid))
 
-pdf("lna_post_incid.pdf")
+pdf("lna_post_incid_rho_1.pdf")
 # produce the plot
 print(ggplot(results_prev, aes(x = time, y = mean)) + geom_ribbon(aes(ymin = mean - 1.96 * mcse, ymax = mean + 1.96 * mcse), alpha = 0.2) + geom_line() + geom_line(data = as.data.frame(true_path_prev), aes(x = time, y = I), colour = "red") + labs(x = "time", y = "I", title = "Pointwise prevalence from incidence data - mean and MCSE bands"))
 

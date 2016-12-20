@@ -29,7 +29,7 @@ using namespace arma;
 // [[Rcpp::export]]
 Rcpp::List propose_lna_ess(Rcpp::List& path_cur, const arma::colvec& lna_times,
                            const Rcpp::NumericMatrix& lna_pars, const Rcpp::LogicalVector& param_update_inds,
-                           const arma::mat& flow_matrix, SEXP lna_pointer_ess, SEXP set_ess_pars_pointer) {
+                           const arma::mat& flow_matrix, SEXP lna_pointer_ess, SEXP lna_ess_set_pars_ptr) {
 
         // get the dimensions of various objects
         int n_comps = flow_matrix.n_rows;         // number of model compartments = number of rates
@@ -42,7 +42,7 @@ Rcpp::List propose_lna_ess(Rcpp::List& path_cur, const arma::colvec& lna_times,
         arma::mat lna_step(1, n_comps);                         // vector for storing the sampled lna values
         Rcpp::NumericVector current_params(lna_pars.ncol());    // vector for storing the current parameter values
         current_params = lna_pars.row(0);                       // set the current parameter values
-        CALL_SET_LNA_PARAMS(current_params, set_ess_pars_pointer);  // set the parameters in the odeintr namespace
+        CALL_SET_LNA_PARAMS(current_params, lna_ess_set_pars_ptr);  // set the parameters in the odeintr namespace
 
         // initialize the LNA objects - the vector for storing the ODES, the state vector, and the Jacobian
         Rcpp::NumericVector lna_state_vec(n_odes);                        // vector to store the results of the ODEs
@@ -74,7 +74,7 @@ Rcpp::List propose_lna_ess(Rcpp::List& path_cur, const arma::colvec& lna_times,
                 // update the parameters if they need to be updated
                 if(param_update_inds[j-1]) {
                         current_params = lna_pars.row(j-1);
-                        CALL_SET_LNA_PARAMS(current_params, set_ess_pars_pointer);
+                        CALL_SET_LNA_PARAMS(current_params, lna_ess_set_pars_ptr);
                 }
 
                 // integrate the LNA

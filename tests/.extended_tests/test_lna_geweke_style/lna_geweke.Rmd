@@ -18,7 +18,7 @@ This test implements a Geweke type test to ascertain that the LNA targets the co
 # number of iterations and objects to store the paths
 cat("Starting prevalence simulation.", sep = "\n", file = "lna_geweke.txt", append = FALSE)
 
-iterations       <- 500000
+iterations       <- 1000000
 thin_latent_proc <- 100
 thin_params      <- 1
 
@@ -66,7 +66,7 @@ flow_matrix            <- stem_object$dynamics$flow_matrix_lna
 lna_pointer            <- stem_object$dynamics$lna_pointers$lna_pointer
 lna_pointer_ess        <- stem_object$dynamics$lna_pointers$lna_pointer_ess
 lna_set_pars_pointer   <- stem_object$dynamics$lna_pointers$lna_set_pars_ptr
-lna_ess_set_pars_pointer <- stem_object$dynamics$lna_pointers$lna_ess_set_pars_ptr
+lna_ess_set_pars_ptr <- stem_object$dynamics$lna_pointers$lna_ess_set_pars_ptr
 censusmat              <- stem_object$measurement_process$censusmat
 parameters             <- stem_object$dynamics$parameters
 constants              <- stem_object$dynamics$constants
@@ -201,7 +201,7 @@ path <- lna_density2(
         param_update_inds = param_update_inds,
         flow_matrix       = flow_matrix,
         lna_pointer_ess   = lna_pointer_ess,
-        set_pars_pointer  = lna_set_pars_pointer
+        lna_ess_set_pars_ptr = lna_ess_set_pars_ptr
 )
 
 # census the original LNA path
@@ -234,8 +234,8 @@ for(k in 2:iterations) {
                         censusmat               = censusmat,
                         emitmat                 = emitmat,
                         flow_matrix             = flow_matrix,
-                        lna_pointer             = lna_pointer_ess,
-                        set_ess_pars_pointer    = lna_ess_set_pars_pointer,
+                        lna_pointer_ess         = lna_pointer_ess,
+                        lna_ess_set_pars_ptr    = lna_ess_set_pars_ptr,
                         lna_times               = lna_times,
                         lna_initdist_inds       = lna_initdist_inds,
                         param_update_inds       = param_update_inds,
@@ -304,16 +304,13 @@ lna_paths_sim     <- array(unlist(stemr_paths$paths),
                                ncol(stemr_paths$paths[[1]]),
                                length(stemr_paths$paths)))
 
-# paths simulated from the LNA
-lna_paths_mcmc <- latent_lna_paths
-natural_paths_mcmc <- latent_paths_natural
 
 # extract the S2I and I compartments from the relevant objects
 I_nat_sim   <- natural_paths_sim[,3,]
 S2I_lna_sim <- lna_paths_sim[,2,]
 
-I_nat_mcmc   <- natural_paths_mcmc[,3,]
-S2I_lna_mcmc <- lna_paths_mcmc[,2,]
+I_nat_mcmc   <- latent_paths_natural[,3,]
+S2I_lna_mcmc <- latent_lna_paths[,2,]
 
 library(mcmc)
 library(ggplot2)
@@ -367,7 +364,7 @@ library(stemr)
 # number of iterations and objects to store the paths
 cat("Starting incidence simulation.", sep = "\n", file = "lna_geweke.txt", append = FALSE)
 
-iterations       <- 500000
+iterations       <- 1000000
 thin_latent_proc <- 100
 thin_params      <- 1
 
@@ -417,7 +414,7 @@ flow_matrix            <- stem_object$dynamics$flow_matrix_lna
 lna_pointer            <- stem_object$dynamics$lna_pointers$lna_pointer
 lna_pointer_ess        <- stem_object$dynamics$lna_pointers$lna_pointer_ess
 lna_set_pars_pointer   <- stem_object$dynamics$lna_pointers$lna_set_pars_ptr
-lna_ess_set_pars_pointer <- stem_object$dynamics$lna_pointers$lna_ess_set_pars_ptr
+lna_ess_set_pars_ptr   <- stem_object$dynamics$lna_pointers$lna_ess_set_pars_ptr
 censusmat              <- stem_object$measurement_process$censusmat
 parameters             <- stem_object$dynamics$parameters
 constants              <- stem_object$dynamics$constants
@@ -552,7 +549,7 @@ path <- lna_density2(
         param_update_inds = param_update_inds,
         flow_matrix       = flow_matrix,
         lna_pointer_ess   = lna_pointer_ess,
-        set_pars_pointer  = lna_set_pars_pointer
+        lna_ess_set_pars_ptr = lna_ess_set_pars_ptr
 )
 
 # census the original LNA path
@@ -574,7 +571,7 @@ for(k in 2:iterations) {
 
         if(k%%1000 == 0) {
                 # print(k)
-                cat(paste0("Prevalence iteration ", k), sep = "\n", file = "lna_geweke.txt", append = TRUE)
+                cat(paste0("Incidence iteration ", k), sep = "\n", file = "lna_geweke.txt", append = TRUE)
         }
                 
         path <- update_lna_path(
@@ -585,8 +582,8 @@ for(k in 2:iterations) {
                         censusmat               = censusmat,
                         emitmat                 = emitmat,
                         flow_matrix             = flow_matrix,
-                        lna_pointer             = lna_pointer_ess,
-                        set_ess_pars_pointer    = lna_ess_set_pars_pointer,
+                        lna_pointer_ess         = lna_pointer_ess,
+                        lna_ess_set_pars_ptr    = lna_ess_set_pars_ptr,
                         lna_times               = lna_times,
                         lna_initdist_inds       = lna_initdist_inds,
                         param_update_inds       = param_update_inds,

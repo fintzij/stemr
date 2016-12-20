@@ -33,7 +33,9 @@ ceiling(iterations/100)}
 \item{initialization_attempts}{number of attempts to initialize the latent
 path before breaking.}
 
-\item{messages}{should status messages be printed? defaults to TRUE.}
+\item{messages}{should status messages be generated in an external text file?
+If so, the iteration number is printed every 1000th iteration. defaults to
+TRUE.}
 }
 \value{
 list with parameter posterior samples and MCMC diagnostics

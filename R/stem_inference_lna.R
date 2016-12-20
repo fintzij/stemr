@@ -16,7 +16,9 @@
 #'   ceiling(iterations/100)
 #' @param initialization_attempts number of attempts to initialize the latent
 #'   path before breaking.
-#' @param messages should status messages be printed? defaults to TRUE.
+#' @param messages should status messages be generated in an external text file?
+#'   If so, the iteration number is printed every 1000th iteration. defaults to
+#'   TRUE.
 #'
 #' @return list with parameter posterior samples and MCMC diagnostics
 #' @export
@@ -27,6 +29,7 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernels, 
         lna_pointer            <- stem_object$dynamics$lna_pointers$lna_pointer
         lna_pointer_ess        <- stem_object$dynamics$lna_pointers$lna_pointer_ess
         lna_set_pars_pointer   <- stem_object$dynamics$lna_pointers$lna_set_pars_ptr
+        lna_ess_set_pars_ptr   <- stem_object$dynamics$lna_pointers$lna_ess_set_pars_ptr
         censusmat              <- stem_object$measurement_process$censusmat
         parameters             <- stem_object$dynamics$parameters
         constants              <- stem_object$dynamics$constants
@@ -163,7 +166,7 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernels, 
                 param_update_inds = param_update_inds,
                 flow_matrix       = flow_matrix,
                 lna_pointer_ess   = lna_pointer_ess,
-                set_pars_pointer  = lna_set_pars_pointer
+                lna_ess_set_pars_ptr = lna_ess_set_pars_ptr
         )
 
         # save the initial path, data log-likelihood and the lna log-likelihood
@@ -171,13 +174,26 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernels, 
         data_log_lik[1]   <- path$data_log_lik
         lna_log_lik[1]    <- path$lna_log_lik
 
+        if(messages) {
+                status_file <-
+                        paste0("LNA_inference_status_",
+                               as.numeric(Sys.time()),
+                               ".txt")
+                cat(
+                        "Beginning MCMC",
+                        file = status_file,
+                        sep = "\n",
+                        append = FALSE
+                )
+        }
+
         # begin the MCMC
         start.time <- Sys.time()
         for(k in (seq_len(iterations) + 1)) {
 
                 # print the status if messages are enabled
                 if(messages && k%%thin_latent_proc == 0) {
-                        print(k)
+                        cat(paste0("Iteration ", k), file = status_file, sep = "\n", append = TRUE)
                 }
 
                 # update the path via elliptical slice sampling
@@ -189,8 +205,8 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernels, 
                         censusmat               = censusmat,
                         emitmat                 = emitmat,
                         flow_matrix             = flow_matrix,
-                        lna_pointer             = lna_pointer,
-                        lna_set_pars_pointer    = lna_set_pars_pointer,
+                        lna_pointer_ess         = lna_pointer_ess,
+                        lna_ess_set_pars_ptr    = lna_ess_set_pars_ptr,
                         lna_times               = lna_times,
                         lna_initdist_inds       = lna_initdist_inds,
                         param_update_inds       = param_update_inds,
@@ -207,5 +223,4 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernels, 
                         do_incidence            = do_incidence
                 )
         }
-
 }

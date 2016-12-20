@@ -36,12 +36,13 @@
 initialize_lna <- function(data, lna_parameters, censusmat, emitmat, flow_matrix, lna_pointer, lna_set_pars_pointer, lna_times, lna_initdist_inds, param_update_inds, incidence_codes, census_incidence_codes, census_indices, measproc_indmat, obstime_inds, d_meas_pointer, parameters, constants, tcovar_censmat, do_prevalence, do_incidence, initialization_attempts) {
 
         path <- propose_lna(
-                lna_times         = lna_times,
-                lna_pars          = lna_parameters,
-                param_update_inds = param_update_inds,
-                flow_matrix       = flow_matrix,
-                lna_pointer       = lna_pointer,
-                set_pars_pointer  = lna_set_pars_pointer
+                lna_times            = lna_times,
+                lna_pars             = lna_parameters,
+                param_update_inds    = param_update_inds,
+                flow_matrix          = flow_matrix,
+                lna_pointer          = lna_pointer,
+                set_pars_pointer     = lna_set_pars_pointer,
+                enforce_monotonicity = TRUE
         )
 
         # get the initial state parameters
@@ -85,14 +86,14 @@ initialize_lna <- function(data, lna_parameters, censusmat, emitmat, flow_matrix
 
                 # propose another LNA path
                 path <- propose_lna(
-                        lna_times         = lna_times,
-                        lna_pars          = lna_parameters,
-                        param_update_inds = param_update_inds,
-                        flow_matrix       = flow_matrix,
-                        lna_pointer       = lna_pointer,
-                        set_pars_pointer  = lna_set_pars_pointer
+                        lna_times            = lna_times,
+                        lna_pars             = lna_parameters,
+                        param_update_inds    = param_update_inds,
+                        flow_matrix          = flow_matrix,
+                        lna_pointer          = lna_pointer,
+                        set_pars_pointer     = lna_set_pars_pointer,
+                        enforce_monotonicity = TRUE
                 )
-
 
                 # census the LNA
                 census_lna(

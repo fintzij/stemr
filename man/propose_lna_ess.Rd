@@ -6,7 +6,7 @@
 model.}
 \usage{
 propose_lna_ess(path_cur, lna_times, lna_pars, param_update_inds, flow_matrix,
-  lna_pointer_ess, set_ess_pars_pointer)
+  lna_pointer_ess, lna_ess_set_pars_ptr)
 }
 \arguments{
 \item{path_cur}{list containing the LNA objects for the current path}

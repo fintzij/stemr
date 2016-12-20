@@ -111,23 +111,19 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 # generate or copy the initial states
                 if(stem_object$dynamics$fixed_inits) {
 
-                        if(stem_object$dynamics$n_strata == 1) {
-                                param_inds     <- stem_object$dynamics$state_initializer$param_inds
-                                initdist_codes <- stem_object$dynamics$state_initializer$codes
-                        } else {
-                                param_inds     <- unlist(lapply(stem_object$dynamics$state_initializer, function(x) x$param_inds))
-                                initdist_codes <- unlist(lapply(stem_object$dynamics$state_initializer, function(x) x$codes))
-                        }
-
                         # if all initial states are fixed, just copy the initial compartment counts
-                        init_states    <- matrix(rep(stem_object$dynamics$initdist_params[param_inds], nsim), nrow = nsim, byrow = TRUE)[,order(initdist_codes), drop = FALSE]
+                        init_states <- matrix(
+                                rep(stem_object$dynamics$initdist_params, nsim),
+                                nrow = nsim,
+                                byrow = TRUE
+                        )
                         colnames(init_states) <- names(stem_object$dynamics$comp_codes)
 
                 } else {
                         if(stem_object$dynamics$n_strata == 1) {
 
                                 # simulate the initial compartment counts
-                                init_states <- t(as.matrix(rmultinom(nsim, stem_object$dynamics$popsize, stem_object$dynamics$initdist_params)))
+                                init_states <- t(as.matrix(rmultinom(nsim, stem_object$dynamics$popsize, stem_object$dynamics$initdist_priors)))
                                 colnames(init_states) <- names(stem_object$dynamics$comp_codes)
 
                         } else if(stem_object$dynamics$n_strata > 1) {
@@ -137,7 +133,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                                 colnames(init_states) <- names(stem_object$dynamics$comp_codes)
 
                                 for(s in seq_len(stem_object$dynamics$n_strata)) {
-                                        init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <- as.matrix(t(rmultinom(nsim, stem_object$dynamics$strata_sizes[s], stem_object$dynamics$state_initializer[[s]]$init_states)))
+                                        init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <- as.matrix(t(rmultinom(nsim, stem_object$dynamics$strata_sizes[s], stem_object$dynamics$state_initializer[[s]]$prior)))
                                 }
                         }
                 }
@@ -278,18 +274,43 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 # retrieve the initial state
                 init_state <- lna_pars[1, stem_object$dynamics$lna_initdist_inds + 1]
 
+                # if the initial state is not fixed, sample the collection of initial states
+                if(!stem_object$dynamics$fixed_inits) {
+                        if(stem_object$dynamics$n_strata == 1) {
+
+                                # simulate the initial compartment counts
+                                init_states <- t(as.matrix(rmultinom(nsim, stem_object$dynamics$popsize, stem_object$dynamics$initdist_priors)))
+                                colnames(init_states) <- names(stem_object$dynamics$comp_codes)
+
+                        } else if(stem_object$dynamics$n_strata > 1) {
+
+                                # generate the matrix of initial compartment counts
+                                init_states <- matrix(0.0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
+                                colnames(init_states) <- names(stem_object$dynamics$comp_codes)
+
+                                for(s in seq_len(stem_object$dynamics$n_strata)) {
+                                        init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <- as.matrix(t(rmultinom(nsim, stem_object$dynamics$strata_sizes[s], stem_object$dynamics$state_initializer[[s]]$prior)))
+                                }
+                        }
+                }
+
                 for(k in seq_len(nsim)) {
 
                         if(!stem_object$dynamics$fixed_inits) {
-                               stop("Non-fixed initial state not yet implemented for the LNA.")
+                               pars2lnapars(lna_pars, c(parameters, init_states[k,]))
                         }
 
-                        census_paths[[k]] <- propose_lna(lna_times,
-                                                         lna_pars,
-                                                         param_update_inds,
-                                                         stem_object$dynamics$flow_matrix_lna,
-                                                         stem_object$dynamics$lna_pointers$lna_pointer,
-                                                         stem_object$dynamics$lna_pointers$lna_set_pars_ptr)$lna_path
+                        census_paths[[k]] <- propose_lna(lna_times        = lna_times,
+                                                         lna_pars         = lna_pars,
+                                                         param_update_inds= param_update_inds,
+                                                         flow_matrix      = stem_object$dynamics$flow_matrix_lna,
+                                                         lna_pointer      = stem_object$dynamics$lna_pointers$lna_pointer,
+                                                         set_pars_pointer = stem_object$dynamics$lna_pointers$lna_set_pars_ptr,
+                                                         enforce_monotonicity = FALSE)$lna_path
+
+                        if(!stem_object$dynamics$fixed_inits) {
+                                init_state <- init_states[k,]
+                        }
 
                         lna_paths[[k]] <- convert_lna(census_paths[[k]],
                                                       stem_object$dynamics$flow_matrix_lna,

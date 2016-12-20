@@ -7,7 +7,7 @@
 #' @return list with an updated LNA path along with its ODEs, the observed data
 #'   log-likelihood, and the lna log-likelihood.
 #' @export
-update_lna_path <- function(path_cur, data, lna_parameters, pathmat, censusmat, emitmat, flow_matrix, lna_pointer, set_ess_pars_pointer, lna_times, lna_initdist_inds, param_update_inds, incidence_codes, census_incidence_codes, census_indices, measproc_indmat, obstime_inds, d_meas_pointer, parameters, constants, tcovar_censmat, do_prevalence, do_incidence) {
+update_lna_path <- function(path_cur, data, lna_parameters, pathmat, censusmat, emitmat, flow_matrix, lna_pointer_ess, lna_ess_set_pars_ptr, lna_times, lna_initdist_inds, param_update_inds, incidence_codes, census_incidence_codes, census_indices, measproc_indmat, obstime_inds, d_meas_pointer, parameters, constants, tcovar_censmat, do_prevalence, do_incidence) {
 
         # propose a new path
         path_prop <- propose_lna_ess(
@@ -17,7 +17,7 @@ update_lna_path <- function(path_cur, data, lna_parameters, pathmat, censusmat, 
                 param_update_inds = param_update_inds,
                 flow_matrix       = flow_matrix,
                 lna_pointer_ess   = lna_pointer_ess,
-                set_ess_pars_pointer = set_ess_pars_pointer
+                lna_ess_set_pars_ptr = lna_ess_set_pars_ptr
         )
 
         # choose a likelihood threshold
@@ -135,7 +135,7 @@ update_lna_path <- function(path_cur, data, lna_parameters, pathmat, censusmat, 
                         param_update_inds,
                         flow_matrix,
                         lna_pointer_ess,
-                        lna_set_pars_pointer
+                        lna_ess_set_pars_ptr
                 )
 
         return(path_prop)

@@ -6,7 +6,7 @@
 residual ODEs (sufficient after elliptical slice sampling).}
 \usage{
 lna_density2(path, lna_times, lna_pars, param_update_inds, flow_matrix,
-  lna_pointer_ess, set_pars_pointer)
+  lna_pointer_ess, lna_ess_set_pars_ptr)
 }
 \arguments{
 \item{path}{list containing the lna_path, and the drift, residual, and
@@ -23,10 +23,10 @@ LNA parameters need to be updated.}
 \item{flow_matrix}{original flow matrix giving the changes to compartments
 from each reaction}
 
+\item{lna_pointer}{external pointer to LNA integration fcn}
+
 \item{set_pars_pointer}{external pointer to the function for setting the LNA
 parameters.}
-
-\item{lna_pointer}{external pointer to LNA integration fcn}
 }
 \value{
 List containing the LNA path, the path of the residual

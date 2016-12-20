@@ -6,7 +6,7 @@
 model.}
 \usage{
 propose_lna(lna_times, lna_pars, param_update_inds, flow_matrix, lna_pointer,
-  set_pars_pointer)
+  set_pars_pointer, enforce_monotonicity)
 }
 \arguments{
 \item{lna_times}{vector of times at which the LNA must be evaluated}
@@ -24,6 +24,9 @@ from each reaction}
 
 \item{set_pars_pointer}{external pointer to the function for setting the LNA
 parameters.}
+
+\item{enforce_monotonicity}{should monotinicity in the sample paths of the
+LNA counting processes be enforced?}
 }
 \value{
 array with slices containing the LNA path, the path of the residual
