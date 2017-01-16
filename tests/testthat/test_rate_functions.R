@@ -121,8 +121,8 @@ test_that("Rates are computed properly for a complex system with time varying co
                            seasonality(period = 52, intercept = 1e-5, trend = 5e-5, common_seasonality = FALSE)),
                       rate("mu", "I", "R", "ALL"),
                       rate("delta", "R", "D", c("male_old", "female_old")))
-        state_initializer <- list(stem_initializer(c(S = 900, I = 10, R = 90), fixed = FALSE, strata = c("male_young", "female_young"), shared_params = FALSE),
-                                  stem_initializer(c(S = 400, I = 5, R = 500, D = 0), fixed = FALSE, strata = c("male_old", "female_old"), shared_params = FALSE))
+        state_initializer <- list(stem_initializer(c(S = 900, I = 10, R = 90), fixed = FALSE, strata = c("male_young", "female_young")),
+                                  stem_initializer(c(S = 400, I = 5, R = 500, D = 0), fixed = FALSE, strata = c("male_old", "female_old")))
         adjacency <- matrix(1, nrow = length(strata), ncol = length(strata)); diag(adjacency) <- 0
         colnames(adjacency) = rownames(adjacency) = strata
         parameters = c(gamma = 1e-4, mu = 1/7, delta = 0.5)
@@ -131,7 +131,20 @@ test_that("Rates are computed properly for a complex system with time varying co
         t0 <- 0; tmax <- 52
 
         # set dynamics
-        dynamics <- stem_dynamics(rates = rates, parameters = parameters,state_initializer = state_initializer, compartments=compartments, strata = strata, adjacency = adjacency, t0 = t0, tmax = tmax, tcovar = tcovar, compile_lna = F, messages = FALSE)
+        dynamics <-
+                stem_dynamics(
+                        rates = rates,
+                        parameters = parameters,
+                        state_initializer = state_initializer,
+                        compartments = compartments,
+                        strata = strata,
+                        adjacency = adjacency,
+                        t0 = t0,
+                        tmax = tmax,
+                        tcovar = tcovar,
+                        compile_lna = F,
+                        messages = FALSE
+                )
 
         # initialize stem object
         stem_object <- stem(dynamics = dynamics)

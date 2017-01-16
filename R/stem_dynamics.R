@@ -499,7 +499,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 initdist_priors <- unlist(initdist_priors)
 
                 # determine if initial states are fixed
-                fixed_inits <- all(sapply(initializer, "[[", 2) == TRUE)
+                fixed_inits <- all(sapply(initializer, "[[", "fixed") == TRUE)
 
                 strata_sizes <- sapply(initializer, function(x) sum(x[[1]]));
                 names(strata_sizes) <- paste0("popsize_",sapply(initializer, "[[", 3))
@@ -704,10 +704,13 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 lna_initdist_inds <- sapply(paste0(names(compartment_codes), "_0"),
                                             grep, names(lna_rates$lna_param_codes)) - 1
         } else {
-                lna_pointer  <- NULL
-                lna_rates    <- list(hazards = NULL, derivatives = NULL, lna_param_codes = NULL)
+                lna_pointer       <- NULL
+                lna_pointer_ess   <- NULL
+                lna_pointers      <- NULL
+                lna_rates         <- list(hazards = NULL, derivatives = NULL, lna_param_codes = NULL)
                 lna_initdist_inds <- NULL
-                lna_comp_codes <- NULL
+                lna_comp_codes    <- NULL
+                flow_matrix_lna   <- NULL
         }
 
         # compile the functions to solve the ODEs for the stochastic epidemic model

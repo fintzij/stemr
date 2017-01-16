@@ -75,7 +75,6 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 observations <- TRUE
         }
 
-
         # build the time varying covariate matrix (includes, at a minimum, the endpoints of the simulation interval)
         # if timestep is null, there are no time-varying covariates
         if(method == "gillespie") {
@@ -255,9 +254,13 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 # insert parameters, constants, and time-varying covariates
                 parameter_inds <- 1:length(stem_object$dynamics$param_codes)
                 constant_inds  <- (length(parameter_inds)+1):(length(parameter_inds) + length(stem_object$dynamics$const_codes))
-                tcovar_inds  <- (max(constant_inds)+1):ncol(lna_pars)
-                lna_pars[, parameter_inds] <- matrix(stem_object$dynamics$parameters, nrow = nrow(lna_pars), ncol = length(parameter_inds), byrow = T)
-                lna_pars[, constant_inds]  <- matrix(stem_object$dynamics$constants, nrow = nrow(lna_pars), ncol = length(constant_inds), byrow = T)
+                tcovar_inds    <- (max(constant_inds)+1):ncol(lna_pars)
+                lna_pars[, parameter_inds] <- matrix(stem_object$dynamics$parameters,
+                                                     nrow = nrow(lna_pars),
+                                                     ncol = length(parameter_inds), byrow = T)
+                lna_pars[, constant_inds]  <- matrix(stem_object$dynamics$constants,
+                                                     nrow = nrow(lna_pars),
+                                                     ncol = length(constant_inds), byrow = T)
 
                 if(!is.null(stem_object$dynamics$.dynamics_args$tcovar)) {
                         tcovar_rowinds          <- findInterval(lna_times, stem_object$dynamics$.dynamics_args$tcovar[,1])
@@ -343,8 +346,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 if(method == "gillespie") {
 
                         # should incidence be computed?
-                        get_incidence   <- !is.null(stem_object$dynamics$incidence_codes)
-                        if(get_incidence) incidence_codes <- stem_object$dynamics$incidence_codes + 1
+                        if(do_incidence) incidence_codes <- stem_object$dynamics$incidence_codes + 1
 
                         # column codes in the path matrix for compartments to be censused
                         census_codes    <- c(stem_object$dynamics$comp_codes,
@@ -370,7 +372,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                                 }
 
                                 # simulate the data
-                                datasets[[k]] <- simulate_r_measure(censusmat = censusmat[,-1],
+                                datasets[[k]] <- simulate_r_measure(censusmat = censusmat,
                                                                     measproc_indmat = stem_object$measurement_process$measproc_indmat,
                                                                     parameters = stem_object$dynamics$parameters,
                                                                     constants = stem_object$dynamics$constants,

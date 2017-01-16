@@ -54,15 +54,17 @@ function.
   parameters as strings in the canonical order they are presented. Thus,
   \enumerate{\item poisson: lambda \item binomial: size, prob \item negative
   binomial: size, mu. (N.B. the negative binomial emissions are parameterized
-  by mean, NOT probability!) \item gaussian: mean, sd}. The \code{strata}
-  argument may either be supplied as a character vector of model strata, or
-  may be specified as "ALL" to indicate all model strata. The case-sensitive
-  key word, "SELF", may be used in the name of the measurement variable and
-  the parameter strings in conjunction with the \code{strata} argument to
-  facilitate specification of multiple measurement processes. Thus, if there
-  are multiple strata whose observations are accrued at the same set of
-  times, the user would only need to supply a single emission function since
-  "SELF" will be parsed and replaced with the names of the strata.
+  by mean, NOT probability! Thus, the size argument corresponds to the
+  negative binomial overdispersion parameter.) \item gaussian: mean, sd}. The
+  \code{strata} argument may either be supplied as a character vector of
+  model strata, or may be specified as "ALL" to indicate all model strata.
+  The case-sensitive key word, "SELF", may be used in the name of the
+  measurement variable and the parameter strings in conjunction with the
+  \code{strata} argument to facilitate specification of multiple measurement
+  processes. Thus, if there are multiple strata whose observations are
+  accrued at the same set of times, the user would only need to supply a
+  single emission function since "SELF" will be parsed and replaced with the
+  names of the strata.
 
   If the data consist of incidence counts, the counts of transition events
   must be identified in terms of the transitions that are being counted, in
@@ -82,8 +84,8 @@ function.
   here: \enumerate{\item \code{emission("prevalence", "binomial", c("I",
   "rho"))}: the observed variable, names "prevalence" is a binomial sample of
   the number of individuals in compartment "I", with sampling probability
-  "rho". \item \code{emission("I_SELF", "binomial", c("S_SELF2I_SELF", "rho"),
-  incidence = TRUE, strata = "ALL")}: the observed incidence for each stratum
-  is a binomial sample of the true incidence in that stratum.}
+  "rho". \item \code{emission("I_SELF", "binomial", c("S_SELF2I_SELF",
+  "rho"), incidence = TRUE, strata = "ALL")}: the observed incidence for each
+  stratum is a binomial sample of the true incidence in that stratum.}
 }
 
