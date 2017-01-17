@@ -384,19 +384,19 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 } else if(method == "lna") {
 
                         # get the objects for simulating from the measurement process
-                        measproc_indmat <- stem_object$measurement_process$measproc_indmat
-                        parameters      <- stem_object$dynamics$parameters
-                        constants       <- stem_object$dynamics$parameters
-                        tcovar          <- tcovar_obstimes
-                        r_measure_ptr   <- stem_object$measurement_process$meas_pointers$r_measure_ptr
-                        cens_inds       <- findInterval(stem_object$measurement_process$obstimes, census_times) - 1
-                        do_prevalence   <- stem_object$measurement_process$lna_prevalence
-                        do_incidence    <- stem_object$measurement_process$lna_incidence
-                        incidence_codes <- stem_object$measurement_process$incidence_codes_lna
-                        obstime_inds    <- stem_object$measurement_process$obstime_inds
-                        pathmat         <- stem_object$measurement_process$censusmat
-                        flow_matrix_lna <- stem_object$dynamics$flow_matrix_lna
-                        cens_incid_codes<- incidence_codes + ncol(pathmat) - 2
+                        measproc_indmat  <- stem_object$measurement_process$measproc_indmat
+                        parameters       <- stem_object$dynamics$parameters
+                        constants        <- stem_object$dynamics$parameters
+                        tcovar           <- tcovar_obstimes
+                        r_measure_ptr    <- stem_object$measurement_process$meas_pointers$r_measure_ptr
+                        cens_inds        <- findInterval(stem_object$measurement_process$obstimes, census_times) - 1
+                        do_prevalence    <- stem_object$measurement_process$lna_prevalence
+                        do_incidence     <- stem_object$measurement_process$lna_incidence
+                        incidence_codes  <- stem_object$measurement_process$incidence_codes_lna
+                        obstime_inds     <- stem_object$measurement_process$obstime_inds
+                        pathmat          <- stem_object$measurement_process$censusmat
+                        flow_matrix_lna  <- stem_object$dynamics$flow_matrix_lna
+                        cens_incid_codes <- incidence_codes + ncol(pathmat) - (1 + length(incidence_codes))
 
                         for(k in seq_len(nsim)) {
 

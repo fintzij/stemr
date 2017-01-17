@@ -13,8 +13,8 @@ kernel(parameters, method = "mvn_rw", cov_mtx)
 \item{method}{algorithm to be used in generating parameter updates -
 currently only multivariate normal random walk is supported.}
 
-\item{cov_mtx}{variance-covariance matrix for random walk proposals with
-column and row names corresponding to the parameters.}
+\item{cov_mtx}{variance-covariance matrix for random walk proposals, with
+rows and columns corresponding to the parameters argument}
 }
 \value{
 list containing objects to be used in the proposals.
