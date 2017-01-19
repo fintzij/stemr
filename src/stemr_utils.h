@@ -71,6 +71,9 @@ arma::vec dmvtn(const arma::mat& x, const arma::rowvec& mu, const arma::mat& sig
 void to_estimation_scale(Rcpp::NumericVector& natural_params, Rcpp::NumericVector& scaled_params, Rcpp::CharacterVector& scales);
 void from_estimation_scale(Rcpp::NumericVector& natural_params, Rcpp::NumericVector& scaled_params, Rcpp::CharacterVector& scales);
 
+// MCMC transition kernel functions
+void mvn_rw(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& cov_chol);
+
 // convert the lna from the counting process on transition events to its natural state space
 arma::mat convert_lna(const arma::mat& path, const arma::mat& flow_matrix, const arma::rowvec& init_state);
 void convert_lna2(const arma::mat& path, const arma::mat& flow_matrix, const arma::rowvec& init_state, arma::mat& statemat);
@@ -83,7 +86,7 @@ Rcpp::List lna_density(const Rcpp::List& path, const arma::colvec& lna_times, co
 
 // reintegrating just the drift and residual ODEs - sufficient after elliptical slice sampling
 Rcpp::List lna_density2(const Rcpp::List& path, const arma::colvec& lna_times, const Rcpp::NumericMatrix& lna_pars,
-                       const Rcpp::LogicalVector& param_update_inds, const arma::mat& flow_matrix,
+                        const Rcpp::LogicalVector& param_update_inds, const arma::mat& flow_matrix,
                        SEXP lna_pointer, SEXP set_pars_pointer);
 
 // // compute and return the hazards

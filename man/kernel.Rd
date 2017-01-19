@@ -2,25 +2,62 @@
 % Please edit documentation in R/kernel.R
 \name{kernel}
 \alias{kernel}
-\title{Construct a list for building a transition kernel to be used in proposing new
-parameter values.}
+\title{Specify an MCMC transition kernel for updating the model parameters.}
 \usage{
-kernel(parameters, method = "mvn_rw", cov_mtx)
+kernel(method = "mvn_rw", cov_mtx, scale_start = 100,
+  scale_cooling = 0.999, max_scaling = 50, shape_start = 100,
+  target = 0.234, nugget = NULL, nugget_weight = 0.05)
 }
 \arguments{
-\item{parameters}{character vector with names of parameters}
-
 \item{method}{algorithm to be used in generating parameter updates -
-currently only multivariate normal random walk is supported.}
+currently only multivariate normal random walk and an adaptive version are
+supported.}
 
 \item{cov_mtx}{variance-covariance matrix for random walk proposals, with
-rows and columns corresponding to the parameters argument}
+rows and columns corresponding to the parameters argument.}
+
+\item{scale_start}{iteration at which to begin scaling the proposal
+covariance matrix, defaults to 100.}
+
+\item{scale_cooling}{rate at which to cool the adaptation, defaults to 0.999.}
+
+\item{max_scaling}{maximum scale factor, defaults to 50.}
+
+\item{shape_start}{number of acceptances required before estimating the
+scaled empirical covariance matrix in the proposals, defaults to 100.}
+
+\item{target}{target acceptance rate when adapting the scale, defaults to
+0.234.}
+
+\item{nugget}{either a scalar or vector for the nugget covariance in the
+adaptive RWMH algorithm (defaults to 0.01 * diag(cov_mtx)) if not
+specified).}
+
+\item{nugget_weight}{weight that the nugget contribution receives in the
+adaptive RWMH proposal (defaults to 0.05).}
 }
 \value{
-list containing objects to be used in the proposals.
+list containing the method and covariance matrix for the MCMC kernel.
 }
 \description{
-Construct a list for building a transition kernel to be used in proposing new
-parameter values.
+Model parameters can be updated either using random walk
+  Metropolis-Hastings (RWMH) with a fixed proposal covariance matrix, or
+  using a modified version of the adaptive RWMH of Roberts and Rosenthal
+  (2009).
+}
+\details{
+The adaptive algorithm will adapt the scale of the covariance matrix
+  in order to achieve the target acceptance rate. Starting at iteration
+  \code{scale_start}, the scaling factor is calculated as \eqn{\lambda =
+  min(scaling * e^(scale_cooling^(iteration - scale_start) *
+  (acceptances/iteration-target)), max_scaling)}, and the initial covariance
+  matrix is scaled by \eqn{\lambda^2}. Once \code{shape_start} acceptances
+  have been obtained, the scaling factor is set to 2.38^2/d, where d is the
+  number of parameters. The proposal distribution at iteration n is
+  constructed as a mixture of Gaussian kernels, as \deqn{Q_n(x,\cdot) = (1 -
+  nugget_weight) * N(x, 2.38^2 \Sigma_n / d) + nugget_weight * N(x, diag(nugget) / d).}
+
+  References: G.O. Roberts and J.S. Rosenthal. "Examples of adaptive MCMC."
+  *Journal of Computational and Graphical Statistics* 18.2 (2009): 349-367.
 }
 

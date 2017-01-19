@@ -501,8 +501,8 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tc
                 # determine if initial states are fixed
                 fixed_inits <- all(sapply(initializer, "[[", "fixed") == TRUE)
 
-                strata_sizes <- sapply(initializer, function(x) sum(x[[1]]));
-                names(strata_sizes) <- paste0("popsize_",sapply(initializer, "[[", 3))
+                strata_sizes <- sapply(initializer, function(x) sum(x[["init_states"]]));
+                names(strata_sizes) <- paste0("popsize_", sapply(initializer, "[[", "strata"))
                 popsize <- sum(strata_sizes)
 
                 constants   <- c(constants, popsize = popsize, strata_sizes)

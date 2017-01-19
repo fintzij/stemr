@@ -7,19 +7,6 @@
 
 using namespace Rcpp;
 
-// build_census_path
-arma::mat build_census_path(Rcpp::NumericMatrix& path, Rcpp::NumericVector& census_times, Rcpp::IntegerVector& census_columns);
-RcppExport SEXP stemr_build_census_path(SEXP pathSEXP, SEXP census_timesSEXP, SEXP census_columnsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::NumericMatrix& >::type path(pathSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type census_times(census_timesSEXP);
-    Rcpp::traits::input_parameter< Rcpp::IntegerVector& >::type census_columns(census_columnsSEXP);
-    rcpp_result_gen = Rcpp::wrap(build_census_path(path, census_times, census_columns));
-    return rcpp_result_gen;
-END_RCPP
-}
 // CALL_D_MEASURE
 void CALL_D_MEASURE(Rcpp::NumericMatrix& emitmat, const Rcpp::LogicalVector& emit_inds, const int record_ind, const Rcpp::NumericVector& record, const Rcpp::NumericVector& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar, SEXP d_meas_ptr);
 RcppExport SEXP stemr_CALL_D_MEASURE(SEXP emitmatSEXP, SEXP emit_indsSEXP, SEXP record_indSEXP, SEXP recordSEXP, SEXP stateSEXP, SEXP parametersSEXP, SEXP constantsSEXP, SEXP tcovarSEXP, SEXP d_meas_ptrSEXP) {
@@ -52,6 +39,22 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// CALL_RATE_FCN
+void CALL_RATE_FCN(Rcpp::NumericVector& rates, const Rcpp::LogicalVector& inds, const arma::rowvec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::rowvec& tcovar, SEXP rate_ptr);
+RcppExport SEXP stemr_CALL_RATE_FCN(SEXP ratesSEXP, SEXP indsSEXP, SEXP stateSEXP, SEXP parametersSEXP, SEXP constantsSEXP, SEXP tcovarSEXP, SEXP rate_ptrSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type rates(ratesSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type inds(indsSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type state(stateSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type parameters(parametersSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type constants(constantsSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type tcovar(tcovarSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type rate_ptr(rate_ptrSEXP);
+    CALL_RATE_FCN(rates, inds, state, parameters, constants, tcovar, rate_ptr);
+    return R_NilValue;
+END_RCPP
+}
 // CALL_R_MEASURE
 void CALL_R_MEASURE(Rcpp::NumericMatrix& obsmat, const Rcpp::LogicalVector& emit_inds, const int record_ind, const Rcpp::NumericVector& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar, SEXP r_meas_ptr);
 RcppExport SEXP stemr_CALL_R_MEASURE(SEXP obsmatSEXP, SEXP emit_indsSEXP, SEXP record_indSEXP, SEXP stateSEXP, SEXP parametersSEXP, SEXP constantsSEXP, SEXP tcovarSEXP, SEXP r_meas_ptrSEXP) {
@@ -69,22 +72,6 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// CALL_RATE_FCN
-void CALL_RATE_FCN(Rcpp::NumericVector& rates, const Rcpp::LogicalVector& inds, const arma::rowvec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::rowvec& tcovar, SEXP rate_ptr);
-RcppExport SEXP stemr_CALL_RATE_FCN(SEXP ratesSEXP, SEXP indsSEXP, SEXP stateSEXP, SEXP parametersSEXP, SEXP constantsSEXP, SEXP tcovarSEXP, SEXP rate_ptrSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type rates(ratesSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type inds(indsSEXP);
-    Rcpp::traits::input_parameter< const arma::rowvec& >::type state(stateSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type parameters(parametersSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type constants(constantsSEXP);
-    Rcpp::traits::input_parameter< const arma::rowvec& >::type tcovar(tcovarSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type rate_ptr(rate_ptrSEXP);
-    CALL_RATE_FCN(rates, inds, state, parameters, constants, tcovar, rate_ptr);
-    return R_NilValue;
-END_RCPP
-}
 // CALL_SET_LNA_PARAMS
 void CALL_SET_LNA_PARAMS(Rcpp::NumericVector& p, SEXP set_lna_params_ptr);
 RcppExport SEXP stemr_CALL_SET_LNA_PARAMS(SEXP pSEXP, SEXP set_lna_params_ptrSEXP) {
@@ -94,6 +81,19 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< SEXP >::type set_lna_params_ptr(set_lna_params_ptrSEXP);
     CALL_SET_LNA_PARAMS(p, set_lna_params_ptr);
     return R_NilValue;
+END_RCPP
+}
+// build_census_path
+arma::mat build_census_path(Rcpp::NumericMatrix& path, Rcpp::NumericVector& census_times, Rcpp::IntegerVector& census_columns);
+RcppExport SEXP stemr_build_census_path(SEXP pathSEXP, SEXP census_timesSEXP, SEXP census_columnsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix& >::type path(pathSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type census_times(census_timesSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector& >::type census_columns(census_columnsSEXP);
+    rcpp_result_gen = Rcpp::wrap(build_census_path(path, census_times, census_columns));
+    return rcpp_result_gen;
 END_RCPP
 }
 // census_lna
@@ -260,6 +260,18 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type logd(logdSEXP);
     rcpp_result_gen = Rcpp::wrap(dmvtn(x, mu, sigma, logd));
     return rcpp_result_gen;
+END_RCPP
+}
+// mvn_rw
+void mvn_rw(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& cov_chol);
+RcppExport SEXP stemr_mvn_rw(SEXP params_propSEXP, SEXP params_curSEXP, SEXP cov_cholSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::rowvec& >::type params_prop(params_propSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type params_cur(params_curSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type cov_chol(cov_cholSEXP);
+    mvn_rw(params_prop, params_cur, cov_chol);
+    return R_NilValue;
 END_RCPP
 }
 // pars2lnapars
