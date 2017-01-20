@@ -8,7 +8,7 @@
 #' @param method algorithm to be used in generating parameter updates -
 #'   currently only multivariate normal random walk and an adaptive version are
 #'   supported.
-#' @param cov_mtx variance-covariance matrix for random walk proposals, with
+#' @param covmat variance-covariance matrix for random walk proposals, with
 #'   rows and columns corresponding to the parameters argument.
 #' @param scale_start iteration at which to begin scaling the proposal
 #'   covariance matrix, defaults to 100.
@@ -19,7 +19,7 @@
 #' @param target target acceptance rate when adapting the scale, defaults to
 #'   0.234.
 #' @param nugget either a scalar or vector for the nugget covariance in the
-#'   adaptive RWMH algorithm (defaults to 0.01 * diag(cov_mtx)) if not
+#'   adaptive RWMH algorithm (defaults to 0.01 * diag(covmat)) if not
 #'   specified).
 #' @param nugget_weight weight that the nugget contribution receives in the
 #'   adaptive RWMH proposal (defaults to 0.05).
@@ -33,20 +33,25 @@
 #'   have been obtained, the scaling factor is set to 2.38^2/d, where d is the
 #'   number of parameters. The proposal distribution at iteration n is
 #'   constructed as a mixture of Gaussian kernels, as \deqn{Q_n(x,\cdot) = (1 -
-#'   nugget_weight) * N(x, 2.38^2 \Sigma_n / d) + nugget_weight * N(x, diag(nugget) / d).}
+#'   nugget_weight) * N(x, 2.38^2 \Sigma_n / d) + nugget_weight * N(x,
+#'   diag(nugget) / d).}
 #'
 #'   References: G.O. Roberts and J.S. Rosenthal. "Examples of adaptive MCMC."
 #'   *Journal of Computational and Graphical Statistics* 18.2 (2009): 349-367.
 #'
+#'   Code for the adaptive algorithm is also based on a slightly different
+#'   algorithm implemented in the \code{pomp} packages
+#'   (https://github.com/kingaa/pomp/blob/master/R/proposals.R).
+#'
 #' @return list containing the method and covariance matrix for the MCMC kernel.
 #' @export
-kernel <- function(method = "mvn_rw", cov_mtx, scale_start=100, shape_start=100, scale_cooling=0.999, max_scaling=50, target=0.234, nugget = NULL, nugget_weight = 0.05) {
+kernel <- function(method = "mvn_rw", covmat, scale_start=NULL, shape_start=NULL, scale_cooling=0.999, max_scaling=50, target=0.234, nugget = NULL, nugget_weight = 0.05) {
 
-        if(!all.equal(length(parameters), nrow(cov_mtx), ncol(cov_mtx))) {
+        if(!all.equal(length(parameters), nrow(covmat), ncol(covmat))) {
                 stop("The covariance matrix must have number of rows and number of columns equal to the number of parameters")
         }
 
-        if(!identical(rownames(cov_mtx), colnames(cov_mtx))) {
+        if(!identical(rownames(covmat), colnames(covmat))) {
                 stop("The variables in the covariance matrix rows and columns must be identically ordered")
         }
 
@@ -62,15 +67,16 @@ kernel <- function(method = "mvn_rw", cov_mtx, scale_start=100, shape_start=100,
                 stop("The scale cooling rate must be between 0 and 1.")
         }
 
+        # we take square roots b/c we will just multiply the nugget contribution by the standard deviation
         if(is.null(nugget)) {
-                nugget <- 0.01 * diag(cov_mtx) / nrow(cov_mtx)
+                nugget <- sqrt(0.01 * diag(covmat) / nrow(covmat))
         } else if(length(nugget) == 1) {
-                nugget <- rep(nugget, nrow(cov_mtx)) / nrow(cov_mtx)
+                nugget <- sqrt(rep(nugget, nrow(covmat)) / nrow(covmat))
         } else {
-                nugget <- nugget / nrow(cov_mtx)
+                nugget <- sqrt(nugget / nrow(covmat))
         }
 
-        names(nugget) <- rownames(cov_mtx)
+        names(nugget) <- rownames(covmat)
 
         kernel_settings <- list(scale_start   = scale_start,
                                 scale_cooling = scale_cooling,
@@ -80,5 +86,5 @@ kernel <- function(method = "mvn_rw", cov_mtx, scale_start=100, shape_start=100,
                                 nugget        = nugget,
                                 nugget_weight = nugget_weight)
 
-        return(list(method = method, cov_mtx = cov_mtx, kernel_settings = kernel_settings))
+        return(list(method = method, covmat = covmat, kernel_settings = kernel_settings))
 }

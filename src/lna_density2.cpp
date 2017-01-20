@@ -48,7 +48,7 @@ Rcpp::List lna_density2(const Rcpp::List& path, const arma::colvec& lna_times, c
         Rcpp::NumericVector lna_state_vec(n_odes);        // vector to store the results of the ODEs
         arma::rowvec res_vec(n_comps);                    // vector to store the results of the ODEs
         arma::mat lna_path           = path["lna_path"];  // path
-        arma::mat residual_path      = path["res_path"];  // residual path
+        arma::mat residual_path      = path["res_path"];  // residual path wrt the drift
         arma::mat drift_process      = path["drift"];     // drift process
         arma::mat residual_process   = path["residual"];  // residual process
         arma::cube diffusion_process = path["diffusion"]; // diffusion
@@ -80,7 +80,7 @@ Rcpp::List lna_density2(const Rcpp::List& path, const arma::colvec& lna_times, c
                 // transfer the elements of the lna_state_vec to the process objects
                 residual_process.row(j) = Rcpp::as<arma::rowvec>(lna_state_vec).subvec(resid_start, resid_end);
 
-                // sample the next state
+                // evaluate the density of the next state
                 lna_log_lik += dmvtn(residual_path(j, arma::span(1, n_comps)),
                                      residual_process.row(j),
                                      diffusion_process.slice(j), true)[0];

@@ -26,14 +26,15 @@ construct_priors <- function(priors, param_codes) {
         # get the transformations
         transformations <- sapply(priors, "[[", "scale")
         jacobian_terms  <- data.frame("linear" = "",
-                                      "log"    = paste0(" + ", parameters),
-                                      "logit"  = paste0(" - ",parameters," - 2*log(1+exp(-",parameters,"))"))
+                                      "log"    = paste0(" + params_est[", seq_along(param_names),"]"),
+                                      "logit"  = paste0(" - params_est[",seq_along(param_names),"] - ",
+                                                        "2 * log(1 + exp(-params_est[",seq_along(param_names),"]))"))
 
         # get the distributions, scales, hyperparameters, parameters, and jacobian terms
         densities       <- paste0("d",sapply(priors, "[[", "distribution"))
         hyperpars       <- lapply(priors, "[[", "hyperpars"); hyperpar_args <- lapply(lapply(priors, "[[", "hyperpars"), names)
         hyperparameters <- mapply(paste, hyperpar_args, hyperpars, MoreArgs = list(collapse = ", ", sep = "="))
-        parameters      <- paste0("parameters[",seq_along(priors),"]")
+        parameters      <- paste0("params_nat[",seq_along(priors),"]")
         jacobian_terms  <- jacobian_terms[cbind(1:length(parameters),match(transformations, colnames(jacobian_terms)))]
 
         # generate the body of the function
@@ -43,7 +44,7 @@ construct_priors <- function(priors, param_codes) {
                                                  jacobian_terms,
                                                  collapse = ",\n "),")")
 
-        prior_fcn <- eval(parse(text = paste0("function(parameters) {", prior_fcn_body, "}", sep = "\n")))
+        prior_fcn <- eval(parse(text = paste0("function(params_nat, params_est) {", prior_fcn_body, "}", sep = "\n")))
 
         return(prior_fcn)
 }

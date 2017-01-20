@@ -25,7 +25,7 @@ arma::mat rmvtn(int n, const arma::rowvec& mu, const arma::mat& sigma) {
         arma::mat X = arma::randn(n, p);
 
         // add the mean and multiply by the upper triangular portion of the cholesky
-        return arma::repmat(mu, n, 1) + X * arma::trimatu(arma::chol(sigma));
+        return arma::repmat(mu, n, 1) + X * arma::chol(sigma, "upper");
 }
 
 //' Multivariate normal density
@@ -44,17 +44,18 @@ arma::vec dmvtn(const arma::mat& x, const arma::rowvec& mu, const arma::mat& sig
         int n = x.n_rows;
         int xdim = x.n_cols;
         arma::vec out(n);
-        arma::mat rooti = arma::trans(arma::inv(trimatu(arma::chol(sigma))));
+        arma::mat rooti = arma::trans(arma::inv(arma::chol(sigma, "upper")));
         double rootisum = arma::sum(log(rooti.diag()));
         double constants = -(static_cast<double>(xdim)/2.0) * log2pi;
 
         for (int i=0; i < n; i++) {
-                arma::vec z = rooti * arma::trans( x.row(i) - mu) ;
+                arma::vec z = rooti * arma::trans(x.row(i) - mu) ;
                 out(i)      = constants - 0.5 * arma::sum(z%z) + rootisum;
         }
 
         if (logd == false) {
                 out = exp(out);
         }
-        return(out);
+
+        return out;
 }

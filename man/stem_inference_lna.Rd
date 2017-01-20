@@ -7,7 +7,7 @@ noise approximation.}
 \usage{
 stem_inference_lna(stem_object, iterations, prior_density, kernel,
   estimation_scales, thin_params, thin_latent_proc,
-  initialization_attempts = 500, messages)
+  initialization_attempts = 500, messages, monitor_MCMC)
 }
 \arguments{
 \item{stem_object}{stochastic epidemic model object with model dynamics, the

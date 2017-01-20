@@ -18,11 +18,15 @@
 #' @param thin_latent_proc thinning interval for latent paths, defaults to
 #'   ceiling(iterations/100) so that every 100th path will be saved
 #' @param messages should status messages be printed? defaults to TRUE.
+#' @param monitor_MCMC should MCMC output be generated for the purposes of
+#'   monitoring convergence (defaults to FALSE)? If so, the acceptance rate and
+#'   the proposal covariance matrix (if adaptive RWMH is used) are printed
+#'   whenever messages are printed.
 #'
 #' @return list with posterior samples for the parameters and the latent
 #'   process, along with MCMC diagnostics.
 #' @export
-stem_inference <- function(stem_object, method, iterations, priors, kernel, thin_params = 1, thin_latent_proc = ceiling(iterations/100), initialization_attempts = 500, messages = TRUE) {
+stem_inference <- function(stem_object, method, iterations, priors, kernel, thin_params = 1, thin_latent_proc = ceiling(iterations/100), initialization_attempts = 500, messages = FALSE, monitor_MCMC = FALSE) {
 
         # check that the data, dynamics and measurement process are all supplied
         if (is.null(stem_object$measurement_process$data) ||
@@ -46,7 +50,8 @@ stem_inference <- function(stem_object, method, iterations, priors, kernel, thin
                                               thin_params             = thin_params,
                                               thin_latent_proc        = thin_latent_proc,
                                               initialization_attempts = initialization_attempts,
-                                              messages                = messages)
+                                              messages                = messages,
+                                              monitor_MCMC            = monitor_MCMC)
 
         } else if (method == "bda") {
                 print("bda not yet implemented")

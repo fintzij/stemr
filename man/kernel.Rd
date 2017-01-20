@@ -4,33 +4,33 @@
 \alias{kernel}
 \title{Specify an MCMC transition kernel for updating the model parameters.}
 \usage{
-kernel(method = "mvn_rw", cov_mtx, scale_start = 100,
-  scale_cooling = 0.999, max_scaling = 50, shape_start = 100,
-  target = 0.234, nugget = NULL, nugget_weight = 0.05)
+kernel(method = "mvn_rw", covmat, scale_start = NULL, shape_start = NULL,
+  scale_cooling = 0.999, max_scaling = 50, target = 0.234,
+  nugget = NULL, nugget_weight = 0.05)
 }
 \arguments{
 \item{method}{algorithm to be used in generating parameter updates -
 currently only multivariate normal random walk and an adaptive version are
 supported.}
 
-\item{cov_mtx}{variance-covariance matrix for random walk proposals, with
+\item{covmat}{variance-covariance matrix for random walk proposals, with
 rows and columns corresponding to the parameters argument.}
 
 \item{scale_start}{iteration at which to begin scaling the proposal
 covariance matrix, defaults to 100.}
 
+\item{shape_start}{number of acceptances required before estimating the
+scaled empirical covariance matrix in the proposals, defaults to 100.}
+
 \item{scale_cooling}{rate at which to cool the adaptation, defaults to 0.999.}
 
 \item{max_scaling}{maximum scale factor, defaults to 50.}
-
-\item{shape_start}{number of acceptances required before estimating the
-scaled empirical covariance matrix in the proposals, defaults to 100.}
 
 \item{target}{target acceptance rate when adapting the scale, defaults to
 0.234.}
 
 \item{nugget}{either a scalar or vector for the nugget covariance in the
-adaptive RWMH algorithm (defaults to 0.01 * diag(cov_mtx)) if not
+adaptive RWMH algorithm (defaults to 0.01 * diag(covmat)) if not
 specified).}
 
 \item{nugget_weight}{weight that the nugget contribution receives in the
@@ -55,9 +55,14 @@ The adaptive algorithm will adapt the scale of the covariance matrix
   have been obtained, the scaling factor is set to 2.38^2/d, where d is the
   number of parameters. The proposal distribution at iteration n is
   constructed as a mixture of Gaussian kernels, as \deqn{Q_n(x,\cdot) = (1 -
-  nugget_weight) * N(x, 2.38^2 \Sigma_n / d) + nugget_weight * N(x, diag(nugget) / d).}
+  nugget_weight) * N(x, 2.38^2 \Sigma_n / d) + nugget_weight * N(x,
+  diag(nugget) / d).}
 
   References: G.O. Roberts and J.S. Rosenthal. "Examples of adaptive MCMC."
   *Journal of Computational and Graphical Statistics* 18.2 (2009): 349-367.
+
+  Code for the adaptive algorithm is also based on a slightly different
+  algorithm implemented in the \code{pomp} packages
+  (https://github.com/kingaa/pomp/blob/master/R/proposals.R).
 }
 

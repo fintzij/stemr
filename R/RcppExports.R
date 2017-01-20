@@ -298,6 +298,32 @@ dmvtn <- function(x, mu, sigma, logd = FALSE) {
     .Call('stemr_dmvtn', PACKAGE = 'stemr', x, mu, sigma, logd)
 }
 
+#' Adaptive random walk Metropolis-Hastings transition kernel based on Roberts
+#' and Rosenthal (2009).
+#'
+#' @param params_prop vector in which the proposed parameters should be stored
+#' @param params_cur vector containing the current parameter vector
+#' @param covmat proposal covariance matrix
+#' @param empirical_covmat empirical covariance matrix
+#' @param param_means sample means of each of the parameters
+#' @param scaling scale factor
+#' @param iteration MCMC iteration number
+#' @param acceptances number of acceptances
+#' @param nugget adaptive RWMH nugget distribution
+#' @param nugget_weight adaptive RWMH nugget contribution
+#' @param scale_start iteration at which to begin scaling the supplied covariance matrix
+#' @param shape_start iteration at which to begin estimating the empirical covariance matrix
+#' @param target target acceptance rate when varying the scale
+#' @param scale_cooling scale cooling rate
+#' @param max_scaling maximum scale factor
+#' @param opt_scaling 2.38^2/length(params)
+#'
+#' @return propose new parameter values in place and modify scaling and/or the empirical covariance matrix in place
+#' @export
+mvn_adaptive <- function(params_prop, params_cur, covmat, empirical_covmat, param_means, scaling, iteration, acceptances, nugget, nugget_weight, adapt_scale, adapt_shape, scale_start, shape_start, target, scale_cooling, max_scaling, opt_scaling) {
+    invisible(.Call('stemr_mvn_adaptive', PACKAGE = 'stemr', params_prop, params_cur, covmat, empirical_covmat, param_means, scaling, iteration, acceptances, nugget, nugget_weight, adapt_scale, adapt_shape, scale_start, shape_start, target, scale_cooling, max_scaling, opt_scaling))
+}
+
 #' Random walk Metropolis-Hastings transition kernel.
 #'
 #' @param params_prop vector in which the proposed parameters should be stored

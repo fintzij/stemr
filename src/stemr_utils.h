@@ -87,7 +87,8 @@ Rcpp::List lna_density(const Rcpp::List& path, const arma::colvec& lna_times, co
 // reintegrating just the drift and residual ODEs - sufficient after elliptical slice sampling
 Rcpp::List lna_density2(const Rcpp::List& path, const arma::colvec& lna_times, const Rcpp::NumericMatrix& lna_pars,
                         const Rcpp::LogicalVector& param_update_inds, const arma::mat& flow_matrix,
-                       SEXP lna_pointer, SEXP set_pars_pointer);
+                        SEXP lna_pointer, SEXP set_pars_pointer);
+
 
 // // compute and return the hazards
 // arma::vec COMPUTE_HAZARD(double t, const arma::vec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar, SEXP haz_ptr);

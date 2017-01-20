@@ -22,7 +22,7 @@
 #'
 #' @return list with parameter posterior samples and MCMC diagnostics
 #' @export
-stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, estimation_scales, thin_params, thin_latent_proc, initialization_attempts = 500, messages) {
+stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, estimation_scales, thin_params, thin_latent_proc, initialization_attempts = 500, messages, monitor_MCMC) {
 
         # extract the model objects from the stem_object
         flow_matrix            <- stem_object$dynamics$flow_matrix_lna
@@ -33,8 +33,6 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, e
         censusmat              <- stem_object$measurement_process$censusmat
         parameters             <- stem_object$dynamics$parameters
         constants              <- stem_object$dynamics$constants
-        initdist_parameters    <- stem_object$dynamics$initdist_params
-        lna_initdist_inds      <- stem_object$dynamics$lna_initdist_inds
         n_compartments         <- ncol(flow_matrix)
         n_rates                <- nrow(flow_matrix)
         n_odes                 <- 2*n_rates + n_rates^2
@@ -48,6 +46,8 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, e
         state_initializer      <- stem_object$dynamics$state_initializer
         fixed_inits            <- stem_object$dynamics$fixed_inits
         n_strata               <- stem_object$dynamics$n_strata
+        lna_initdist_inds      <- stem_object$dynamics$lna_initdist_inds
+        initdist_parameters    <- stem_object$dynamics$initdist_params
 
         # measurement process objects
         data                   <- stem_object$measurement_process$data
@@ -57,14 +57,97 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, e
         obstime_inds           <- stem_object$measurement_process$obstime_inds
         tcovar_censmat         <- stem_object$measurement_process$tcovar_censmat
 
+        # if the initial counts are not fixed, construct the initial distribution prior
+        if(!fixed_inits) {
+                # function for computing the log prior density for the initial comparment counts
+                initdist_prior     <- construct_initdist_prior(state_initializer   = state_initializer,
+                                                               n_strata            = n_strata,
+                                                               constants           = constants)
+
+                # function for sampling the initial compartment counts (independence sampling)
+                initdist_sampler   <- construct_initdist_sampler(state_initializer   = state_initializer,
+                                                                 n_strata            = n_strata,
+                                                                 constants           = constants)
+
+                # vector for storing the log prior densities for the initial compartment counts
+                initdist_log_prior <- double(1 + floor(iterations / thin_params))
+
+                # vector for storing the proposed compartment counts
+                initdist_params_prop <- initdist_parameters
+
+        } else {
+                initdist_parameters  <- NULL # vector of initial distribution parameters
+                initdist_prior       <- NULL # function for computing the prior
+                initdist_sampler     <- NULL # function for sampling new values
+                initdist_log_prior   <- NULL # vector for storing the log priors
+                initdist_params_prop <- NULL # vector for storing the proposed compartment counts
+        }
+
         # get the objects for the MCMC kernel
         kernel_method  <- kernel$method
-        kernel_cov_mtx <- kernel$cov_mtx
+        kernel_covmat  <- kernel$covmat
         adaptive_rwmh  <- kernel_method == "mvn_adaptive"
 
         # ensure that the covariance matrix is specified in the same order as the parameters (not including initdist params)
-        param_names      <- names(parameters)[!names(parameters) %in% names(lna_initdist_inds)]
-        kernel_cov_mtx <- kernel_cov_mtx[param_names, param_names]
+        param_names    <- names(parameters)[!names(parameters) %in% names(lna_initdist_inds)]
+        kernel_covmat  <- kernel_covmat[param_names, param_names]
+
+        # extract the remaining kernel arguments
+        if(!adaptive_rwmh) {
+
+                # cache the cholesky decomposition
+                kernel_chol_cov <- chol(kernel_covmat)
+
+        } else if(adaptive_rwmh) {
+
+                # unpack the settings for adaptive RWMH
+                scale_start      <- kernel$kernel_settings$scale_start
+                scale_cooling    <- kernel$kernel_settings$scale_cooling
+                max_scaling      <- kernel$kernel_settings$max_scaling
+                shape_start      <- kernel$kernel_settings$shape_start
+                target           <- kernel$kernel_settings$target
+                nugget           <- kernel$kernel_settings$nugget[param_names]
+                nugget_weight    <- kernel$kernel_settings$nugget_weight
+                opt_scaling      <- 2.38^2 / length(param_names)
+
+                if(is.null(scale_start)) {
+                        scale_start    <- iterations + 2
+                        adapt_scale    <- FALSE
+                        kernel_scaling <- NULL
+
+                } else {
+                        adapt_scale    <- TRUE
+                        kernel_scaling <- 1
+                }
+
+                if(is.null(shape_start)) {
+                        shape_start <- iterations + 2
+                        adapt_shape <- FALSE
+                        param_means <- NULL
+                        empirical_covmat <- NULL
+
+                } else {
+                        adapt_shape <- TRUE
+                        param_means <- parameters[param_names]
+                        empirical_covmat <- matrix(0.0, length(param_means), length(param_means))
+                }
+
+                # initialize objects for monitoring the adaptive MCMC if requested
+                if(monitor_MCMC) {
+                        # initialize objects for saving the scaling
+                        proposal_scalings    <- double(1 + floor(iterations/thin_params))
+                        proposal_covariances <- array(0.0, dim = c(nrow(kernel_covmat),
+                                                                   ncol(kernel_covmat),
+                                                                   1 + floor(iterations/thin_params)))
+                        # save initial values
+                        if(adapt_scale) proposal_scalings[1]      <- kernel_scaling
+                        if(adapt_shape) proposal_covariances[,,1] <- kernel_covmat
+
+                } else {
+                        proposal_scalings    <- NULL
+                        proposal_covariances <- NULL
+                }
+        }
 
         # vectors for storing the model parameters on their natural and estimation scales
         # model_params_nat -- model parameters on their natural scales
@@ -77,22 +160,6 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, e
         # create analogous vectors for storing the proposed parameter values
         params_prop_nat  <- parameters[param_names]
         params_prop_est  <- parameters[param_names]
-
-        # extract the remaining kernel arguments
-        if(!adaptive_rwmh) {
-                # cache the cholesky decomposition
-                kernel_chol_cov <- chol(kernel_cov_mtx)
-
-        } else if(adaptive_rwmh) {
-                # unpack the settings for adaptive RWMH
-                scale_start   <- kernel$kernel_settings$scale_start
-                scale_cooling <- kernel$kernel_settings$scale_cooling
-                max_scaling   <- kernel$kernel_settings$max_scaling
-                shape_start   <- kernel$kernel_settings$shape_start
-                target        <- kernel$kernel_settings$target
-                nugget        <- kernel$kernel_settings$nugget[param_names, param_names]
-                nugget_weight <- kernel$kernel_settings$nugget_weight
-        }
 
         # generate other derived objects
         lna_times         <- sort(unique(c(obstimes, stem_object$dynamics$.dynamics_args$tcovar[,1],
@@ -114,6 +181,7 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, e
 
         # insert the lna parameters into the parameter matrix
         pars2lnapars(lna_parameters, c(model_params_nat, initdist_parameters))
+        pars2lnapars(lna_params_prop, c(model_params_nat, initdist_parameters))
 
         # get column indices for constants and time-varying covariates
         const_inds             <- seq_along(stem_object$dynamics$const_codes) + length(stem_object$dynamics$param_codes)
@@ -157,7 +225,8 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, e
                 matrix(
                         0.0,
                         nrow = 1 + floor(iterations / thin_params),
-                        ncol = length(stem_object$dynamics$parameters)
+                        ncol = length(stem_object$dynamics$parameters),
+                        dimnames = list(NULL, c(names(model_params_nat), names(initdist_parameters)))
                 )
 
         latent_paths      <-
@@ -170,31 +239,6 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, e
         lna_log_lik       <- double(1 + floor(iterations / thin_params))
         data_log_lik      <- double(1 + floor(iterations / thin_params))
         params_log_prior  <- double(1 + floor(iterations / thin_params))
-
-        # if the initial counts are not fixed, construct the initial distribution prior
-        if(!fixed_inits) {
-                # function for computing the log prior density for the initial comparment counts
-                initdist_prior     <- construct_initdist_prior(state_initializer   = state_initializer,
-                                                               n_strata            = n_strata,
-                                                               constants           = constants)
-
-                # function for sampling the initial compartment counts (independence sampling)
-                initdist_sampler   <- construct_initdist_sampler(state_initializer   = state_initializer,
-                                                                 n_strata            = n_strata,
-                                                                 constants           = constants)
-
-                # vector for storing the log prior densities for the initial compartment counts
-                initdist_log_prior <- double(1 + floor(iterations / thin_params))
-
-                # vector for storing the proposed compartment counts
-                initdist_params_prop <- initdist_parameters
-
-        } else {
-                initdist_prior       <- NULL # function for computing the prior
-                initdist_sampler     <- NULL # function for sampling new values
-                initdist_log_prior   <- NULL # vector for storing the log priors
-                initdist_params_prop <- NULL # vector for storing the proposed compartment counts
-        }
 
         # initialize the latent path
         path <- initialize_lna(
@@ -222,8 +266,7 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, e
                 initialization_attempts = initialization_attempts
         )
 
-        # save the current observed data log-likelihood and compute the
-        # likelihood of the latent LNA path
+        # compute the log likelihood of the latent LNA path
         path <- lna_density2(
                 path              = path,
                 lna_times         = lna_times,
@@ -237,7 +280,7 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, e
         # set the current LNA log likelihood, data log likelihood, and prior log likelihood
         lna_loglik_cur  <- path$lna_log_lik
         data_loglik_cur <- path$data_log_lik
-        params_logprior_cur <- prior_density(model_params_nat)
+        params_logprior_cur <- prior_density(model_params_nat, model_params_est)
         if(!fixed_inits) initdist_logprior_cur <- initdist_prior(initdist_parameters)
 
         # save the initial path, data log-likelihood, lna log-likelihood, and prior log-likelihood
@@ -276,6 +319,7 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, e
 
                 # Print the status if messages are enabled
                 if(messages && k%%thin_latent_proc == 0) {
+                        # print the iteration
                         cat(paste0("Iteration ", k), file = status_file, sep = "\n", append = TRUE)
                 }
 
@@ -315,7 +359,24 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, e
 
                 } else {
                         # propose new parameters via adaptive RWMH
-
+                        mvn_adaptive(params_prop      = params_prop_est,
+                                     params_cur       = model_params_est,
+                                     covmat           = covmat,
+                                     empirical_covmat = empirical_covmat,
+                                     param_means      = param_means,
+                                     scaling          = kernel_scaling,
+                                     iteration        = k-1,
+                                     acceptances      = acceptances,
+                                     nugget           = nugget,
+                                     nugget_weight    = nugget_weight,
+                                     adapt_scale      = adapt_scale,
+                                     adapt_shape      = adapt_shape,
+                                     scale_start      = scale_start,
+                                     shape_start      = shape_start,
+                                     target           = target,
+                                     scale_cooling    = scale_cooling,
+                                     max_scaling      = max_scaling,
+                                     opt_scaling      = opt_scaling)
                 }
 
                 # Convert the proposed parameters to their natural scale
@@ -324,7 +385,7 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, e
                                       scales         = estimation_scales)
 
                 # Compute the log prior for the proposed parameters
-                params_logprior_prop <- prior_density(params_prop_nat)
+                params_logprior_prop <- prior_density(params_prop_nat, params_prop_est)
 
                 # If the initial compartment counts are not fixed, sample new values and compute the prior
                 if(!fixed_inits) {
@@ -345,17 +406,14 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, e
                         lna_pointer       = lna_pointer,
                         set_pars_pointer  = lna_set_pars_pointer)
 
-                # Compute the log posteriors
+                ## Compute the log posteriors
+                # N.B. no need to include the initial distribution log likelihoods
+                # since those are updated via an independence sampler so they cancel out
                 log_post_cur  <- path$lna_log_lik + path$data_log_lik + params_logprior_cur
                 log_post_prop <- path_prop$lna_log_lik + path_prop$data_log_lik + params_logprior_prop
 
-                if(!fixed_inits) {
-                        log_post_cur  <- log_post_cur + initdist_logprior_cur
-                        log_post_prop <- log_post_prop + initdist_logprior_prop
-                }
-
                 # Accept/Reject via metropolis-hastings (N.B. symmetric parameter proposals)
-                if(log(runif(1)) < log_post_cur - log_post_prop) {
+                if(log(runif(1)) < log_post_prop - log_post_cur) {
 
                         ### ACCEPTANCE
                         acceptances         <- acceptances + 1                  # increment acceptances
@@ -390,8 +448,63 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, e
                         # Store the parameter sample
                         parameter_samples[param_rec_ind, ] <- c(model_params_nat, initdist_parameters)
 
+                        # Store the proposal covariance matrix if monitoring is requested
+                        if(monitor_MCMC && adaptive_rwmh) {
+                                # adaptation_stage = 1, if still using the initial covariance matrix
+                                # adaptation_stage = 2, if adapting scaling
+                                # adaptation_stage = 3, if adapting shape
+                                if(adapt_scale && k >= scale_start && (!adapt_shape || acceptances < shape_start)) {
+                                        adaptation_stage <- 2
+                                } else if(adapt_shape && acceptances > shape_start) {
+                                        adaptation_stage <- 3
+                                } else {
+                                        adaptation_stage <- 1
+                                }
+
+                                # save the scaling and/or proposal covariance
+                                if(adaptation_stage == 1) {
+                                        if(adapt_scale) proposal_scalings[param_rec_ind] <- 1
+                                        if(adapt_shape) proposal_covariances[,,param_rec_ind] <- kernel_covmat
+
+                                } else if(adaptation_stage == 2) {
+                                        proposal_scalings[param_rec_ind] <- kernel_scaling
+                                        if(adapt_shape) proposal_covariances[,,param_rec_ind] <- kernel_scaling * kernel_covmat
+                                } else {
+                                        if(adapt_scale) proposal_scalings[param_rec_ind] <- opt_scaling
+                                        proposal_covariances[,,param_rec_ind] <- empirical_covmat
+                                }
+                        }
+
                         # Increment the parameter record index
                         param_rec_ind <- param_rec_ind + 1
                 }
         }
+        end.time <- Sys.time()
+
+        if(fixed_inits){
+                MCMC_results <- cbind(lna_log_lik     = lna_log_lik,
+                                     data_log_lik     = data_log_lik,
+                                     params_log_prior = params_log_prior,
+                                     parameter_samples)
+        } else {
+                MCMC_results <- cbind(lna_log_lik        = lna_log_lik,
+                                      data_log_lik       = data_log_lik,
+                                      params_log_prior   = params_log_prior,
+                                      initdist_log_prior = initdist_log_prior,
+                                      parameter_samples)
+        }
+
+        # return the results
+        stem_object$dynamics$parameters <- c(model_params_nat, initdist_parameters)
+        stem_object$results <- list(time         = difftime(end.time, start.time, units = "hours"),
+                                    acceptances  = acceptances,
+                                    latent_paths = latent_paths,
+                                    MCMC_results = MCMC_results)
+
+        if(monitor_MCMC & adaptive_rwmh) {
+                stem_object$results$adaptation_record <- list(proposal_scalings = proposal_scalings,
+                                                              proposal_covariances = proposal_covariances)
+        }
+
+        return(stem_object)
 }
