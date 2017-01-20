@@ -47,8 +47,8 @@
 #' @export
 kernel <- function(method = "mvn_rw", covmat, scale_start=NULL, shape_start=NULL, scale_cooling=0.999, max_scaling=50, target=0.234, nugget = NULL, nugget_weight = 0.05) {
 
-        if(!all.equal(length(parameters), nrow(covmat), ncol(covmat))) {
-                stop("The covariance matrix must have number of rows and number of columns equal to the number of parameters")
+        if(!all.equal(nrow(covmat), ncol(covmat))) {
+                stop("The covariance matrix must be square.")
         }
 
         if(!identical(rownames(covmat), colnames(covmat))) {

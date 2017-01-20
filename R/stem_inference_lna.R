@@ -409,11 +409,11 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, e
                 ## Compute the log posteriors
                 # N.B. no need to include the initial distribution log likelihoods
                 # since those are updated via an independence sampler so they cancel out
-                log_post_cur  <- path$lna_log_lik + path$data_log_lik + params_logprior_cur
-                log_post_prop <- path_prop$lna_log_lik + path_prop$data_log_lik + params_logprior_prop
+                acceptance_prob <- (path_prop$lna_log_lik + path_prop$data_log_lik + params_logprior_prop) -
+                                        (path$lna_log_lik + path$data_log_lik + params_logprior_cur)
 
                 # Accept/Reject via metropolis-hastings (N.B. symmetric parameter proposals)
-                if(log(runif(1)) < log_post_prop - log_post_cur) {
+                if(acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
 
                         ### ACCEPTANCE
                         acceptances         <- acceptances + 1                  # increment acceptances
