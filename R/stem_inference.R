@@ -13,6 +13,8 @@
 #'   \link{\code{kernel}} function. RWMH and adaptive RWMH are implemented for
 #'   jointly updating the model parameters (not including the initial
 #'   compartment counts which are handled separately).
+#' @param t0_kernel output of \link{\code{t0_kernel}}, specifying the RWMH
+#'   transition kernel for t0 and the truncated normal distribution prior.
 #' @param thin_params thinning interval for posterior parameter samples,
 #'   defaults to 1
 #' @param thin_latent_proc thinning interval for latent paths, defaults to
@@ -26,7 +28,7 @@
 #' @return list with posterior samples for the parameters and the latent
 #'   process, along with MCMC diagnostics.
 #' @export
-stem_inference <- function(stem_object, method, iterations, priors, kernel, thin_params = 1, thin_latent_proc = ceiling(iterations/100), initialization_attempts = 500, messages = FALSE, monitor_MCMC = FALSE) {
+stem_inference <- function(stem_object, method, iterations, priors, kernel, t0_kernel = NULL, thin_params = 1, thin_latent_proc = ceiling(iterations/100), initialization_attempts = 500, messages = FALSE, monitor_MCMC = FALSE) {
 
         # check that the data, dynamics and measurement process are all supplied
         if (is.null(stem_object$measurement_process$data) ||
@@ -35,9 +37,20 @@ stem_inference <- function(stem_object, method, iterations, priors, kernel, thin
                 stop("The dataset, dynamics, and measurement process must all be specified.")
         }
 
+        # check that the kernel for t0 was provided if t0 is not fixed
+        if(!stem_object$dynamics$t0_fixed && is.null(t0_kernel)) {
+                stop("An MCMC transition kernel must be provided for t0 if it is not fixed.")
+        }
+
+        # set the upper and lower bounds for t0_kernel if they are not supplied
+        if(!is.null(t0_kernel)) {
+                t0_kernel$upper <- min(t0_kernel$upper, min(stem_object$measurement_process$obstimes))
+                t0_kernel$lower <- max(t0_kernel$lower, -Inf)
+        }
+
         # construct prior density functions
         estimation_scales <- sapply(priors, "[[", "scale")
-        prior_density     <- construct_priors(priors, param_codes = stem_object$dynamics$param_codes)
+        prior_density     <- construct_priors(priors = priors, param_codes = stem_object$dynamics$param_codes)
 
         if(method == "lna") {
 
@@ -46,6 +59,7 @@ stem_inference <- function(stem_object, method, iterations, priors, kernel, thin
                                               iterations              = iterations,
                                               prior_density           = prior_density,
                                               kernel                  = kernel,
+                                              t0_kernel               = t0_kernel,
                                               estimation_scales       = estimation_scales,
                                               thin_params             = thin_params,
                                               thin_latent_proc        = thin_latent_proc,

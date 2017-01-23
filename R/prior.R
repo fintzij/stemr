@@ -12,19 +12,21 @@
 #'
 #' @section Specification of prior distributions:
 #'
-#' The distributions and hyperparameters should be specified according to the
+#'   The distributions and hyperparameters should be specified according to the
 #'   table below
 #'
-#'   \tabular{lll}{
-#'   distribution \tab abbreviation \tab hyperparameters \cr
-#'   Beta \tab beta \tab shape1, shape2, ncp \cr
-#'   Cauchy \tab cauchy \tab location, scale \cr
-#'   Gamma \tab gamma \tab shape, rate = 1, scale = 1/rate \cr
-#'   Normal \tab norm \tab mean, sd \cr
-#'   Student t \tab t \tab df, ncp \cr
-#'   Uniform \tab unif \tab min, max }
+#'   \tabular{lll}{ distribution \tab abbreviation \tab hyperparameters \cr Beta
+#'   \tab beta \tab shape1, shape2, ncp \cr Cauchy \tab cauchy \tab location,
+#'   scale \cr Gamma \tab gamma \tab shape, rate = 1, scale = 1/rate \cr Normal
+#'   \tab norm \tab mean, sd \cr Truncated normal (a,b) \tab tnorm \tab mean,
+#'   sd, a, b \cr Student t \tab t \tab df, ncp \cr Uniform \tab unif \tab min,
+#'   max}
 #'
-#' @return list to be used in evaluating the prior densities of model parameters.
+#'   N.B. The prior for t0 should be specified through the
+#'   \code{\link{t0_prior}} function.
+#'
+#' @return list to be used in evaluating the prior densities of model
+#'   parameters.
 #'
 #' @export
 #'
@@ -36,7 +38,7 @@ prior <- function(parameter, distribution, hyperpars, scale = "linear") {
         }
 
         if(is.null(names(hyperpars))) {
-                stop("The vector of hyperparameters must have named elements")
+                stop("The vector of hyperparameters must have named elements.")
         }
 
         return(list(parameter = parameter, distribution = distribution, hyperpars = hyperpars, scale = scale))

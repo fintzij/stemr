@@ -78,13 +78,13 @@ kernel <- function(method = "mvn_rw", covmat, scale_start=NULL, shape_start=NULL
 
         names(nugget) <- rownames(covmat)
 
-        kernel_settings <- list(scale_start   = scale_start,
-                                scale_cooling = scale_cooling,
-                                max_scaling   = max_scaling,
-                                shape_start   = shape_start,
-                                target        = target,
+        kernel_settings <- list(scale_start   = as.integer(scale_start),
+                                scale_cooling = as.numeric(scale_cooling),
+                                max_scaling   = as.numeric(max_scaling),
+                                shape_start   = as.integer(shape_start),
+                                target        = as.numeric(target),
                                 nugget        = nugget,
-                                nugget_weight = nugget_weight)
+                                nugget_weight = as.numeric(nugget_weight))
 
         return(list(method = method, covmat = covmat, kernel_settings = kernel_settings))
 }

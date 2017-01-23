@@ -63,6 +63,9 @@ arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& p
         double t_max = tcovar(tcovar_dims[0] - 1, 0);   // maximum time
         Rcpp::NumericVector dt(1);                      // time increment
 
+        // insert the initial time into the path matrix
+        path(0, 0) = t_cur;
+
         // initialize the rates
         Rcpp::LogicalVector rate_inds(flow_dims[0], true); // logical vector of rates to update
         Rcpp::NumericVector rates(flow_dims[0]);           // initialize vector of rates

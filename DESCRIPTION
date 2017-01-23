@@ -20,6 +20,7 @@ Imports:
     ECctmc,
     Ryacas,
     odeintr,
+    extraDistr,
     Rcpp (>= 0.12.4)
 LinkingTo: Rcpp,
     RcppArmadillo

@@ -143,7 +143,8 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                 meas_inds       <- which(!is.na(obsmat[,-1, drop = FALSE]), arr.ind = T) - 1
         }
 
-        # having made the name substitutions and constructed the observation matrix, proceed to make subsitutions for argument vector indices
+        # having made the name substitutions and constructed the observation matrix,
+        # proceed to make subsitutions for argument vector indices
         obscomp_codes <- seq_len(ncol(measproc_indmat)); names(obscomp_codes) <- colnames(measproc_indmat)
         obscomp_names <- colnames(measproc_indmat)
 

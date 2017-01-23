@@ -21,7 +21,8 @@ specified as "log" or "logit". The appropriate transformation will be
 applied automatically for the proposals.}
 }
 \value{
-list to be used in evaluating the prior densities of model parameters.
+list to be used in evaluating the prior densities of model
+  parameters.
 }
 \description{
 Specify the prior distribution for a model parameter
@@ -29,17 +30,18 @@ Specify the prior distribution for a model parameter
 \section{Specification of prior distributions}{
 
 
-The distributions and hyperparameters should be specified according to the
+  The distributions and hyperparameters should be specified according to the
   table below
 
-  \tabular{lll}{
-  distribution \tab abbreviation \tab hyperparameters \cr
-  Beta \tab beta \tab shape1, shape2, ncp \cr
-  Cauchy \tab cauchy \tab location, scale \cr
-  Gamma \tab gamma \tab shape, rate = 1, scale = 1/rate \cr
-  Normal \tab norm \tab mean, sd \cr
-  Student t \tab t \tab df, ncp \cr
-  Uniform \tab unif \tab min, max }
+  \tabular{lll}{ distribution \tab abbreviation \tab hyperparameters \cr Beta
+  \tab beta \tab shape1, shape2, ncp \cr Cauchy \tab cauchy \tab location,
+  scale \cr Gamma \tab gamma \tab shape, rate = 1, scale = 1/rate \cr Normal
+  \tab norm \tab mean, sd \cr Truncated normal (a,b) \tab tnorm \tab mean,
+  sd, a, b \cr Student t \tab t \tab df, ncp \cr Uniform \tab unif \tab min,
+  max}
+
+  N.B. The prior for t0 should be specified through the
+  \code{\link{t0_prior}} function.
 }
 \examples{
 prior("theta", "norm", c(mean = 1, sd = 2), scale = "log")

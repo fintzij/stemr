@@ -75,19 +75,25 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 observations <- TRUE
         }
 
+        # get t0 or tmax if not supplied
+        if(is.null(t0)) t0     <- stem_object$dynamics$t0
+        if(is.null(tmax)) tmax <- stem_object$dynamics$tmax
+
+        # make sure that t0 and tmax are in the census times
+        if(!is.null(census_times)) census_times <- as.numeric(sort(unique(c(t0, census_times, tmax))))
+
         # build the time varying covariate matrix (includes, at a minimum, the endpoints of the simulation interval)
         # if timestep is null, there are no time-varying covariates
         if(method == "gillespie") {
 
-                # if any of t0, tmax, or a timestep was supplied, check if they differ from the parameters supplied in the stem_object$dynamics.
+                # if any of t0, tmax, or a timestep was supplied,
+                # check if they differ from the parameters supplied in the stem_object$dynamics.
                 # if they differ, reconstruct the tcovar matrix and associated objects
-                rebuild_tcovar <- (!is.null(t0) && t0 != stem_object$dynamics$tcovar[1,1]) ||
-                        (!is.null(tmax) && tmax != stem_object$dynamics$tcovar[nrow(stem_object$dynamics$tcovar), 1]) || !is.null(timestep)
+                rebuild_tcovar <- (t0 != stem_object$dynamics$t0) ||
+                        (tmax != stem_object$dynamics$tcovar[nrow(stem_object$dynamics$tcovar), 1]) ||
+                        !is.null(timestep)
 
                 if(rebuild_tcovar) {
-                        # get t0 or tmax if it wasn't supplied
-                        if(is.null(t0)) t0 <- stem_object$dynamics$tcovar[1,1]
-                        if(is.null(tmax)) tmax <- stem_object$dynamics$tcovar[nrow(stem_object$dynamics$tcovar), 1]
 
                         # replace t0 and tmax in the time-varying covariate matrix
                         if(is.null(timestep) && stem_object$dynamics$timevarying) {
@@ -98,8 +104,8 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                         }
 
                         # rebuild the time-varying covariate matrix so that it contains the census intervals
-                        stem_object$dynamics$tcovar              <- build_tcovar_matrix(tcovar = stem_object$dynamics$.dynamics_args$tcovar,
-                                                                                        timestep = timestep, t0 = t0, tmax = tmax)
+                        stem_object$dynamics$tcovar <- build_tcovar_matrix(tcovar = stem_object$dynamics$.dynamics_args$tcovar,
+                                                                           timestep = timestep, t0 = t0, tmax = tmax)
                         stem_object$dynamics$tcovar_codes        <- seq_len(ncol(stem_object$dynamics$tcovar) - 1)
                         names(stem_object$dynamics$tcovar_codes) <- colnames(stem_object$dynamics$tcovar)[2:ncol(stem_object$dynamics$tcovar)]
                         stem_object$dynamics$n_tcovar            <- ncol(stem_object$dynamics$tcovar) - 1
@@ -174,7 +180,11 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 }
 
                 # get the compartment names
-                path_colnames <- c("time", "event", c(names(stem_object$dynamics$comp_codes), names(stem_object$dynamics$incidence_codes)))
+                path_colnames <-
+                        c("time", "event", c(
+                                names(stem_object$dynamics$comp_codes),
+                                names(stem_object$dynamics$incidence_codes)
+                        ))
 
                 if(is.null(census_times)) {
                         # initialize the list of paths
@@ -245,7 +255,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
         } else if (method == "lna") {
 
                 # set the vectors of times when the LNA is evaluated and censused
-                lna_times       <- sort(unique(c(census_times, stem_object$dynamics$.dynamics_args$tcovar[,1])))
+                lna_times       <- sort(unique(c(t0, census_times, stem_object$dynamics$.dynamics_args$tcovar[,1], tmax)))
 
                 # generate the matrix of parameters, constants, and time-varying covariates
                 lna_pars <- matrix(0.0, nrow = length(lna_times), ncol = length(stem_object$dynamics$lna_param_codes))
@@ -343,6 +353,9 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 do_census <- do_incidence || (!is.null(census_times) &&
                         !identical(as.numeric(stem_object$measurement_process$obstimes), as.numeric(census_times)))
 
+                # get the indices in the censused matrices for the observation times
+                if(do_census) cens_inds <- findInterval(stem_object$measurement_process$obstimes, census_times)
+
                 if(method == "gillespie") {
 
                         # should incidence be computed?
@@ -365,10 +378,15 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
 
                                         # compute the incidence if appropriate
                                         if(get_incidence) compute_incidence(censusmat = censusmat,
-                                                                            col_inds = incidence_codes,
-                                                                            row_inds =  stem_object$measurement_process$obstime_inds)
+                                                                            col_inds  = incidence_codes,
+                                                                            row_inds  = stem_object$measurement_process$obstime_inds)
                                 } else {
-                                        censusmat <- census_paths[,,k]
+                                        # get the state at observation times
+                                        if(do_census) {
+                                                censusmat[,-1] <- census_paths[cens_inds, -1, k]
+                                        } else {
+                                                censusmat <- census_paths[,,k]
+                                        }
                                 }
 
                                 # simulate the data

@@ -6,8 +6,9 @@
 noise approximation or agent-based Bayesian data augmentation.}
 \usage{
 stem_inference(stem_object, method, iterations, priors, kernel,
-  thin_params = 1, thin_latent_proc = ceiling(iterations/100),
-  initialization_attempts = 500, messages = FALSE, monitor_MCMC = FALSE)
+  t0_kernel = NULL, thin_params = 1,
+  thin_latent_proc = ceiling(iterations/100), initialization_attempts = 500,
+  messages = FALSE, monitor_MCMC = FALSE)
 }
 \arguments{
 \item{stem_object}{a stochastic epidemic model object containing the dataset,
@@ -26,6 +27,9 @@ initial compartment counts, which are specified in the
 \link{\code{kernel}} function. RWMH and adaptive RWMH are implemented for
 jointly updating the model parameters (not including the initial
 compartment counts which are handled separately).}
+
+\item{t0_kernel}{output of \link{\code{t0_kernel}}, specifying the RWMH
+transition kernel for t0 and the truncated normal distribution prior.}
 
 \item{thin_params}{thinning interval for posterior parameter samples,
 defaults to 1}

@@ -29,9 +29,10 @@ using namespace arma;
 //' @export
 // [[Rcpp::export]]
 void mvn_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& covmat, arma::mat& empirical_covmat,
-                  arma::rowvec& param_means, double& scaling, const int& iteration, const int& acceptances, const arma::rowvec& nugget,
-                  const double& nugget_weight, bool& adapt_scale, bool& adapt_shape, const int& scale_start,const int& shape_start,
-                  const double& target, const double& scale_cooling, const double& max_scaling, const double& opt_scaling) {
+                  arma::rowvec& param_means, arma::vec& scaling, const double& iteration, const double& acceptances,
+                  const arma::rowvec& nugget, const double& nugget_weight, const bool& adapt_scale, const bool& adapt_shape,
+                  const int& scale_start, const int& shape_start, const double& target, const double& scale_cooling,
+                  const double& max_scaling, const double& opt_scaling) {
 
         // if the shape should be adapted, update the empirical covariance matrix and sample means
         if(adapt_shape) {
@@ -44,11 +45,16 @@ void mvn_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, con
 
                 // adapt the covariance scale toward the target acceptance rate.
                 // N.B. 0 < scale_cooling < 1 so the finite adaptation criterion is satisfied
-                scaling = std::min(scaling * exp(pow(scale_cooling, iteration - scale_start) * (acceptances / iteration - target)),
-                                   max_scaling);
+                double scale_factor = scaling[0] * exp(pow(scale_cooling, iteration - scale_start) * (acceptances / iteration - target));
+
+                if(scale_factor < max_scaling) {
+                        scaling[0] = scale_factor;
+                } else {
+                        scaling[0] = max_scaling;
+                }
 
                 // make the proposal using the scaled covariance matrix
-                params_prop = params_cur + arma::randn(1,params_cur.n_elem) * arma::chol(pow(scaling,2.0)*covmat,"upper");
+                params_prop = params_cur + arma::randn(1,params_cur.n_elem) * arma::chol(pow(scaling[0],2.0)*covmat,"upper");
 
         } else if(adapt_shape && acceptances > shape_start) {
 

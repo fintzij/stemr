@@ -16,7 +16,7 @@ construct_initdist_sampler <- function(state_initializer, n_strata, constants) {
                 initdist_prior_body <- paste0("rmultinom(1,",
                                               constants["popsize"],", c(",
                                               paste0(state_initializer$prior, collapse = ", "),
-                                              ")")
+                                              "))")
 
                 initdist_prior <- eval(parse(text = paste0("function() {", initdist_prior_body,"}")))
 

@@ -13,7 +13,9 @@ construct_priors <- function(priors, param_codes) {
         codes <- param_codes[!grepl("_0", names(param_codes))]
 
         if(length(priors) != length(codes)) {
-                stop("All of the model parameters must have a prior distribution.")
+                if(setdiff(names(codes), sapply(priors, "[[", "parameter")) != "t0") {
+                        stop("All parameters must be assigned a prior distribution.")
+                }
         }
 
         # get the names of the parameters in the priors
@@ -21,7 +23,7 @@ construct_priors <- function(priors, param_codes) {
         param_names  <- names(codes)
 
         # reorder the priors to match the parameters
-        priors <- priors[match(param_names, prior_params)]
+        priors <- priors[match(param_names[which(names(codes) != "t0")], prior_params)]
 
         # get the transformations
         transformations <- sapply(priors, "[[", "scale")
