@@ -13,8 +13,8 @@ kernel(method = "mvn_rw", covmat, scale_start = NULL, shape_start = NULL,
 currently only multivariate normal random walk and an adaptive version are
 supported.}
 
-\item{covmat}{variance-covariance matrix for random walk proposals, with
-rows and columns corresponding to the parameters argument.}
+\item{covmat}{variance-covariance matrix for random walk proposals, with rows
+and columns corresponding to the parameters argument.}
 
 \item{scale_start}{iteration at which to begin scaling the proposal
 covariance matrix, defaults to 100.}
@@ -29,12 +29,16 @@ scaled empirical covariance matrix in the proposals, defaults to 100.}
 \item{target}{target acceptance rate when adapting the scale, defaults to
 0.234.}
 
-\item{nugget}{either a scalar or vector for the nugget covariance in the
-adaptive RWMH algorithm (defaults to 0.01 * diag(covmat)) if not
-specified).}
+\item{nugget}{a scalar giving the ratio of the nugget standard deviation to
+the proposal standard deviation, defaults to 0.01.}
 
 \item{nugget_weight}{weight that the nugget contribution receives in the
 adaptive RWMH proposal (defaults to 0.05).}
+
+\item{reset_nugget}{By default, the nugget is reset to nugget *
+diag(empirical covmat) when shape_start acceptances have been obtained. The
+nugget can also be reset at whenever acceptances%%reset_nugget == 0 in
+addition to this.}
 }
 \value{
 list containing the method and covariance matrix for the MCMC kernel.

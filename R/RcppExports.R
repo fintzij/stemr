@@ -348,15 +348,26 @@ pars2lnapars <- function(lnapars, parameters) {
     invisible(.Call('stemr_pars2lnapars', PACKAGE = 'stemr', lnapars, parameters))
 }
 
-#' Identify which rates to update when a state transition event occurs.
+#' Copy the contents of one vector into another
 #'
 #' @param dest destination row vector
 #' @param orig origin row vector
 #'
 #' @return copy the elements of one row vector into another.
 #' @export
-copypars <- function(dest, orig) {
-    invisible(.Call('stemr_copypars', PACKAGE = 'stemr', dest, orig))
+copy_vec <- function(dest, orig) {
+    invisible(.Call('stemr_copy_vec', PACKAGE = 'stemr', dest, orig))
+}
+
+#' Copy the contents of one matrix into another
+#'
+#' @param dest destination row vector
+#' @param orig origin row vector
+#'
+#' @return copy the elements of one matrix into another.
+#' @export
+copy_mat <- function(dest, orig) {
+    invisible(.Call('stemr_copy_mat', PACKAGE = 'stemr', dest, orig))
 }
 
 #' Simulate a data matrix from the measurement process of a stochastic epidemic

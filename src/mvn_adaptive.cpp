@@ -29,10 +29,10 @@ using namespace arma;
 //' @export
 // [[Rcpp::export]]
 void mvn_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& covmat, arma::mat& empirical_covmat,
-                  arma::rowvec& param_means, arma::vec& scaling, const double& iteration, const double& acceptances,
-                  const arma::rowvec& nugget, const double& nugget_weight, const bool& adapt_scale, const bool& adapt_shape,
-                  const int& scale_start, const int& shape_start, const double& target, const double& scale_cooling,
-                  const double& max_scaling, const double& opt_scaling) {
+                  arma::rowvec& param_means, arma::vec& scaling, const double iteration, const double acceptances,
+                  const arma::rowvec& nugget, const double nugget_weight, const bool adapt_scale, const bool adapt_shape,
+                  const int scale_start, const int shape_start, const double target, const double scale_cooling,
+                  const double max_scaling, const double opt_scaling) {
 
         // if the shape should be adapted, update the empirical covariance matrix and sample means
         if(adapt_shape) {
@@ -58,9 +58,20 @@ void mvn_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, con
 
         } else if(adapt_shape && acceptances > shape_start) {
 
-                // make the proposal using the empirical covariance matrix
+                double scale_factor = scaling[0] * exp(pow(scale_cooling, iteration - scale_start) * (acceptances / iteration - target));
+
+                if(scale_factor < max_scaling) {
+                        scaling[0] = scale_factor;
+                } else {
+                        scaling[0] = max_scaling;
+                }
+
                 params_prop = nugget_weight*(params_cur + nugget % arma::randn(1, params_cur.n_elem)) +
-                        (1-nugget_weight)*(params_cur+arma::randn(1,params_cur.n_elem)*arma::chol(opt_scaling*empirical_covmat,"upper"));
+                        (1-nugget_weight)*(params_cur+arma::randn(1,params_cur.n_elem)*arma::chol(scaling*empirical_covmat,"upper"));
+
+                // make the proposal using the empirical covariance matrix
+                // params_prop = nugget_weight*(params_cur + nugget % arma::randn(1, params_cur.n_elem)) +
+                //         (1-nugget_weight)*(params_cur+arma::randn(1,params_cur.n_elem)*arma::chol(opt_scaling*empirical_covmat,"upper"));
 
         } else {
                 // make the proposal using the supplied covariance matrix

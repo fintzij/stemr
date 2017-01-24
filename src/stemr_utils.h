@@ -74,13 +74,14 @@ void from_estimation_scale(Rcpp::NumericVector& natural_params, Rcpp::NumericVec
 // MCMC transition kernel functions
 void mvn_rw(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& cov_chol);
 void mvn_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& covmat, arma::mat& empirical_covmat,
-                  arma::rowvec& param_means, arma::vec& scaling, const double& iteration, const double& acceptances,
-                  const arma::rowvec& nugget, const double& nugget_weight, const bool& adapt_scale, const bool& adapt_shape,
-                  const int& scale_start, const int& shape_start, const double& target, const double& scale_cooling,
-                  const double& max_scaling, const double& opt_scaling);
+                  arma::rowvec& param_means, arma::vec& scaling, const double iteration, const double acceptances,
+                  const arma::rowvec& nugget, const double nugget_weight, const bool adapt_scale, const bool adapt_shape,
+                  const int scale_start, const int shape_start, const double target, const double scale_cooling,
+                  const double max_scaling, const double opt_scaling);
 
 // copy functions
-void copypars(arma::rowvec& dest, const arma::rowvec& orig);
+void copy_vec(arma::rowvec& dest, const arma::rowvec& orig);
+void copy_mat(arma::mat& dest, const arma::mat& orig);
 void pars2lnapars(arma::mat& lnapars, const arma::rowvec& parameters);
 
 // convert the lna from the counting process on transition events to its natural state space

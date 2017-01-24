@@ -16,7 +16,7 @@ void pars2lnapars(arma::mat& lnapars, const arma::rowvec& parameters) {
         lnapars.cols(0, n_pars-1).each_row() = parameters;
 }
 
-//' Identify which rates to update when a state transition event occurs.
+//' Copy the contents of one vector into another
 //'
 //' @param dest destination row vector
 //' @param orig origin row vector
@@ -24,7 +24,20 @@ void pars2lnapars(arma::mat& lnapars, const arma::rowvec& parameters) {
 //' @return copy the elements of one row vector into another.
 //' @export
 // [[Rcpp::export]]
-void copypars(arma::rowvec& dest, const arma::rowvec& orig) {
+void copy_vec(arma::rowvec& dest, const arma::rowvec& orig) {
+
+        dest = orig;
+}
+
+//' Copy the contents of one matrix into another
+//'
+//' @param dest destination row vector
+//' @param orig origin row vector
+//'
+//' @return copy the elements of one matrix into another.
+//' @export
+// [[Rcpp::export]]
+void copy_mat(arma::mat& dest, const arma::mat& orig) {
 
         dest = orig;
 }

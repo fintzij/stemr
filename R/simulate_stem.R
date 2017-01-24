@@ -261,6 +261,9 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                 lna_pars <- matrix(0.0, nrow = length(lna_times), ncol = length(stem_object$dynamics$lna_param_codes))
                 colnames(lna_pars) <- c(names(stem_object$dynamics$lna_param_codes))
 
+                # if the data consist of incidence counts, need to enforce monotonicity
+                if(!is.null(stem_object$dynamics$incidence_codes)) enforce_monotonicity <- TRUE
+
                 # insert parameters, constants, and time-varying covariates
                 parameter_inds <- 1:length(stem_object$dynamics$param_codes)
                 constant_inds  <- (length(parameter_inds)+1):(length(parameter_inds) + length(stem_object$dynamics$const_codes))
@@ -319,7 +322,7 @@ simulate_stem <- function(stem_object, nsim = 1, paths = FALSE, observations = F
                                                          flow_matrix      = stem_object$dynamics$flow_matrix_lna,
                                                          lna_pointer      = stem_object$dynamics$lna_pointers$lna_pointer,
                                                          set_pars_pointer = stem_object$dynamics$lna_pointers$lna_set_pars_ptr,
-                                                         enforce_monotonicity = FALSE)$lna_path
+                                                         enforce_monotonicity = enforce_monotonicity)$lna_path
 
                         if(!stem_object$dynamics$fixed_inits) {
                                 init_state <- init_states[k,]

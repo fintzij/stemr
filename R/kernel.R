@@ -8,8 +8,8 @@
 #' @param method algorithm to be used in generating parameter updates -
 #'   currently only multivariate normal random walk and an adaptive version are
 #'   supported.
-#' @param covmat variance-covariance matrix for random walk proposals, with
-#'   rows and columns corresponding to the parameters argument.
+#' @param covmat variance-covariance matrix for random walk proposals, with rows
+#'   and columns corresponding to the parameters argument.
 #' @param scale_start iteration at which to begin scaling the proposal
 #'   covariance matrix, defaults to 100.
 #' @param shape_start number of acceptances required before estimating the
@@ -18,11 +18,14 @@
 #' @param max_scaling maximum scale factor, defaults to 50.
 #' @param target target acceptance rate when adapting the scale, defaults to
 #'   0.234.
-#' @param nugget either a scalar or vector for the nugget covariance in the
-#'   adaptive RWMH algorithm (defaults to 0.01 * diag(covmat)) if not
-#'   specified).
+#' @param nugget a scalar giving the ratio of the nugget standard deviation to
+#'   the proposal standard deviation, defaults to 0.01.
 #' @param nugget_weight weight that the nugget contribution receives in the
 #'   adaptive RWMH proposal (defaults to 0.05).
+#' @param reset_nugget By default, the nugget is reset to nugget *
+#'   diag(empirical covmat) when shape_start acceptances have been obtained. The
+#'   nugget can also be reset at whenever acceptances%%reset_nugget == 0 in
+#'   addition to this.
 #'
 #' @details The adaptive algorithm will adapt the scale of the covariance matrix
 #'   in order to achieve the target acceptance rate. Starting at iteration
@@ -67,16 +70,14 @@ kernel <- function(method = "mvn_rw", covmat, scale_start=NULL, shape_start=NULL
                 stop("The scale cooling rate must be between 0 and 1.")
         }
 
-        # we take square roots b/c we will just multiply the nugget contribution by the standard deviation
-        if(is.null(nugget)) {
-                nugget <- sqrt(0.01 * diag(covmat) / nrow(covmat))
-        } else if(length(nugget) == 1) {
-                nugget <- sqrt(rep(nugget, nrow(covmat)) / nrow(covmat))
-        } else {
-                nugget <- sqrt(nugget / nrow(covmat))
+        if(method == "mvn_adaptive" && !is.null(nugget) && (nugget < 0 || nugget > 1)) {
+                stop("The nugget must be between 0 and 1.")
         }
 
-        names(nugget) <- rownames(covmat)
+        # we take square roots b/c we will just multiply the nugget contribution by the standard deviation
+        if(is.null(nugget)) {
+                nugget <- 0.01
+        }
 
         kernel_settings <- list(scale_start   = as.integer(scale_start),
                                 scale_cooling = as.numeric(scale_cooling),
