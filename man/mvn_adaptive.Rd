@@ -7,8 +7,7 @@ and Rosenthal (2009).}
 \usage{
 mvn_adaptive(params_prop, params_cur, covmat, empirical_covmat, param_means,
   scaling, iteration, acceptances, nugget, nugget_weight, adapt_scale,
-  adapt_shape, scale_start, shape_start, target, scale_cooling, max_scaling,
-  opt_scaling)
+  adapt_shape, scale_start, shape_start, target, scale_cooling, max_scaling)
 }
 \arguments{
 \item{params_prop}{vector in which the proposed parameters should be stored}
@@ -40,8 +39,6 @@ mvn_adaptive(params_prop, params_cur, covmat, empirical_covmat, param_means,
 \item{scale_cooling}{scale cooling rate}
 
 \item{max_scaling}{maximum scale factor}
-
-\item{opt_scaling}{2.38^2/length(params)}
 }
 \value{
 propose new parameter values in place and modify scaling and/or the empirical covariance matrix in place

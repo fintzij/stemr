@@ -316,12 +316,11 @@ dmvtn <- function(x, mu, sigma, logd = FALSE) {
 #' @param target target acceptance rate when varying the scale
 #' @param scale_cooling scale cooling rate
 #' @param max_scaling maximum scale factor
-#' @param opt_scaling 2.38^2/length(params)
 #'
 #' @return propose new parameter values in place and modify scaling and/or the empirical covariance matrix in place
 #' @export
-mvn_adaptive <- function(params_prop, params_cur, covmat, empirical_covmat, param_means, scaling, iteration, acceptances, nugget, nugget_weight, adapt_scale, adapt_shape, scale_start, shape_start, target, scale_cooling, max_scaling, opt_scaling) {
-    invisible(.Call('stemr_mvn_adaptive', PACKAGE = 'stemr', params_prop, params_cur, covmat, empirical_covmat, param_means, scaling, iteration, acceptances, nugget, nugget_weight, adapt_scale, adapt_shape, scale_start, shape_start, target, scale_cooling, max_scaling, opt_scaling))
+mvn_adaptive <- function(params_prop, params_cur, covmat, empirical_covmat, param_means, scaling, iteration, acceptances, nugget, nugget_weight, adapt_scale, adapt_shape, scale_start, shape_start, target, scale_cooling, max_scaling) {
+    invisible(.Call('stemr_mvn_adaptive', PACKAGE = 'stemr', params_prop, params_cur, covmat, empirical_covmat, param_means, scaling, iteration, acceptances, nugget, nugget_weight, adapt_scale, adapt_shape, scale_start, shape_start, target, scale_cooling, max_scaling))
 }
 
 #' Random walk Metropolis-Hastings transition kernel.
@@ -469,8 +468,8 @@ retrieve_census_path <- function(censusmat, path, census_times, census_columns) 
 #' @return updates the scaled_params vector in place with the scaled parameter
 #'   values
 #' @export
-to_estimation_scale <- function(natural_params, scaled_params, scales) {
-    invisible(.Call('stemr_to_estimation_scale', PACKAGE = 'stemr', natural_params, scaled_params, scales))
+to_estimation_scale <- function(natural_params, scales) {
+    .Call('stemr_to_estimation_scale', PACKAGE = 'stemr', natural_params, scales)
 }
 
 #' Transform the parameters from estimation scales to their natural scales
@@ -484,8 +483,8 @@ to_estimation_scale <- function(natural_params, scaled_params, scales) {
 #' @return updates the natural_params vector in place with the inverse of the
 #'   scale transformation functions
 #' @export
-from_estimation_scale <- function(natural_params, scaled_params, scales) {
-    invisible(.Call('stemr_from_estimation_scale', PACKAGE = 'stemr', natural_params, scaled_params, scales))
+from_estimation_scale <- function(scaled_params, scales) {
+    .Call('stemr_from_estimation_scale', PACKAGE = 'stemr', scaled_params, scales)
 }
 
 #' Simulate a data matrix from the measurement process of a stochastic epidemic

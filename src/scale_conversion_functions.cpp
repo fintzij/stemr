@@ -14,24 +14,22 @@ using namespace Rcpp;
 //'   values
 //' @export
 // [[Rcpp::export]]
-void to_estimation_scale(Rcpp::NumericVector& natural_params, Rcpp::NumericVector& scaled_params, Rcpp::CharacterVector& scales) {
+Rcpp::NumericVector to_estimation_scale(const Rcpp::NumericVector& natural_params, const Rcpp::CharacterVector& scales) {
 
-        // get number of parameters
         int n_pars = natural_params.size();
+        Rcpp::NumericVector scaled_params(n_pars);
 
         for(int r=0; r < n_pars; ++r) {
-
                 if(scales[r] == "linear") {
                         scaled_params[r] = natural_params[r];
-
                 } else if(scales[r] == "log") {
                         scaled_params[r] = log(natural_params[r]);
-
                 } else if(scales[r] == "logit") {
                         scaled_params[r] = -log(1/natural_params[r] - 1);
-
                 }
         }
+
+        return scaled_params;
 }
 
 //' Transform the parameters from estimation scales to their natural scales
@@ -46,22 +44,20 @@ void to_estimation_scale(Rcpp::NumericVector& natural_params, Rcpp::NumericVecto
 //'   scale transformation functions
 //' @export
 // [[Rcpp::export]]
-void from_estimation_scale(Rcpp::NumericVector& natural_params, Rcpp::NumericVector& scaled_params, Rcpp::CharacterVector& scales) {
+Rcpp::NumericVector from_estimation_scale(const Rcpp::NumericVector& scaled_params, const Rcpp::CharacterVector& scales) {
 
-        // get number of parameters
-        int n_pars = natural_params.size();
+        int n_pars = scaled_params.size();
+        Rcpp::NumericVector natural_params(n_pars);
 
         for(int r=0; r < n_pars; ++r) {
-
                 if(scales[r] == "linear") {
                         natural_params[r] = scaled_params[r];
-
                 } else if(scales[r] == "log") {
                         natural_params[r] = exp(scaled_params[r]);
-
                 } else if(scales[r] == "logit") {
                         natural_params[r] = 1 / (1 + exp(-scaled_params[r]));
-
                 }
         }
+
+        return natural_params;
 }

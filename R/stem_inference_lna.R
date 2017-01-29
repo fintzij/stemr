@@ -10,8 +10,6 @@
 #'   matrix, and an external pointer for the compiled MCMC kernel function
 #' @param t0_kernel output of \link{\code{t0_kernel}}, specifying the RWMH
 #'   transition kernel for t0 and the truncated normal distribution prior.
-#' @param estimation_scales character vector of estimation scales, each the
-#'   result of a
 #' @param thin_params thinning interval for posterior parameter samples,
 #'   defaults to 1
 #' @param thin_latent_proc thinning interval for latent paths, defaults to
@@ -24,7 +22,7 @@
 #'
 #' @return list with parameter posterior samples and MCMC diagnostics
 #' @export
-stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, t0_kernel, estimation_scales, thin_params, thin_latent_proc, initialization_attempts = 500, messages, monitor_MCMC) {
+stem_inference_lna <- function(stem_object, iterations, prior_density, priors, kernel, t0_kernel, thin_params, thin_latent_proc, initialization_attempts = 500, messages, monitor_MCMC) {
 
         # extract the model objects from the stem_object
         flow_matrix            <- stem_object$dynamics$flow_matrix_lna
@@ -59,6 +57,18 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, t
         obstimes               <- data[,1]
         obstime_inds           <- stem_object$measurement_process$obstime_inds
         tcovar_censmat         <- stem_object$measurement_process$tcovar_censmat
+
+        # construct prior density functions
+        if(class(priors[[1]]) == "list") {
+                estimation_scales <- sapply(priors, "[[", "scale")
+                prior_density     <- construct_priors(priors = priors, param_codes = stem_object$dynamics$param_codes)
+
+        } else if(class(priors[[1]]) == "function") {
+                prior_density         <- priors$prior_density
+                to_estimation_scale   <- priors$to_estimation_scale
+                from_estimation_scale <- priors$from_estimation_scale
+                estimation_scales     <- NULL
+        }
 
         # if the initial counts are not fixed, construct the initial distribution prior
         if(!fixed_inits) {
@@ -100,6 +110,10 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, t
                 t0           <- parameters["t0"]
                 t0_prop      <- double(1)
                 t0_log_prior <- double(1 + floor(iterations / thin_params))
+
+                # set the truncation points for the t0 kernel if not fixed
+                t0_kernel$upper <- min(t0_kernel$upper, min(stem_object$measurement_process$obstimes))
+                t0_kernel$lower <- max(t0_kernel$lower, -Inf)
         } else {
                 t0           <- NULL
                 t0_prop      <- NULL
@@ -168,12 +182,12 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, t
         # model_params_est -- model parameters on their estimation scales
         # lna_parameters -- matrix containing all model parameters (including initial count params) for all LNA times
         model_params_nat <- parameters[param_names]
-        model_params_est <- double(length(param_names))
-        to_estimation_scale(natural_params = model_params_nat, scaled_params = model_params_est, scales = estimation_scales)
+        model_params_est <- to_estimation_scale(model_params_nat, estimation_scales)
 
         # create analogous vectors for storing the proposed parameter values
         params_prop_nat  <- double(length(param_names))
         params_prop_est  <- double(length(param_names))
+        names(params_prop_est) <- names(params_prop_nat) <- param_names
 
         # generate other derived objects
         lna_times         <- sort(unique(c(obstimes, stem_object$dynamics$.dynamics_args$tcovar[,1],
@@ -322,7 +336,7 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, t
         params_log_prior[1]   <- params_logprior_cur
 
         # initialize the status file if status updates are required
-        if(messages) {
+        if(messages || monitor_MCMC) {
                 status_file <-
                         paste0("LNA_inference_status_",
                                as.numeric(Sys.time()),
@@ -340,7 +354,7 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, t
         for(k in (seq_len(iterations) + 1)) {
 
                 # Print the status if messages are enabled
-                if(messages && k%%thin_latent_proc == 0) {
+                if((messages || monitor_MCMC) && k%%thin_latent_proc == 0) {
                         # print the iteration
                         cat(paste0("Iteration ", k-1), file = status_file, sep = "\n \n", append = TRUE)
                 }
@@ -379,14 +393,25 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, t
                 if(!adaptive_rwmh) {
                         # propose new parameters via RWMH
                         mvn_rw(params_prop = params_prop_est,
-                               params_cur = model_params_est,
-                               cov_chol   = kernel_chol_cov)
+                               params_cur  = model_params_est,
+                               cov_chol    = kernel_chol_cov)
 
                 } else {
 
                         # reset the nugget if the shape is being estimated
                         if(adapt_shape && (acceptances == shape_start)) {
-                                nugget <- nugget * apply(parameter_samples[scale_start:k,], 2, sd)
+                                # reset the nugget based on the empirical covariance matrix
+                                nugget <-
+                                        reset_nugget(
+                                                nugget            = nugget,
+                                                parameter_samples = parameter_samples,
+                                                start             = scale_start,
+                                                end               = param_rec_ind-1,
+                                                estimation_scales = estimation_scales
+                                        )
+
+                                # reset the scaling to the optimal scaling = 2.38^2/n_params
+                                kernel_scaling <- opt_scaling
                         }
 
                         # propose new parameters via adaptive RWMH
@@ -406,14 +431,11 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, t
                                      shape_start      = shape_start,
                                      target           = target,
                                      scale_cooling    = scale_cooling,
-                                     max_scaling      = max_scaling,
-                                     opt_scaling      = opt_scaling)
+                                     max_scaling      = max_scaling)
                 }
 
                 # Convert the proposed parameters to their natural scale
-                from_estimation_scale(natural_params = params_prop_nat,
-                                      scaled_params  = params_prop_est,
-                                      scales         = estimation_scales)
+                params_prop_nat <- from_estimation_scale(params_prop_est, estimation_scales)
 
                 # Compute the log prior for the proposed parameters
                 params_logprior_prop <- prior_density(params_prop_nat, params_prop_est)
@@ -625,8 +647,12 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, t
         stem_object$results <- list(time         = difftime(end.time, start.time, units = "hours"),
                                     acceptances  = acceptances,
                                     latent_paths = latent_paths,
-                                    MCMC_results = MCMC_results,
-                                    covmat       = cov(parameter_samples))
+                                    MCMC_results = MCMC_results)
+
+        # save the settings
+        stem_object$stem_settings <- list(priors        = priors,
+                                          prior_density = prior_density)
+
 
         if(adaptive_rwmh) {
                 if(adapt_scale && k >= scale_start && (!adapt_shape || acceptances < shape_start)) {
@@ -636,11 +662,16 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, kernel, t
                 } else {
                         stem_object$results$scaling <- 1
                 }
+
+                if(adapt_shape) stem_object$results$empirical_covmat <- empirical_covmat
         }
 
+        # save the MCMC record if asked for
         if(monitor_MCMC & adaptive_rwmh) {
                 stem_object$results$adaptation_record <- list(proposal_scalings = proposal_scalings,
-                                                              proposal_covariances = proposal_covariances)
+                                                              proposal_covariances = proposal_covariances,
+                                                              nugget = nugget,
+                                                              nugget_weight = nugget_weight)
         }
 
         return(stem_object)

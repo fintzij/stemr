@@ -7,7 +7,7 @@
 #'
 #' @return list containing the LNA pointers and calling code
 #' @export
-load_lna <- function(lna_rates, messages) {
+load_lna <- function(lna_rates, messages, atol, rtol) {
 
         # get the number of rates and the number of compartments
         n_rates         <- length(lna_rates$rates)
@@ -86,8 +86,9 @@ load_lna <- function(lna_rates, messages) {
                                          sys = LNA_odes,
                                          sys_dim = n_compartments*2 + n_compartments^2,
                                          pars = n_params,
-                                         rtol = 1e-8,
-                                         atol = 1e-8,
+                                         method = "rk78_a",
+                                         rtol = rtol,
+                                         atol = atol,
                                          globals = paste(paste(
                                                  paste0("static arma::vec resid(", n_compartments,");"),
                                                  paste0("static arma::mat diffusion(", n_compartments,",",n_compartments,");"),

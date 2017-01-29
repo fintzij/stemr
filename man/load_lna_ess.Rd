@@ -6,7 +6,7 @@
 elliptical slice sampling algorithm, with integration of the LNA ODEs
 accomplished using the Boost odeint library.}
 \usage{
-load_lna_ess(lna_rates, messages)
+load_lna_ess(lna_rates, messages, atol, rtol)
 }
 \arguments{
 \item{lna_rates}{list containing the LNA rate functions, derivatives, and

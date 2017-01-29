@@ -38,6 +38,7 @@
 #' @param compile_rates should the rate functions be compiled? Defaults to TRUE.
 #' @param compile_lna should the LNA functions be generated and compiled?
 #'   Defaults to TRUE.
+#' @param atol,rtol absolute and relative error tolerance for LNA ODEs, defaults to 1e-12.
 #'
 #' @return list with evaluated rate functions and objects for managing the
 #'   bookkeeping for epidemic paths. The objects in the list are as follows:
@@ -85,7 +86,7 @@
 #'   }
 #'
 #' @export
-stem_dynamics <- function(rates, parameters, state_initializer, compartments, tmax, tcovar = NULL, timestep = NULL, strata = NULL, constants = NULL, adjacency = NULL, messages = TRUE, compile_rates = TRUE, compile_lna = TRUE, compile_ode = FALSE) {
+stem_dynamics <- function(rates, parameters, state_initializer, compartments, tmax, tcovar = NULL, timestep = NULL, strata = NULL, constants = NULL, adjacency = NULL, messages = TRUE, compile_rates = TRUE, compile_lna = TRUE, compile_ode = FALSE, atol = 1e-8, rtol = 1e-8) {
 
         # check consistency of specification and throw errors if inconsistent
         if(is.list(compartments) && ("ALL" %in% compartments) && is.null(strata)) {
@@ -700,8 +701,8 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tm
                                                   lna_comp_codes = lna_comp_codes)
 
                 # compile the LNA functions
-                lna_pointer     <- load_lna(lna_rates = lna_rates, messages = messages)
-                lna_pointer_ess <- load_lna_ess(lna_rates = lna_rates, messages = messages)
+                lna_pointer     <- load_lna(lna_rates = lna_rates, messages = messages, atol = atol, rtol = rtol)
+                lna_pointer_ess <- load_lna_ess(lna_rates = lna_rates, messages = messages, atol = atol, rtol = rtol)
 
                 lna_pointers    <- list(lna_pointer      = lna_pointer$lna_ptr,
                                         lna_pointer_ess  = lna_pointer_ess$lna_ess_ptr,

@@ -4,17 +4,17 @@
 \alias{to_estimation_scale}
 \title{Transform the parameters from their natural scale to the estimation scale}
 \usage{
-to_estimation_scale(natural_params, scaled_params, scales)
+to_estimation_scale(natural_params, scales)
 }
 \arguments{
 \item{natural_params}{numeric vector of parameter values on their natural
 scale}
 
-\item{scaled_params}{numeric vector of scaled parameter values, to be
-modified in pleace}
-
 \item{scales}{character vector of estimation scales, either 'linear', 'log',
 or 'logit'}
+
+\item{scaled_params}{numeric vector of scaled parameter values, to be
+modified in pleace}
 }
 \value{
 updates the scaled_params vector in place with the scaled parameter

@@ -5,9 +5,9 @@
 \title{Approximate Bayesian inference for a stochastic epidemic model via the linear
 noise approximation.}
 \usage{
-stem_inference_lna(stem_object, iterations, prior_density, kernel, t0_kernel,
-  estimation_scales, thin_params, thin_latent_proc,
-  initialization_attempts = 500, messages, monitor_MCMC)
+stem_inference_lna(stem_object, iterations, prior_density, priors, kernel,
+  t0_kernel, thin_params, thin_latent_proc, initialization_attempts = 500,
+  messages, monitor_MCMC)
 }
 \arguments{
 \item{stem_object}{stochastic epidemic model object with model dynamics, the
@@ -23,9 +23,6 @@ matrix, and an external pointer for the compiled MCMC kernel function}
 
 \item{t0_kernel}{output of \link{\code{t0_kernel}}, specifying the RWMH
 transition kernel for t0 and the truncated normal distribution prior.}
-
-\item{estimation_scales}{character vector of estimation scales, each the
-result of a}
 
 \item{thin_params}{thinning interval for posterior parameter samples,
 defaults to 1}

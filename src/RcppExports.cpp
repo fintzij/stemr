@@ -263,8 +263,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // mvn_adaptive
-void mvn_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& covmat, arma::mat& empirical_covmat, arma::rowvec& param_means, arma::vec& scaling, const double iteration, const double acceptances, const arma::rowvec& nugget, const double nugget_weight, const bool adapt_scale, const bool adapt_shape, const int scale_start, const int shape_start, const double target, const double scale_cooling, const double max_scaling, const double opt_scaling);
-RcppExport SEXP stemr_mvn_adaptive(SEXP params_propSEXP, SEXP params_curSEXP, SEXP covmatSEXP, SEXP empirical_covmatSEXP, SEXP param_meansSEXP, SEXP scalingSEXP, SEXP iterationSEXP, SEXP acceptancesSEXP, SEXP nuggetSEXP, SEXP nugget_weightSEXP, SEXP adapt_scaleSEXP, SEXP adapt_shapeSEXP, SEXP scale_startSEXP, SEXP shape_startSEXP, SEXP targetSEXP, SEXP scale_coolingSEXP, SEXP max_scalingSEXP, SEXP opt_scalingSEXP) {
+void mvn_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& covmat, arma::mat& empirical_covmat, arma::rowvec& param_means, arma::vec& scaling, const double iteration, const double acceptances, const arma::rowvec& nugget, const double nugget_weight, const bool adapt_scale, const bool adapt_shape, const int scale_start, const int shape_start, const double target, const double scale_cooling, const double max_scaling);
+RcppExport SEXP stemr_mvn_adaptive(SEXP params_propSEXP, SEXP params_curSEXP, SEXP covmatSEXP, SEXP empirical_covmatSEXP, SEXP param_meansSEXP, SEXP scalingSEXP, SEXP iterationSEXP, SEXP acceptancesSEXP, SEXP nuggetSEXP, SEXP nugget_weightSEXP, SEXP adapt_scaleSEXP, SEXP adapt_shapeSEXP, SEXP scale_startSEXP, SEXP shape_startSEXP, SEXP targetSEXP, SEXP scale_coolingSEXP, SEXP max_scalingSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::rowvec& >::type params_prop(params_propSEXP);
@@ -284,8 +284,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const double >::type target(targetSEXP);
     Rcpp::traits::input_parameter< const double >::type scale_cooling(scale_coolingSEXP);
     Rcpp::traits::input_parameter< const double >::type max_scaling(max_scalingSEXP);
-    Rcpp::traits::input_parameter< const double >::type opt_scaling(opt_scalingSEXP);
-    mvn_adaptive(params_prop, params_cur, covmat, empirical_covmat, param_means, scaling, iteration, acceptances, nugget, nugget_weight, adapt_scale, adapt_shape, scale_start, shape_start, target, scale_cooling, max_scaling, opt_scaling);
+    mvn_adaptive(params_prop, params_cur, covmat, empirical_covmat, param_means, scaling, iteration, acceptances, nugget, nugget_weight, adapt_scale, adapt_shape, scale_start, shape_start, target, scale_cooling, max_scaling);
     return R_NilValue;
 END_RCPP
 }
@@ -406,27 +405,27 @@ BEGIN_RCPP
 END_RCPP
 }
 // to_estimation_scale
-void to_estimation_scale(Rcpp::NumericVector& natural_params, Rcpp::NumericVector& scaled_params, Rcpp::CharacterVector& scales);
-RcppExport SEXP stemr_to_estimation_scale(SEXP natural_paramsSEXP, SEXP scaled_paramsSEXP, SEXP scalesSEXP) {
+Rcpp::NumericVector to_estimation_scale(const Rcpp::NumericVector& natural_params, const Rcpp::CharacterVector& scales);
+RcppExport SEXP stemr_to_estimation_scale(SEXP natural_paramsSEXP, SEXP scalesSEXP) {
 BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type natural_params(natural_paramsSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type scaled_params(scaled_paramsSEXP);
-    Rcpp::traits::input_parameter< Rcpp::CharacterVector& >::type scales(scalesSEXP);
-    to_estimation_scale(natural_params, scaled_params, scales);
-    return R_NilValue;
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type natural_params(natural_paramsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::CharacterVector& >::type scales(scalesSEXP);
+    rcpp_result_gen = Rcpp::wrap(to_estimation_scale(natural_params, scales));
+    return rcpp_result_gen;
 END_RCPP
 }
 // from_estimation_scale
-void from_estimation_scale(Rcpp::NumericVector& natural_params, Rcpp::NumericVector& scaled_params, Rcpp::CharacterVector& scales);
-RcppExport SEXP stemr_from_estimation_scale(SEXP natural_paramsSEXP, SEXP scaled_paramsSEXP, SEXP scalesSEXP) {
+Rcpp::NumericVector from_estimation_scale(const Rcpp::NumericVector& scaled_params, const Rcpp::CharacterVector& scales);
+RcppExport SEXP stemr_from_estimation_scale(SEXP scaled_paramsSEXP, SEXP scalesSEXP) {
 BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type natural_params(natural_paramsSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type scaled_params(scaled_paramsSEXP);
-    Rcpp::traits::input_parameter< Rcpp::CharacterVector& >::type scales(scalesSEXP);
-    from_estimation_scale(natural_params, scaled_params, scales);
-    return R_NilValue;
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type scaled_params(scaled_paramsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::CharacterVector& >::type scales(scalesSEXP);
+    rcpp_result_gen = Rcpp::wrap(from_estimation_scale(scaled_params, scales));
+    return rcpp_result_gen;
 END_RCPP
 }
 // simulate_r_measure

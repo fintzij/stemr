@@ -23,7 +23,6 @@ using namespace arma;
 //' @param target target acceptance rate when varying the scale
 //' @param scale_cooling scale cooling rate
 //' @param max_scaling maximum scale factor
-//' @param opt_scaling 2.38^2/length(params)
 //'
 //' @return propose new parameter values in place and modify scaling and/or the empirical covariance matrix in place
 //' @export
@@ -32,15 +31,9 @@ void mvn_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, con
                   arma::rowvec& param_means, arma::vec& scaling, const double iteration, const double acceptances,
                   const arma::rowvec& nugget, const double nugget_weight, const bool adapt_scale, const bool adapt_shape,
                   const int scale_start, const int shape_start, const double target, const double scale_cooling,
-                  const double max_scaling, const double opt_scaling) {
+                  const double max_scaling) {
 
-        // if the shape should be adapted, update the empirical covariance matrix and sample means
-        if(adapt_shape) {
-                param_means      = ((iteration - 1) * param_means + params_cur) / iteration;
-                arma::rowvec v   = params_cur - param_means;
-                empirical_covmat = ((iteration - 1) * empirical_covmat + v.t() * v)/iteration;
-        }
-
+        // if the scale is to be adapted, adapt the scaling factor and make the proposal
         if(adapt_scale && iteration >= scale_start && (!adapt_shape || acceptances < shape_start)) {
 
                 // adapt the covariance scale toward the target acceptance rate.
@@ -58,6 +51,8 @@ void mvn_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, con
 
         } else if(adapt_shape && acceptances > shape_start) {
 
+                // adapt the covariance scale toward the target acceptance rate.
+                // N.B. 0 < scale_cooling < 1 so the finite adaptation criterion is satisfied
                 double scale_factor = scaling[0] * exp(pow(scale_cooling, iteration - scale_start) * (acceptances / iteration - target));
 
                 if(scale_factor < max_scaling) {
@@ -66,15 +61,19 @@ void mvn_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, con
                         scaling[0] = max_scaling;
                 }
 
-                params_prop = nugget_weight*(params_cur + nugget % arma::randn(1, params_cur.n_elem)) +
-                        (1-nugget_weight)*(params_cur+arma::randn(1,params_cur.n_elem)*arma::chol(scaling*empirical_covmat,"upper"));
-
                 // make the proposal using the empirical covariance matrix
-                // params_prop = nugget_weight*(params_cur + nugget % arma::randn(1, params_cur.n_elem)) +
-                //         (1-nugget_weight)*(params_cur+arma::randn(1,params_cur.n_elem)*arma::chol(opt_scaling*empirical_covmat,"upper"));
+                params_prop = nugget_weight*(params_cur + nugget % arma::randn(1, params_cur.n_elem)) +
+                        (1-nugget_weight)*(params_cur+arma::randn(1,params_cur.n_elem)*arma::chol(scaling[0]*empirical_covmat,"upper"));
 
         } else {
                 // make the proposal using the supplied covariance matrix
                 params_prop = params_cur + arma::randn(1, params_cur.n_elem) * arma::chol(covmat, "upper");
+        }
+
+        // if the shape should be adapted, update the empirical covariance matrix and sample means
+        if(adapt_shape) {
+                param_means      = ((iteration - 1) * param_means + params_cur) / iteration;
+                arma::rowvec v   = params_cur - param_means;
+                empirical_covmat = ((iteration - 1) * empirical_covmat + v.t() * v)/iteration;
         }
 }
