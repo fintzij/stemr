@@ -26,4 +26,3 @@ arguments for specifying prior and proposal distribution for t0
 Specify the prior for t0 and the standard deviation of the random--walk
 proposal distribution.
 }
-

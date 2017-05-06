@@ -19,4 +19,3 @@ Two vector of strings that serve as function pointers.
 Instatiate the C++ rate functions for a stochastic epidemic model and return
 a vector of function pointers.
 }
-

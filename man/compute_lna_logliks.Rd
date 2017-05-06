@@ -70,4 +70,3 @@ list with an updated LNA path along with its ODEs, the observed data
 \description{
 Compute the LNA log likelihood and data log likelihood.
 }
-

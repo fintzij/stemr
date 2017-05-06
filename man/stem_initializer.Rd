@@ -69,4 +69,3 @@ list(stem_initializer(c(S=200,I=100,R=700), fixed = TRUE, strata = "adults"),
      stem_initializer(c(S=900,I=50,R=50), fixed=TRUE, strata = c("children",
      "elderly")))
 }
-

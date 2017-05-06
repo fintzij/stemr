@@ -11,6 +11,9 @@
 #' @export
 rate_fcns_4_lna <- function(rate_fcns, compartment_codes, flow_matrix) {
 
+        # adjust compartment code indices for R/Stan style
+        compartment_codes <- compartment_codes + 1
+
         # character vector for the rates
         n_rates    <- nrow(flow_matrix)
         n_comps    <- length(compartment_codes)
@@ -30,7 +33,7 @@ rate_fcns_4_lna <- function(rate_fcns, compartment_codes, flow_matrix) {
         comp_names <- names(compartment_codes)
 
         # lna_compartment codes
-        lna_comp_codes        <- seq_len(n_rates) - 1
+        lna_comp_codes        <- seq_len(n_rates)
         names(lna_comp_codes) <- rate_names
 
         # lookup table for making substitutions

@@ -18,4 +18,3 @@ stem object with updated parameters
 \description{
 Set the parameter values for a stochastic epidemic model object.
 }
-

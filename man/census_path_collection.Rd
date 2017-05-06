@@ -26,4 +26,3 @@ a list (default) or array of matrices of compartment counts at census
 Census each path in a collection of paths to obtain the compartment counts at
 census times.
 }
-

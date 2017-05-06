@@ -74,4 +74,3 @@ Returns a list with the simulated paths, subject-level paths, and/or
 \description{
 Simulations from a stochastic epidemic model.
 }
-

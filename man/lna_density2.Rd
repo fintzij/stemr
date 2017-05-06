@@ -38,4 +38,3 @@ List containing the LNA path, the path of the residual
 Compute the density of an LNA path, reintegrating only the drift and
 residual ODEs (sufficient after elliptical slice sampling).
 }
-

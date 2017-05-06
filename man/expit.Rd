@@ -15,4 +15,3 @@ expit(x)
 \description{
 Expit transformation, i.e. inverse logit
 }
-

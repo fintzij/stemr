@@ -22,4 +22,3 @@ updates the natural_params vector in place with the inverse of the
 \description{
 Transform the parameters from estimation scales to their natural scales
 }
-

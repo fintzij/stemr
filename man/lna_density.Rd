@@ -38,4 +38,3 @@ List containing the LNA path, the path of the residual
 Compute the density of an LNA path, reintegrating all LNA ODEs (as required,
 e.g. after updating the parameters).
 }
-

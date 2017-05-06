@@ -24,4 +24,3 @@ function for evaluating the log prior density of the initial
 Construct a function for sampling new initial compartment counts, which are
 taken to have multinomial prior.
 }
-

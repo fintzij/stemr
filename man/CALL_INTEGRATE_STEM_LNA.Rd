@@ -22,4 +22,3 @@ CALL_INTEGRATE_STEM_LNA(init, start, end, step_size, lna_ode_ptr)
 \description{
 Compute the hazards by calling the hazard functions via external Xptr.
 }
-

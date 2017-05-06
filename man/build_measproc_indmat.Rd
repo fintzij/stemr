@@ -18,4 +18,3 @@ logical matrix indicating measurment status
 Construct an indicator matrix for which measurement process variables are
 measured at which observation times.
 }
-

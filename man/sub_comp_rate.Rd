@@ -19,4 +19,3 @@ rate string
 \description{
 Makes comp_fcn replacements.
 }
-

@@ -69,4 +69,3 @@ LNA path along with paths of its ODEs and its data log-likelihood
 \description{
 Initialize the LNA path
 }
-

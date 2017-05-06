@@ -27,4 +27,3 @@ Construct a time-varying covariance matrix that includes time and
 seasonality, based on a user-supplied time-varying covariate matrix. Used
 internally.
 }
-

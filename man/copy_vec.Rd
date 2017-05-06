@@ -17,4 +17,3 @@ copy the elements of one row vector into another.
 \description{
 Copy the contents of one vector into another
 }
-

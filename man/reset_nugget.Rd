@@ -23,4 +23,3 @@ vector of nugget standard deviations
 \description{
 Reset the nugget based based on a sample
 }
-

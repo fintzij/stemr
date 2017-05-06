@@ -60,4 +60,3 @@ list with posterior samples for the parameters and the latent
 Perform inference for a stochastic epidemic model using either the linear
 noise approximation or agent-based Bayesian data augmentation.
 }
-

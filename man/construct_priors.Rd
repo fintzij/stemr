@@ -19,4 +19,3 @@ function to evaluate the prior densities, returning a vector
 \description{
 Construct a function for evaluating log prior densities of model parameters.
 }
-

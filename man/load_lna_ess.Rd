@@ -22,4 +22,3 @@ Construct and compile the functions for proposing an LNA path within the
 elliptical slice sampling algorithm, with integration of the LNA ODEs
 accomplished using the Boost odeint library.
 }
-

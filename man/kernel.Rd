@@ -69,4 +69,3 @@ The adaptive algorithm will adapt the scale of the covariance matrix
   algorithm implemented in the \code{pomp} packages
   (https://github.com/kingaa/pomp/blob/master/R/proposals.R).
 }
-

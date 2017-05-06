@@ -22,4 +22,3 @@ matrix by the stoichiometry matrix: \eqn{X_t = A'\phi(t, N_t)}.}
 Convert an LNA path from the counting process on transition events to the
 compartment densities on their natural scale.
 }
-

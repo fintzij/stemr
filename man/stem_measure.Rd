@@ -56,4 +56,3 @@ list with evaluated measurement process functions and objects. The
 Generate a list of objects governing the measurement process for a stochastic
 epidemic model.
 }
-

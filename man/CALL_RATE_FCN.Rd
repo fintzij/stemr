@@ -24,4 +24,3 @@ CALL_RATE_FCN(rates, inds, state, parameters, constants, tcovar, rate_ptr)
 \description{
 Update rates by calling rate functions via Xptr.
 }
-

@@ -22,4 +22,3 @@ CALL_SET_LNA_PARAMS(p, set_lna_params_ptr)
 \description{
 Compute the hazards by calling the hazard functions via external Xptr.
 }
-

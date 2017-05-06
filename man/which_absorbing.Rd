@@ -15,4 +15,3 @@ logical vector indicating which model compartments are absorbing.
 \description{
 Detects which states in a model are absorbing states
 }
-

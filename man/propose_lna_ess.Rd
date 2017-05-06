@@ -40,4 +40,3 @@ array with slices containing the LNA path, the path of the residual
 Simulate a data matrix from the measurement process of a stochastic epidemic
 model.
 }
-

@@ -29,4 +29,3 @@ matrix containing the compartment counts at census times.
 Given a vector of interval endpoints \code{breaks}, determine in which
 intervals the elements of a vector \code{x} fall.
 }
-

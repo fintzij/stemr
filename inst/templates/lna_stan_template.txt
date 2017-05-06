@@ -1,0 +1,148 @@
+// user-defined functions
+functions{
+        // compute the LNA moments - state is an array with the current state
+        real[] lna_fcn(real t, real[] state, real[] lna_params, real[] rdummy, int[] idummy) {
+
+                // compute hazards and jacobian
+                vector[__NCOMPS__] Z;
+                vector[__NCOMPS__] exp_Z;
+                vector[__NCOMPS__] exp_negZ;
+                vector[__NCOMPS__] exp_neg2Z;
+                vector[__NCOMPS__] haz;
+                matrix[__NCOMPS__,__NCOMPS__] jac;
+                matrix[__NCOMPS__,__NCOMPS__] V0;
+                matrix[__NCOMPS__,__NCOMPS__] Vt;
+                real newstate[__NSTATE__];
+
+                // get the state and current value of the diffusion
+                V0 = to_matrix(state[__COVSTART__:__COVEND__],__NCOMPS__,__NCOMPS__);
+
+                // compute exp_Z, exp_negZ, and exp_neg2Z
+                exp_Z     = exp(state[1:__NCOMPS__]);
+                exp_negZ  = exp(-state[1:__NCOMPS__]);
+                exp_neg2Z = exp(-state[1:__NCOMPS__]);
+
+                // compute the hazards and the jacobian
+                __HAZCODE__
+                __JACCODE__
+
+                // compute drift and diffusion
+                Vt = V0 * jac' + diag_matrix(exp_neg2Z .* haz) + jac * V0;
+
+                // concatenate and return
+                newstate[1:2] = to_array_1d(haz);
+                newstate[3:6] = to_array_1d(Vt);
+
+                return newstate;
+        }
+
+        // integrate over one time interval
+        real[] lna_step(real t_l, real[] t_r, real[] state, real[] lna_params, real[] rdummy, int[] idummy) {
+
+                // temporary container for output of stepper
+                real lnastep[1, __NSTATE__];
+
+                // integrate LNA
+                lnastep = integrate_ode_bdf(lna_fcn, state, t_l, t_r, lna_params, rdummy, idummy); // integrate ODEs
+
+                return to_array_1d(lnastep);
+        }
+
+        // function to map the standard normal draws to the log-LNA increments and return incidence (increments in N_SI)
+        vector get_lna(vector N_raw, real[] theta, vector X0, matrix stoich, real[] times, int[] incid_inds, real[] rdummy, int[] idummy) {
+
+                // number of times at which incidence is recorded
+                int n_times = __NTIMES__;
+
+                // container with model parameters and state at beginning of each interval (updated throughout)
+                real lna_params[__NPARS__]; // (beta, mu, S_t, I_t, R_t)
+
+                // containers current state
+                vector[__NCOMPS__] log_LNA; // log-LNA increment: (log(N_SI), log(N_IR))
+                vector[__NCOMPS__] nat_LNA; // LNA increment on the natural scale
+                vector[__NCOMPS__] c_incid; // cumulative incidence
+                vector[__NMODCOMPS__] SIR_cur; // SIR compartment counts
+
+                // containers for LNA moments
+                real state[__NSTATE__];     // LNA moments - (mu, Sigma)
+                vector[__NCOMPS__] mu;      // LNA mean
+                matrix[__NCOMPS__,__NCOMPS__] Sigma; // LNA covariance
+                matrix[__NCOMPS__,__NCOMPS__] Sig_chol; // Cholesky decomposition of the covariance
+
+                // incidence vector to be returned
+                matrix[__NTIMES__,__NEMITS__] incidence; // increments for incidence (natural scale)
+
+                // initialize object values
+                c_incid = rep_vector(0.0, __NCOMPS__); // current incidence is 0
+                state   = rep_array(0.0, __NSTATE__);  // lna gets initialized at 0
+                lna_params[1:__NMODPARS__] = theta;      // parameters
+                lna_params[__INITSTART__:__INITEND__] = to_array_1d(X0); // initial compartment counts
+
+                // map the standard normal draws to the log-LNA increments
+                for(k in 1:n_times) {
+
+                        // LNA transition density
+                        state = lna_step(times[k],
+                                         times[(k+1):(k+1)],
+                                         state,
+                                         lna_params,
+                                         rdummy,
+                                         idummy);
+
+                        // extract moments
+                        mu       = to_vector(state[1:__NCOMPS__]);
+                        Sigma    = to_matrix(state[__COVSTART__:__COVEND__],__NCOMPS__,__NCOMPS__);
+                        Sig_chol = cholesky_decompose(Sigma); // compute the cholesky decomp.
+
+                        // map N_raw values to the sampled LNA value
+                        log_LNA = mu + Sig_chol * N_raw[(__NCOMPS__*(k-1)+1):(__NCOMPS__*k)];
+
+                        // save new state
+                        nat_LNA      = exp(log_LNA); // LNA increment on the natural scale
+                        incidence[k] = nat_LNA[incid_inds];      // save incidence
+
+                        // update the cumulative incidence and set the new initial state
+                        c_incid = c_incid + nat_LNA;            // update cumulative incidence
+                        SIR_cur = X0 + stoich * c_incid;        // update the current compartment counts
+                        state   = rep_array(0.0,__NSTATE__);   // reset the increment
+                        lna_params[__INITSTART__:__INITEND__] = to_array_1d(SIR_cur); // set the new initial values
+                }
+
+                return incidence;
+        }
+}
+data {
+        real popsize;
+        int n_times;          // number of census interval endpoints
+        real times[n_times];  // census interval endpoint times
+        int cases[n_times-1]; // observed incidence
+        matrix[__NMODCOMPS,__NCOMPS__] stoich;   // stoichiometry matrix
+}
+transformed data{
+        real rdummy[0]; // no real data arguments to LNA ODEs
+        int idummy[0];  // no integer data arguments to LNA ODEs
+        int incid_inds[__NEMITS__] = __EMITINDS__; // number of measured compartments
+}
+parameters {
+        /*
+        Raw model parameters --- Insert more parameters as needed:
+        N_raw:  multivariate standard normal draws that drive the stochasticity
+        */
+
+        vector[__NCOMPS__*__NTIMES__] N_raw; // initial state is fixed for now
+}
+transformed parameters {
+        /*
+        Insert  additional model parameter transformations here.
+        theta:  the model parameters
+        X0:     initial state volumes
+        stoich: stoichiometry matrix
+        times:  vector of interval endpoints (includes t0)
+        rdummy,idummy: generated above, serve no role
+        */
+        lna_incidence = get_lna(N_raw, theta, X0, stoich, times, incid_inds, rdummy, idummy); // map normal draws to LNA incidence path
+}
+model {
+        // implies the LNA paths are multivariate normal with solns given by ODE solns
+        N_raw ~ normal(0,1);
+}

@@ -21,4 +21,3 @@ matrix whose elements indicate the change in each compartment
 Given a list of (unparsed) rate functions, construct the matrix of
 compartment flows.
 }
-

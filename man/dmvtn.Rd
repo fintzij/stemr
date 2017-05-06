@@ -20,4 +20,3 @@ dmvtn(x, mu, sigma, logd = FALSE)
 \description{
 Multivariate normal density
 }
-

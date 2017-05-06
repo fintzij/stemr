@@ -47,4 +47,3 @@ propose new parameter values in place and modify scaling and/or the empirical co
 Adaptive random walk Metropolis-Hastings transition kernel based on Roberts
 and Rosenthal (2009).
 }
-

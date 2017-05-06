@@ -19,4 +19,3 @@ logical vector stating which rates need to be updated
 \description{
 Identify which rates to update based on changes in the time-varying covariates.
 }
-

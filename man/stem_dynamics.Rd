@@ -118,4 +118,3 @@ list with evaluated rate functions and objects for managing the
 \description{
 Generate the objects governing the dynamics of a stochastic epidemic model.
 }
-

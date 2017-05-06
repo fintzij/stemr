@@ -21,4 +21,3 @@ Instatiate the C++ emission probability functions for simulation and density
 evaluation for a stochastic epidemic model measurement process and return a
 vector of function pointers.
 }
-

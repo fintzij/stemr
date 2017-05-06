@@ -22,4 +22,3 @@ time-varying covariates on which they each depend given in columns. Thus,
 when time or a time-varying covariate changes, all of the non-zero entries in
 the corresponding column must be updated.
 }
-

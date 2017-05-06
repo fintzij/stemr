@@ -17,4 +17,3 @@ modifies the lna parameter matrix in place
 \description{
 Identify which rates to update when a state transition event occurs.
 }
-

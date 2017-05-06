@@ -21,4 +21,3 @@ combinations.
 \examples{
 interact(sex=c("male", "female"), age=c("young", "adult", "old"))
 }
-

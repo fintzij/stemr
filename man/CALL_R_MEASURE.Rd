@@ -29,4 +29,3 @@ CALL_R_MEASURE(obsmat, emit_inds, record_ind, state, parameters, constants,
 Simulate from the measurement process by calling measurement process
 functions via external Xptr.
 }
-

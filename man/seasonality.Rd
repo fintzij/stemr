@@ -53,4 +53,3 @@ Supplies a string for the seasonal terms \deqn{\beta_0 +
 # add two sine and cosine terms, one with a period of 12 (for months), the other with a period of 52 (for weeks)
 list("beta * I", S, I, strata = NULL, seasonality(period = c(12, 52), s_params = c(0.01, 0.05)))
 }
-

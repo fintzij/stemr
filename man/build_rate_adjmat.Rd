@@ -22,4 +22,3 @@ Constructs an adjacency matrix with rates given in the rows, and reactions on
 which they each depend given in columns. Thus, when a reaction occurs, all of
 the non-zero entries in the corresponding column must be updated.
 }
-

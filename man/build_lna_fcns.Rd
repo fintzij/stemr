@@ -31,4 +31,3 @@ strings for computing the LNA hazards and the LNA jacobian
 Reformat the rates for use in the LNA and compute the derivatives of the rate
 functions.
 }
-

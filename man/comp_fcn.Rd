@@ -43,4 +43,3 @@ resulting quantities should be added or multiplied together.
 # infecteds in adjacent compartments.
 rate("beta * I_SELF + gamma * comp_fcn(log(I_ADJ), sum)", S, I, ALL)
 }
-

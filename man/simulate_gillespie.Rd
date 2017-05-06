@@ -42,4 +42,3 @@ Simulate a stochastic epidemic model path via Gillespie's direct method and
 returns a matrix containing a simulated path from a stochastic epidemic
 model.
 }
-

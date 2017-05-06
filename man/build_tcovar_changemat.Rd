@@ -18,4 +18,3 @@ indicator matrix for which time-varying covariates change at teach
 Indicator matrix for determining which time-varying covariates change at each
 row of a time-varying covariate matrix.
 }
-

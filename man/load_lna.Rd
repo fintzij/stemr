@@ -20,4 +20,3 @@ list containing the LNA pointers and calling code
 Construct and compile the functions for proposing an LNA path, with
 integration of the LNA ODEs accomplished using the Boost odeint library.
 }
-

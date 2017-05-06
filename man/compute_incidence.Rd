@@ -19,4 +19,3 @@ update the census matrix in place
 \description{
 Difference an incidence variable in a census matrix.
 }
-

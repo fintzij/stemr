@@ -17,4 +17,3 @@ copy the elements of one matrix into another.
 \description{
 Copy the contents of one matrix into another
 }
-

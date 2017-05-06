@@ -30,4 +30,3 @@ matrix with a simulated dataset from a stochastic epidemic model.
 Simulate a data matrix from the measurement process of a stochastic epidemic
 model.
 }
-

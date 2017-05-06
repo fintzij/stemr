@@ -1,0 +1,180 @@
+// compute the LNA moments - state is an array with the current state
+real[] lna_fcn(real t, real[] state, real[] lna_params, real[] rdummy, int[] idummy) {
+
+// compute hazards and jacobian
+vector[8] Z;
+vector[8] exp_Z;
+vector[8] exp_negZ;
+vector[8] exp_neg2Z;
+vector[8] haz;
+matrix[8,8] jac;
+matrix[8,8] V0;
+matrix[8,8] Vt;
+real newstate[72];
+
+// get the state and current value of the diffusion
+V0 = to_matrix(state[9:72],8,8);
+
+// compute exp_Z, exp_negZ, and exp_neg2Z
+exp_Z     = exp(state[1:8]);
+exp_negZ  = exp(-state[1:8]);
+exp_neg2Z = exp(-state[1:8]);
+
+// compute the hazards and the jacobian
+haz[1]=(exp_negZ[1]-0.5*exp_neg2Z[2])*((lna_params[1]*(lna_params[11]+exp_Z[1]-exp_Z[5])+lna_params[2]*((lna_params[12]+exp_Z[2]-exp_Z[6])+(lna_params[13]+exp_Z[3]-exp_Z[7])+(lna_params[14]+exp_Z[4]-exp_Z[8])))*(lna_params[7]-exp_Z[1]));
+haz[2]=(exp_negZ[2]-0.5*exp_neg2Z[2])*((lna_params[1]*(lna_params[12]+exp_Z[2]-exp_Z[6])+lna_params[2]*((lna_params[11]+exp_Z[1]-exp_Z[5])+(lna_params[13]+exp_Z[3]-exp_Z[7])+(lna_params[14]+exp_Z[4]-exp_Z[8])))*(lna_params[8]-exp_Z[2]));
+haz[3]=(exp_negZ[3]-0.5*exp_neg2Z[2])*((lna_params[1]*(lna_params[13]+exp_Z[3]-exp_Z[7])+lna_params[2]*((lna_params[11]+exp_Z[1]-exp_Z[5])+(lna_params[12]+exp_Z[2]-exp_Z[6])+(lna_params[14]+exp_Z[4]-exp_Z[8])))*(lna_params[9]-exp_Z[3]));
+haz[4]=(exp_negZ[4]-0.5*exp_neg2Z[2])*((lna_params[1]*(lna_params[14]+exp_Z[4]-exp_Z[8])+lna_params[2]*((lna_params[11]+exp_Z[1]-exp_Z[5])+(lna_params[12]+exp_Z[2]-exp_Z[6])+(lna_params[13]+exp_Z[3]-exp_Z[7])))*(lna_params[10]-exp_Z[4]));
+haz[5]=(exp_negZ[5]-0.5*exp_neg2Z[2])*((lna_params[3])*(lna_params[11]+exp_Z[1]-exp_Z[5]));
+haz[6]=(exp_negZ[6]-0.5*exp_neg2Z[2])*((lna_params[3])*(lna_params[12]+exp_Z[2]-exp_Z[6]));
+haz[7]=(exp_negZ[7]-0.5*exp_neg2Z[2])*((lna_params[3])*(lna_params[13]+exp_Z[3]-exp_Z[7]));
+haz[8]=(exp_negZ[8]-0.5*exp_neg2Z[2])*((lna_params[3])*(lna_params[14]+exp_Z[4]-exp_Z[8]));
+jac[1,1]=(exp_negZ[1]-0.5*exp_neg2Z[2])*(lna_params[1]*exp_Z[1]*(lna_params[7]-exp_Z[1])-(lna_params[1]*(lna_params[11]+exp_Z[1]-exp_Z[5])+lna_params[2]*((lna_params[12]+exp_Z[2]-exp_Z[6])+(lna_params[13]+exp_Z[3]-exp_Z[7])+(lna_params[14]+exp_Z[4]-exp_Z[8])))*exp_Z[1])-(exp_negZ[1]-0.5*(exp_neg2Z[1]*2))*((lna_params[1]*(lna_params[11]+exp_Z[1]-exp_Z[5])+lna_params[2]*((lna_params[12]+exp_Z[2]-exp_Z[6])+(lna_params[13]+exp_Z[3]-exp_Z[7])+(lna_params[14]+exp_Z[4]-exp_Z[8])))*(lna_params[7]-exp_Z[1]));
+jac[2,1]=(exp_negZ[1]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[2]*(lna_params[7]-exp_Z[1]));
+jac[3,1]=(exp_negZ[1]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[3]*(lna_params[7]-exp_Z[1]));
+jac[4,1]=(exp_negZ[1]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[4]*(lna_params[7]-exp_Z[1]));
+jac[5,1]=-((exp_negZ[1]-0.5*exp_neg2Z[2])*(lna_params[1]*exp_Z[5]*(lna_params[7]-exp_Z[1])));
+jac[6,1]=-((exp_negZ[1]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[6]*(lna_params[7]-exp_Z[1])));
+jac[7,1]=-((exp_negZ[1]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[7]*(lna_params[7]-exp_Z[1])));
+jac[8,1]=-((exp_negZ[1]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[8]*(lna_params[7]-exp_Z[1])));
+jac[1,2]=(exp_negZ[2]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[1]*(lna_params[8]-exp_Z[2]));
+jac[2,2]=(exp_negZ[2]-0.5*exp_neg2Z[2])*(lna_params[1]*exp_Z[2]*(lna_params[8]-exp_Z[2])-(lna_params[1]*(lna_params[12]+exp_Z[2]-exp_Z[6])+lna_params[2]*((lna_params[11]+exp_Z[1]-exp_Z[5])+(lna_params[13]+exp_Z[3]-exp_Z[7])+(lna_params[14]+exp_Z[4]-exp_Z[8])))*exp_Z[2])-(exp_negZ[2]-0.5*(exp_neg2Z[2]*2))*((lna_params[1]*(lna_params[12]+exp_Z[2]-exp_Z[6])+lna_params[2]*((lna_params[11]+exp_Z[1]-exp_Z[5])+(lna_params[13]+exp_Z[3]-exp_Z[7])+(lna_params[14]+exp_Z[4]-exp_Z[8])))*(lna_params[8]-exp_Z[2]));
+jac[3,2]=(exp_negZ[2]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[3]*(lna_params[8]-exp_Z[2]));
+jac[4,2]=(exp_negZ[2]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[4]*(lna_params[8]-exp_Z[2]));
+jac[5,2]=-((exp_negZ[2]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[5]*(lna_params[8]-exp_Z[2])));
+jac[6,2]=-((exp_negZ[2]-0.5*exp_neg2Z[2])*(lna_params[1]*exp_Z[6]*(lna_params[8]-exp_Z[2])));
+jac[7,2]=-((exp_negZ[2]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[7]*(lna_params[8]-exp_Z[2])));
+jac[8,2]=-((exp_negZ[2]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[8]*(lna_params[8]-exp_Z[2])));
+jac[1,3]=(exp_negZ[3]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[1]*(lna_params[9]-exp_Z[3]));
+jac[2,3]=(exp_negZ[3]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[2]*(lna_params[9]-exp_Z[3]));
+jac[3,3]=(exp_negZ[3]-0.5*exp_neg2Z[2])*(lna_params[1]*exp_Z[3]*(lna_params[9]-exp_Z[3])-(lna_params[1]*(lna_params[13]+exp_Z[3]-exp_Z[7])+lna_params[2]*((lna_params[11]+exp_Z[1]-exp_Z[5])+(lna_params[12]+exp_Z[2]-exp_Z[6])+(lna_params[14]+exp_Z[4]-exp_Z[8])))*exp_Z[3])-(exp_negZ[3]-0.5*(exp_neg2Z[3]*2))*((lna_params[1]*(lna_params[13]+exp_Z[3]-exp_Z[7])+lna_params[2]*((lna_params[11]+exp_Z[1]-exp_Z[5])+(lna_params[12]+exp_Z[2]-exp_Z[6])+(lna_params[14]+exp_Z[4]-exp_Z[8])))*(lna_params[9]-exp_Z[3]));
+jac[4,3]=(exp_negZ[3]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[4]*(lna_params[9]-exp_Z[3]));
+jac[5,3]=-((exp_negZ[3]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[5]*(lna_params[9]-exp_Z[3])));
+jac[6,3]=-((exp_negZ[3]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[6]*(lna_params[9]-exp_Z[3])));
+jac[7,3]=-((exp_negZ[3]-0.5*exp_neg2Z[2])*(lna_params[1]*exp_Z[7]*(lna_params[9]-exp_Z[3])));
+jac[8,3]=-((exp_negZ[3]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[8]*(lna_params[9]-exp_Z[3])));
+jac[1,4]=(exp_negZ[4]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[1]*(lna_params[10]-exp_Z[4]));
+jac[2,4]=(exp_negZ[4]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[2]*(lna_params[10]-exp_Z[4]));
+jac[3,4]=(exp_negZ[4]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[3]*(lna_params[10]-exp_Z[4]));
+jac[4,4]=(exp_negZ[4]-0.5*exp_neg2Z[2])*(lna_params[1]*exp_Z[4]*(lna_params[10]-exp_Z[4])-(lna_params[1]*(lna_params[14]+exp_Z[4]-exp_Z[8])+lna_params[2]*((lna_params[11]+exp_Z[1]-exp_Z[5])+(lna_params[12]+exp_Z[2]-exp_Z[6])+(lna_params[13]+exp_Z[3]-exp_Z[7])))*exp_Z[4])-(exp_negZ[4]-0.5*(exp_neg2Z[4]*2))*((lna_params[1]*(lna_params[14]+exp_Z[4]-exp_Z[8])+lna_params[2]*((lna_params[11]+exp_Z[1]-exp_Z[5])+(lna_params[12]+exp_Z[2]-exp_Z[6])+(lna_params[13]+exp_Z[3]-exp_Z[7])))*(lna_params[10]-exp_Z[4]));
+jac[5,4]=-((exp_negZ[4]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[5]*(lna_params[10]-exp_Z[4])));
+jac[6,4]=-((exp_negZ[4]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[6]*(lna_params[10]-exp_Z[4])));
+jac[7,4]=-((exp_negZ[4]-0.5*exp_neg2Z[2])*(lna_params[2]*exp_Z[7]*(lna_params[10]-exp_Z[4])));
+jac[8,4]=-((exp_negZ[4]-0.5*exp_neg2Z[2])*(lna_params[1]*exp_Z[8]*(lna_params[10]-exp_Z[4])));
+jac[1,5]=(exp_negZ[5]-0.5*exp_neg2Z[2])*((lna_params[3])*exp_Z[1]);
+jac[2,5]=0;
+jac[3,5]=0;
+jac[4,5]=0;
+jac[5,5]=-((exp_negZ[5]-0.5*exp_neg2Z[2])*((lna_params[3])*exp_Z[5])+(exp_negZ[5]-0.5*(exp_neg2Z[5]*2))*((lna_params[3])*(lna_params[11]+exp_Z[1]-exp_Z[5])));
+jac[6,5]=0;
+jac[7,5]=0;
+jac[8,5]=0;
+jac[1,6]=0;
+jac[2,6]=(exp_negZ[6]-0.5*exp_neg2Z[2])*((lna_params[3])*exp_Z[2]);
+jac[3,6]=0;
+jac[4,6]=0;
+jac[5,6]=0;
+jac[6,6]=-((exp_negZ[6]-0.5*exp_neg2Z[2])*((lna_params[3])*exp_Z[6])+(exp_negZ[6]-0.5*(exp_neg2Z[6]*2))*((lna_params[3])*(lna_params[12]+exp_Z[2]-exp_Z[6])));
+jac[7,6]=0;
+jac[8,6]=0;
+jac[1,7]=0;
+jac[2,7]=0;
+jac[3,7]=(exp_negZ[7]-0.5*exp_neg2Z[2])*((lna_params[3])*exp_Z[3]);
+jac[4,7]=0;
+jac[5,7]=0;
+jac[6,7]=0;
+jac[7,7]=-((exp_negZ[7]-0.5*exp_neg2Z[2])*((lna_params[3])*exp_Z[7])+(exp_negZ[7]-0.5*(exp_neg2Z[7]*2))*((lna_params[3])*(lna_params[13]+exp_Z[3]-exp_Z[7])));
+jac[8,7]=0;
+jac[1,8]=0;
+jac[2,8]=0;
+jac[3,8]=0;
+jac[4,8]=(exp_negZ[8]-0.5*exp_neg2Z[2])*((lna_params[3])*exp_Z[4]);
+jac[5,8]=0;
+jac[6,8]=0;
+jac[7,8]=0;
+jac[8,8]=-((exp_negZ[8]-0.5*exp_neg2Z[2])*((lna_params[3])*exp_Z[8])+(exp_negZ[8]-0.5*(exp_neg2Z[8]*2))*((lna_params[3])*(lna_params[14]+exp_Z[4]-exp_Z[8])));
+
+// compute drift and diffusion
+Vt = V0 * jac' + diag_matrix(exp_neg2Z .* haz) + jac * V0;
+
+// concatenate and return
+newstate[1:2] = to_array_1d(haz);
+newstate[3:6] = to_array_1d(Vt);
+
+return newstate;
+}
+
+// integrate over one time interval
+real[] lna_step(real t_l, real[] t_r, real[] state, real[] lna_params, real[] rdummy, int[] idummy) {
+
+        // temporary container for output of stepper
+        real lnastep[1, 72];
+
+        // integrate LNA
+        lnastep = integrate_ode_bdf(lna_fcn, state, t_l, t_r, lna_params, rdummy, idummy); // integrate ODEs
+
+        return to_array_1d(lnastep);
+}
+
+// function to map the standard normal draws to the log-LNA increments and return incidence (increments in N_SI)
+vector get_lna(vector N_raw, real[] theta, vector X0, matrix stoich, real[] times, int[] incid_inds, real[] rdummy, int[] idummy) {
+
+        // number of times at which incidence is recorded
+        int n_times = 52;
+
+        // container with model parameters and state at beginning of each interval (updated throughout)
+        real lna_params[18]; // (beta, mu, S_t, I_t, R_t)
+
+        // containers current state
+        vector[8] log_LNA; // log-LNA increment: (log(N_SI), log(N_IR))
+        vector[8] nat_LNA; // LNA increment on the natural scale
+        vector[8] c_incid; // cumulative incidence
+        vector[12] SIR_cur; // SIR compartment counts
+
+        // containers for LNA moments
+        real state[72];     // LNA moments - (mu, Sigma)
+        vector[8] mu;      // LNA mean
+        matrix[8,8] Sigma; // LNA covariance
+        matrix[8,8] Sig_chol; // Cholesky decomposition of the covariance
+
+        // incidence vector to be returned
+        matrix[52,8] incidence; // increments for incidence (natural scale)
+
+        // initialize object values
+        c_incid = rep_vector(0.0, 8); // current incidence is 0
+        state   = rep_array(0.0, 72);  // lna gets initialized at 0
+        lna_params[1:6] = theta;      // parameters
+        lna_params[7:18] = to_array_1d(X0); // initial compartment counts
+
+        // map the standard normal draws to the log-LNA increments
+        for(k in 1:n_times) {
+
+                // LNA transition density
+                state = lna_step(times[k],
+                                 times[(k+1):(k+1)],
+                                 state,
+                                 lna_params,
+                                 rdummy,
+                                 idummy);
+
+                // extract moments
+                mu       = to_vector(state[1:8]);
+                Sigma    = to_matrix(state[9:72],8,8);
+                Sig_chol = cholesky_decompose(Sigma); // compute the cholesky decomp.
+
+                // map N_raw values to the sampled LNA value
+                log_LNA = mu + Sig_chol * N_raw[(2*k - 1):(2*k)];
+
+                // save new state
+                nat_LNA      = exp(log_LNA); // LNA increment on the natural scale
+                incidence[k] = nat_LNA;      // save incidence
+
+                // update the cumulative incidence and set the new initial state
+                c_incid = c_incid + nat_LNA;            // update cumulative incidence
+                SIR_cur = X0 + stoich * c_incid;        // update the current compartment counts
+                state   = rep_array(0.0,72);   // reset the increment
+                lna_params[7:18] = to_array_1d(SIR_cur); // set the new initial values
+        }
+
+        return incidence;
+}

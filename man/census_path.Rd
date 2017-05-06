@@ -23,4 +23,3 @@ matrix of compartment counts at census times
 \description{
 Wrapper for evaluating the compartment counts at census times.
 }
-

@@ -22,4 +22,3 @@ matrix containing the compartment counts at census times.
 \description{
 Insert the compartment counts at a sequence of census times into an existing census matrix.
 }
-

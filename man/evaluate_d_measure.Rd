@@ -31,4 +31,3 @@ observed at every observation time}
 Evaluate the log-density of the measurement process by calling measurement
 process density functions via external Xptr.
 }
-

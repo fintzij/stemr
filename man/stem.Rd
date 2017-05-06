@@ -37,4 +37,3 @@ returns a \code{stem} object.
 \description{
 Construct a stem object.
 }
-

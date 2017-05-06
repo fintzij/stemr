@@ -26,4 +26,3 @@ Convert an LNA path from the counting process on transition events to the
 compartment densities on their natural scale, making the conversion in place
 for an existing census matrix.
 }
-

@@ -28,4 +28,3 @@ matrix containing the compartment counts at census times.
 \description{
 Construct a matrix containing the compartment counts and the incidence at a sequence of census times.
 }
-

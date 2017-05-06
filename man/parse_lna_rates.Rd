@@ -24,4 +24,3 @@ string snippets for the LNA that can be compiled
 \description{
 Parse the LNA rates so they can be compiled.
 }
-

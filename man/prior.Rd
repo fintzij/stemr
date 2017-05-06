@@ -43,7 +43,7 @@ Specify the prior distribution for a model parameter
   N.B. The prior for t0 should be specified through the
   \code{\link{t0_prior}} function.
 }
+
 \examples{
 prior("theta", "norm", c(mean = 1, sd = 2), scale = "log")
 }
-

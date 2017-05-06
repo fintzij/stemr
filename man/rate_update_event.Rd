@@ -19,4 +19,3 @@ modifies logical vector stating which rates need to be updated
 \description{
 Identify which rates to update when a state transition event occurs.
 }
-

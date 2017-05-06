@@ -31,4 +31,3 @@ CALL_D_MEASURE(emitmat, emit_inds, record_ind, record, state, parameters,
 Evaluate the log-density of the measurement process by calling measurement
 process density functions via external Xptr.
 }
-

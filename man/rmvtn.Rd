@@ -20,4 +20,3 @@ rmvtn(n, mu, sigma)
 Produce samples from a multivariate normal density using the Cholesky
 decomposition
 }
-

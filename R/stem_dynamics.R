@@ -36,9 +36,8 @@
 #'   parsed internally, the rate strings will be parsed incorrectly due to the
 #'   partial match.
 #' @param compile_rates should the rate functions be compiled? Defaults to TRUE.
-#' @param compile_lna should the LNA functions be generated and compiled?
-#'   Defaults to TRUE.
-#' @param atol,rtol absolute and relative error tolerance for LNA ODEs, defaults to 1e-12.
+#' @param stan_lna_code should the user defined functions for fitting the
+#'   restarting log-transformed LNA in Stan be generated?
 #'
 #' @return list with evaluated rate functions and objects for managing the
 #'   bookkeeping for epidemic paths. The objects in the list are as follows:
@@ -86,7 +85,7 @@
 #'   }
 #'
 #' @export
-stem_dynamics <- function(rates, parameters, state_initializer, compartments, tmax, tcovar = NULL, timestep = NULL, strata = NULL, constants = NULL, adjacency = NULL, messages = TRUE, compile_rates = TRUE, compile_lna = TRUE, compile_ode = FALSE, atol = 1e-8, rtol = 1e-8) {
+stem_dynamics <- function(rates, parameters, state_initializer, compartments, tmax, tcovar = NULL, timestep = NULL, strata = NULL, constants = NULL, adjacency = NULL, messages = TRUE, compile_rates = TRUE, compile_ode = FALSE, ...) {
 
         # check consistency of specification and throw errors if inconsistent
         if(is.list(compartments) && ("ALL" %in% compartments) && is.null(strata)) {
@@ -138,6 +137,16 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tm
                 }
         }
 
+        args = list(...)
+        if(!"stan_lna_code" %in% names(args)) {
+                stan_lna_code = F
+        } else {
+                if("t0" %in% names(parameters)) {
+                        stop("Stan cannot handle t0 as a parameter. Please specify t0 as a constant.")
+                }
+                stan_lna_code = T
+        }
+
         # create a hidden list of user supplied arguments prior to processing
         .dynamics_args <- list(rates             = rates,
                                parameters        = parameters,
@@ -150,7 +159,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tm
                                adjacency         = adjacency,
                                messages          = messages,
                                compile_rates     = compile_rates,
-                               compile_lna       = compile_lna,
+                               stan_lna_code     = stan_lna_code,
                                compile_ode       = compile_ode)
 
         if(!"t0" %in% c(names(parameters), names(constants))) {
@@ -641,6 +650,10 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tm
         tcovar_adjmat       <- build_tcovar_adjmat(rate_fcns, tcovar_codes)
         timecode            <- which(names(tcovar_codes) == "TIME")
 
+        if(length(tcovar_codes)>1 & stan_lna_code) {
+                stop("Time varying covariates not yet available for Stan code generation.")
+        }
+
         # generate the initial distribution
         if(n_strata == 1) {
                 param_inds     <- initializer$param_inds # initial distribution parameter indices
@@ -674,7 +687,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tm
         }
 
         # if LNA functions are requested, compile them
-        if(compile_lna) {
+        if(stan_lna_code) {
 
                 # remove the incidence codes from the flow matrix, we don't need them
                 if(!is.null(incidence_codes)) {
@@ -687,11 +700,24 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tm
                                                             sapply(rate_fcns, "[[", "to"))
                 }
 
-                # odeintr rates and pointers, done on the event counts
+                # remove t0 from the constants or parameters
+                if(t0_fixed) {
+                        const_codes <- const_codes[-which(names(const_codes) == "t0")]
+                        const_names <- names(const_codes)
+                        const_codes <- seq_along(const_codes)
+                        names(const_codes) <- const_names
+                } else {
+                        param_codes <- param_codes[-which(names(param_codes) == "t0")]
+                        param_names <- names(param_codes)
+                        param_codes <- seq_along(param_codes)
+                        names(param_codes) <- param_names
+                }
+
+                # Stan rates and pointers, done on the event counts
                 # first translate the rates into rates on the counting processes
-                lna_rates <- rate_fcns_4_lna(rate_fcns = rate_fcns,
+                lna_rates <- rate_fcns_4_lna(rate_fcns         = rate_fcns,
                                              compartment_codes = compartment_codes,
-                                             flow_matrix = flow_matrix_lna)
+                                             flow_matrix       = flow_matrix_lna)
 
                 lna_comp_codes  <- lna_rates$lna_comp_codes
                 lna_rates       <- lna_rates$lna_rates
@@ -700,28 +726,13 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tm
                                                   const_codes = const_codes, tcovar_codes = tcovar_codes,
                                                   lna_comp_codes = lna_comp_codes)
 
-                # compile the LNA functions
-                lna_pointer     <- load_lna(lna_rates = lna_rates, messages = messages, atol = atol, rtol = rtol)
-                lna_pointer_ess <- load_lna_ess(lna_rates = lna_rates, messages = messages, atol = atol, rtol = rtol)
+                stan_lna_rates <- lna_rates
+                lna_rates <- NULL
 
-                lna_pointers    <- list(lna_pointer      = lna_pointer$lna_ptr,
-                                        lna_pointer_ess  = lna_pointer_ess$lna_ess_ptr,
-                                        lna_set_pars_ptr = lna_pointer$set_lna_params_ptr,
-                                        lna_ess_set_pars_ptr = lna_pointer_ess$set_lna_ess_params_ptr,
-                                        lna_code         = lna_pointer$LNA_code,
-                                        lna_ess_code     = lna_pointer_ess$LNA_ess_code)
-
-                # get the C++ indices for the initial distribution parameters in the lna_pars matrix
-                lna_initdist_inds <- sapply(paste0(names(compartment_codes), "_0"),
-                                            grep, names(lna_rates$lna_param_codes)) - 1
         } else {
-                lna_pointer       <- NULL
-                lna_pointer_ess   <- NULL
-                lna_pointers      <- NULL
                 lna_rates         <- list(hazards = NULL, derivatives = NULL, lna_param_codes = NULL)
-                lna_initdist_inds <- NULL
-                lna_comp_codes    <- NULL
                 flow_matrix_lna   <- NULL
+                stan_lna_rates <- NULL
         }
 
         # compile the functions to solve the ODEs for the stochastic epidemic model
@@ -745,9 +756,8 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tm
                          fixed_inits         = fixed_inits,
                          flow_matrix         = flow_matrix,
                          flow_matrix_lna     = flow_matrix_lna,
-                         lna_initdist_inds   = lna_initdist_inds,
                          lna_rates           = lna_rates,
-                         lna_pointers        = lna_pointers,
+                         stan_lna_rates      = stan_lna_rates,
                          ode_pointer         = ode_pointer,
                          ode_hazards         = ode_rates$ode_hazards,
                          strata_sizes        = strata_sizes,
@@ -757,9 +767,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tm
                          tcovar_codes        = tcovar_codes,
                          const_codes         = const_codes,
                          strata_codes        = strata_codes,
-                         lna_param_codes     = lna_rates$lna_param_codes,
                          ode_param_codes     = ode_rates$ode_param_codes,
-                         lna_comp_codes      = lna_comp_codes,
                          incidence_codes     = incidence_codes,
                          incidence_sources   = incidence_sources,
                          progressive         = progressive,

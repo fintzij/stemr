@@ -15,4 +15,3 @@ logit(y)
 \description{
 Logit tranformation
 }
-

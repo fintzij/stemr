@@ -23,4 +23,3 @@ list containing a character vector with the rate functions and a
 Convert unparsed rate functions into rate functions appropriate for applying
 the LNA to the transition event count processes.
 }
-

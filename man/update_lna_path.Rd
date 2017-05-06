@@ -68,4 +68,3 @@ list with an updated LNA path along with its ODEs, the observed data
 \description{
 Sample a new LNA path via elliptical slice sampling.
 }
-

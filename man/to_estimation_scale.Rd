@@ -23,4 +23,3 @@ updates the scaled_params vector in place with the scaled parameter
 \description{
 Transform the parameters from their natural scale to the estimation scale
 }
-

@@ -44,4 +44,3 @@ list with parameter posterior samples and MCMC diagnostics
 Approximate Bayesian inference for a stochastic epidemic model via the linear
 noise approximation.
 }
-

@@ -20,4 +20,3 @@ observation matrix
 Generate a template for a stemr observation matrix, or combine multiple
 datasets into a stemr observation matrix; used internally.
 }
-

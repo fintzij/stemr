@@ -20,4 +20,3 @@ propose new parameter values in place
 \description{
 Random walk Metropolis-Hastings transition kernel.
 }
-

@@ -15,4 +15,3 @@ TRUE/FALSE indicating whether a model is progressive
 \description{
 Determines whether a model is progressive based on its flow matrix
 }
-

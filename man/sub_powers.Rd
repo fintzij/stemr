@@ -15,4 +15,3 @@ string suitable for C++
 \description{
 Parse a string and substitute powers of the form a^b with pow(a,b).
 }
-

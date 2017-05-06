@@ -110,7 +110,7 @@ funciton.
   compartment, parameters, time-varying covariates, and constants be at least
   four characters long.
 }
+
 \examples{
 rate("beta*I", "S", "I", "ALL", seasonality(period = c(12,52), timevar = "t", common_seasonality = FALSE))
 }
-
