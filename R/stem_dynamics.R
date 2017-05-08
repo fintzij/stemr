@@ -138,7 +138,7 @@ stem_dynamics <- function(rates, parameters, state_initializer, compartments, tm
         }
 
         args = list(...)
-        if(!"stan_lna_code" %in% names(args)) {
+        if(!"stan_lna_code" %in% names(args) || args$stan_lna_code == F) {
                 stan_lna_code = F
         } else {
                 if("t0" %in% names(parameters)) {
