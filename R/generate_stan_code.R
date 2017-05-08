@@ -35,10 +35,8 @@ generate_stan_code <- function(dynamics, measurement_process, separate_params = 
         HAZCODE <- paste(paste0("haz[",1:n_comps,"]=",hazards,";"), collapse = "\n")
 
         # code for filling out the Jacobian
-        nonzeros <- which(derivatives != "0")
         jac_inds <- matrix(c(rep(seq_len(n_comps), n_comps), rep(seq_len(n_comps), each = n_comps)), ncol = 2)
-        JACCODE  <- paste(paste0("jac[",jac_inds[nonzeros,1],",",jac_inds[nonzeros,2],"]=",
-                                 derivatives[nonzeros],";"), collapse = "\n")
+        JACCODE  <- paste(paste0("jac[",jac_inds[,1],",",jac_inds[,2],"]=", derivatives,";"), collapse = "\n")
 
         # code for inserting a template for the raw model parameters, transformed parameters, and priors
         if(separate_params) {
