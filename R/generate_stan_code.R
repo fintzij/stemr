@@ -63,17 +63,28 @@ generate_stan_code <- function(dynamics, measurement_process, separate_params = 
                                         names(dynamics$constants)[which_popsizes], ");"), collapse = "\n")
         popsizes       <- paste(popsizes, log_popsizes, sep = "\n")
 
-        # strata indices in the initial state vector
+        # strata indices and the initial state probability vectors
         if(dynamics$n_strata == 1) {
                 strata_inds <- ""
+                init_params <- paste0("simplex[", n_modcomps,"] p0;")
+                init_volumes <- paste0("X0 = popsize * p0;")
         } else {
                 strata_inds <- vector("character", length = dynamics$n_strata)
-                for(k in seq_along(strata_inds)) {
+                init_params <- vector("character", length = dynamics$n_strata)
+                init_volumes <- vector("character", length = dynamics$n_strata)
+                for(k in seq_len(dynamics$n_strata)) {
                         strata_inds[k] <- paste0("int ",dynamics$state_initializer[[k]]$strata,
                                                  "_inds[",length(dynamics$state_initializer[[k]]$codes),"] = {",
-                                                 paste0(dynamics$state_initializer[[k]]$codes + n_modpars, collapse=","),"};")
+                                                 paste0(dynamics$state_initializer[[k]]$codes, collapse=","),"};")
+                        init_params[k] <- paste0("simplex[", length(dynamics$state_initializer[[k]]$codes),
+                                                 "] p0_",dynamics$state_initializer[[k]]$strata,";")
+                        init_volumes[k] <- paste0("X0[",dynamics$state_initializer[[k]]$strata,"_inds]",
+                                                  " = popsize_",dynamics$state_initializer[[k]]$strata,
+                                                  " * p0_", dynamics$state_initializer[[k]]$strata,";")
                 }
                 strata_inds <- paste(strata_inds, collapse = "\n")
+                init_params <- paste(init_params, collapse = "\n")
+                init_volumes <- paste(init_volumes, collapse = "\n")
         }
 
         # read the stan function template

@@ -115,7 +115,7 @@ functions{
 data {
         int n_times;          // number of census interval endpoints
         real times[n_times];  // census interval endpoint times
-        int cases[n_times-1]; // observed incidence
+        int cases[__NEMITS__,n_times-1]; // observed incidence
         matrix[__NMODCOMPS__,__NCOMPS__] stoich;   // stoichiometry matrix
 }
 transformed data{
@@ -137,7 +137,7 @@ parameters {
            following order, which MUST be preserved:
                 __INITSTATES__
         ------------------------------------------ */
-
+        __INITPARAMS__
 
         // N_raw:  multivariate standard normal draws that drive the stochasticity
         vector[__NCOMPS__*__NTIMES__] N_raw; // initial state is fixed for now
@@ -151,7 +151,8 @@ transformed parameters {
         /* ------------------------------------------
            Insert initial volume params below.
         ------------------------------------------ */
-
+        vector[__NMODCOMPS__] X0;
+        __INITVOLUMES__
 
         /* Map standard normal draws to the LNA incidence. Move variable declaration up if necessary!
                 theta:  the model parameters

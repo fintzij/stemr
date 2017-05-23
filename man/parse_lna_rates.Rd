@@ -2,7 +2,7 @@
 % Please edit documentation in R/parse_lna_rates.R
 \name{parse_lna_rates}
 \alias{parse_lna_rates}
-\title{Parse the LNA rates so they can be compiled.}
+\title{Parse the LNA rates for use in generating Stan code.}
 \usage{
 parse_lna_rates(lna_rates, param_codes, const_codes, tcovar_codes,
   lna_comp_codes)
@@ -19,8 +19,8 @@ parse_lna_rates(lna_rates, param_codes, const_codes, tcovar_codes,
 \item{lna_comp_codes}{named numeric vector of LNA compartment codes}
 }
 \value{
-string snippets for the LNA that can be compiled
+string snippets for the LNA
 }
 \description{
-Parse the LNA rates so they can be compiled.
+Parse the LNA rates for use in generating Stan code.
 }
