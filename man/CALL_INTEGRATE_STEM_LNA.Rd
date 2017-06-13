@@ -7,17 +7,15 @@
 CALL_INTEGRATE_STEM_LNA(init, start, end, step_size, lna_ode_ptr)
 }
 \arguments{
-\item{t}{time}
+\item{init}{initial condition}
 
-\item{state}{vector of compartment counts}
+\item{end}{time at right endpoint}
 
-\item{parameters}{vector of model parameters}
+\item{step_size}{set automatically by caller, required argument not specified by user}
 
-\item{constants}{vector of constants}
+\item{lna_ode_ptr}{external pointer for calling the ODE integrator}
 
-\item{vector}{of time-varying covariate values}
-
-\item{hazard_ptr}{external pointer to the LNA functions}
+\item{state}{time at left endpoint of interval}
 }
 \description{
 Compute the hazards by calling the hazard functions via external Xptr.

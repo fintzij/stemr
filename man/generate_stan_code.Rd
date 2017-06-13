@@ -19,6 +19,9 @@ template or combined (e.g. for multivariate normal) for convenience?}
 
 \item{out.file}{optional file to output code.}
 }
+\value{
+outputs stan code to out.file or returns the code
+}
 \description{
 Generate the user defined functions for fitting the restarting,
 log-transformed LNA for SEM counting processes via a noncentered

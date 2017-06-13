@@ -8,7 +8,7 @@
 #'   template or combined (e.g. for multivariate normal) for convenience?
 #' @param out.file optional file to output code.
 #'
-#' @return
+#' @return outputs stan code to out.file or returns the code
 generate_stan_code <- function(dynamics, measurement_process, separate_params = TRUE, out.file = NULL) {
 
         # extract objects from stem_objects

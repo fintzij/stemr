@@ -284,6 +284,8 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                              meas_inds       = meas_inds,
                              censusmat       = censusmat,
                              tcovar_censmat  = tcovar_censmat,
+                             lna_incidence   = lna_incidence,
+                             lna_prevalence  = lna_prevalence,
                              incidence_codes_lna = incidence_codes_lna,
                              stan_meas_objects   = stan_meas_objects)
 

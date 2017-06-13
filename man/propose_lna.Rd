@@ -2,38 +2,44 @@
 % Please edit documentation in R/RcppExports.R
 \name{propose_lna}
 \alias{propose_lna}
-\title{Simulate a data matrix from the measurement process of a stochastic epidemic
-model.}
+\title{Simulate an LNA path using a non-centered parameterization for the
+log-transformed counting process LNA.}
 \usage{
-propose_lna(lna_times, lna_pars, param_update_inds, flow_matrix, lna_pointer,
-  set_pars_pointer, enforce_monotonicity)
+propose_lna(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix,
+  net_effect, lna_pointer, set_pars_pointer)
 }
 \arguments{
-\item{lna_times}{vector of times at which the LNA must be evaluated}
+\item{lna_times}{vector of interval endpoint times}
 
 \item{lna_pars}{numeric matrix of parameters, constants, and time-varying
 covariates at each of the lna_times}
 
+\item{init_start}{index in the parameter vector where the initial compartment
+volumes start}
+
 \item{param_update_inds}{logical vector indicating at which of the times the
 LNA parameters need to be updated.}
 
-\item{flow_matrix}{original flow matrix giving the changes to compartments
+\item{stoich_matrix}{stoichiometry matrix giving the changes to compartments
 from each reaction}
 
-\item{lna_pointer}{external pointer to LNA integration fcn}
+\item{net_effect}{vector giving the net effect on the compartment volumes from
+of one of each type of reaction: net_effect = stoich * 1}
+
+\item{lna_pointer}{external pointer to LNA integration function.}
 
 \item{set_pars_pointer}{external pointer to the function for setting the LNA
 parameters.}
 
-\item{enforce_monotonicity}{should monotinicity in the sample paths of the
-LNA counting processes be enforced?}
+\item{set_left_state_pointer}{external pointer to the function for setting the
+state (compartment volumes) at the left endpoint of an interval.}
 }
 \value{
-array with slices containing the LNA path, the path of the residual
-  process, the drift process, the residual process (conditional means), and
-  diffusion process.
+array containing the stochastic perturbations (i.i.d. N(0,1) draws in
+the first slice of the cube) and the LNA path on its natural scale which is
+determined by the perturbations (second slice of the cube).
 }
 \description{
-Simulate a data matrix from the measurement process of a stochastic epidemic
-model.
+Simulate an LNA path using a non-centered parameterization for the
+log-transformed counting process LNA.
 }

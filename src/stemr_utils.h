@@ -24,8 +24,6 @@ void CALL_R_MEASURE(Rcpp::NumericMatrix& obsmat, const Rcpp::LogicalVector& emit
                     const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar, SEXP r_meas_ptr);
 
 // integrate the LNA odes, call via XPtr
-Rcpp::List CALL_COMPUTE_LNA(double t, arma::vec& state, Rcpp::List& parms);
-
 // Rcpp::NumericVector CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector init, double start, double end, double step_size, SEXP lna_ode_ptr);
 void CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr);
 
@@ -98,12 +96,5 @@ Rcpp::List lna_density(const Rcpp::List& path, const arma::colvec& lna_times, co
 Rcpp::List lna_density2(const Rcpp::List& path, const arma::colvec& lna_times, const Rcpp::NumericMatrix& lna_pars,
                         const Rcpp::LogicalVector& param_update_inds, const arma::mat& flow_matrix,
                         SEXP lna_pointer, SEXP set_pars_pointer);
-
-
-// // compute and return the hazards
-// arma::vec COMPUTE_HAZARD(double t, const arma::vec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar, SEXP haz_ptr);
-
-// // compute and return the Jacobian matrix
-// arma::mat COMPUTE_JACOBIAN(double t, const arma::vec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar, SEXP jacob_ptr);
 
 #endif // stemr_UTILITIES_H

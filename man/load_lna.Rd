@@ -5,11 +5,16 @@
 \title{Construct and compile the functions for proposing an LNA path, with
 integration of the LNA ODEs accomplished using the Boost odeint library.}
 \usage{
-load_lna(lna_rates, messages, atol, rtol)
+load_lna(lna_rates, compile_lna, messages, atol, rtol)
 }
 \arguments{
 \item{lna_rates}{list containing the LNA rate functions, derivatives, and
 parameter codes}
+
+\item{compile_lna}{if TRUE, code will be generated and compiled. If a
+character string for the name of a file that does not yet exist, code will
+be generated but not compiled. If the name of a file that exists in the
+current working directory, the code in the file will be compiled.}
 
 \item{messages}{should messages be printed}
 }

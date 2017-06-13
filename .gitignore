@@ -1,5 +1,5 @@
 .Rproj.user
-stemr.Rproj
+*.Rproj
 .Rhistory
 .RData
 .Ruserdata
@@ -9,3 +9,5 @@ src/*.so
 src/*.dll
 inst/doc
 .developement_files/
+
+lna_code\.txt

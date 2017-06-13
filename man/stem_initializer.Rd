@@ -2,22 +2,24 @@
 % Please edit documentation in R/stem_initializer.R
 \name{stem_initializer}
 \alias{stem_initializer}
-\title{Determines the initial state probabilities at the first observation time.
-This function is applied internally in different ways depending on whether
-inference (or simulation) is accomplished using the LNA or using Bayesian
-data augmentation (Gillespie's direct algorithm for simulation).}
+\title{Determines the initial state probabilities or concentrations at the first
+observation time. This function is applied internally in different ways
+depending on whether inference (or simulation) is accomplished using the LNA
+or using Bayesian data augmentation (Gillespie's direct algorithm for
+simulation).}
 \usage{
 stem_initializer(init_states, fixed, strata = NULL, prior = NULL)
 }
 \arguments{
-\item{init_states}{named vector of initial compartment counts.}
+\item{init_states}{named vector of initial compartment counts (MJP) or
+volumes (LNA).}
 
 \item{fixed}{should the vector of compartment counts be treated as random?}
 
 \item{strata}{character vector strata to which the vector of initial
 compartment counts or probabilities applies, possibly "ALL".}
 
-\item{prior}{multinomial distribution state probability parameters.}
+\item{prior}{dirichlet hyperparameters for state probabilities at time t0.}
 }
 \value{
 list of settings used to initialize the initial state at the first
@@ -25,39 +27,23 @@ list of settings used to initialize the initial state at the first
 }
 \description{
 The initial state of the system is initialized at the first observation time,
-either with a fixed vector of compartment counts, or with a vector of
-unnormalized state probabilities, \eqn{\mathbf{p}_{t_0}}, the sum of which
-determine the size of the population or stratum. \eqn{X(t_0)} is assigned a
-prior distribution \eqn{X(t_0)\sim Categorical(\cdot, \mathbf{p}_{t_0}),} if
-doing exact inference, or \eqn{X(t_0)\sim Multinomial(\cdot,
-\mathbf{p}_{t_0}),} if performing approximate inference/simulation using the
-LNA. The distinction is important as the exact data augmentation method
-implemented in this package requires augmentation on the unlumped state space
-of subject-level state labels. The \code{state_initializer} argument in the
-\code{\link{stem_dynamics}} function is supplied as a list of calls to
-\code{stem_initializer}.
-}
-\details{
-There are three possible ways of initializing the state at time \eqn{t_0},
-which are determined by the combination of the \code{fixed} argument, and the
-\code{prior} argument: 1) fixed initial state - \code{fixed = TRUE}; 2)
-random initial state with initial state probabilities that correspond to the
-normalized compartment counts in the \code{init_state} argument - \code{fixed
-= TRUE, prior = NULL}; 3) random initial state with initial state  -
-\code{fixed = TRUE, prior = vector of hyperparameters}. When the parameters
-for the prior distribution are specified, the compartment counts are still
-initialized in the first iteration using the vector supplied in the
-\code{init_states} argument. The vector of compartment counts is also used
-for determining the population size and the size of the various strata.
-
-When approximate inference is carried out using the LNA and the initial state
-is random, the compartment counts at time \eqn{t_0} are updated in a
-Metropolis-Hastings step using the multinomial prior as a proposal
-distribution.
+either with a fixed vector of compartment counts, or is sampled by drawing
+the initial compartment counts from a multinomial distribution for a Markov
+jump process (MJP), or by drawing the initial compartment concentrations from
+a dirichlet distribution and multiplying by the population/strata sizes to
+obtain compartment volumes (LNA). If the initial state is not fixed and no
+prior is specified, then the hyperparameters are handled internally as follows:
+For the MJP, if the multinomial hyperprior parameters are not specified,
+the normalized probabilities are computed from the init_states vector and used
+in the prior slot. For the LNA, the init_state vector is used directly as the
+dirichlet prior hyperparameters.
 }
 \examples{
-# All strata are of size 1000, with \\eqn{P(X_j=S)=0.5,P(X_j=I)=0.2,
-# P(X_j=R=0.3)}, and one set of initial state probabilities govern the
+Fixed initial state, all strata are of size 1000:
+stem_initializer(c(S=500, I=200, R=300), fixed=TRUE, strata = "ALL")
+
+Random initial state where for a single subject P(X_j=S)=0.5,P(X_j=I)=0.2,
+P(X_j=R=0.3), and one set of initial state probabilities govern the
 distribution of initial compartment counts in all strata:
 stem_initializer(c(S=500, I = 200, R = 300), fixed = FALSE, strata = "ALL")
 

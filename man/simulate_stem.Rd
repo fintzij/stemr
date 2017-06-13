@@ -5,9 +5,9 @@
 \title{Simulations from a stochastic epidemic model.}
 \usage{
 simulate_stem(stem_object, nsim = 1, paths = FALSE, observations = FALSE,
-  subject_paths = FALSE, method = "gillespie", t0 = NULL, tmax = NULL,
-  timestep = NULL, census_times = NULL, paths_as_array = FALSE,
-  datasets_as_array = FALSE, messages = TRUE)
+  subject_paths = FALSE, method = "gillespie", tmax = NULL,
+  timestep = NULL, census_times = NULL, lna_path_type = "incidence",
+  messages = TRUE)
 }
 \arguments{
 \item{nsim}{number of realizations to simulate}
@@ -25,10 +25,6 @@ the Gillespie direct method.}
 \item{method}{either "gillespie" if simulating via Gillespie's direct method,
 or "lna" if simulating paths via the Linear Noise Approximation.}
 
-\item{t0}{the time at which the system is initialized. If not supplied, it is
-taken to be the first observation time if that is available, or otherwise
-0. If supplied, it must be no later than the first observation time.}
-
 \item{tmax}{the time at which simulation of the system is terminated. If not
 supplied, defaults to the last observation time if not supplied.}
 
@@ -41,12 +37,6 @@ method="gillespie". If not supplied, \code{timestep} will default to
 recorded. Required for \code{method = "lna"}. If supplied and \code{method
 = "gillespie"}, the compartment counts at census times are returned rather
 than the full paths.}
-
-\item{paths_as_array}{if TRUE, the simulated paths will be returned as an
-array. Available only if \code{census_times} is specified.}
-
-\item{datasets_as_array}{if TRUE, the simulated datasets will be returned as
-an array.}
 
 \item{messages}{should a message be printed when parsing the rates?}
 

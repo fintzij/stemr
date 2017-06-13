@@ -23,6 +23,7 @@ typedef void(*r_measure_ptr)(Rcpp::NumericMatrix& obsmat, const Rcpp::LogicalVec
 // typedef Rcpp::NumericVector(*lna_ptr)(Rcpp::NumericVector& init, double start, double end, double step_size);
 typedef void(*lna_ptr)(Rcpp::NumericVector& init, double start, double end, double step_size);
 typedef void(*set_pars_ptr)(Rcpp::NumericVector& p);
+// typedef void(*left_state_ptr)(arma::vec& state_vec);
 
 // original deSolve pointers
 // typedef Rcpp::List(*compute_lna_ptr)(double t, arma::vec& state, Rcpp::NumericVector& parms, arma::mat& stoich);

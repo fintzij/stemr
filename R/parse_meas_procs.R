@@ -58,7 +58,9 @@ parse_meas_procs <- function(meas_procs, messages = TRUE) {
         Rcpp::sourceCpp(code = code_r_measure, env = globalenv())
         Rcpp::sourceCpp(code = code_d_measure, env = globalenv())
 
-        measproc_pointers <- c(r_measure_ptr = R_MEASURE_XPtr(), d_measure_ptr = D_MEASURE_XPtr())
+        measproc_pointers <- c(r_measure_ptr = R_MEASURE_XPtr(),
+                               d_measure_ptr = D_MEASURE_XPtr(),
+                               meas_proc_code = paste(code_r_measure, code_d_measure, sep = "\n"))
 
         return(measproc_pointers)
 }
