@@ -10,11 +10,10 @@
 #' @return function for evaluating the log prior density of the initial
 #'   compartment counts
 #' @export
-construct_initdist_sampler <- function(state_initializer, n_strata, constants) {
+construct_initdist_sampler_lna <- function(state_initializer, n_strata, constants) {
 
         if(n_strata == 1) {
-                initdist_prior_body <- paste0("rmultinom(1,",
-                                              constants["popsize"],", c(",
+                initdist_prior_body <- paste0("extraDistr::rdirichlet(1, c(",
                                               paste0(state_initializer$prior, collapse = ", "),
                                               "))")
 
@@ -24,7 +23,7 @@ construct_initdist_sampler <- function(state_initializer, n_strata, constants) {
                 strata_sizes <- constants[paste0("popsize_", sapply(state_initializer,"[[","strata"))]
                 comp_inds    <- sapply(state_initializer, "[[", "codes")
                 out_order    <- order(comp_inds) # order in which the counts should be returned
-                initdist_prior_body <- paste0("rmultinom(1, ",strata_sizes,", c(",
+                initdist_prior_body <- paste0("extraDistr::rdirichlet(1, c(",
                                               apply(sapply(state_initializer,"[[","prior"), 2, paste0, collapse = ", "),
                                               "))")
 

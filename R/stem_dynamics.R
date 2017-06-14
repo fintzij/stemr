@@ -654,6 +654,7 @@ stem_dynamics <-
                 if(is.null(state_initializer$prior)) {
                         if(is.character(compile_lna)||compile_lna) {
                                 prior <- initializer$init_states
+                                prior <- pmin(prior, 1e-16)
                         } else {
                                 prior <- initializer$init_states / sum(initializer$init_states)
                         }

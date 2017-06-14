@@ -1,5 +1,6 @@
 #' Construct a function for evaluating the log prior density of the initial
-#' compartment counts, which are taken to have multinomial prior.
+#' compartment concentrations (normalized volumes), which are taken to have
+#' dirichlet prior.
 #'
 #' @param state_initializer list for intializing the comparment counts generated
 #'   by \code{\link{stem_dynamics}}.
@@ -10,25 +11,23 @@
 #' @return function for evaluating the log prior density of the initial
 #'   compartment counts
 #' @export
-construct_initdist_prior <- function(state_initializer, n_strata, constants) {
+construct_initdist_prior_lna <- function(state_initializer, n_strata, constants) {
 
         if(n_strata == 1) {
-                initdist_prior_body <- paste0("dmultinom(init_counts, ",
-                                              constants["popsize"],", c(",
+                initdist_prior_body <- paste0("extraDistr::ddirichlet(initdist_parameters, c(",
                                               paste0(state_initializer$prior, collapse = ", "),
                                               "), log = TRUE)")
 
-                initdist_prior <- eval(parse(text = paste0("function(init_counts) {", initdist_prior_body,"}")))
+                initdist_prior <- eval(parse(text = paste0("function(initdist_parameters) {", initdist_prior_body,"}")))
 
         } else {
-                strata_sizes <- constants[paste0("popsize_", sapply(state_initializer,"[[","strata"))]
-                initdist_prior_body <- paste0("dmultinom(init_counts[c(",
+                initdist_prior_body <- paste0("extraDistr::ddirichlet(initdist_parameters[c(",
                                               apply(sapply(state_initializer,"[[","codes"), 2, paste0, collapse = ", "),
-                                              ")], ",strata_sizes,", c(",
+                                              ")], c(",
                                               apply(sapply(state_initializer,"[[","prior"), 2, paste0, collapse = ", "),
                                               "), log = TRUE)")
 
-                initdist_prior <- eval(parse(text = paste0("function(init_counts) {sum(",
+                initdist_prior <- eval(parse(text = paste0("function(initdist_parameters) {sum(",
                                                            paste0(initdist_prior_body, collapse = ",\n"),")}", collapse = "\n")))
         }
 

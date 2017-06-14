@@ -26,6 +26,7 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, priors, k
 
         # extract the model objects from the stem_object
         flow_matrix            <- stem_object$dynamics$flow_matrix_lna
+        stoich_matrix          <- stem_object$dynamics$stoich_matrix_lna
         lna_pointer            <- stem_object$dynamics$lna_pointers$lna_pointer
         lna_pointer_ess        <- stem_object$dynamics$lna_pointers$lna_pointer_ess
         lna_set_pars_pointer   <- stem_object$dynamics$lna_pointers$lna_set_pars_ptr
@@ -73,14 +74,14 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, priors, k
         # if the initial counts are not fixed, construct the initial distribution prior
         if(!fixed_inits) {
                 # function for computing the log prior density for the initial comparment counts
-                initdist_prior     <- construct_initdist_prior(state_initializer   = state_initializer,
+                initdist_prior <- construct_initdist_prior_lna(state_initializer   = state_initializer,
                                                                n_strata            = n_strata,
                                                                constants           = constants)
 
                 # function for sampling the initial compartment counts (independence sampling)
-                initdist_sampler   <- construct_initdist_sampler(state_initializer   = state_initializer,
-                                                                 n_strata            = n_strata,
-                                                                 constants           = constants)
+                initdist_sampler <- construct_initdist_sampler_lna(state_initializer   = state_initializer,
+                                                                   n_strata            = n_strata,
+                                                                   constants           = constants)
 
                 # vector for storing the log prior densities for the initial compartment counts
                 initdist_log_prior <- double(1 + floor(iterations / thin_params))
@@ -200,12 +201,12 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, priors, k
         # matrix for storing the LNA parameters
         lna_parameters    <- matrix(0.0,
                                     nrow = length(lna_times),
-                                    ncol = length(stem_object$dynamics$lna_param_codes),
-                                    dimnames = list(NULL, names(stem_object$dynamics$lna_param_codes)))
+                                    ncol = length(stem_object$dynamics$lna_rates$lna_param_codes),
+                                    dimnames = list(NULL, names(stem_object$dynamics$lna_rates$lna_param_codes)))
         lna_params_prop   <- matrix(0.0,
                                     nrow = length(lna_times),
-                                    ncol = length(stem_object$dynamics$lna_param_codes),
-                                    dimnames = list(NULL, names(stem_object$dynamics$lna_param_codes)))
+                                    ncol = length(stem_object$dynamics$lna_rates$lna_param_codes),
+                                    dimnames = list(NULL, names(stem_object$dynamics$lna_rates$lna_param_codes)))
 
         # insert the lna parameters into the parameter matrix
         pars2lnapars(lna_parameters, c(model_params_nat, t0, initdist_parameters))
@@ -274,7 +275,7 @@ stem_inference_lna <- function(stem_object, iterations, prior_density, priors, k
                 lna_parameters          = lna_parameters,
                 censusmat               = censusmat,
                 emitmat                 = emitmat,
-                flow_matrix             = flow_matrix,
+                stoich_matrix           = stoich_matrix,
                 lna_pointer             = lna_pointer,
                 lna_set_pars_pointer    = lna_set_pars_pointer,
                 lna_times               = lna_times,

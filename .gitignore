@@ -9,5 +9,3 @@ src/*.so
 src/*.dll
 inst/doc
 .developement_files/
-
-lna_code\.txt
