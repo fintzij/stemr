@@ -6,7 +6,7 @@
 log-transformed counting process LNA.}
 \usage{
 propose_lna(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix,
-  net_effect, lna_pointer, set_pars_pointer)
+  lna_pointer, set_pars_pointer)
 }
 \arguments{
 \item{lna_times}{vector of interval endpoint times}
@@ -23,21 +23,14 @@ LNA parameters need to be updated.}
 \item{stoich_matrix}{stoichiometry matrix giving the changes to compartments
 from each reaction}
 
-\item{net_effect}{vector giving the net effect on the compartment volumes from
-of one of each type of reaction: net_effect = stoich * 1}
-
 \item{lna_pointer}{external pointer to LNA integration function.}
 
 \item{set_pars_pointer}{external pointer to the function for setting the LNA
 parameters.}
-
-\item{set_left_state_pointer}{external pointer to the function for setting the
-state (compartment volumes) at the left endpoint of an interval.}
 }
 \value{
-array containing the stochastic perturbations (i.i.d. N(0,1) draws in
-the first slice of the cube) and the LNA path on its natural scale which is
-determined by the perturbations (second slice of the cube).
+list containing the stochastic perturbations (i.i.d. N(0,1) draws) and
+the LNA path on its natural scale which is determined by the perturbations.
 }
 \description{
 Simulate an LNA path using a non-centered parameterization for the

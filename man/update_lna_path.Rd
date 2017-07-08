@@ -4,11 +4,11 @@
 \alias{update_lna_path}
 \title{Sample a new LNA path via elliptical slice sampling.}
 \usage{
-update_lna_path(path_cur, data, lna_parameters, pathmat, censusmat, emitmat,
-  flow_matrix, lna_pointer_ess, lna_ess_set_pars_ptr, lna_times,
+update_lna_path(path_cur, data, lna_parameters, propmat, pathmat, censusmat,
+  emitmat, flow_matrix, lna_pointer, lna_set_pars_ptr, lna_times,
   lna_initdist_inds, param_update_inds, incidence_codes, census_incidence_codes,
   census_indices, measproc_indmat, obstime_inds, d_meas_pointer, parameters,
-  constants, tcovar_censmat, do_prevalence, do_incidence)
+  constants, tcovar_censmat, do_prevalence, do_incidence, n_ess_updates)
 }
 \arguments{
 \item{path_cur}{list with the current LNA path along with its ODE paths}
@@ -18,14 +18,14 @@ update_lna_path(path_cur, data, lna_parameters, pathmat, censusmat, emitmat,
 \item{lna_parameters}{parameters, contants, time-varying covariates at LNA
 times}
 
-\item{pathmat}{matrix in which to store the proposed LNA paths}
+\item{propmat}{matrix in which to store the proposed N(0,1) draws}
 
 \item{censusmat}{template matrix for the LNA path and incidence at the
 observation times}
 
 \item{emitmat}{matrix in which to store the log-emission probabilities}
 
-\item{flow_matrix}{LNA flow matrix (no incidence)}
+\item{lna_pointer}{external LNA pointer}
 
 \item{lna_times}{times at whicht eh LNA should be evaluated}
 
@@ -62,8 +62,10 @@ process is evaluated}
 \item{do_incidence}{should incidence be computed?}
 }
 \value{
-list with an updated LNA path along with its ODEs, the observed data
-  log-likelihood, and the lna log-likelihood.
+list with an updated LNA path along with its stochastic
+  perturbations, the observed data log-likelihood, and the lna
+  log-likelihood, and a record of the number of elliptical slice sampling
+  proposals
 }
 \description{
 Sample a new LNA path via elliptical slice sampling.

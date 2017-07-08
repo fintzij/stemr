@@ -20,7 +20,6 @@ construct_initdist_sampler_lna <- function(state_initializer, n_strata, constant
                 initdist_prior <- eval(parse(text = paste0("function() {", initdist_prior_body,"}")))
 
         } else {
-                strata_sizes <- constants[paste0("popsize_", sapply(state_initializer,"[[","strata"))]
                 comp_inds    <- sapply(state_initializer, "[[", "codes")
                 out_order    <- order(comp_inds) # order in which the counts should be returned
                 initdist_prior_body <- paste0("extraDistr::rdirichlet(1, c(",

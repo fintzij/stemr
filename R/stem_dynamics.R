@@ -171,7 +171,6 @@ stem_dynamics <-
                 stan_lna_code = T
         }
 
-
         # create a hidden list of user supplied arguments prior to processing
         .dynamics_args <- list(rates             = rates,
                                parameters        = parameters,
@@ -654,7 +653,7 @@ stem_dynamics <-
                 if(is.null(state_initializer$prior)) {
                         if(is.character(compile_lna)||compile_lna) {
                                 prior <- initializer$init_states
-                                prior <- pmin(prior, 1e-16)
+                                prior <- pmax(prior, 1e-16)
                         } else {
                                 prior <- initializer$init_states / sum(initializer$init_states)
                         }
@@ -729,7 +728,7 @@ stem_dynamics <-
 
         # add the initial state parameters either to the parameters or to the constants
         if(fixed_inits) {
-                constants          <- c(constants, initdist_parameters)
+                constants          <- c(initdist_parameters, constants)
                 const_codes        <- c(const_codes, seq_along(initdist_codes) + length(const_codes) - 1)
                 names(const_codes) <- names(constants)
         } else {
@@ -764,18 +763,17 @@ stem_dynamics <-
                         constants   <- constants[-which(names(constants) == "t0")]
                         const_codes <- const_codes[-which(names(const_codes) == "t0")]
                         const_names <- names(const_codes)
-                        const_codes <- seq_along(const_codes)
+                        const_codes <- seq_along(const_codes) - 1
                         names(const_codes) <- const_names
                 } else {
                         parameters  <- parameters[-which(names(parameters) == "t0")]
                         param_codes <- param_codes[-which(names(param_codes) == "t0")]
                         param_names <- names(param_codes)
-                        param_codes <- seq_along(param_codes)
+                        param_codes <- seq_along(param_codes) - 1
                         names(param_codes) <- param_names
                 }
 
                 stoich_matrix_lna   <- t(flow_matrix_lna)
-                net_effect          <- rowSums(t(flow_matrix_lna))
 
                 if(is.character(compile_lna) || compile_lna) {
 
@@ -836,14 +834,13 @@ stem_dynamics <-
                 lna_pointers    <- NULL
                 lna_initdist_inds <- NULL
                 stoich_matrix_lna <- NULL
-                net_effect        <- NULL
         }
 
         # compile the functions to solve the ODEs for the stochastic epidemic model
         if(compile_ode) {
                 stop("ODE function not implemented yet. Nag me about it.")
-                ode_rates   <- build_ode_rates(rate_fcns, param_codes, const_codes, tcovar_codes, compartment_codes)
-                ode_pointer <- parse_ode_fcns(ode_rates, flow_matrix, messages = messages)
+                # ode_rates   <- build_ode_rates(rate_fcns, param_codes, const_codes, tcovar_codes, compartment_codes)
+                # ode_pointer <- parse_ode_fcns(ode_rates, flow_matrix, messages = messages)
         } else {
                 ode_pointer <- NULL
                 ode_rates   <- list(hazards = NULL, ode_param_codes = NULL)
@@ -862,7 +859,6 @@ stem_dynamics <-
                          flow_matrix         = flow_matrix,
                          flow_matrix_lna     = flow_matrix_lna,
                          stoich_matrix_lna   = stoich_matrix_lna,
-                         net_effect          = net_effect,
                          lna_rates           = lna_rates,
                          lna_pointers        = lna_pointers,
                          lna_initdist_inds   = lna_initdist_inds,

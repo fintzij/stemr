@@ -34,7 +34,7 @@ parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, l
                                        paste(sample(c(letters, LETTERS), 15, replace = TRUE), collapse = ""),
                                        simplify = T)
 
-        lookup_table$log_code[comp_inds] <- paste0("exp(", lookup_table$code[comp_inds], ")")
+        lookup_table$log_code[comp_inds] <- paste0("(exp(", lookup_table$code[comp_inds], ")-1)")
 
         # make the substitutions in the rate strings
         for(s in seq_along(lna_rates)) {

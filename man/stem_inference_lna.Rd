@@ -5,9 +5,9 @@
 \title{Approximate Bayesian inference for a stochastic epidemic model via the linear
 noise approximation.}
 \usage{
-stem_inference_lna(stem_object, iterations, prior_density, priors, kernel,
-  t0_kernel, thin_params, thin_latent_proc, initialization_attempts = 500,
-  messages, monitor_MCMC)
+stem_inference_lna(stem_object, iterations, priors, kernel, t0_kernel,
+  thin_params, thin_latent_proc, initialization_attempts = 500,
+  n_ess_updates = 1, messages, monitor_MCMC)
 }
 \arguments{
 \item{stem_object}{stochastic epidemic model object with model dynamics, the
@@ -15,8 +15,10 @@ measurement process, and a dataset.}
 
 \item{iterations}{number of MCMC iterations}
 
-\item{prior_density}{function to compute the prior density for the model
-parameters}
+\item{priors}{either a list of priors, each of which is constructed using the
+\code{prior} function, or a list of functions for computing the prior
+density as well as transforming parameters to and from their estimation
+scales}
 
 \item{kernel}{list containing the MCMC kernel method, proposal covariance
 matrix, and an external pointer for the compiled MCMC kernel function}
@@ -33,9 +35,13 @@ ceiling(iterations/100)}
 \item{initialization_attempts}{number of attempts to initialize the latent
 path before breaking.}
 
+\item{n_ess_updates}{number of elliptical slice sampling updates per iteration}
+
 \item{messages}{should status messages be generated in an external text file?
 If so, the iteration number is printed every 1000th iteration. defaults to
 TRUE.}
+
+\item{monitor_MCMC}{should MCMC progress be monitored?}
 }
 \value{
 list with parameter posterior samples and MCMC diagnostics

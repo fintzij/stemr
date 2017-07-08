@@ -1,142 +1,180 @@
 #' Sample a new LNA path via elliptical slice sampling.
 #'
 #' @param path_cur list with the current LNA path along with its ODE paths
-#' @param pathmat matrix in which to store the proposed LNA paths
+#' @param propmat matrix in which to store the proposed N(0,1) draws
 #' @inheritParams initialize_lna
 #'
-#' @return list with an updated LNA path along with its ODEs, the observed data
-#'   log-likelihood, and the lna log-likelihood.
+#' @return list with an updated LNA path along with its stochastic
+#'   perturbations, the observed data log-likelihood, and the lna
+#'   log-likelihood, and a record of the number of elliptical slice sampling
+#'   proposals
 #' @export
-update_lna_path <- function(path_cur, data, lna_parameters, pathmat, censusmat, emitmat, flow_matrix, lna_pointer_ess, lna_ess_set_pars_ptr, lna_times, lna_initdist_inds, param_update_inds, incidence_codes, census_incidence_codes, census_indices, measproc_indmat, obstime_inds, d_meas_pointer, parameters, constants, tcovar_censmat, do_prevalence, do_incidence) {
+update_lna_path <-
+        function(path_cur,
+                 data,
+                 lna_parameters,
+                 propmat,
+                 pathmat,
+                 censusmat,
+                 emitmat,
+                 flow_matrix,
+                 stoich_matrix,
+                 lna_pointer,
+                 lna_set_pars_ptr,
+                 lna_times,
+                 lna_initdist_inds,
+                 param_update_inds,
+                 incidence_codes,
+                 census_incidence_codes,
+                 census_indices,
+                 measproc_indmat,
+                 obstime_inds,
+                 d_meas_pointer,
+                 parameters,
+                 constants,
+                 tcovar_censmat,
+                 do_prevalence,
+                 do_incidence,
+                 n_ess_updates) {
 
-        # propose a new path
-        path_prop <- propose_lna_ess(
-                path_cur          = path_cur,
-                lna_times         = lna_times,
-                lna_pars          = lna_parameters,
-                param_update_inds = param_update_inds,
-                flow_matrix       = flow_matrix,
-                lna_pointer_ess   = lna_pointer_ess,
-                lna_ess_set_pars_ptr = lna_ess_set_pars_ptr
-        )
+        # vector for storing the number of steps in each ESS update
+        ess_record <- rep(1, n_ess_updates)
 
-        # choose a likelihood threshold
-        threshold <- path_cur$data_log_lik + log(runif(1))
+        # perform the ESS updates, retaining the last state
+        for(k in seq_len(n_ess_updates)) {
 
-        # initial proposal, which also defines a bracket
-        theta <- runif(1, 0, 2*pi)
-        lower <- theta - 2*pi; upper <- theta
+                # get the initial state parameters and census the LNA path
+                init_state <- lna_parameters[1, lna_initdist_inds + 1]
 
-        # get the initial state parameters
-        init_state   <- lna_parameters[1, lna_initdist_inds + 1]
+                # sample a new set of stochastic perturbations
+                draws_prop <- matrix(rnorm(nrow(path_cur$draws)*ncol(path_cur$draws)),
+                                     nrow = nrow(path_cur$draws),
+                                     ncol = ncol(path_cur$draws))
 
-        # construct the first proposal
-        pathmat[, -1] <- path_cur$drift + cos(theta)*path_cur$res_path[,-1] + sin(theta)*path_prop$res_path[,-1]
+                # choose a likelihood threshold
+                threshold <- path_cur$data_log_lik + log(runif(1))
 
-        # census the LNA
-        census_lna(
-                path                = pathmat,
-                census_path         = censusmat,
-                census_inds         = census_indices,
-                flow_matrix_lna     = flow_matrix,
-                do_prevalence       = do_prevalence,
-                init_state          = init_state,
-                incidence_codes_lna = incidence_codes
-        )
+                # initial proposal, which also defines a bracket
+                theta <- runif(1, 0, 2*pi)
+                lower <- theta - 2*pi; upper <- theta
 
-        # either compute the incidence, or compute the compartment counts if the data are prevalence counts
-        if(do_incidence) {
-                # compute the incidence
-                compute_incidence(censusmat = censusmat,
-                                  col_inds  = census_incidence_codes,
-                                  row_inds  = obstime_inds)
-        }
+                # construct the first proposal
+                propmat <- cos(theta)*path_cur$draws + sin(theta)*draws_prop
 
-        # evaluate the density of the incidence counts
-        evaluate_d_measure(
-                emitmat          = emitmat,
-                obsmat           = data,
-                statemat         = censusmat,
-                measproc_indmat  = measproc_indmat,
-                parameters       = parameters,
-                constants        = constants,
-                tcovar_censusmat = tcovar_censmat,
-                d_meas_ptr       = d_meas_pointer
-        )
+                # map the perturbations to an LNA path
+                tryCatch({
+                        map_draws_2_lna(pathmat           = pathmat,
+                                        draws             = propmat,
+                                        lna_times         = lna_times,
+                                        lna_pars          = lna_parameters,
+                                        init_start        = lna_initdist_inds[1],
+                                        param_update_inds = param_update_inds,
+                                        stoich_matrix     = stoich_matrix,
+                                        lna_pointer       = lna_pointer,
+                                        set_pars_pointer  = lna_set_pars_ptr
+                        )
 
-        # compute the data log likelihood
-        data_log_lik_prop <- sum(emitmat[,-1][measproc_indmat])
-        if(is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
+                        census_lna(
+                                path                = pathmat,
+                                census_path         = censusmat,
+                                census_inds         = census_indices,
+                                flow_matrix_lna     = flow_matrix,
+                                do_prevalence       = do_prevalence,
+                                init_state          = init_state,
+                                incidence_codes_lna = incidence_codes
+                        )
 
-        # accept or reject the proposal
-        while((data_log_lik_prop < threshold) && !isTRUE(all.equal(lower, upper))) {
+                        # evaluate the density of the incidence counts
+                        evaluate_d_measure(
+                                emitmat          = emitmat,
+                                obsmat           = data,
+                                statemat         = censusmat,
+                                measproc_indmat  = measproc_indmat,
+                                parameters       = parameters,
+                                constants        = constants,
+                                tcovar_censusmat = tcovar_censmat,
+                                d_meas_ptr       = d_meas_pointer
+                        )
 
-                # shrink the bracket
-                if(theta < 0) {
-                        lower <- theta
-                } else {
-                        upper <- theta
+                        # compute the data log likelihood
+                        data_log_lik_prop <- sum(emitmat[,-1][measproc_indmat])
+                        if(is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
+
+                }, error = function(e) {
+                        data_log_lik_prop <- -Inf
+                })
+
+                # accept or reject the proposal
+                while((data_log_lik_prop < threshold) && !isTRUE(all.equal(lower, upper))) {
+
+                        # increment the number of ESS proposals for the current iteration
+                        ess_record[k] <- ess_record[k] + 1
+
+                        # shrink the bracket
+                        if(theta < 0) {
+                                lower <- theta
+                        } else {
+                                upper <- theta
+                        }
+
+                        # sample a new point
+                        theta <- runif(1, lower, upper)
+
+                        # construct the next proposal
+                        propmat <- cos(theta)*path_cur$draws + sin(theta)*draws_prop
+
+                        # map the perturbations to an LNA path
+                        tryCatch({
+                                map_draws_2_lna(pathmat           = pathmat,
+                                                draws             = propmat,
+                                                lna_times         = lna_times,
+                                                lna_pars          = lna_parameters,
+                                                init_start        = lna_initdist_inds[1],
+                                                param_update_inds = param_update_inds,
+                                                stoich_matrix     = stoich_matrix,
+                                                lna_pointer       = lna_pointer,
+                                                set_pars_pointer  = lna_set_pars_ptr
+                                )
+
+                                census_lna(
+                                        path                = pathmat,
+                                        census_path         = censusmat,
+                                        census_inds         = census_indices,
+                                        flow_matrix_lna     = flow_matrix,
+                                        do_prevalence       = do_prevalence,
+                                        init_state          = init_state,
+                                        incidence_codes_lna = incidence_codes
+                                )
+
+                                # evaluate the density of the incidence counts
+                                evaluate_d_measure(
+                                        emitmat          = emitmat,
+                                        obsmat           = data,
+                                        statemat         = censusmat,
+                                        measproc_indmat  = measproc_indmat,
+                                        parameters       = parameters,
+                                        constants        = constants,
+                                        tcovar_censusmat = tcovar_censmat,
+                                        d_meas_ptr       = d_meas_pointer
+                                )
+
+                                # compute the data log likelihood
+                                data_log_lik_prop <- sum(emitmat[,-1][measproc_indmat])
+                                if(is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
+
+                        }, error = function(e) {
+                                data_log_lik_prop <- -Inf
+                        })
                 }
 
-                # sample a new point
-                theta <- runif(1, lower, upper)
-
-                # construct the next proposal
-                pathmat[, -1] <- path_cur$drift + cos(theta)*path_cur$res_path[,-1] + sin(theta)*path_prop$res_path[,-1]
-
-                # census the LNA
-                census_lna(
-                        path                = pathmat,
-                        census_path         = censusmat,
-                        census_inds         = census_indices,
-                        flow_matrix_lna     = flow_matrix,
-                        do_prevalence       = do_prevalence,
-                        init_state          = init_state,
-                        incidence_codes_lna = incidence_codes
-                )
-
-                # either compute the incidence, or compute the compartment counts if the data are prevalence counts
-                if(do_incidence) {
-                        # compute the incidence
-                        compute_incidence(censusmat = censusmat,
-                                          col_inds  = census_incidence_codes,
-                                          row_inds  = obstime_inds)
-                }
-
-                # evaluate the density of the incidence counts
-                evaluate_d_measure(
-                        emitmat          = emitmat,
-                        obsmat           = data,
-                        statemat         = censusmat,
-                        measproc_indmat  = measproc_indmat,
-                        parameters       = parameters,
-                        constants        = constants,
-                        tcovar_censusmat = tcovar_censmat,
-                        d_meas_ptr       = d_meas_pointer
-
-                )
-
-                # compute the data log likelihood
-                data_log_lik_prop <- sum(emitmat[,-1][measproc_indmat])
-                if(is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
+                # transfer the new path and residual path into the* sin(theta) path_prop list
+                path_cur$draws        <- propmat
+                path_cur$lna_path     <- pathmat
+                path_cur$data_log_lik <- data_log_lik_prop
         }
 
-        # transfer the new path and residual path into the path_prop list
-        path_prop$lna_path      <- pathmat
-        path_prop$res_path[,-1] <- pathmat[,-1] - path_cur$drift
-        path_prop$data_log_lik  <- data_log_lik_prop
+        # path_cur$lna_log_lik <- sum(dnorm(path_cur$draws, log = TRUE)) # NOT NEEDED
+        path_cur$ess_record  <- ess_record
 
-        # compute the new LNA density
-        path_prop <-
-                lna_density2(
-                        path_prop,
-                        lna_times,
-                        lna_parameters,
-                        param_update_inds,
-                        flow_matrix,
-                        lna_pointer_ess,
-                        lna_ess_set_pars_ptr
-                )
-
-        return(path_prop)
+        return(path_cur)
 }

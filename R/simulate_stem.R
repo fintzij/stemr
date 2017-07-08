@@ -313,6 +313,19 @@ simulate_stem <-
                                                         stem_object$dynamics$strata_sizes[s] * extraDistr::rdirichlet(nsim, stem_object$dynamics$state_initializer[[s]]$prior)
                                         }
                                 }
+                        } else {
+                                if(stem_object$dynamics$n_strata == 1) {
+                                        init_states <- matrix(rep(stem_object$dynamics$state_initializer$init_states, nsim), nrow = nsim, byrow = T)
+
+                                } else {
+                                        init_states <- matrix(0.0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
+                                        colnames(init_states) <- names(stem_object$dynamics$comp_codes)
+
+                                        for(s in seq_len(stem_object$dynamics$n_strata)) {
+                                                init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <-
+                                                        stem_object$dynamics$strata_sizes[s] * stem_object$dynamics$state_initializer[[s]]$init_states
+                                        }
+                                }
                         }
 
                         for(k in seq_len(nsim)) {
@@ -326,7 +339,6 @@ simulate_stem <-
                                                                  init_start        = stem_object$dynamics$lna_initdist_inds[1],
                                                                  param_update_inds = param_update_inds,
                                                                  stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
-                                                                 net_effect        = stem_object$dynamics$net_effect,
                                                                  lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
                                                                  set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)$lna_path
 

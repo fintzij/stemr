@@ -27,8 +27,12 @@ void census_lna(const arma::mat& path, arma::mat& census_path, const arma::uvec&
         int n_incidence    = census_path.n_cols - n_comps - 1;
 
         if(do_prevalence) {
+                int n_rows_path = path.n_rows;
                 Rcpp::IntegerVector prev_col_inds = Rcpp::seq_len(n_rates);
-                census_path.cols(1, n_comps) = arma::repmat(init_state, n_census_times, 1) + path(census_inds, Rcpp::as<arma::uvec>(prev_col_inds)) * flow_matrix_lna;
+                arma::mat cumsum_mat(n_rows_path, n_comps);
+                cumsum_mat = arma::repmat(init_state, n_rows_path, 1);
+                cumsum_mat += arma::cumsum(path.cols(Rcpp::as<arma::uvec>(prev_col_inds)), 0) * flow_matrix_lna;
+                census_path.cols(1, n_comps) = cumsum_mat.rows(census_inds);
         }
 
         if(n_incidence != 0) {

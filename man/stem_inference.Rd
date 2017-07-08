@@ -8,7 +8,7 @@ noise approximation or agent-based Bayesian data augmentation.}
 stem_inference(stem_object, method, iterations, priors, kernel,
   t0_kernel = NULL, thin_params = 1,
   thin_latent_proc = ceiling(iterations/100), initialization_attempts = 500,
-  messages = FALSE, monitor_MCMC = FALSE)
+  n_ess_updates = 1, messages = FALSE, monitor_MCMC = FALSE)
 }
 \arguments{
 \item{stem_object}{a stochastic epidemic model object containing the dataset,
@@ -44,6 +44,9 @@ defaults to 1}
 
 \item{thin_latent_proc}{thinning interval for latent paths, defaults to
 ceiling(iterations/100) so that every 100th path will be saved}
+
+\item{n_ess_updates}{number of elliptical slice sampling updates per
+iteration (LNA)}
 
 \item{messages}{should status messages be printed? defaults to TRUE.}
 

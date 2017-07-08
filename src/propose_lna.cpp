@@ -17,24 +17,18 @@ using namespace arma;
 //'   LNA parameters need to be updated.
 //' @param stoich_matrix stoichiometry matrix giving the changes to compartments
 //'   from each reaction
-//' @param net_effect vector giving the net effect on the compartment volumes from
-//'   of one of each type of reaction: net_effect = stoich * 1
 //' @param lna_pointer external pointer to LNA integration function.
 //' @param set_pars_pointer external pointer to the function for setting the LNA
 //'   parameters.
-//' @param set_left_state_pointer external pointer to the function for setting the
-//'   state (compartment volumes) at the left endpoint of an interval.
 //'
-//' @return array containing the stochastic perturbations (i.i.d. N(0,1) draws in
-//' the first slice of the cube) and the LNA path on its natural scale which is
-//' determined by the perturbations (second slice of the cube).
+//' @return list containing the stochastic perturbations (i.i.d. N(0,1) draws) and
+//' the LNA path on its natural scale which is determined by the perturbations.
 //'
 //' @export
 // [[Rcpp::export]]
 Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix& lna_pars,
                        const int init_start, const Rcpp::LogicalVector& param_update_inds,
-                       const arma::mat& stoich_matrix, const arma::vec& net_effect,
-                       SEXP lna_pointer, SEXP set_pars_pointer) {
+                       const arma::mat& stoich_matrix, SEXP lna_pointer, SEXP set_pars_pointer) {
 
         // get the dimensions of various objects
         int n_events = stoich_matrix.n_cols;         // number of transition events, e.g., S2I, I2R
@@ -62,7 +56,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix&
         arma::vec log_lna(n_events, arma::fill::zeros);  // LNA increment, log scale
         arma::vec nat_lna(n_events, arma::fill::zeros);  // LNA increment, natural scale
         arma::vec c_incid(n_events, arma::fill::zeros);  // cumulative incidence
-        arma::vec init_volumes = init_state - net_effect; // initial compartment counts/volumes
+        arma::vec init_volumes = init_state; // initial compartment counts/volumes
         arma::mat lna_path(n_events+1, n_times, arma::fill::zeros); // matrix to store the path
         lna_path.row(0) = lna_times;     // save the observation times
 
@@ -96,7 +90,10 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix&
 
                 // map the stochastic perturbation to the LNA path on its natural scale
                 log_lna = lna_drift + arma::chol(lna_diffusion, "lower") * draws.col(j);
-                nat_lna = arma::exp(log_lna);
+                nat_lna = arma::exp(log_lna) - 1;
+
+                // clamp the LNA increment below by 0
+                nat_lna.elem(arma::find(nat_lna < 0)).zeros();
 
                 // save the new state
                 lna_path(arma::span(1,n_events),j+1) = nat_lna;
@@ -108,8 +105,13 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix&
 
                 // update the cumulative incidence, compartment volumes, and the parameter vector
                 c_incid += nat_lna;
-                init_volumes = init_state - net_effect + stoich_matrix * c_incid;
-                std::copy(init_volumes.begin(), init_volumes.end(), current_params.begin()+init_start);
+                init_volumes = init_state + stoich_matrix * c_incid;
+
+                // clamp the compartment volumes below by 0
+                init_volumes.elem(arma::find(init_volumes < 0)).zeros();
+
+                // copy the compartment volumes to the current parameters
+                std::copy(init_volumes.begin(), init_volumes.end(), current_params.begin() + init_start);
 
                 // set the lna parameters and reset the LNA state vector
                 CALL_SET_LNA_PARAMS(current_params, set_pars_pointer);

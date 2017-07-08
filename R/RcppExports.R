@@ -270,6 +270,31 @@ lna_incid2prev <- function(path, flow_matrix, init_state) {
     .Call('stemr_lna_incid2prev', PACKAGE = 'stemr', path, flow_matrix, init_state)
 }
 
+#' Map N(0,1) stochastic perturbations to an LNA path.
+#'
+#' @param pathmat matrix where the LNA path should be stored
+#' @param draws matrix of N(0,1) draws to be mapped to an LNA path
+#' @param lna_times vector of interval endpoint times
+#' @param lna_pars numeric matrix of parameters, constants, and time-varying
+#'   covariates at each of the lna_times
+#' @param init_start index in the parameter vector where the initial compartment
+#'   volumes start
+#' @param param_update_inds logical vector indicating at which of the times the
+#'   LNA parameters need to be updated.
+#' @param stoich_matrix stoichiometry matrix giving the changes to compartments
+#'   from each reaction
+#' @param lna_pointer external pointer to LNA integration function.
+#' @param set_pars_pointer external pointer to the function for setting the LNA
+#'   parameters.
+#'
+#' @return fill out pathmat with the LNA path corresponding to the stochastic
+#'   perturbations.
+#'
+#' @export
+map_draws_2_lna <- function(pathmat, draws, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, lna_pointer, set_pars_pointer) {
+    invisible(.Call('stemr_map_draws_2_lna', PACKAGE = 'stemr', pathmat, draws, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, lna_pointer, set_pars_pointer))
+}
+
 #' Produce samples from a multivariate normal density using the Cholesky
 #' decomposition
 #'
@@ -381,21 +406,16 @@ copy_mat <- function(dest, orig) {
 #'   LNA parameters need to be updated.
 #' @param stoich_matrix stoichiometry matrix giving the changes to compartments
 #'   from each reaction
-#' @param net_effect vector giving the net effect on the compartment volumes from
-#'   of one of each type of reaction: net_effect = stoich * 1
 #' @param lna_pointer external pointer to LNA integration function.
 #' @param set_pars_pointer external pointer to the function for setting the LNA
 #'   parameters.
-#' @param set_left_state_pointer external pointer to the function for setting the
-#'   state (compartment volumes) at the left endpoint of an interval.
 #'
-#' @return array containing the stochastic perturbations (i.i.d. N(0,1) draws in
-#' the first slice of the cube) and the LNA path on its natural scale which is
-#' determined by the perturbations (second slice of the cube).
+#' @return list containing the stochastic perturbations (i.i.d. N(0,1) draws) and
+#' the LNA path on its natural scale which is determined by the perturbations.
 #'
 #' @export
-propose_lna <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, net_effect, lna_pointer, set_pars_pointer) {
-    .Call('stemr_propose_lna', PACKAGE = 'stemr', lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, net_effect, lna_pointer, set_pars_pointer)
+propose_lna <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, lna_pointer, set_pars_pointer) {
+    .Call('stemr_propose_lna', PACKAGE = 'stemr', lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, lna_pointer, set_pars_pointer)
 }
 
 #' Identify which rates to update when a state transition event occurs.

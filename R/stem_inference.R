@@ -27,6 +27,8 @@
 #'   defaults to 1
 #' @param thin_latent_proc thinning interval for latent paths, defaults to
 #'   ceiling(iterations/100) so that every 100th path will be saved
+#' @param n_ess_updates number of elliptical slice sampling updates per
+#'   iteration (LNA)
 #' @param messages should status messages be printed? defaults to TRUE.
 #' @param monitor_MCMC should MCMC output be generated for the purposes of
 #'   monitoring convergence (defaults to FALSE)? If so, the acceptance rate and
@@ -36,7 +38,7 @@
 #' @return list with posterior samples for the parameters and the latent
 #'   process, along with MCMC diagnostics.
 #' @export
-stem_inference <- function(stem_object, method, iterations, priors, kernel, t0_kernel = NULL, thin_params = 1, thin_latent_proc = ceiling(iterations/100), initialization_attempts = 500, messages = FALSE, monitor_MCMC = FALSE) {
+stem_inference <- function(stem_object, method, iterations, priors, kernel, t0_kernel = NULL, thin_params = 1, thin_latent_proc = ceiling(iterations/100), initialization_attempts = 500, n_ess_updates = 1, messages = FALSE, monitor_MCMC = FALSE) {
 
         # check that the data, dynamics and measurement process are all supplied
         if (is.null(stem_object$measurement_process$data) ||
@@ -53,18 +55,17 @@ stem_inference <- function(stem_object, method, iterations, priors, kernel, t0_k
         if(method == "lna") {
 
                 # get the results
-                results <- stem_inference_lna(stem_object             = stem_object,
-                                              iterations              = iterations,
-                                              prior_density           = prior_density,
-                                              priors                  = priors,
-                                              kernel                  = kernel,
-                                              t0_kernel               = t0_kernel,
-                                              estimation_scales       = estimation_scales,
-                                              thin_params             = thin_params,
-                                              thin_latent_proc        = thin_latent_proc,
-                                              initialization_attempts = initialization_attempts,
-                                              messages                = messages,
-                                              monitor_MCMC            = monitor_MCMC)
+                results <- stem_inference_lna(stem_object,
+                                              iterations,
+                                              priors,
+                                              kernel,
+                                              t0_kernel,
+                                              thin_params,
+                                              thin_latent_proc,
+                                              initialization_attempts = 500,
+                                              n_ess_updates = n_ess_updates,
+                                              messages,
+                                              monitor_MCMC)
 
         } else if (method == "bda") {
                 print("bda not yet implemented")

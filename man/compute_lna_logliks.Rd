@@ -25,8 +25,6 @@ observation times}
 
 \item{emitmat}{matrix in which to store the log-emission probabilities}
 
-\item{flow_matrix}{LNA flow matrix (no incidence)}
-
 \item{lna_times}{times at whicht eh LNA should be evaluated}
 
 \item{lna_initdist_inds}{C++ column indices in the LNA parameter matrix for

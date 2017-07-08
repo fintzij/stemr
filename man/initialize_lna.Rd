@@ -4,7 +4,7 @@
 \alias{initialize_lna}
 \title{Initialize the LNA path}
 \usage{
-initialize_lna(data, lna_parameters, censusmat, emitmat, flow_matrix,
+initialize_lna(data, lna_parameters, censusmat, emitmat, stoich_matrix,
   lna_pointer, lna_set_pars_pointer, lna_times, lna_initdist_inds,
   param_update_inds, incidence_codes, census_incidence_codes, census_indices,
   measproc_indmat, obstime_inds, d_meas_pointer, parameters, constants,
@@ -21,7 +21,7 @@ observation times}
 
 \item{emitmat}{matrix in which to store the log-emission probabilities}
 
-\item{flow_matrix}{LNA flow matrix (no incidence)}
+\item{stoich_matrix}{LNA stoichiometry matrix}
 
 \item{lna_pointer}{external LNA pointer}
 
@@ -64,7 +64,7 @@ process is evaluated}
 \item{initialization_attempts}{number of initialization attempts}
 }
 \value{
-LNA path along with paths of its ODEs and its data log-likelihood
+LNA path along with its stochastic perturbations
 }
 \description{
 Initialize the LNA path

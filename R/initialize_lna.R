@@ -31,41 +31,33 @@
 #' @param do_incidence should incidence be computed?
 #' @param initialization_attempts number of initialization attempts
 #'
-#' @return LNA path along with paths of its ODEs and its data log-likelihood
+#' @return LNA path along with its stochastic perturbations
 #' @export
 initialize_lna <- function(data, lna_parameters, censusmat, emitmat, stoich_matrix, lna_pointer, lna_set_pars_pointer, lna_times, lna_initdist_inds, param_update_inds, incidence_codes, census_incidence_codes, census_indices, measproc_indmat, obstime_inds, d_meas_pointer, parameters, constants, tcovar_censmat, do_prevalence, do_incidence, initialization_attempts) {
 
         path <- propose_lna(
                 lna_times            = lna_times,
                 lna_pars             = lna_parameters,
+                init_start           = stem_object$dynamics$lna_initdist_inds[1],
                 param_update_inds    = param_update_inds,
                 stoich_matrix        = stoich_matrix,
                 lna_pointer          = lna_pointer,
-                set_pars_pointer     = lna_set_pars_pointer,
-                enforce_monotonicity = TRUE
+                set_pars_pointer     = lna_set_pars_pointer
         )
 
         # get the initial state parameters
-        init_state   <- lna_parameters[1, lna_initdist_inds + 1]
+        init_state <- lna_parameters[1, lna_initdist_inds + 1]
 
         # census the LNA
         census_lna(
                 path                = path$lna_path,
                 census_path         = censusmat,
                 census_inds         = census_indices,
-                flow_matrix_lna     = flow_matrix,
+                flow_matrix_lna     = t(stoich_matrix),
                 do_prevalence       = do_prevalence,
                 init_state          = init_state,
                 incidence_codes_lna = incidence_codes
         )
-
-        # either compute the incidence, or compute the compartment counts if the data are prevalence counts
-        if(do_incidence) {
-                # compute the incidence
-                compute_incidence(censusmat = censusmat,
-                                  col_inds  = census_incidence_codes,
-                                  row_inds  = obstime_inds)
-        }
 
         # evaluate the density of the incidence counts
         evaluate_d_measure(
@@ -88,11 +80,11 @@ initialize_lna <- function(data, lna_parameters, censusmat, emitmat, stoich_matr
                 path <- propose_lna(
                         lna_times            = lna_times,
                         lna_pars             = lna_parameters,
+                        init_start           = stem_object$dynamics$lna_initdist_inds[1],
                         param_update_inds    = param_update_inds,
-                        flow_matrix          = flow_matrix,
+                        stoich_matrix        = stoich_matrix,
                         lna_pointer          = lna_pointer,
-                        set_pars_pointer     = lna_set_pars_pointer,
-                        enforce_monotonicity = TRUE
+                        set_pars_pointer     = lna_set_pars_pointer
                 )
 
                 # census the LNA
@@ -100,19 +92,11 @@ initialize_lna <- function(data, lna_parameters, censusmat, emitmat, stoich_matr
                         path                = path$lna_path,
                         census_path         = censusmat,
                         census_inds         = census_indices,
-                        flow_matrix_lna     = flow_matrix,
+                        flow_matrix_lna     = t(flow_matrix),
                         do_prevalence       = do_prevalence,
                         init_state          = init_state,
                         incidence_codes_lna = incidence_codes
                 )
-
-                # either compute the incidence, or compute the compartment counts if the data are prevalence counts
-                if(do_incidence) {
-                        # compute the incidence
-                        compute_incidence(censusmat = censusmat,
-                                          col_inds  = census_incidence_codes,
-                                          row_inds  = obstime_inds)
-                }
 
                 # evaluate the density of the incidence counts
                 evaluate_d_measure(
@@ -134,7 +118,9 @@ initialize_lna <- function(data, lna_parameters, censusmat, emitmat, stoich_matr
         if(keep_going) {
                 stop("Initialization failed. Try different initial parameter values.")
         } else {
-                path$data_log_lik = sum(emitmat[,-1][measproc_indmat])
+                # path$lna_log_lik  = sum(dnorm(path$draws, log = TRUE)) # log-likelihood of the normal(0,1) draws - NOT NEEDED
+                path$data_log_lik = sum(emitmat[,-1][measproc_indmat]) # sum of log emission probabilities
+                path$lna_path_prop = path$lna_path # matrix for storing the LNA path for a proposed set of parameters
                 return(path)
         }
 }
