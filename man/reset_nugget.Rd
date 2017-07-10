@@ -4,18 +4,18 @@
 \alias{reset_nugget}
 \title{Reset the nugget based based on a sample}
 \usage{
-reset_nugget(nugget, parameter_samples, start, end, estimation_scales)
+reset_nugget(nugget, parameter_samples_est, start, end, lna_initdist_inds)
 }
 \arguments{
 \item{nugget}{current value, a scalar}
-
-\item{parameter_samples}{parameter samples on their natural scale}
 
 \item{start}{beginning of range to include}
 
 \item{end}{end of range to include}
 
-\item{estimation_scales}{character vector of estimation scales}
+\item{lna_initdist_inds}{indices for which parameters are initial distribution parameters}
+
+\item{parameter_samples}{parameter samples on their estimation}
 }
 \value{
 vector of nugget standard deviations

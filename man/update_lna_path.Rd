@@ -5,7 +5,7 @@
 \title{Sample a new LNA path via elliptical slice sampling.}
 \usage{
 update_lna_path(path_cur, data, lna_parameters, propmat, pathmat, censusmat,
-  emitmat, flow_matrix, lna_pointer, lna_set_pars_ptr, lna_times,
+  emitmat, flow_matrix, stoich_matrix, lna_pointer, lna_set_pars_ptr, lna_times,
   lna_initdist_inds, param_update_inds, incidence_codes, census_incidence_codes,
   census_indices, measproc_indmat, obstime_inds, d_meas_pointer, parameters,
   constants, tcovar_censmat, do_prevalence, do_incidence, n_ess_updates)
@@ -24,6 +24,8 @@ times}
 observation times}
 
 \item{emitmat}{matrix in which to store the log-emission probabilities}
+
+\item{stoich_matrix}{LNA stoichiometry matrix}
 
 \item{lna_pointer}{external LNA pointer}
 

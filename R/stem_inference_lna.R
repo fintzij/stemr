@@ -386,8 +386,7 @@ stem_inference_lna <- function(stem_object,
 
         # begin the MCMC
         start.time <- Sys.time()
-        # for(k in (seq_len(iterations) + 1)) {
-        for(k in 2:2191) {
+        for(k in (seq_len(iterations) + 1)) {
 
                 # Print the status if messages are enabled
                 if((messages || monitor_MCMC) && k%%thin_latent_proc == 0) {
@@ -424,9 +423,6 @@ stem_inference_lna <- function(stem_object,
                         do_incidence            = do_incidence,
                         n_ess_updates           = n_ess_updates
                 )
-
-                # save the ESS record
-                ess_record[,k-1] <- path$ess_record
 
                 # compute the current log posterior
                 logpost_cur <- path$data_log_lik + params_logprior_cur
@@ -626,6 +622,7 @@ stem_inference_lna <- function(stem_object,
 
                 # Save the latent process if called for in this iteration
                 if(k %% thin_latent_proc == 0) {
+                        ess_record[,param_rec_ind-1] <- path$ess_record             # save the ESS record
                         latent_paths[,,path_rec_ind] <- path$lna_path   # save the path
                         path_rec_ind <- path_rec_ind + 1                # increment the path record index
                 }
