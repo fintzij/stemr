@@ -7,7 +7,7 @@ noise approximation.}
 \usage{
 stem_inference_lna(stem_object, iterations, priors, kernel, t0_kernel,
   thin_params, thin_latent_proc, initialization_attempts = 500,
-  n_ess_updates = 1, messages, monitor_MCMC)
+  n_ess_updates = 1, messages)
 }
 \arguments{
 \item{stem_object}{stochastic epidemic model object with model dynamics, the
@@ -40,8 +40,6 @@ path before breaking.}
 \item{messages}{should status messages be generated in an external text file?
 If so, the iteration number is printed every 1000th iteration. defaults to
 TRUE.}
-
-\item{monitor_MCMC}{should MCMC progress be monitored?}
 }
 \value{
 list with parameter posterior samples and MCMC diagnostics

@@ -22,7 +22,6 @@
 #'   density as well as transforming parameters to and from their estimation
 #'   scales
 #' @param n_ess_updates number of elliptical slice sampling updates per iteration
-#' @param monitor_MCMC should MCMC progress be monitored?
 #'
 #' @return list with parameter posterior samples and MCMC diagnostics
 #' @export
@@ -36,8 +35,7 @@ stem_inference_lna <- function(stem_object,
                                thin_latent_proc,
                                initialization_attempts = 500,
                                n_ess_updates = 1,
-                               messages,
-                               monitor_MCMC) {
+                               messages) {
 
         # extract the model objects from the stem_object
         flow_matrix            <- stem_object$dynamics$flow_matrix_lna
@@ -155,7 +153,9 @@ stem_inference_lna <- function(stem_object,
         if(!adaptive_rwmh) {
 
                 # cache the cholesky decomposition
-                kernel_chol_cov <- chol(kernel_covmat)
+                kernel_chol_cov      <- chol(kernel_covmat)
+                proposal_scalings    <- NULL
+                proposal_covariances <- NULL
 
         } else if(adaptive_rwmh) {
 
@@ -192,20 +192,14 @@ stem_inference_lna <- function(stem_object,
                 }
 
                 # initialize objects for monitoring the adaptive MCMC if requested
-                if(monitor_MCMC) {
-                        # initialize objects for saving the scaling
-                        proposal_scalings    <- double(1 + floor(iterations/thin_params))
-                        proposal_covariances <- array(0.0, dim = c(nrow(kernel_covmat),
-                                                                   ncol(kernel_covmat),
-                                                                   1 + floor(iterations/thin_params)))
-                        # save initial values
-                        if(adapt_scale) proposal_scalings[1]      <- kernel_scaling
-                        if(adapt_shape) proposal_covariances[,,1] <- kernel_covmat
-
-                } else {
-                        proposal_scalings    <- NULL
-                        proposal_covariances <- NULL
-                }
+                # initialize objects for saving the scaling
+                proposal_scalings    <- double(1 + floor(iterations/thin_params))
+                proposal_covariances <- array(0.0, dim = c(nrow(kernel_covmat),
+                                                           ncol(kernel_covmat),
+                                                           1 + floor(iterations/thin_params)))
+                # save initial values
+                if(adapt_scale) proposal_scalings[1]      <- kernel_scaling
+                if(adapt_shape) proposal_covariances[,,1] <- kernel_covmat
         }
 
         # vectors for storing the model parameters on their natural and estimation scales
@@ -254,7 +248,8 @@ stem_inference_lna <- function(stem_object,
                         0.0,
                         nrow = 1 + floor(iterations / thin_params),
                         ncol = length(stem_object$dynamics$parameters) + !t0_fixed,
-                        dimnames = list(NULL, c(names(model_params_est), t0_name, names(initdist_parameters)))
+                        dimnames = list(NULL,
+                                        paste0(c(names(model_params_est), t0_name, names(initdist_parameters)), "_est"))
                 )
 
         latent_paths      <-
@@ -371,7 +366,7 @@ stem_inference_lna <- function(stem_object,
         params_log_prior[1]   <- params_logprior_cur
 
         # initialize the status file if status updates are required
-        if(messages || monitor_MCMC) {
+        if(messages) {
                 status_file <-
                         paste0("LNA_inference_status_",
                                as.numeric(Sys.time()),
@@ -389,7 +384,7 @@ stem_inference_lna <- function(stem_object,
         for(k in (seq_len(iterations) + 1)) {
 
                 # Print the status if messages are enabled
-                if((messages || monitor_MCMC) && k%%thin_latent_proc == 0) {
+                if((messages) && k%%thin_latent_proc == 0) {
                         # print the iteration
                         cat(paste0("Iteration ", k-1), file = status_file, sep = "\n \n", append = TRUE)
                 }
@@ -643,7 +638,7 @@ stem_inference_lna <- function(stem_object,
                         parameter_samples_est[param_rec_ind, ] <- c(model_params_est, t0, init_volumes)
 
                         # Store the proposal covariance matrix if monitoring is requested
-                        if(adaptive_rwmh && monitor_MCMC) {
+                        if(adaptive_rwmh) {
                                 # adaptation_stage = 1, if still using the initial covariance matrix
                                 # adaptation_stage = 2, if adapting scaling
                                 # adaptation_stage = 3, if adapting shape
@@ -661,7 +656,7 @@ stem_inference_lna <- function(stem_object,
                                         if(adapt_shape) proposal_covariances[,,param_rec_ind] <- kernel_covmat
 
                                         # print the status if asked for
-                                        if(monitor_MCMC) cat(paste0("Acceptances = ", acceptances),
+                                        if(messages) cat(paste0("Acceptances = ", acceptances),
                                                              paste0("Acceptance rate = ", acceptances / (k-1)),
                                                              file = status_file, sep = "\n", append = TRUE)
 
@@ -670,7 +665,7 @@ stem_inference_lna <- function(stem_object,
                                         if(adapt_shape) proposal_covariances[,,param_rec_ind] <- kernel_scaling * kernel_covmat
 
                                         # print the status if asked for
-                                        if(monitor_MCMC) cat(paste0("Acceptances = ", acceptances),
+                                        if(messages) cat(paste0("Acceptances = ", acceptances),
                                                              paste0("Acceptance rate = ", acceptances / (k-1)),
                                                              paste0("Scaling factor = ", kernel_scaling),
                                                              file = status_file, sep = "\n", append = TRUE)
@@ -678,7 +673,7 @@ stem_inference_lna <- function(stem_object,
                                         if(adapt_scale) proposal_scalings[param_rec_ind] <- opt_scaling
                                         proposal_covariances[,,param_rec_ind] <- empirical_covmat
 
-                                        if(monitor_MCMC) {
+                                        if(messages) {
                                                 cat(paste0("Acceptances = ", acceptances),
                                                     paste0("Acceptance rate = ", acceptances / (k-1)),
                                                     paste0("Scaling factor = ", opt_scaling),
@@ -706,15 +701,23 @@ stem_inference_lna <- function(stem_object,
         MCMC_results <- cbind(MCMC_results, parameter_samples_nat, parameter_samples_est)
 
         # return the results
-        stem_object$dynamics$parameters <- c(model_params_nat, t0, initdist_parameters)
+        stem_object$dynamics$parameters <- c(model_params_nat, t0, init_volumes)
         stem_object$results <- list(time         = difftime(end.time, start.time, units = "hours"),
                                     acceptances  = acceptances,
                                     latent_paths = latent_paths,
                                     MCMC_results = MCMC_results)
 
         # save the settings
-        stem_object$stem_settings <- list(priors        = priors,
-                                          prior_density = prior_density)
+        stem_object$stem_settings <- list(iterations       = iterations,
+                                          thin_params      = thin_params,
+                                          thin_latent_proc = thin_latent_proc,
+                                          n_ess_updates    = n_ess_updates,
+                                          priors           = priors,
+                                          prior_density    = prior_density,
+                                          kernel           = kernel,
+                                          t0_kernel        = t0_kernel,
+                                          initdist_prior   = initdist_prior,
+                                          initdist_sampler = initdist_sampler)
 
 
         if(adaptive_rwmh) {
@@ -727,10 +730,7 @@ stem_inference_lna <- function(stem_object,
                 }
 
                 if(adapt_shape) stem_object$results$empirical_covmat <- empirical_covmat
-        }
 
-        # save the MCMC record if asked for
-        if(monitor_MCMC & adaptive_rwmh) {
                 stem_object$results$adaptation_record <- list(proposal_scalings = proposal_scalings,
                                                               proposal_covariances = proposal_covariances,
                                                               nugget = nugget,

@@ -8,7 +8,7 @@ noise approximation or agent-based Bayesian data augmentation.}
 stem_inference(stem_object, method, iterations, priors, kernel,
   t0_kernel = NULL, thin_params = 1,
   thin_latent_proc = ceiling(iterations/100), initialization_attempts = 500,
-  n_ess_updates = 1, messages = FALSE, monitor_MCMC = FALSE)
+  n_ess_updates = 1, messages = FALSE)
 }
 \arguments{
 \item{stem_object}{a stochastic epidemic model object containing the dataset,
@@ -49,11 +49,6 @@ ceiling(iterations/100) so that every 100th path will be saved}
 iteration (LNA)}
 
 \item{messages}{should status messages be printed? defaults to TRUE.}
-
-\item{monitor_MCMC}{should MCMC output be generated for the purposes of
-monitoring convergence (defaults to FALSE)? If so, the acceptance rate and
-the proposal covariance matrix (if adaptive RWMH is used) are printed
-whenever messages are printed.}
 }
 \value{
 list with posterior samples for the parameters and the latent
