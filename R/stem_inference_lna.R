@@ -115,6 +115,7 @@ stem_inference_lna <- function(stem_object,
                 init_volumes_prop    <- initdist_parameters
                 initdist_parameters  <- vols2concs(initdist_parameters)
                 initdist_params_prop <- initdist_parameters
+                names(init_volumes) <- names(init_volumes_prop) <- names(initdist_params_prop) <- names(initdist_parameters)
 
         } else {
                 initdist_parameters  <- NULL # vector of initial distribution parameters
@@ -130,8 +131,8 @@ stem_inference_lna <- function(stem_object,
         adaptive_rwmh  <- kernel_method == "mvn_adaptive"
 
         # ensure that the covariance matrix is specified in the same order as the parameters (not including initdist params)
-        param_names    <- names(parameters)[!names(parameters) %in% c(names(lna_initdist_inds), "t0")]
-        kernel_covmat  <- kernel_covmat[param_names, param_names]
+        param_names     <- names(parameters)[!names(parameters) %in% c(names(lna_initdist_inds), "t0")]
+        param_names_est <- colnames(kernel_covmat)
 
         # set up objects for sampling t0 if it is not fixed
         if(!t0_fixed) {
@@ -248,8 +249,7 @@ stem_inference_lna <- function(stem_object,
                         0.0,
                         nrow = 1 + floor(iterations / thin_params),
                         ncol = length(stem_object$dynamics$parameters) + !t0_fixed,
-                        dimnames = list(NULL,
-                                        paste0(c(names(model_params_est), t0_name, names(initdist_parameters)), "_est"))
+                        dimnames = list(NULL, c(param_names_est, t0_name, names(initdist_parameters)))
                 )
 
         latent_paths      <-
@@ -617,7 +617,7 @@ stem_inference_lna <- function(stem_object,
 
                 # Save the latent process if called for in this iteration
                 if(k %% thin_latent_proc == 0) {
-                        ess_record[,param_rec_ind-1] <- path$ess_record             # save the ESS record
+                        ess_record[,param_rec_ind-1] <- path$ess_record # save the ESS record
                         latent_paths[,,path_rec_ind] <- path$lna_path   # save the path
                         path_rec_ind <- path_rec_ind + 1                # increment the path record index
                 }
@@ -700,12 +700,17 @@ stem_inference_lna <- function(stem_object,
 
         MCMC_results <- cbind(MCMC_results, parameter_samples_nat, parameter_samples_est)
 
+        # coerce the ESS record to a vector if there is only one ESS update per iteration
+        if(n_ess_updates == 1) ess_record <- as.vector(ess_record)
+
         # return the results
         stem_object$dynamics$parameters <- c(model_params_nat, t0, init_volumes)
+        names(stem_object$dynamics$parameters) <- names(stem_object$dynamics$param_codes)
         stem_object$results <- list(time         = difftime(end.time, start.time, units = "hours"),
                                     acceptances  = acceptances,
                                     latent_paths = latent_paths,
-                                    MCMC_results = MCMC_results)
+                                    MCMC_results = MCMC_results,
+                                    ess_record   = ess_record)
 
         # save the settings
         stem_object$stem_settings <- list(iterations       = iterations,
