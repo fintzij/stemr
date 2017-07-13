@@ -84,6 +84,17 @@ stem_inference_lna <- function(stem_object,
                 estimation_scales     <- NULL
         }
 
+        # function for converting concentrations to volumes
+        if(n_strata == 1) {
+                comp_size_vec <- constants["popsize"]
+        } else {
+                strata_sizes  <- constants[paste0("popsize_", sapply(state_initializer,"[[","strata"))]
+                comp_size_vec <- strata_sizes[rep(1:n_strata, sapply(state_initializer, function(x) length(x$codes)))]
+        }
+
+        concs2vols <- function(concentrations, size_vec = comp_size_vec) concentrations*size_vec
+        vols2concs <- function(volumes, size_vec = comp_size_vec) volumes/size_vec
+
         # if the initial counts are not fixed, construct the initial distribution prior
         if(!fixed_inits) {
                 # function for computing the log prior density for the initial comparment counts
@@ -96,17 +107,6 @@ stem_inference_lna <- function(stem_object,
                                                                    n_strata            = n_strata,
                                                                    constants           = constants)
 
-                # function for converting concentrations to volumes
-                if(n_strata == 1) {
-                        comp_size_vec <- constants["popsize"]
-                } else {
-                        strata_sizes  <- constants[paste0("popsize_", sapply(state_initializer,"[[","strata"))]
-                        comp_size_vec <- strata_sizes[rep(1:n_strata, sapply(state_initializer, function(x) length(x$codes)))]
-                }
-
-                concs2vols <- function(concentrations, size_vec = comp_size_vec) concentrations*size_vec
-                vols2concs <- function(volumes, size_vec = comp_size_vec) volumes/size_vec
-
                 # vector for storing the log prior densities for the initial compartment counts
                 initdist_log_prior <- double(1 + floor(iterations / thin_params))
 
@@ -118,11 +118,15 @@ stem_inference_lna <- function(stem_object,
                 names(init_volumes) <- names(init_volumes_prop) <- names(initdist_params_prop) <- names(initdist_parameters)
 
         } else {
-                initdist_parameters  <- NULL # vector of initial distribution parameters
+                init_volumes         <- initdist_parameters # vector of initial compartment volumes
+                initdist_parameters  <- vols2concs(initdist_parameters) # vector of initial distribution parameters
+                names(init_volumes)  <- names(initdist_parameters)
+
+                initdist_params_prop <- NULL # vector for storing the proposed compartment counts
+                init_volumes_prop    <- NULL # vector of initial compartment volumes
                 initdist_prior       <- NULL # function for computing the prior
                 initdist_sampler     <- NULL # function for sampling new values
                 initdist_log_prior   <- NULL # vector for storing the log priors
-                initdist_params_prop <- NULL # vector for storing the proposed compartment counts
         }
 
         # get the objects for the MCMC kernel
