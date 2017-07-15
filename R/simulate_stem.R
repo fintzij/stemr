@@ -23,6 +23,9 @@
 #'   recorded. Required for \code{method = "lna"}. If supplied and \code{method
 #'   = "gillespie"}, the compartment counts at census times are returned rather
 #'   than the full paths.
+#' @param max_attempts maximum number of times to attempt simulating an LNA path
+#'   before aborting due to the moments of the path being degenerate at some
+#'   point
 #' @param messages should a message be printed when parsing the rates?
 #'
 #' @return Returns a list with the simulated paths, subject-level paths, and/or
@@ -52,6 +55,7 @@ simulate_stem <-
                  timestep = NULL,
                  census_times = NULL,
                  lna_path_type = "incidence",
+                 max_attempts = 100,
                  messages = TRUE) {
 
                 # ensure that the method is correctly specified
@@ -334,13 +338,18 @@ simulate_stem <-
                                         pars2lnapars(lna_pars, c(parameters, init_states[k,]))
                                 }
 
-                                census_paths[[k]] <- propose_lna(lna_times         = lna_times,
-                                                                 lna_pars          = lna_pars,
-                                                                 init_start        = stem_object$dynamics$lna_initdist_inds[1],
-                                                                 param_update_inds = param_update_inds,
-                                                                 stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
-                                                                 lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
-                                                                 set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)$lna_path
+                                for(j in 1:100) {
+                                        try({
+                                        census_paths[[k]] <- propose_lna(lna_times         = lna_times,
+                                                                         lna_pars          = lna_pars,
+                                                                         init_start        = stem_object$dynamics$lna_initdist_inds[1],
+                                                                         param_update_inds = param_update_inds,
+                                                                         stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
+                                                                         lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
+                                                                         set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)$lna_path
+                                        break
+                                        }, silent = TRUE)
+                                }
 
                                 lna_paths[[k]] <- lna_incid2prev(census_paths[[k]],
                                                               stem_object$dynamics$flow_matrix_lna,

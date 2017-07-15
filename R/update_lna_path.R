@@ -1,7 +1,6 @@
 #' Sample a new LNA path via elliptical slice sampling.
 #'
 #' @param path_cur list with the current LNA path along with its ODE paths
-#' @param propmat matrix in which to store the proposed N(0,1) draws
 #' @inheritParams initialize_lna
 #'
 #' @return list with an updated LNA path along with its stochastic
@@ -13,7 +12,6 @@ update_lna_path <-
         function(path_cur,
                  data,
                  lna_parameters,
-                 propmat,
                  pathmat,
                  censusmat,
                  emitmat,

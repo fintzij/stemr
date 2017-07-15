@@ -110,7 +110,8 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol) {
                                                  sys = LNA_odes,
                                                  sys_dim = n_rates + n_rates^2,
                                                  pars = n_params,
-                                                 method = "rk78_a",
+                                                 # method = "rk78_a",
+                                                 method = "bs",
                                                  rtol = rtol,
                                                  atol = atol,
                                                  globals = paste(paste(

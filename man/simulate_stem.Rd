@@ -7,7 +7,7 @@
 simulate_stem(stem_object, nsim = 1, paths = FALSE, observations = FALSE,
   subject_paths = FALSE, method = "gillespie", tmax = NULL,
   timestep = NULL, census_times = NULL, lna_path_type = "incidence",
-  messages = TRUE)
+  max_attempts = 100, messages = TRUE)
 }
 \arguments{
 \item{nsim}{number of realizations to simulate}
@@ -37,6 +37,10 @@ method="gillespie". If not supplied, \code{timestep} will default to
 recorded. Required for \code{method = "lna"}. If supplied and \code{method
 = "gillespie"}, the compartment counts at census times are returned rather
 than the full paths.}
+
+\item{max_attempts}{maximum number of times to attempt simulating an LNA path
+before aborting due to the moments of the path being degenerate at some
+point}
 
 \item{messages}{should a message be printed when parsing the rates?}
 

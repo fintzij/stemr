@@ -33,7 +33,29 @@
 #'
 #' @return LNA path along with its stochastic perturbations
 #' @export
-initialize_lna <- function(data, lna_parameters, censusmat, emitmat, stoich_matrix, lna_pointer, lna_set_pars_pointer, lna_times, lna_initdist_inds, param_update_inds, incidence_codes, census_incidence_codes, census_indices, measproc_indmat, obstime_inds, d_meas_pointer, parameters, constants, tcovar_censmat, do_prevalence, do_incidence, initialization_attempts) {
+initialize_lna <-
+        function(data,
+                 lna_parameters,
+                 censusmat,
+                 emitmat,
+                 stoich_matrix,
+                 lna_pointer,
+                 lna_set_pars_pointer,
+                 lna_times,
+                 lna_initdist_inds,
+                 param_update_inds,
+                 incidence_codes,
+                 census_incidence_codes,
+                 census_indices,
+                 measproc_indmat,
+                 obstime_inds,
+                 d_meas_pointer,
+                 parameters,
+                 constants,
+                 tcovar_censmat,
+                 do_prevalence,
+                 do_incidence,
+                 initialization_attempts) {
 
         path <- propose_lna(
                 lna_times            = lna_times,
@@ -119,8 +141,8 @@ initialize_lna <- function(data, lna_parameters, censusmat, emitmat, stoich_matr
                 stop("Initialization failed. Try different initial parameter values.")
         } else {
                 # path$lna_log_lik  = sum(dnorm(path$draws, log = TRUE)) # log-likelihood of the normal(0,1) draws - NOT NEEDED
-                path$data_log_lik = sum(emitmat[,-1][measproc_indmat]) # sum of log emission probabilities
                 path$lna_path_prop = path$lna_path # matrix for storing the LNA path for a proposed set of parameters
+                path$data_log_lik = sum(emitmat[,-1][measproc_indmat]) # sum of log emission probabilities
                 return(path)
         }
 }

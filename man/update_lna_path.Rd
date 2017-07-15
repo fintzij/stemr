@@ -4,8 +4,8 @@
 \alias{update_lna_path}
 \title{Sample a new LNA path via elliptical slice sampling.}
 \usage{
-update_lna_path(path_cur, data, lna_parameters, propmat, pathmat, censusmat,
-  emitmat, flow_matrix, stoich_matrix, lna_pointer, lna_set_pars_ptr, lna_times,
+update_lna_path(path_cur, data, lna_parameters, pathmat, censusmat, emitmat,
+  flow_matrix, stoich_matrix, lna_pointer, lna_set_pars_ptr, lna_times,
   lna_initdist_inds, param_update_inds, incidence_codes, census_incidence_codes,
   census_indices, measproc_indmat, obstime_inds, d_meas_pointer, parameters,
   constants, tcovar_censmat, do_prevalence, do_incidence, n_ess_updates)
@@ -17,8 +17,6 @@ update_lna_path(path_cur, data, lna_parameters, propmat, pathmat, censusmat,
 
 \item{lna_parameters}{parameters, contants, time-varying covariates at LNA
 times}
-
-\item{propmat}{matrix in which to store the proposed N(0,1) draws}
 
 \item{censusmat}{template matrix for the LNA path and incidence at the
 observation times}

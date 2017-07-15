@@ -89,7 +89,12 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix&
                 lna_diffusion = arma::symmatu(lna_diffusion);
 
                 // map the stochastic perturbation to the LNA path on its natural scale
-                log_lna = lna_drift + arma::chol(lna_diffusion, "lower") * draws.col(j);
+                try{
+                        log_lna = lna_drift + arma::chol(lna_diffusion, "lower") * draws.col(j);
+                } catch(std::runtime_error &err) {
+                        forward_exception_to_r(err);
+                }
+
                 nat_lna = arma::exp(log_lna) - 1;
 
                 // clamp the LNA increment below by 0

@@ -13,21 +13,21 @@
 construct_initdist_sampler_lna <- function(state_initializer, n_strata, constants) {
 
         if(n_strata == 1) {
-                initdist_prior_body <- paste0("extraDistr::rdirichlet(1, c(",
+                initdist_prior_body <- paste0("as.numeric(extraDistr::rdirichlet(1, c(",
                                               paste0(state_initializer$prior, collapse = ", "),
-                                              "))")
+                                              ")))")
 
                 initdist_prior <- eval(parse(text = paste0("function() {", initdist_prior_body,"}")))
 
         } else {
                 comp_inds    <- sapply(state_initializer, "[[", "codes")
                 out_order    <- order(comp_inds) # order in which the counts should be returned
-                initdist_prior_body <- paste0("extraDistr::rdirichlet(1, c(",
+                initdist_prior_body <- paste0("as.numeric(extraDistr::rdirichlet(1, c(",
                                               apply(sapply(state_initializer,"[[","prior"), 2, paste0, collapse = ", "),
-                                              "))")
+                                              ")))")
 
-                initdist_prior <- eval(parse(text = paste0("function() {c(",
-                                                           paste0(initdist_prior_body, collapse = ", "),")[c(",
+                initdist_prior <- eval(parse(text = paste0("function() {",
+                                                           paste0(initdist_prior_body, collapse = ", "),"[c(",
                                                            paste0(out_order, collapse = ", "),
                                                            ")]}")))
         }
