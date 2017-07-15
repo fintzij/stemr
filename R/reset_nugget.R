@@ -11,7 +11,7 @@
 reset_nugget <- function(nugget, parameter_samples_est, start, end, lna_initdist_inds) {
 
         if(start == end) {
-                new_nugget <- rep(nugget, length(estimation_scales))
+                new_nugget <- rep(nugget, sum(!(colnames(parameter_samples_est) %in% names(lna_initdist_inds))))
         } else {
                 # transform the samples
                 transformed_samples <- parameter_samples_est[start:end, -c(lna_initdist_inds+1), drop = FALSE]
