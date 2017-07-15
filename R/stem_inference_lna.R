@@ -517,7 +517,11 @@ stem_inference_lna <- function(stem_object,
 
                 # map the perturbations to an LNA path and compute the data log likelihood for the proposed parameters
                 # it is possible that, with the non-centered parameterization the draws result in a degenerate mapping
-                tryCatch({
+
+                # set the data log likelihood for the proposal to NULL
+                data_log_lik_prop <- NULL
+
+                try({
                         map_draws_2_lna(pathmat           = path$lna_path_prop,
                                         draws             = path$draws,
                                         lna_times         = lna_times,
@@ -555,10 +559,9 @@ stem_inference_lna <- function(stem_object,
                         # compute the data log likelihood
                         data_log_lik_prop <- sum(emitmat[,-1][measproc_indmat])
                         if(is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
-                }, error = function(e) {
-                        data_log_lik_prop <- -Inf
-                        }
-                )
+                }, silent = TRUE)
+
+                if(is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
 
                 # compute the log posterior for the proposed parameters
                 logpost_prop <- data_log_lik_prop + params_logprior_prop

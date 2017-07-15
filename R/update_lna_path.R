@@ -59,8 +59,11 @@ update_lna_path <-
                 # construct the first proposal
                 propmat <- cos(theta)*path_cur$draws + sin(theta)*draws_prop
 
+                # initialize the data log likelihood for the proposed path
+                data_log_lik_prop <- NULL
+
                 # map the perturbations to an LNA path
-                tryCatch({
+                try({
                         map_draws_2_lna(pathmat           = pathmat,
                                         draws             = propmat,
                                         lna_times         = lna_times,
@@ -97,10 +100,9 @@ update_lna_path <-
                         # compute the data log likelihood
                         data_log_lik_prop <- sum(emitmat[,-1][measproc_indmat])
                         if(is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
+                }, silent = TRUE)
 
-                }, error = function(e) {
-                        data_log_lik_prop <- -Inf
-                })
+                if(is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
 
                 # accept or reject the proposal
                 while((data_log_lik_prop < threshold) && !isTRUE(all.equal(lower, upper))) {
@@ -121,8 +123,12 @@ update_lna_path <-
                         # construct the next proposal
                         propmat <- cos(theta)*path_cur$draws + sin(theta)*draws_prop
 
+                        # initialize the data log likelihood for the proposed path
+                        data_log_lik_prop <- NULL
+
                         # map the perturbations to an LNA path
-                        tryCatch({
+                        try({
+
                                 map_draws_2_lna(pathmat           = pathmat,
                                                 draws             = propmat,
                                                 lna_times         = lna_times,
@@ -159,16 +165,18 @@ update_lna_path <-
                                 # compute the data log likelihood
                                 data_log_lik_prop <- sum(emitmat[,-1][measproc_indmat])
                                 if(is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
+                        }, silent = TRUE)
 
-                        }, error = function(e) {
-                                data_log_lik_prop <- -Inf
-                        })
+                        if(is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
                 }
 
-                # transfer the new path and residual path into the* sin(theta) path_prop list
-                path_cur$draws        <- propmat
-                path_cur$lna_path     <- pathmat
-                path_cur$data_log_lik <- data_log_lik_prop
+                # if the bracket width is not equal to zero, update the draws, path, and data log likelihood
+                if(!isTRUE(all.equal(lower, upper))) {
+                        # transfer the new path and residual path into the* sin(theta) path_prop list
+                        path_cur$draws        <- propmat
+                        path_cur$lna_path     <- pathmat
+                        path_cur$data_log_lik <- data_log_lik_prop
+                }
         }
 
         # path_cur$lna_log_lik <- sum(dnorm(path_cur$draws, log = TRUE)) # NOT NEEDED
