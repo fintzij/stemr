@@ -128,9 +128,6 @@ stem_inference_lna <- function(stem_object,
         kernel_covmat  <- MCMC_kernel$covmat
         adaptive_rwmh  <- kernel_method == "mvn_adaptive"
 
-        # ensure that the covariance matrix is specified in the same order as the parameters (not including initdist params)
-
-
         # extract the remaining MCMC_kernel arguments
         if(!adaptive_rwmh) {
 
