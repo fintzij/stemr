@@ -116,7 +116,7 @@ list with evaluated rate functions and objects for managing the
   \item{n_compartments}{number of compartments} \item{n_params}{number of
   model parameters} \item{n_tcovar}{number of time-varying covariates,
   including time} \item{n_consts}{number of constants in the model}
-  \item{.dynamics_args}{original arguments supplied to \code{stem_dynamics}}
+  \item{dynamics_args}{original arguments supplied to \code{stem_dynamics}}
   }
 }
 \description{

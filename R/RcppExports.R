@@ -11,7 +11,7 @@
 #' @return matrix containing the compartment counts at census times.
 #' @export
 build_census_path <- function(path, census_times, census_columns) {
-    .Call('stemr_build_census_path', PACKAGE = 'stemr', path, census_times, census_columns)
+    .Call('_stemr_build_census_path', PACKAGE = 'stemr', path, census_times, census_columns)
 }
 
 #' Evaluate the log-density of the measurement process by calling measurement
@@ -29,7 +29,7 @@ build_census_path <- function(path, census_times, census_columns) {
 #'
 #' @export
 CALL_D_MEASURE <- function(emitmat, emit_inds, record_ind, record, state, parameters, constants, tcovar, d_meas_ptr) {
-    invisible(.Call('stemr_CALL_D_MEASURE', PACKAGE = 'stemr', emitmat, emit_inds, record_ind, record, state, parameters, constants, tcovar, d_meas_ptr))
+    invisible(.Call('_stemr_CALL_D_MEASURE', PACKAGE = 'stemr', emitmat, emit_inds, record_ind, record, state, parameters, constants, tcovar, d_meas_ptr))
 }
 
 #' Compute the hazards by calling the hazard functions via external Xptr.
@@ -42,7 +42,7 @@ CALL_D_MEASURE <- function(emitmat, emit_inds, record_ind, record, state, parame
 #'
 #' @export
 CALL_INTEGRATE_STEM_LNA <- function(init, start, end, step_size, lna_ode_ptr) {
-    invisible(.Call('stemr_CALL_INTEGRATE_STEM_LNA', PACKAGE = 'stemr', init, start, end, step_size, lna_ode_ptr))
+    invisible(.Call('_stemr_CALL_INTEGRATE_STEM_LNA', PACKAGE = 'stemr', init, start, end, step_size, lna_ode_ptr))
 }
 
 #' Update rates by calling rate functions via Xptr.
@@ -57,7 +57,7 @@ CALL_INTEGRATE_STEM_LNA <- function(init, start, end, step_size, lna_ode_ptr) {
 #'
 #' @export
 CALL_RATE_FCN <- function(rates, inds, state, parameters, constants, tcovar, rate_ptr) {
-    invisible(.Call('stemr_CALL_RATE_FCN', PACKAGE = 'stemr', rates, inds, state, parameters, constants, tcovar, rate_ptr))
+    invisible(.Call('_stemr_CALL_RATE_FCN', PACKAGE = 'stemr', rates, inds, state, parameters, constants, tcovar, rate_ptr))
 }
 
 #' Simulate from the measurement process by calling measurement process
@@ -74,7 +74,7 @@ CALL_RATE_FCN <- function(rates, inds, state, parameters, constants, tcovar, rat
 #'
 #' @export
 CALL_R_MEASURE <- function(obsmat, emit_inds, record_ind, state, parameters, constants, tcovar, r_meas_ptr) {
-    invisible(.Call('stemr_CALL_R_MEASURE', PACKAGE = 'stemr', obsmat, emit_inds, record_ind, state, parameters, constants, tcovar, r_meas_ptr))
+    invisible(.Call('_stemr_CALL_R_MEASURE', PACKAGE = 'stemr', obsmat, emit_inds, record_ind, state, parameters, constants, tcovar, r_meas_ptr))
 }
 
 #' Compute the hazards by calling the hazard functions via external Xptr.
@@ -88,7 +88,7 @@ CALL_R_MEASURE <- function(obsmat, emit_inds, record_ind, state, parameters, con
 #'
 #' @export
 CALL_SET_LNA_PARAMS <- function(p, set_lna_params_ptr) {
-    invisible(.Call('stemr_CALL_SET_LNA_PARAMS', PACKAGE = 'stemr', p, set_lna_params_ptr))
+    invisible(.Call('_stemr_CALL_SET_LNA_PARAMS', PACKAGE = 'stemr', p, set_lna_params_ptr))
 }
 
 #' Construct a matrix containing the compartment counts and the incidence at a sequence of census times.
@@ -105,7 +105,7 @@ CALL_SET_LNA_PARAMS <- function(p, set_lna_params_ptr) {
 #' @return matrix containing the compartment counts at census times.
 #' @export
 census_lna <- function(path, census_path, census_inds, flow_matrix_lna, do_prevalence, init_state, incidence_codes_lna) {
-    invisible(.Call('stemr_census_lna', PACKAGE = 'stemr', path, census_path, census_inds, flow_matrix_lna, do_prevalence, init_state, incidence_codes_lna))
+    invisible(.Call('_stemr_census_lna', PACKAGE = 'stemr', path, census_path, census_inds, flow_matrix_lna, do_prevalence, init_state, incidence_codes_lna))
 }
 
 #' Difference an incidence variable in a census matrix.
@@ -118,7 +118,7 @@ census_lna <- function(path, census_path, census_inds, flow_matrix_lna, do_preva
 #' @return update the census matrix in place
 #' @export
 compute_incidence <- function(censusmat, col_inds, row_inds) {
-    invisible(.Call('stemr_compute_incidence', PACKAGE = 'stemr', censusmat, col_inds, row_inds))
+    invisible(.Call('_stemr_compute_incidence', PACKAGE = 'stemr', censusmat, col_inds, row_inds))
 }
 
 #' Convert an LNA path from the counting process on transition events to the
@@ -136,7 +136,33 @@ compute_incidence <- function(censusmat, col_inds, row_inds) {
 #'
 #' @export
 convert_lna2 <- function(path, flow_matrix, init_state, statemat) {
-    invisible(.Call('stemr_convert_lna2', PACKAGE = 'stemr', path, flow_matrix, init_state, statemat))
+    invisible(.Call('_stemr_convert_lna2', PACKAGE = 'stemr', path, flow_matrix, init_state, statemat))
+}
+
+#' Componentwise Metropolis random walk transition kernel
+#'
+#' @param params_prop vector in which the proposed parameters should be stored
+#' @param params_cur vector containing the current parameter vector
+#' @param ind C++ style index for the component index
+#' @param kernel_cov vector of component proposal standard deviations
+#'
+#' @return propose new parameter values in place
+#' @export
+c_rw_adaptive <- function(params_prop, params_cur, ind, kernel_cov, proposal_scaling, adaptations, nugget) {
+    invisible(.Call('_stemr_c_rw_adaptive', PACKAGE = 'stemr', params_prop, params_cur, ind, kernel_cov, proposal_scaling, adaptations, nugget))
+}
+
+#' Componentwise Metropolis random walk transition kernel
+#'
+#' @param params_prop vector in which the proposed parameters should be stored
+#' @param params_cur vector containing the current parameter vector
+#' @param ind C++ style index for the component index
+#' @param kernel_cov vector of component proposal standard deviations
+#'
+#' @return propose new parameter values in place
+#' @export
+c_rw <- function(params_prop, params_cur, ind, kernel_cov) {
+    invisible(.Call('_stemr_c_rw', PACKAGE = 'stemr', params_prop, params_cur, ind, kernel_cov))
 }
 
 #' Evaluate the log-density of the measurement process by calling measurement
@@ -155,7 +181,7 @@ convert_lna2 <- function(path, flow_matrix, init_state, statemat) {
 #'
 #' @export
 evaluate_d_measure <- function(emitmat, obsmat, statemat, measproc_indmat, parameters, constants, tcovar_censusmat, d_meas_ptr) {
-    invisible(.Call('stemr_evaluate_d_measure', PACKAGE = 'stemr', emitmat, obsmat, statemat, measproc_indmat, parameters, constants, tcovar_censusmat, d_meas_ptr))
+    invisible(.Call('_stemr_evaluate_d_measure', PACKAGE = 'stemr', emitmat, obsmat, statemat, measproc_indmat, parameters, constants, tcovar_censusmat, d_meas_ptr))
 }
 
 #' Simulate a stochastic epidemic model path via Gillespie's direct method and
@@ -180,7 +206,7 @@ evaluate_d_measure <- function(emitmat, obsmat, statemat, measproc_indmat, param
 #' @return matrix with a simulated path from a stochastic epidemic model.
 #' @export
 simulate_gillespie <- function(flow, parameters, constants, tcovar, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, rate_ptr) {
-    .Call('stemr_simulate_gillespie', PACKAGE = 'stemr', flow, parameters, constants, tcovar, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, rate_ptr)
+    .Call('_stemr_simulate_gillespie', PACKAGE = 'stemr', flow, parameters, constants, tcovar, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, rate_ptr)
 }
 
 #' Given a vector of interval endpoints \code{breaks}, determine in which
@@ -200,7 +226,7 @@ simulate_gillespie <- function(flow, parameters, constants, tcovar, init_states,
 #' @return matrix containing the compartment counts at census times.
 #' @export
 find_interval <- function(x, breaks, rightmost_closed, all_inside) {
-    .Call('stemr_find_interval', PACKAGE = 'stemr', x, breaks, rightmost_closed, all_inside)
+    .Call('_stemr_find_interval', PACKAGE = 'stemr', x, breaks, rightmost_closed, all_inside)
 }
 
 #' Compute the density of an LNA path, reintegrating only the drift and
@@ -225,7 +251,7 @@ find_interval <- function(x, breaks, rightmost_closed, all_inside) {
 #'   measurement process.
 #' @export
 lna_density2 <- function(path, lna_times, lna_pars, param_update_inds, flow_matrix, lna_pointer_ess, lna_ess_set_pars_ptr) {
-    .Call('stemr_lna_density2', PACKAGE = 'stemr', path, lna_times, lna_pars, param_update_inds, flow_matrix, lna_pointer_ess, lna_ess_set_pars_ptr)
+    .Call('_stemr_lna_density2', PACKAGE = 'stemr', path, lna_times, lna_pars, param_update_inds, flow_matrix, lna_pointer_ess, lna_ess_set_pars_ptr)
 }
 
 #' Compute the density of an LNA path, reintegrating all LNA ODEs (as required,
@@ -250,7 +276,7 @@ lna_density2 <- function(path, lna_times, lna_pars, param_update_inds, flow_matr
 #'   measurement process.
 #' @export
 lna_density <- function(path, lna_times, lna_pars, param_update_inds, flow_matrix, lna_pointer, set_pars_pointer) {
-    .Call('stemr_lna_density', PACKAGE = 'stemr', path, lna_times, lna_pars, param_update_inds, flow_matrix, lna_pointer, set_pars_pointer)
+    .Call('_stemr_lna_density', PACKAGE = 'stemr', path, lna_times, lna_pars, param_update_inds, flow_matrix, lna_pointer, set_pars_pointer)
 }
 
 #' Convert an LNA path from the counting process on transition events to the
@@ -267,7 +293,7 @@ lna_density <- function(path, lna_times, lna_pars, param_update_inds, flow_matri
 #'
 #' @export
 lna_incid2prev <- function(path, flow_matrix, init_state) {
-    .Call('stemr_lna_incid2prev', PACKAGE = 'stemr', path, flow_matrix, init_state)
+    .Call('_stemr_lna_incid2prev', PACKAGE = 'stemr', path, flow_matrix, init_state)
 }
 
 #' Map N(0,1) stochastic perturbations to an LNA path.
@@ -292,7 +318,7 @@ lna_incid2prev <- function(path, flow_matrix, init_state) {
 #'
 #' @export
 map_draws_2_lna <- function(pathmat, draws, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, lna_pointer, set_pars_pointer) {
-    invisible(.Call('stemr_map_draws_2_lna', PACKAGE = 'stemr', pathmat, draws, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, lna_pointer, set_pars_pointer))
+    invisible(.Call('_stemr_map_draws_2_lna', PACKAGE = 'stemr', pathmat, draws, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, lna_pointer, set_pars_pointer))
 }
 
 #' Produce samples from a multivariate normal density using the Cholesky
@@ -306,7 +332,7 @@ map_draws_2_lna <- function(pathmat, draws, lna_times, lna_pars, init_start, par
 #'
 #' @export
 rmvtn <- function(n, mu, sigma) {
-    .Call('stemr_rmvtn', PACKAGE = 'stemr', n, mu, sigma)
+    .Call('_stemr_rmvtn', PACKAGE = 'stemr', n, mu, sigma)
 }
 
 #' Multivariate normal density
@@ -320,11 +346,10 @@ rmvtn <- function(n, mu, sigma) {
 #'
 #' @export
 dmvtn <- function(x, mu, sigma, logd = FALSE) {
-    .Call('stemr_dmvtn', PACKAGE = 'stemr', x, mu, sigma, logd)
+    .Call('_stemr_dmvtn', PACKAGE = 'stemr', x, mu, sigma, logd)
 }
 
-#' Adaptive random walk Metropolis-Hastings transition kernel based on Roberts
-#' and Rosenthal (2009).
+#' Adaptive random walk Metropolis-Hastings with global adaptive scaling (Algorithm 4 of Andrieu and Thomas, 2008).
 #'
 #' @param params_prop vector in which the proposed parameters should be stored
 #' @param params_cur vector containing the current parameter vector
@@ -344,21 +369,21 @@ dmvtn <- function(x, mu, sigma, logd = FALSE) {
 #'
 #' @return propose new parameter values in place and modify scaling and/or the empirical covariance matrix in place
 #' @export
-mvn_adaptive <- function(params_prop, params_cur, covmat, empirical_covmat, param_means, scaling, iteration, acceptances, nugget, nugget_weight, adapt_scale, adapt_shape, scale_start, shape_start, target, scale_cooling, max_scaling) {
-    invisible(.Call('stemr_mvn_adaptive', PACKAGE = 'stemr', params_prop, params_cur, covmat, empirical_covmat, param_means, scaling, iteration, acceptances, nugget, nugget_weight, adapt_scale, adapt_shape, scale_start, shape_start, target, scale_cooling, max_scaling))
+mvn_g_adaptive <- function(params_prop, params_cur, covmat, empirical_covmat, param_means, scaling, iteration, acceptances, nugget, nugget_weight, adapt_scale, adapt_shape, scale_start, shape_start, target, scale_cooling, max_scaling) {
+    invisible(.Call('_stemr_mvn_g_adaptive', PACKAGE = 'stemr', params_prop, params_cur, covmat, empirical_covmat, param_means, scaling, iteration, acceptances, nugget, nugget_weight, adapt_scale, adapt_shape, scale_start, shape_start, target, scale_cooling, max_scaling))
 }
 
 #' Random walk Metropolis-Hastings transition kernel.
 #'
 #' @param params_prop vector in which the proposed parameters should be stored
 #' @param params_cur vector containing the current parameter vector
-#' @param cov_chol upper triangular portion of the Cholesky decomposition of
+#' @param sigma_chol upper triangular portion of the Cholesky decomposition of
 #'   the proposal covariance matrix
 #'
 #' @return propose new parameter values in place
 #' @export
-mvn_rw <- function(params_prop, params_cur, cov_chol) {
-    invisible(.Call('stemr_mvn_rw', PACKAGE = 'stemr', params_prop, params_cur, cov_chol))
+mvn_rw <- function(params_prop, params_cur, sigma_chol) {
+    invisible(.Call('_stemr_mvn_rw', PACKAGE = 'stemr', params_prop, params_cur, sigma_chol))
 }
 
 #' Identify which rates to update when a state transition event occurs.
@@ -369,7 +394,19 @@ mvn_rw <- function(params_prop, params_cur, cov_chol) {
 #' @return modifies the lna parameter matrix in place
 #' @export
 pars2lnapars <- function(lnapars, parameters) {
-    invisible(.Call('stemr_pars2lnapars', PACKAGE = 'stemr', lnapars, parameters))
+    invisible(.Call('_stemr_pars2lnapars', PACKAGE = 'stemr', lnapars, parameters))
+}
+
+#' Copy an element from one vector into another
+#'
+#' @param dest destination row vector
+#' @param orig origin row vector
+#' @param ind C++ style index for the element to be copied
+#'
+#' @return copy an element of one row vector into another.
+#' @export
+copy_elem <- function(dest, orig, ind) {
+    invisible(.Call('_stemr_copy_elem', PACKAGE = 'stemr', dest, orig, ind))
 }
 
 #' Copy the contents of one vector into another
@@ -380,18 +417,30 @@ pars2lnapars <- function(lnapars, parameters) {
 #' @return copy the elements of one row vector into another.
 #' @export
 copy_vec <- function(dest, orig) {
-    invisible(.Call('stemr_copy_vec', PACKAGE = 'stemr', dest, orig))
+    invisible(.Call('_stemr_copy_vec', PACKAGE = 'stemr', dest, orig))
 }
 
 #' Copy the contents of one matrix into another
 #'
-#' @param dest destination row vector
-#' @param orig origin row vector
+#' @param dest destination matrix
+#' @param orig origin matrix
 #'
 #' @return copy the elements of one matrix into another.
 #' @export
 copy_mat <- function(dest, orig) {
-    invisible(.Call('stemr_copy_mat', PACKAGE = 'stemr', dest, orig))
+    invisible(.Call('_stemr_copy_mat', PACKAGE = 'stemr', dest, orig))
+}
+
+#' Copy the contents of one matrix into another
+#'
+#' @param dest destination matrix
+#' @param orig origin matrix
+#' @param ind column index
+#'
+#' @return copy the elements of one matrix into another.
+#' @export
+copy_col <- function(dest, orig, ind) {
+    invisible(.Call('_stemr_copy_col', PACKAGE = 'stemr', dest, orig, ind))
 }
 
 #' Simulate an LNA path using a non-centered parameterization for the
@@ -415,7 +464,7 @@ copy_mat <- function(dest, orig) {
 #'
 #' @export
 propose_lna <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, lna_pointer, set_pars_pointer) {
-    .Call('stemr_propose_lna', PACKAGE = 'stemr', lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, lna_pointer, set_pars_pointer)
+    .Call('_stemr_propose_lna', PACKAGE = 'stemr', lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, lna_pointer, set_pars_pointer)
 }
 
 #' Identify which rates to update when a state transition event occurs.
@@ -427,7 +476,7 @@ propose_lna <- function(lna_times, lna_pars, init_start, param_update_inds, stoi
 #' @return modifies logical vector stating which rates need to be updated
 #' @export
 rate_update_event <- function(rate_inds, M, event_code) {
-    invisible(.Call('stemr_rate_update_event', PACKAGE = 'stemr', rate_inds, M, event_code))
+    invisible(.Call('_stemr_rate_update_event', PACKAGE = 'stemr', rate_inds, M, event_code))
 }
 
 #' Identify which rates to update based on changes in the time-varying covariates.
@@ -439,7 +488,7 @@ rate_update_event <- function(rate_inds, M, event_code) {
 #' @return logical vector stating which rates need to be updated
 #' @export
 rate_update_tcovar <- function(rate_inds, M, I) {
-    invisible(.Call('stemr_rate_update_tcovar', PACKAGE = 'stemr', rate_inds, M, I))
+    invisible(.Call('_stemr_rate_update_tcovar', PACKAGE = 'stemr', rate_inds, M, I))
 }
 
 #' Insert the compartment counts at a sequence of census times into an existing census matrix.
@@ -453,7 +502,7 @@ rate_update_tcovar <- function(rate_inds, M, I) {
 #' @return matrix containing the compartment counts at census times.
 #' @export
 retrieve_census_path <- function(censusmat, path, census_times, census_columns) {
-    invisible(.Call('stemr_retrieve_census_path', PACKAGE = 'stemr', censusmat, path, census_times, census_columns))
+    invisible(.Call('_stemr_retrieve_census_path', PACKAGE = 'stemr', censusmat, path, census_times, census_columns))
 }
 
 #' Transform the parameters from their natural scale to the estimation scale
@@ -469,7 +518,7 @@ retrieve_census_path <- function(censusmat, path, census_times, census_columns) 
 #'   values
 #' @export
 to_estimation_scale <- function(natural_params, scales) {
-    .Call('stemr_to_estimation_scale', PACKAGE = 'stemr', natural_params, scales)
+    .Call('_stemr_to_estimation_scale', PACKAGE = 'stemr', natural_params, scales)
 }
 
 #' Transform the parameters from estimation scales to their natural scales
@@ -484,7 +533,7 @@ to_estimation_scale <- function(natural_params, scales) {
 #'   scale transformation functions
 #' @export
 from_estimation_scale <- function(scaled_params, scales) {
-    .Call('stemr_from_estimation_scale', PACKAGE = 'stemr', scaled_params, scales)
+    .Call('_stemr_from_estimation_scale', PACKAGE = 'stemr', scaled_params, scales)
 }
 
 #' Simulate a data matrix from the measurement process of a stochastic epidemic
@@ -502,6 +551,6 @@ from_estimation_scale <- function(scaled_params, scales) {
 #' @return matrix with a simulated dataset from a stochastic epidemic model.
 #' @export
 simulate_r_measure <- function(censusmat, measproc_indmat, parameters, constants, tcovar, r_measure_ptr) {
-    .Call('stemr_simulate_r_measure', PACKAGE = 'stemr', censusmat, measproc_indmat, parameters, constants, tcovar, r_measure_ptr)
+    .Call('_stemr_simulate_r_measure', PACKAGE = 'stemr', censusmat, measproc_indmat, parameters, constants, tcovar, r_measure_ptr)
 }
 

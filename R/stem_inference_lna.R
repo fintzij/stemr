@@ -4,10 +4,10 @@
 #' @param stem_object stochastic epidemic model object with model dynamics, the
 #'   measurement process, and a dataset.
 #' @param iterations number of MCMC iterations
-#' @param kernel list containing the MCMC kernel method, proposal covariance
-#'   matrix, and an external pointer for the compiled MCMC kernel function
+#' @param MCMC_kernel list containing the MCMC_kernel method, proposal covariance
+#'   matrix, and an external pointer for the compiled MCMC_kernel function
 #' @param t0_kernel output of \link{\code{t0_kernel}}, specifying the RWMH
-#'   transition kernel for t0 and the truncated normal distribution prior.
+#'   transition MCMC_kernel for t0 and the truncated normal distribution prior.
 #' @param thin_params thinning interval for posterior parameter samples,
 #'   defaults to 1
 #' @param thin_latent_proc thinning interval for latent paths, defaults to
@@ -29,7 +29,7 @@
 stem_inference_lna <- function(stem_object,
                                iterations,
                                priors,
-                               kernel,
+                               MCMC_kernel,
                                t0_kernel,
                                thin_params,
                                thin_latent_proc,
@@ -102,14 +102,6 @@ stem_inference_lna <- function(stem_object,
                                                                    n_strata            = n_strata,
                                                                    constants           = constants)
 
-                # function for computing the log prior density for the initial comparment counts
-                # initdist_prior <- construct_initdist_prior_lna(state_initializer   = state_initializer,
-                #                                                n_strata            = n_strata,
-                #                                                constants           = constants)
-
-                # vector for storing the log prior densities for the initial compartment counts
-                # initdist_log_prior <- double(1 + floor(iterations / thin_params))
-
                 # initdist params come in as volumes, convert to concentrations
                 init_volumes_cur     <- initdist_params_cur
                 init_volumes_prop    <- initdist_params_cur
@@ -118,43 +110,28 @@ stem_inference_lna <- function(stem_object,
                 names(init_volumes_cur) <- names(init_volumes_prop) <- names(initdist_params_prop) <- names(initdist_params_cur)
 
         } else {
+
                 init_volumes_cur         <- initdist_params_cur # vector of initial compartment volumes
                 initdist_params_cur      <- vols2concs(initdist_params_cur) # vector of initial distribution parameters
                 names(init_volumes_cur)  <- names(initdist_params_cur)
-
-                initdist_params_prop <- NULL # vector for storing the proposed compartment counts
-                init_volumes_prop    <- NULL # vector of initial compartment volumes
-                # initdist_prior       <- NULL # function for computing the prior
-                initdist_sampler     <- NULL # function for sampling new values
-                # initdist_log_prior   <- NULL # vector for storing the log priors
+                initdist_params_prop     <- NULL # vector for storing the proposed compartment counts
+                init_volumes_prop        <- NULL # vector of initial compartment volumes
+                initdist_sampler         <- NULL # function for sampling new values
         }
 
-        # get the objects for the MCMC kernel
-        kernel_method  <- kernel$method
-        kernel_covmat  <- kernel$covmat
+        # grab the names of parameters on their natural and estimation scales
+        param_names_nat <- names(parameters)[!names(parameters) %in% c(names(lna_initdist_inds), "t0")]
+        param_names_est <- colnames(MCMC_kernel$sigma)
+
+        # get the objects for the MCMC_kernel
+        kernel_method  <- MCMC_kernel$method
+        kernel_covmat  <- MCMC_kernel$covmat
         adaptive_rwmh  <- kernel_method == "mvn_adaptive"
 
         # ensure that the covariance matrix is specified in the same order as the parameters (not including initdist params)
-        param_names     <- names(parameters)[!names(parameters) %in% c(names(lna_initdist_inds), "t0")]
-        param_names_est <- colnames(kernel_covmat)
 
-        # set up objects for sampling t0 if it is not fixed
-        if(!t0_fixed) {
-                t0_name      <- names(stem_object$dynamics$t0)
-                t0_prop      <- double(1)
-                t0_log_prior <- double(1 + floor(iterations / thin_params))
 
-                # set the truncation points for the t0 kernel if not fixed
-                t0_kernel$upper <- min(t0_kernel$upper, min(stem_object$measurement_process$obstimes))
-                t0_kernel$lower <- max(t0_kernel$lower, -Inf)
-        } else {
-                t0           <- NULL
-                t0_prop      <- NULL
-                t0_log_prior <- NULL
-                t0_name      <- NULL
-        }
-
-        # extract the remaining kernel arguments
+        # extract the remaining MCMC_kernel arguments
         if(!adaptive_rwmh) {
 
                 # cache the cholesky decomposition
@@ -165,14 +142,14 @@ stem_inference_lna <- function(stem_object,
         } else if(adaptive_rwmh) {
 
                 # unpack the settings for adaptive RWMH
-                scale_start      <- kernel$kernel_settings$scale_start
-                scale_cooling    <- kernel$kernel_settings$scale_cooling
-                max_scaling      <- kernel$kernel_settings$max_scaling
-                shape_start      <- kernel$kernel_settings$shape_start
-                target           <- kernel$kernel_settings$target
-                nugget_weight    <- kernel$kernel_settings$nugget_weight
-                nugget           <- kernel$kernel_settings$nugget
-                opt_scaling      <- 2.38^2 / length(param_names)
+                scale_start      <- MCMC_kernel$kernel_settings$scale_start
+                scale_cooling    <- MCMC_kernel$kernel_settings$scale_cooling
+                max_scaling      <- MCMC_kernel$kernel_settings$max_scaling
+                shape_start      <- MCMC_kernel$kernel_settings$shape_start
+                target           <- MCMC_kernel$kernel_settings$target
+                nugget_weight    <- MCMC_kernel$kernel_settings$nugget_weight
+                nugget           <- MCMC_kernel$kernel_settings$nugget
+                opt_scaling      <- 2.38^2 / length(param_names_nat)
 
                 if(length(scale_start) == 0) {
                         scale_start    <- iterations + 2
@@ -187,12 +164,12 @@ stem_inference_lna <- function(stem_object,
                 if(length(shape_start) == 0) {
                         shape_start <- iterations + 2
                         adapt_shape <- FALSE
-                        param_means <- double(length(param_names))
+                        param_means <- double(length(param_names_nat))
                         empirical_covmat <- matrix(0.0, length(param_means), length(param_means))
 
                 } else {
                         adapt_shape <- TRUE
-                        param_means <- double(length(param_names))
+                        param_means <- double(length(param_names_nat))
                         empirical_covmat <- matrix(0.0, length(param_means), length(param_means))
                 }
 
@@ -207,21 +184,37 @@ stem_inference_lna <- function(stem_object,
                 if(adapt_shape) proposal_covariances[,,1] <- kernel_covmat
         }
 
+        # set up objects for sampling t0 if it is not fixed
+        if(!t0_fixed) {
+                t0_name      <- names(stem_object$dynamics$t0)
+                t0_prop      <- double(1)
+                t0_log_prior <- double(1 + floor(iterations / thin_params))
+
+                # set the truncation points for the t0 MCMC_kernel if not fixed
+                t0_kernel$upper <- min(t0_kernel$upper, min(stem_object$measurement_process$obstimes))
+                t0_kernel$lower <- max(t0_kernel$lower, -Inf)
+        } else {
+                t0           <- NULL
+                t0_prop      <- NULL
+                t0_log_prior <- NULL
+                t0_name      <- NULL
+        }
+
         # vectors for storing the model parameters on their natural and estimation scales
         # model_params_nat -- model parameters on their natural scales
         # model_params_est -- model parameters on their estimation scales
         # lna_params_cur -- matrix containing all model parameters (including initial count params) for all LNA times
-        model_params_nat <- parameters[param_names]
+        model_params_nat <- parameters[param_names_nat]
         model_params_est <- to_estimation_scale(model_params_nat, estimation_scales)
 
         # create analogous vectors for storing the proposed parameter values
-        params_prop_nat  <- double(length(param_names))
-        params_prop_est  <- double(length(param_names))
-        names(params_prop_est) <- names(params_prop_nat) <- param_names
+        params_prop_nat  <- double(length(param_names_nat))
+        params_prop_est  <- double(length(param_names_nat))
+        names(params_prop_est) <- names(params_prop_nat) <- param_names_nat
 
         # generate other derived objects
         lna_times         <- sort(unique(c(obstimes,
-                                           stem_object$dynamics$.dynamics_args$tcovar[,1],
+                                           stem_object$dynamics$dynamics_args$tcovar[,1],
                                            stem_object$dynamics$t0,
                                            stem_object$dynamics$tmax)))
         n_times           <- length(lna_times)
@@ -258,9 +251,9 @@ stem_inference_lna <- function(stem_object,
 
         # insert time varying covariates
         if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
-                tcovar_rowinds                <- findInterval(lna_times, stem_object$dynamics$.dynamics_args$tcovar[,1])
-                lna_params_cur[, tcovar_inds] <- stem_object$dynamics$.dynamics_args$tcovar[tcovar_rowinds,-1]
-                lna_params_prop[,tcovar_inds] <- stem_object$dynamics$.dynamics_args$tcovar[tcovar_rowinds,-1]
+                tcovar_rowinds                <- findInterval(lna_times, stem_object$dynamics$dynamics_args$tcovar[,1])
+                lna_params_cur[, tcovar_inds] <- stem_object$dynamics$dynamics_args$tcovar[tcovar_rowinds,-1]
+                lna_params_prop[,tcovar_inds] <- stem_object$dynamics$dynamics_args$tcovar[tcovar_rowinds,-1]
         }
 
         # matrix in which to store the emission probabilities
@@ -337,19 +330,14 @@ stem_inference_lna <- function(stem_object,
                 t0_logprior_cur <- extraDistr:::cpp_dtnorm(x        = t0,
                                                            mu       = t0_kernel$mean,
                                                            sigma    = t0_kernel$sd,
-                                                           a        = t0_kernel$lower,
-                                                           b        = t0_kernel$upper,
+                                                           lower    = t0_kernel$lower,
+                                                           upper    = t0_kernel$upper,
                                                            log_prob = TRUE)
                 t0_log_prior[1] <- t0_logprior_cur
         }
 
-        # if(!fixed_inits) {
-        #         initdist_logprior_cur <- initdist_prior(initdist_params_cur)
-        #         initdist_log_prior[1] <- initdist_logprior_cur
-        # }
 
         # save the initial path, data log-likelihood, lna log-likelihood, and prior log-likelihood
-        acceptances           <- 0
         path_rec_ind          <- 2 # index for recording the latent paths
         param_rec_ind         <- 2 # index for recording the parameters
         parameter_samples_nat[1,] <- c(model_params_nat, t0, initdist_params_cur)
@@ -509,7 +497,6 @@ stem_inference_lna <- function(stem_object,
                 if(!fixed_inits) {
                         initdist_params_prop    <- initdist_sampler() # sample new initial compartment concentrations
                         init_volumes_prop       <- concs2vols(initdist_params_prop) # convert to volumes
-                        # initdist_logprior_prop  <- initdist_prior(initdist_params_prop) # log density of the new counts - not necessary
                 }
 
                 # Insert the proposed parameters into the parameter proposal matrix
@@ -581,7 +568,6 @@ stem_inference_lna <- function(stem_object,
 
                         ### ACCEPTANCE
                         acceptances         <- acceptances + 1                  # increment acceptances
-                        # path$lna_path       <- path$lna_path_prop               # update the LNA path - NO NEED
                         path$data_log_lik   <- data_log_lik_prop                # save the data log likelihood
                         params_logprior_cur <- params_logprior_prop             # update LNA parameter prior log density
                         copy_mat(lna_params_cur, lna_params_prop)               # update LNA parameter matrix
@@ -592,7 +578,6 @@ stem_inference_lna <- function(stem_object,
                         if(!fixed_inits) {
                                 initdist_params_cur <- initdist_params_prop   # update initial distribution params
                                 init_volumes_cur    <- init_volumes_prop      # update initial volumes
-                                # initdist_logprior_cur <- initdist_logprior_prop # update initial dist log prior
                         }
 
                         # update t0 and its log prior if it is not fixed
@@ -621,12 +606,10 @@ stem_inference_lna <- function(stem_object,
                 if(k %% thin_params == 0) {
 
                         # Save the lna log likelihood, data log likelihood, and log priors
-                        # lna_log_lik[param_rec_ind]      <- path$lna_log_lik # NOT NEEDED
                         data_log_lik[param_rec_ind]     <- path$data_log_lik
                         params_log_prior[param_rec_ind] <- params_logprior_cur
 
                         if(!t0_fixed)    t0_log_prior[param_rec_ind]       <- t0_logprior_cur
-                        # if(!fixed_inits) initdist_log_prior[param_rec_ind] <- initdist_logprior_cur
 
                         # Store the parameter sample
                         parameter_samples_nat[param_rec_ind, ] <- c(model_params_nat, t0, initdist_params_cur)
@@ -714,9 +697,8 @@ stem_inference_lna <- function(stem_object,
                                           n_ess_updates    = n_ess_updates,
                                           priors           = priors,
                                           prior_density    = prior_density,
-                                          kernel           = kernel,
+                                          MCMC_kernel           = MCMC_kernel,
                                           t0_kernel        = t0_kernel,
-                                          # initdist_prior   = initdist_prior,
                                           initdist_sampler = initdist_sampler)
 
 

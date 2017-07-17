@@ -115,6 +115,7 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol) {
                                                  rtol = rtol,
                                                  atol = atol,
                                                  globals = paste(paste(
+                                                         "\n",
                                                          paste0("static arma::vec Z(", n_rates,",arma::fill::zeros);"),
                                                          paste0("static arma::vec exp_Z(", n_rates,",arma::fill::zeros);"),
                                                          paste0("static arma::vec exp_neg_Z(", n_rates,",arma::fill::zeros);"),
@@ -148,7 +149,7 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol) {
         }
 
         if(load_file) {
-                LNA_code <- readChar(compile_lna, nchar = 1e6)
+                LNA_code <- readChar(compile_lna, nchars = 1e6)
         }
 
         if(compile_code) {

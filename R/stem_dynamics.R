@@ -84,7 +84,7 @@
 #'   \item{n_compartments}{number of compartments} \item{n_params}{number of
 #'   model parameters} \item{n_tcovar}{number of time-varying covariates,
 #'   including time} \item{n_consts}{number of constants in the model}
-#'   \item{.dynamics_args}{original arguments supplied to \code{stem_dynamics}}
+#'   \item{dynamics_args}{original arguments supplied to \code{stem_dynamics}}
 #'   }
 #'
 #' @export
@@ -172,7 +172,7 @@ stem_dynamics <-
         }
 
         # create a hidden list of user supplied arguments prior to processing
-        .dynamics_args <- list(rates             = rates,
+        dynamics_args <- list(rates             = rates,
                                parameters        = parameters,
                                state_initializer = state_initializer,
                                compartments      = compartments,
@@ -890,7 +890,7 @@ stem_dynamics <-
                          n_params            = n_params,
                          n_tcovar            = n_tcovar,
                          n_consts            = n_consts,
-                         .dynamics_args      = .dynamics_args)
+                         dynamics_args       = dynamics_args)
 
         return(dynamics)
 }

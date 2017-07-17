@@ -116,7 +116,7 @@ simulate_stem <-
                                 }
 
                                 # rebuild the time-varying covariate matrix so that it contains the census intervals
-                                stem_object$dynamics$tcovar <- build_tcovar_matrix(tcovar = stem_object$dynamics$.dynamics_args$tcovar,
+                                stem_object$dynamics$tcovar <- build_tcovar_matrix(tcovar = stem_object$dynamics$dynamics_args$tcovar,
                                                                                    timestep = timestep, t0 = t0, tmax = tmax)
                                 stem_object$dynamics$tcovar_codes        <- seq_len(ncol(stem_object$dynamics$tcovar) - 1)
                                 names(stem_object$dynamics$tcovar_codes) <- colnames(stem_object$dynamics$tcovar)[2:ncol(stem_object$dynamics$tcovar)]
@@ -264,7 +264,7 @@ simulate_stem <-
                 } else if (method == "lna") {
 
                         # set the vectors of times when the LNA is evaluated and censused
-                        lna_times <- sort(unique(c(t0, census_times, stem_object$dynamics$.dynamics_args$tcovar[,1], tmax)))
+                        lna_times <- sort(unique(c(t0, census_times, stem_object$dynamics$dynamics_args$tcovar[,1], tmax)))
 
                         # generate the matrix of parameters, constants, and time-varying covariates
                         lna_pars  <- matrix(0.0,
@@ -283,9 +283,9 @@ simulate_stem <-
                                                              nrow = nrow(lna_pars),
                                                              ncol = length(constant_inds), byrow = T)
 
-                        if(!is.null(stem_object$dynamics$.dynamics_args$tcovar)) {
-                                tcovar_rowinds          <- findInterval(lna_times, stem_object$dynamics$.dynamics_args$tcovar[,1])
-                                lna_pars[, tcovar_inds] <- stem_object$dynamics$.dynamics_args$tcovar[tcovar_rowinds,-1]
+                        if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
+                                tcovar_rowinds          <- findInterval(lna_times, stem_object$dynamics$dynamics_args$tcovar[,1])
+                                lna_pars[, tcovar_inds] <- stem_object$dynamics$dynamics_args$tcovar[tcovar_rowinds,-1]
                         }
 
                         # generate some auxilliary objects

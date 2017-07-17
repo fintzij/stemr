@@ -5,8 +5,7 @@
 using namespace Rcpp;
 using namespace arma;
 
-//' Adaptive random walk Metropolis-Hastings transition kernel based on Roberts
-//' and Rosenthal (2009).
+//' Adaptive random walk Metropolis-Hastings with global adaptive scaling (Algorithm 4 of Andrieu and Thomas, 2008).
 //'
 //' @param params_prop vector in which the proposed parameters should be stored
 //' @param params_cur vector containing the current parameter vector
@@ -27,7 +26,7 @@ using namespace arma;
 //' @return propose new parameter values in place and modify scaling and/or the empirical covariance matrix in place
 //' @export
 // [[Rcpp::export]]
-void mvn_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& covmat, arma::mat& empirical_covmat,
+void mvn_g_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& covmat, arma::mat& empirical_covmat,
                   arma::rowvec& param_means, arma::vec& scaling, const double iteration, const double acceptances,
                   const arma::rowvec& nugget, const double nugget_weight, const bool adapt_scale, const bool adapt_shape,
                   const int scale_start, const int shape_start, const double target, const double scale_cooling,
@@ -51,6 +50,10 @@ void mvn_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, con
 
         } else if(adapt_shape && acceptances > shape_start) {
 
+                // make the proposal using the empirical covariance matrix
+                params_prop = nugget_weight*(params_cur + nugget % arma::randn(1, params_cur.n_elem)) +
+                        (1-nugget_weight)*(params_cur+arma::randn(1,params_cur.n_elem)*arma::chol(scaling[0]*empirical_covmat,"upper"));
+
                 // adapt the covariance scale toward the target acceptance rate.
                 // N.B. 0 < scale_cooling < 1 so the finite adaptation criterion is satisfied
                 double scale_factor = scaling[0] * exp(pow(scale_cooling, iteration - scale_start) * (acceptances / iteration - target));
@@ -60,10 +63,6 @@ void mvn_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, con
                 } else {
                         scaling[0] = max_scaling;
                 }
-
-                // make the proposal using the empirical covariance matrix
-                params_prop = nugget_weight*(params_cur + nugget % arma::randn(1, params_cur.n_elem)) +
-                        (1-nugget_weight)*(params_cur+arma::randn(1,params_cur.n_elem)*arma::chol(scaling[0]*empirical_covmat,"upper"));
 
         } else {
                 // make the proposal using the supplied covariance matrix
