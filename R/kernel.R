@@ -9,9 +9,13 @@
 #' @param sigma vector of variances or variance-covariance matrix for random
 #'   walk proposals, with names or rows and columns corresponding to the names
 #'   of parameters on their estimation scales.
+#' @param scale_constant constant multiple of the adaptations determined by
+#'   \code{scale_cooling}.
 #' @param scale_cooling rate at which to cool the adaptation, defaults to 0.5.
 #'   Adaptation contributions are governed by a harmonic sequence:
-#'   1/iteration^scale_cooling.
+#'   scale_constant/(iteration+1)^scale_cooling. The
+#'   \link{\code{plot_adaptations}} function may be used to plot the adaptation
+#'   factors.
 #' @param max_scaling maximum scale factor, defaults to 50.
 #' @param target_g target acceptance rate for global Metropolis proposals.
 #' @param target_c target acceptance rate for componentwise Metropolis proposals
@@ -36,6 +40,7 @@
 kernel <-
         function(method = "c_rw",
                  sigma,
+                 scale_constant = 0.5,
                  scale_cooling = 0.5,
                  max_scaling = 50,
                  target_g = 0.234,
@@ -59,6 +64,10 @@ kernel <-
                 stop("The scale cooling rate must be between 0 and 1.")
         }
 
+        if(scale_constant <= 0) {
+                stop("The scale constant must be positive.")
+        }
+
         if(!is.null(nugget) && (nugget < 0 || nugget > 1)) {
                 stop("The nugget must be between 0 and 1.")
         }
@@ -69,7 +78,8 @@ kernel <-
                 nugget <- rep(nugget, nrow(sigma))
         }
 
-        kernel_settings <- list(scale_cooling = scale_cooling,
+        kernel_settings <- list(scale_constant = scale_constant,
+                                scale_cooling = scale_cooling,
                                 max_scaling   = as.numeric(max_scaling),
                                 target_g      = target_g,
                                 target_c      = target_c,

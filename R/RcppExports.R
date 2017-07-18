@@ -14,35 +14,6 @@ build_census_path <- function(path, census_times, census_columns) {
     .Call('_stemr_build_census_path', PACKAGE = 'stemr', path, census_times, census_columns)
 }
 
-#' Componentwise Metropolis random walk transition kernel
-#'
-#' @param params_prop vector in which the proposed parameters should be stored
-#' @param params_cur vector containing the current parameter vector
-#' @param ind C++ style index for the component index
-#' @param kernel_cov vector of component proposal standard deviations
-#'
-#' @return propose new parameter values in place
-#' @export
-c_rw <- function(params_prop, params_cur, ind, kernel_cov) {
-    invisible(.Call('_stemr_c_rw', PACKAGE = 'stemr', params_prop, params_cur, ind, kernel_cov))
-}
-
-#' Componentwise Metropolis random walk transition kernel with componentwise
-#'   adaptive scaling
-#'
-#' @param params_prop vector in which the proposed parameters should be stored
-#' @param params_cur vector containing the current parameter vector
-#' @param ind C++ style index for the component index
-#' @param kernel_cov vector of component proposal standard deviations
-#' @param proposal_scaling vector of scaling factors
-#' @param nugget vector of fixed variance nugget contributions
-#'
-#' @return propose new parameter values in place
-#' @export
-c_rw_adaptive <- function(params_prop, params_cur, ind, kernel_cov, proposal_scaling, nugget) {
-    invisible(.Call('_stemr_c_rw_adaptive', PACKAGE = 'stemr', params_prop, params_cur, ind, kernel_cov, proposal_scaling, nugget))
-}
-
 #' Evaluate the log-density of the measurement process by calling measurement
 #' process density functions via external Xptr.
 #'
@@ -74,6 +45,21 @@ CALL_INTEGRATE_STEM_LNA <- function(init, start, end, step_size, lna_ode_ptr) {
     invisible(.Call('_stemr_CALL_INTEGRATE_STEM_LNA', PACKAGE = 'stemr', init, start, end, step_size, lna_ode_ptr))
 }
 
+#' Update rates by calling rate functions via Xptr.
+#'
+#' @param rates vector of rates to be modified
+#' @param inds logical vector of indices of rates to be modified
+#' @param state numeric vector of comaprtment counts
+#' @param parameters numeric vector of parameter values
+#' @param constants numeric vector of constants
+#' @param tcovar numeric vector of time-varying covariate values
+#' @param rate_ptr external pointer to rate function
+#'
+#' @export
+CALL_RATE_FCN <- function(rates, inds, state, parameters, constants, tcovar, rate_ptr) {
+    invisible(.Call('_stemr_CALL_RATE_FCN', PACKAGE = 'stemr', rates, inds, state, parameters, constants, tcovar, rate_ptr))
+}
+
 #' Simulate from the measurement process by calling measurement process
 #' functions via external Xptr.
 #'
@@ -89,21 +75,6 @@ CALL_INTEGRATE_STEM_LNA <- function(init, start, end, step_size, lna_ode_ptr) {
 #' @export
 CALL_R_MEASURE <- function(obsmat, emit_inds, record_ind, state, parameters, constants, tcovar, r_meas_ptr) {
     invisible(.Call('_stemr_CALL_R_MEASURE', PACKAGE = 'stemr', obsmat, emit_inds, record_ind, state, parameters, constants, tcovar, r_meas_ptr))
-}
-
-#' Update rates by calling rate functions via Xptr.
-#'
-#' @param rates vector of rates to be modified
-#' @param inds logical vector of indices of rates to be modified
-#' @param state numeric vector of comaprtment counts
-#' @param parameters numeric vector of parameter values
-#' @param constants numeric vector of constants
-#' @param tcovar numeric vector of time-varying covariate values
-#' @param rate_ptr external pointer to rate function
-#'
-#' @export
-CALL_RATE_FCN <- function(rates, inds, state, parameters, constants, tcovar, rate_ptr) {
-    invisible(.Call('_stemr_CALL_RATE_FCN', PACKAGE = 'stemr', rates, inds, state, parameters, constants, tcovar, rate_ptr))
 }
 
 #' Compute the hazards by calling the hazard functions via external Xptr.
@@ -166,6 +137,35 @@ compute_incidence <- function(censusmat, col_inds, row_inds) {
 #' @export
 convert_lna2 <- function(path, flow_matrix, init_state, statemat) {
     invisible(.Call('_stemr_convert_lna2', PACKAGE = 'stemr', path, flow_matrix, init_state, statemat))
+}
+
+#' Componentwise Metropolis random walk transition kernel with componentwise
+#'   adaptive scaling
+#'
+#' @param params_prop vector in which the proposed parameters should be stored
+#' @param params_cur vector containing the current parameter vector
+#' @param ind C++ style index for the component index
+#' @param kernel_cov vector of component proposal standard deviations
+#' @param proposal_scaling vector of scaling factors
+#' @param nugget vector of fixed variance nugget contributions
+#'
+#' @return propose new parameter values in place
+#' @export
+c_rw_adaptive <- function(params_prop, params_cur, ind, kernel_cov, proposal_scaling, nugget) {
+    invisible(.Call('_stemr_c_rw_adaptive', PACKAGE = 'stemr', params_prop, params_cur, ind, kernel_cov, proposal_scaling, nugget))
+}
+
+#' Componentwise Metropolis random walk transition kernel
+#'
+#' @param params_prop vector in which the proposed parameters should be stored
+#' @param params_cur vector containing the current parameter vector
+#' @param ind C++ style index for the component index
+#' @param kernel_cov vector of component proposal standard deviations
+#'
+#' @return propose new parameter values in place
+#' @export
+c_rw <- function(params_prop, params_cur, ind, kernel_cov) {
+    invisible(.Call('_stemr_c_rw', PACKAGE = 'stemr', params_prop, params_cur, ind, kernel_cov))
 }
 
 #' Evaluate the log-density of the measurement process by calling measurement
@@ -244,31 +244,6 @@ g_prop2c_prop <- function(g2c_mat, params_cur, params_prop) {
     invisible(.Call('_stemr_g_prop2c_prop', PACKAGE = 'stemr', g2c_mat, params_cur, params_prop))
 }
 
-#' Compute the density of an LNA path, reintegrating all LNA ODEs (as required,
-#' e.g. after updating the parameters).
-#'
-#' @param path list containing the lna_path, and the drift, residual, and
-#'   diffusion processes.
-#' @param lna_times vector of times at which the LNA must be evaluated
-#' @param lna_pars numeric matrix of parameters, constants, and time-varying
-#'   covariates at each of the lna_times
-#' @param param_update_inds logical vector indicating at which of the times the
-#'   LNA parameters need to be updated.
-#' @param flow_matrix original flow matrix giving the changes to compartments
-#'   from each reaction
-#' @param lna_pointer external pointer to LNA integration fcn
-#' @param set_pars_pointer external pointer to the function for setting the LNA
-#'   parameters.
-#'
-#' @return List containing the LNA path, the path of the residual
-#'   process, the drift process, the residual process (conditional means), and
-#'   diffusion process, along with the log density of the LNA path and the
-#'   measurement process.
-#' @export
-lna_density <- function(path, lna_times, lna_pars, param_update_inds, flow_matrix, lna_pointer, set_pars_pointer) {
-    .Call('_stemr_lna_density', PACKAGE = 'stemr', path, lna_times, lna_pars, param_update_inds, flow_matrix, lna_pointer, set_pars_pointer)
-}
-
 #' Compute the density of an LNA path, reintegrating only the drift and
 #' residual ODEs (sufficient after elliptical slice sampling).
 #'
@@ -292,6 +267,31 @@ lna_density <- function(path, lna_times, lna_pars, param_update_inds, flow_matri
 #' @export
 lna_density2 <- function(path, lna_times, lna_pars, param_update_inds, flow_matrix, lna_pointer_ess, lna_ess_set_pars_ptr) {
     .Call('_stemr_lna_density2', PACKAGE = 'stemr', path, lna_times, lna_pars, param_update_inds, flow_matrix, lna_pointer_ess, lna_ess_set_pars_ptr)
+}
+
+#' Compute the density of an LNA path, reintegrating all LNA ODEs (as required,
+#' e.g. after updating the parameters).
+#'
+#' @param path list containing the lna_path, and the drift, residual, and
+#'   diffusion processes.
+#' @param lna_times vector of times at which the LNA must be evaluated
+#' @param lna_pars numeric matrix of parameters, constants, and time-varying
+#'   covariates at each of the lna_times
+#' @param param_update_inds logical vector indicating at which of the times the
+#'   LNA parameters need to be updated.
+#' @param flow_matrix original flow matrix giving the changes to compartments
+#'   from each reaction
+#' @param lna_pointer external pointer to LNA integration fcn
+#' @param set_pars_pointer external pointer to the function for setting the LNA
+#'   parameters.
+#'
+#' @return List containing the LNA path, the path of the residual
+#'   process, the drift process, the residual process (conditional means), and
+#'   diffusion process, along with the log density of the LNA path and the
+#'   measurement process.
+#' @export
+lna_density <- function(path, lna_times, lna_pars, param_update_inds, flow_matrix, lna_pointer, set_pars_pointer) {
+    .Call('_stemr_lna_density', PACKAGE = 'stemr', path, lna_times, lna_pars, param_update_inds, flow_matrix, lna_pointer, set_pars_pointer)
 }
 
 #' Convert an LNA path from the counting process on transition events to the

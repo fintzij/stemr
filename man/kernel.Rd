@@ -4,8 +4,9 @@
 \alias{kernel}
 \title{Specify an MCMC transition kernel for updating the model parameters.}
 \usage{
-kernel(method = "c_rw", sigma, scale_cooling = 0.5, max_scaling = 50,
-  target_g = 0.234, target_c = 0.44, nugget = 0.01, messages = TRUE)
+kernel(method = "c_rw", sigma, scale_constant = 0.5, scale_cooling = 0.5,
+  max_scaling = 50, target_g = 0.234, target_c = 0.44, nugget = 0.01,
+  messages = TRUE)
 }
 \arguments{
 \item{method}{algorithm to be used in generating parameter updates, see
@@ -15,9 +16,14 @@ details below.}
 walk proposals, with names or rows and columns corresponding to the names
 of parameters on their estimation scales.}
 
+\item{scale_constant}{constant multiple of the adaptations determined by
+\code{scale_cooling}.}
+
 \item{scale_cooling}{rate at which to cool the adaptation, defaults to 0.5.
 Adaptation contributions are governed by a harmonic sequence:
-1/iteration^scale_cooling.}
+scale_constant/(iteration+1)^scale_cooling. The
+\link{\code{plot_adaptations}} function may be used to plot the adaptation
+factors.}
 
 \item{max_scaling}{maximum scale factor, defaults to 50.}
 
