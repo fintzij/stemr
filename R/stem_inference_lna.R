@@ -177,7 +177,7 @@ stem_inference_lna <- function(stem_object,
 
                 # MCMC objects
                 acceptances_c    <- rep(0.0, n_model_params)
-                adaptations      <- seq_len(iterations)^-mcmc_kernel$kernel_settings$scale_cooling
+                adaptations      <- seq_len(iterations+1)^-mcmc_kernel$kernel_settings$scale_cooling
                 proposal_scaling <- rep(1.0, n_model_params)
                 nugget           <- mcmc_kernel$kernel_settings$nugget
                 max_scaling      <- mcmc_kernel$kernel_settings$max_scaling
@@ -201,7 +201,7 @@ stem_inference_lna <- function(stem_object,
 
                 # MCMC objects
                 acceptances_g    <- 0.0
-                adaptations      <- seq_len(iterations)^-mcmc_kernel$kernel_settings$scale_cooling
+                adaptations      <- seq_len(iterations+1)^-mcmc_kernel$kernel_settings$scale_cooling
                 proposal_scaling <- 1
                 nugget           <- mcmc_kernel$kernel_settings$nugget[1]
                 max_scaling      <- mcmc_kernel$kernel_settings$max_scaling
@@ -227,7 +227,7 @@ stem_inference_lna <- function(stem_object,
                 # MCMC objects
                 acceptances_g    <- 0.0
                 acceptances_c    <- rep(0.0, n_model_params)
-                adaptations      <- seq_len(iterations)^-mcmc_kernel$kernel_settings$scale_cooling
+                adaptations      <- seq_len(iterations+1)^-mcmc_kernel$kernel_settings$scale_cooling
                 proposal_scaling <- rep(1.0, n_model_params)
                 sqrt_scalemat    <- diag(1.0, n_model_params)
                 nugget           <- mcmc_kernel$kernel_settings$nugget
@@ -382,7 +382,6 @@ stem_inference_lna <- function(stem_object,
                 t0_log_prior[1] <- t0_logprior_cur
         }
 
-
         # save the initial path, data log-likelihood, lna log-likelihood, and prior log-likelihood
         path_rec_ind          <- 2 # index for recording the latent paths
         param_rec_ind         <- 2 # index for recording the parameters
@@ -527,7 +526,7 @@ stem_inference_lna <- function(stem_object,
                                 if(acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
 
                                         ### ACCEPTANCE
-                                        acceptances_c[s]      <- acceptances_c[s] + 1    # increment acceptances
+                                        acceptances_c[s]    <- acceptances_c[s] + 1    # increment acceptances
 
                                         path$data_log_lik   <- data_log_lik_prop     # save the data log likelihood
                                         params_logprior_cur <- params_logprior_prop  # update LNA parameter prior log density
@@ -723,12 +722,12 @@ stem_inference_lna <- function(stem_object,
 
                                 # Adapt the proposal kernel
                                 proposal_scaling[s] <-
-                                        min(proposal_scaling[s]*exp(adaptations[iter-1]*(acceptances_c[s]/(iter-1) - target_c)),
+                                        min(proposal_scaling[s]*exp(adaptations[iter]*(acceptances_c[s]/(iter-1) - target_c)),
                                             max_scaling)
 
                                 kernel_resid[s] <- model_params_est[s] - kernel_mean[s]
-                                kernel_cov[s]   <- kernel_cov[s] + adaptations[iter-1] * (kernel_resid[s]^2 - kernel_cov[s])
-                                kernel_mean[s]  <- kernel_mean[s] + adaptations[iter-1] * kernel_resid[s]
+                                kernel_cov[s]   <- kernel_cov[s] + adaptations[iter] * (kernel_resid[s]^2 - kernel_cov[s])
+                                kernel_mean[s]  <- kernel_mean[s] + adaptations[iter] * kernel_resid[s]
                         }
 
                 } else if(mcmc_kernel$method == "mvn_c_adaptive") {
@@ -902,14 +901,14 @@ stem_inference_lna <- function(stem_object,
 
                                 # Adapt the proposal scalings
                                 proposal_scaling[s] <-
-                                        min(proposal_scaling[s]*exp(adaptations[iter-1]*(acceptances_c[s]/(iter-1) - target_c)),
+                                        min(proposal_scaling[s]*exp(adaptations[iter]*(acceptances_c[s]/(iter-1) - target_c)),
                                             max_scaling)
                         }
 
                         # Adapt the proposal kernel
                         kernel_resid <- model_params_est - kernel_mean
-                        kernel_cov   <- kernel_cov + adaptations[iter-1] * (kernel_resid%o%kernel_resid - kernel_cov)
-                        kernel_mean  <- kernel_mean + adaptations[iter-1] * kernel_resid
+                        kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid%*%t(kernel_resid) - kernel_cov)
+                        kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
 
                 } else if(mcmc_kernel$method == "mvn_g_adaptive") {
 
@@ -1001,12 +1000,12 @@ stem_inference_lna <- function(stem_object,
 
                         # Adapt the proposal kernel
                         proposal_scaling <-
-                                min(proposal_scaling * exp(adaptations[iter-1]*(acceptances_g/(iter-1) - target_g)),
+                                min(proposal_scaling * exp(adaptations[iter]*(acceptances_g/(iter-1) - target_g)),
                                     max_scaling)
 
                         kernel_resid <- model_params_est - kernel_mean
-                        kernel_cov   <- kernel_cov + adaptations[iter-1] * (kernel_resid%o%kernel_resid - kernel_cov)
-                        kernel_mean  <- kernel_mean + adaptations[iter-1] * kernel_resid
+                        kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid%*%t(kernel_resid) - kernel_cov)
+                        kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
                 }
 
                 # Propose and Accept-reject initial state/time
@@ -1239,13 +1238,13 @@ stem_inference_lna <- function(stem_object,
 
         } else if(mcmc_kernel$method == "c_rw_adaptive") {
                 stem_object$results$acceptances_c     = acceptances_c
-                stem_object$results$adaptation_record = list(adaptation_scale_record = adaptation_scale_record,
+                stem_object$results$adaptation_record = list(adaptation_scale_record = t(adaptation_scale_record),
                                                              adaptation_shape_record = adaptation_shape_record)
 
         } else if(mcmc_kernel$method == "mvn_c_adaptive") {
                 stem_object$results$acceptances_g = acceptances_g
                 stem_object$results$acceptances_c = acceptances_c
-                stem_object$results$adaptation_record = list(adaptation_scale_record = adaptation_scale_record,
+                stem_object$results$adaptation_record = list(adaptation_scale_record = t(adaptation_scale_record),
                                                              adaptation_shape_record = adaptation_shape_record)
 
         } else if(mcmc_kernel$method == "mvn_g_adaptive") {
