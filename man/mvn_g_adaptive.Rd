@@ -2,46 +2,24 @@
 % Please edit documentation in R/RcppExports.R
 \name{mvn_g_adaptive}
 \alias{mvn_g_adaptive}
-\title{Adaptive random walk Metropolis-Hastings with global adaptive scaling (Algorithm 4 of Andrieu and Thomas, 2008).}
+\title{Global Metropolis random walk with global adaptive scaling}
 \usage{
-mvn_g_adaptive(params_prop, params_cur, covmat, empirical_covmat, param_means,
-  scaling, iteration, acceptances, nugget, nugget_weight, adapt_scale,
-  adapt_shape, scale_start, shape_start, target, scale_cooling, max_scaling)
+mvn_g_adaptive(params_prop, params_cur, kernel_cov, proposal_scaling, nugget)
 }
 \arguments{
 \item{params_prop}{vector in which the proposed parameters should be stored}
 
 \item{params_cur}{vector containing the current parameter vector}
 
-\item{covmat}{proposal covariance matrix}
+\item{kernel_cov}{vector of component proposal standard deviations}
 
-\item{empirical_covmat}{empirical covariance matrix}
+\item{proposal_scaling}{scaling parameter for the proposal}
 
-\item{param_means}{sample means of each of the parameters}
-
-\item{scaling}{scale factor}
-
-\item{iteration}{MCMC iteration number}
-
-\item{acceptances}{number of acceptances}
-
-\item{nugget}{adaptive RWMH nugget distribution}
-
-\item{nugget_weight}{adaptive RWMH nugget contribution}
-
-\item{scale_start}{iteration at which to begin scaling the supplied covariance matrix}
-
-\item{shape_start}{iteration at which to begin estimating the empirical covariance matrix}
-
-\item{target}{target acceptance rate when varying the scale}
-
-\item{scale_cooling}{scale cooling rate}
-
-\item{max_scaling}{maximum scale factor}
+\item{nugget}{fixed covariance nugget contribution}
 }
 \value{
-propose new parameter values in place and modify scaling and/or the empirical covariance matrix in place
+propose new parameter values in place
 }
 \description{
-Adaptive random walk Metropolis-Hastings with global adaptive scaling (Algorithm 4 of Andrieu and Thomas, 2008).
+Global Metropolis random walk with global adaptive scaling
 }

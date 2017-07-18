@@ -5,7 +5,7 @@
 \title{Approximate Bayesian inference for a stochastic epidemic model via the linear
 noise approximation.}
 \usage{
-stem_inference_lna(stem_object, iterations, priors, MCMC_kernel, t0_kernel,
+stem_inference_lna(stem_object, iterations, priors, mcmc_kernel, t0_kernel,
   thin_params, thin_latent_proc, initialization_attempts = 500,
   n_ess_updates = 1, messages)
 }
@@ -15,16 +15,28 @@ measurement process, and a dataset.}
 
 \item{iterations}{number of MCMC iterations}
 
-\item{priors}{either a list of priors, each of which is constructed using the
-\code{prior} function, or a list of functions for computing the prior
-density as well as transforming parameters to and from their estimation
-scales}
+\item{priors}{a list of named functions for computing the prior density as
+well as transforming parameters to and from their estimation scales. The
+functions should have the following names: "prior_density",
+"to_estimation_scale", "from_estimation_scale". The prior_density function
+must take two vectors as arguments, the model parameters (excluding initial
+compartment volumes and t0) on their natural scales, and the model
+parameters on their estimation scales. The functions for converting between
+parameter scales should take vector of parameters as an argument, returning
+a transformed vector (the function call has the form:
+\code{transformed_vector <- conversion_function(original_vector)}).
+Alternately, the conversion functions may be supplied with two arguments
+passed by reference, the first of which is assumed to be the original
+vector, and the second which is the transformed vector that will be
+modified in place (this case, the function call has the form
+\code{conversion_function(original_vector, transformed_vector)}.}
 
-\item{MCMC_kernel}{list containing the MCMC_kernel method, proposal covariance
-matrix, and an external pointer for the compiled MCMC_kernel function}
+\item{mcmc_kernel}{list containing the mcmc_kernel method, proposal
+covariance matrix, and an external pointer for the compiled mcmc_kernel
+function}
 
 \item{t0_kernel}{output of \link{\code{t0_kernel}}, specifying the RWMH
-transition MCMC_kernel for t0 and the truncated normal distribution prior.}
+transition mcmc_kernel for t0 and the truncated normal distribution prior.}
 
 \item{thin_params}{thinning interval for posterior parameter samples,
 defaults to 1}
@@ -35,11 +47,11 @@ ceiling(iterations/100)}
 \item{initialization_attempts}{number of attempts to initialize the latent
 path before breaking.}
 
-\item{n_ess_updates}{number of elliptical slice sampling updates per iteration}
+\item{n_ess_updates}{number of elliptical slice sampling updates per
+iteration}
 
 \item{messages}{should status messages be generated in an external text file?
-If so, the iteration number is printed every 1000th iteration. defaults to
-TRUE.}
+If so, the iteration number is printed whenever the latent process is saved.}
 }
 \value{
 list with parameter posterior samples and MCMC diagnostics

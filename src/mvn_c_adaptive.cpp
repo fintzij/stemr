@@ -15,15 +15,17 @@ using namespace arma;
 //' @return propose new parameter values in place
 //' @export
 // [[Rcpp::export]]
-void mvn_g_adaptive(arma::rowvec& params_prop,
+void mvn_c_adaptive(arma::rowvec& params_prop,
                     const arma::rowvec& params_cur,
                     const arma::mat& kernel_cov,
-                    double proposal_scaling,
+                    const arma::vec& proposal_scaling,
+                    arma::mat& sqrt_scalemat,
                     double nugget) {
 
         int par_dim = params_cur.n_elem;
+        sqrt_scalemat.diag() = arma::sqrt(proposal_scaling);
 
         params_prop = params_cur + nugget * arma::randn(1, par_dim) +
-                (1 - nugget) * proposal_scaling * arma::randn(1, par_dim) * arma::chol(kernel_cov, "upper");
+                (1 - nugget) * arma::randn(1, par_dim) * arma::chol(sqrt_scalemat * kernel_cov * sqrt_scalemat, "upper");
 
 }

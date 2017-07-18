@@ -24,17 +24,10 @@ void CALL_R_MEASURE(Rcpp::NumericMatrix& obsmat, const Rcpp::LogicalVector& emit
                     const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar, SEXP r_meas_ptr);
 
 // integrate the LNA odes, call via XPtr
-// Rcpp::NumericVector CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector init, double start, double end, double step_size, SEXP lna_ode_ptr);
 void CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr);
 
 // set the LNA parameters, call via XPtr
 void CALL_SET_LNA_PARAMS(Rcpp::NumericVector& p, SEXP set_lna_params_ptr);
-
-// integrate the stem odes
-// void CALL_INTEGRATE_STEM_ODE(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr);
-
-// set the ODE parameters, call via XPtr
-// void CALL_SET_ODE_PARAMS(Rcpp::NumericVector& p, SEXP set_ode_params_ptr);
 
 // update rates based on transition events or changes in time-varying covariates
 void rate_update_tcovar(Rcpp::LogicalVector& rate_inds, const arma::mat& M, const arma::rowvec I);
@@ -65,22 +58,20 @@ Rcpp::IntegerVector find_interval(Rcpp::NumericVector& x, Rcpp::NumericVector& b
 arma::mat rmvtn(int n, const arma::rowvec& mu, const arma::mat& sigma);
 arma::vec dmvtn(const arma::mat& x, const arma::rowvec& mu, const arma::mat& sigma, bool logd = false);
 
-// functions for converting parameters between their estimation and natural scales
-void to_estimation_scale(Rcpp::NumericVector& natural_params, Rcpp::NumericVector& scaled_params, Rcpp::CharacterVector& scales);
-void from_estimation_scale(Rcpp::NumericVector& natural_params, Rcpp::NumericVector& scaled_params, Rcpp::CharacterVector& scales);
-
 // MCMC transition kernel functions
-void mvn_rw(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& cov_chol);
-void mvn_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& covmat, arma::mat& empirical_covmat,
-                  arma::rowvec& param_means, arma::vec& scaling, const double iteration, const double acceptances,
-                  const arma::rowvec& nugget, const double nugget_weight, const bool adapt_scale, const bool adapt_shape,
-                  const int scale_start, const int shape_start, const double target, const double scale_cooling,
-                  const double max_scaling, const double opt_scaling);
+void c_rw(arma::rowvec& params_prop, const arma::rowvec& params_cur, int ind, const arma::vec& kernel_cov);
+void c_rw_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, int ind, const arma::vec& kernel_cov, const arma::vec& proposal_scaling, const arma::vec& nugget);
+void mvn_rw(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& sigma_chol);
+void mvn_g_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& kernel_cov, double proposal_scaling, double nugget);
+void mvn_c_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& kernel_cov, const arma::vec& proposal_scaling, arma::mat& sqrt_scalemat, double nugget);
 
 // copy functions
+void copy_elem(arma::rowvec& dest, const arma::rowvec& orig, int ind);
+void copy_col(arma::mat& dest, const arma::mat& orig, int ind);
 void copy_vec(arma::rowvec& dest, const arma::rowvec& orig);
 void copy_mat(arma::mat& dest, const arma::mat& orig);
 void pars2lnapars(arma::mat& lnapars, const arma::rowvec& parameters);
+void g_prop2c_prop(arma::mat& g2c_mat, const arma::rowvec& params_cur, const arma::rowvec& params_prop);
 
 // convert the lna from the counting process on transition events to its natural state space
 arma::mat convert_lna(const arma::mat& path, const arma::mat& flow_matrix, const arma::rowvec& init_state);

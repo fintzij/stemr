@@ -43,7 +43,7 @@ kernel <-
                  nugget = 0.01,
                  messages = TRUE) {
 
-        if(!method %in% c("c_rw", "mvn_rw", "c_rw_adaptive", "mvn_rw_c_adaptive", "mvn_rw_g_adaptive")) {
+        if(!method %in% c("c_rw", "mvn_rw", "c_rw_adaptive", "mvn_c_adaptive", "mvn_g_adaptive")) {
                 stop("The method for the MCMC kernel is not correctly specified.")
         }
 
@@ -63,8 +63,9 @@ kernel <-
                 stop("The nugget must be between 0 and 1.")
         }
 
-        if(method == "c_rw_adaptive" && length(nugget) != nrow(sigma) && messages) {
-                warning("The same nugget contribution will be used for all components, which may not be appropriate.")
+        if(method == "c_rw_adaptive" && length(nugget) != nrow(sigma)) {
+                if(messages) warning("The same nugget contribution will be used for all components, which may not be appropriate.")
+
                 nugget <- rep(nugget, nrow(sigma))
         }
 

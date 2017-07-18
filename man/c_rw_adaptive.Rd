@@ -2,10 +2,11 @@
 % Please edit documentation in R/RcppExports.R
 \name{c_rw_adaptive}
 \alias{c_rw_adaptive}
-\title{Componentwise Metropolis random walk transition kernel}
+\title{Componentwise Metropolis random walk transition kernel with componentwise
+  adaptive scaling}
 \usage{
 c_rw_adaptive(params_prop, params_cur, ind, kernel_cov, proposal_scaling,
-  adaptations, nugget)
+  nugget)
 }
 \arguments{
 \item{params_prop}{vector in which the proposed parameters should be stored}
@@ -15,10 +16,15 @@ c_rw_adaptive(params_prop, params_cur, ind, kernel_cov, proposal_scaling,
 \item{ind}{C++ style index for the component index}
 
 \item{kernel_cov}{vector of component proposal standard deviations}
+
+\item{proposal_scaling}{vector of scaling factors}
+
+\item{nugget}{vector of fixed variance nugget contributions}
 }
 \value{
 propose new parameter values in place
 }
 \description{
-Componentwise Metropolis random walk transition kernel
+Componentwise Metropolis random walk transition kernel with componentwise
+  adaptive scaling
 }
