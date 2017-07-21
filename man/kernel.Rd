@@ -5,7 +5,7 @@
 \title{Specify an MCMC transition kernel for updating the model parameters.}
 \usage{
 kernel(method = "c_rw", sigma, scale_constant = 0.5, scale_cooling = 0.5,
-  max_scaling = 50, target_g = 0.234, target_c = 0.44, nugget = 0.01,
+  max_scaling = Inf, target_g = 0.234, target_c = 0.44, nugget = 0.01,
   messages = TRUE)
 }
 \arguments{
@@ -25,7 +25,7 @@ scale_constant/(iteration+1)^scale_cooling. The
 \link{\code{plot_adaptations}} function may be used to plot the adaptation
 factors.}
 
-\item{max_scaling}{maximum scale factor, defaults to 50.}
+\item{max_scaling}{maximum scale factor, defaults to Inf.}
 
 \item{target_g}{target acceptance rate for global Metropolis proposals.}
 

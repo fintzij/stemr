@@ -100,9 +100,6 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix&
                 // clamp the LNA increment below by 0
                 nat_lna.elem(arma::find(nat_lna < 0)).zeros();
 
-                // save the new state
-                lna_path(arma::span(1,n_events),j+1) = nat_lna;
-
                 // update the parameters if they need to be updated
                 if(param_update_inds[j+1]) {
                         current_params = lna_pars.row(j+1);
@@ -111,6 +108,10 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix&
                 // update the cumulative incidence, compartment volumes, and the parameter vector
                 c_incid += nat_lna;
                 init_volumes = init_state + stoich_matrix * c_incid;
+
+                // save the new state
+                // lna_path(arma::span(1,n_events),j+1) = nat_lna;
+                lna_path(arma::span(1,n_events), j+1) = c_incid;
 
                 // clamp the compartment volumes below by 0
                 init_volumes.elem(arma::find(init_volumes < 0)).zeros();

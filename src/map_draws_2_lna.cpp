@@ -98,9 +98,6 @@ void map_draws_2_lna(arma::mat& pathmat, const arma::mat& draws,
                 // clamp the LNA increment below by 0
                 nat_lna.elem(arma::find(nat_lna < 0)).zeros();
 
-                // save the new state
-                pathmat(j+1, arma::span(1,n_events)) = nat_lna.t();
-
                 // update the parameters if they need to be updated
                 if(param_update_inds[j+1]) {
                         current_params = lna_pars.row(j+1);
@@ -109,6 +106,10 @@ void map_draws_2_lna(arma::mat& pathmat, const arma::mat& draws,
                 // update the cumulative incidence, compartment volumes, and the parameter vector
                 c_incid += nat_lna;
                 init_volumes = init_state + stoich_matrix * c_incid;
+
+                // save the new state
+                // pathmat(j+1, arma::span(1,n_events)) = nat_lna.t();
+                pathmat(j+1, arma::span(1, n_events)) = c_incid.t();
 
                 // clamp the compartment volumes below by 0
                 init_volumes.elem(arma::find(init_volumes < 0)).zeros();

@@ -28,7 +28,6 @@
 #' @param constants vector of model constants
 #' @param tcovar_censmat time-varying covariates at LNA times
 #' @param do_prevalence should prevalence be computed?
-#' @param do_incidence should incidence be computed?
 #' @param initialization_attempts number of initialization attempts
 #'
 #' @return LNA path along with its stochastic perturbations
@@ -42,6 +41,10 @@ initialize_lna <-
                  lna_pointer,
                  lna_set_pars_pointer,
                  lna_times,
+                 lna_params_temp,
+                 lna_param_inds,
+                 lna_const_inds,
+                 lna_tcovar_inds,
                  lna_initdist_inds,
                  param_update_inds,
                  incidence_codes,
@@ -50,13 +53,13 @@ initialize_lna <-
                  measproc_indmat,
                  obstime_inds,
                  d_meas_pointer,
-                 parameters,
-                 constants,
-                 tcovar_censmat,
                  do_prevalence,
-                 do_incidence,
                  initialization_attempts) {
 
+        # get the initial state parameters
+        init_state <- lna_parameters[1, lna_initdist_inds + 1]
+
+        # propose a new LNA path
         path <- propose_lna(
                 lna_times            = lna_times,
                 lna_pars             = lna_parameters,
@@ -66,9 +69,6 @@ initialize_lna <-
                 lna_pointer          = lna_pointer,
                 set_pars_pointer     = lna_set_pars_pointer
         )
-
-        # get the initial state parameters
-        init_state <- lna_parameters[1, lna_initdist_inds + 1]
 
         # census the LNA
         census_lna(
@@ -82,15 +82,19 @@ initialize_lna <-
         )
 
         # evaluate the density of the incidence counts
-        evaluate_d_measure(
-                emitmat          = emitmat,
-                obsmat           = data,
-                statemat         = censusmat,
-                measproc_indmat  = measproc_indmat,
-                parameters       = parameters,
-                constants        = constants,
-                tcovar_censusmat = tcovar_censmat,
-                d_meas_ptr       = d_meas_pointer
+        evaluate_d_measure_LNA(
+                emitmat           = emitmat,
+                obsmat            = data,
+                censusmat         = censusmat,
+                measproc_indmat   = measproc_indmat,
+                lna_parameters    = lna_parameters,
+                lna_params_temp   = lna_params_temp,
+                lna_param_inds    = lna_param_inds,
+                lna_const_inds    = lna_const_inds,
+                lna_tcovar_inds   = lna_tcovar_inds,
+                param_update_inds = param_update_inds,
+                census_indices    = census_indices,
+                d_meas_ptr        = d_meas_pointer
         )
 
         attempt    <- 1
@@ -114,23 +118,26 @@ initialize_lna <-
                         path                = path$lna_path,
                         census_path         = censusmat,
                         census_inds         = census_indices,
-                        flow_matrix_lna     = t(flow_matrix),
+                        flow_matrix_lna     = t(stoich_matrix),
                         do_prevalence       = do_prevalence,
                         init_state          = init_state,
                         incidence_codes_lna = incidence_codes
                 )
 
                 # evaluate the density of the incidence counts
-                evaluate_d_measure(
-                        emitmat          = emitmat,
-                        obsmat           = data,
-                        statemat         = censusmat,
-                        measproc_indmat  = measproc_indmat,
-                        parameters       = parameters,
-                        constants        = constants,
-                        tcovar_censusmat = tcovar_censmat,
-                        d_meas_ptr       = d_meas_pointer
-
+                evaluate_d_measure_LNA(
+                        emitmat           = emitmat,
+                        obsmat            = data,
+                        censusmat         = censusmat,
+                        measproc_indmat   = measproc_indmat,
+                        lna_parameters    = lna_parameters,
+                        lna_params_temp   = lna_params_temp,
+                        lna_param_inds    = lna_param_inds,
+                        lna_const_inds    = lna_const_inds,
+                        lna_tcovar_inds   = lna_tcovar_inds,
+                        param_update_inds = param_update_inds,
+                        census_indices    = census_indices,
+                        d_meas_ptr        = d_meas_pointer
                 )
 
                 attempt <- attempt + 1
@@ -140,9 +147,7 @@ initialize_lna <-
         if(keep_going) {
                 stop("Initialization failed. Try different initial parameter values.")
         } else {
-                # path$lna_log_lik  = sum(dnorm(path$draws, log = TRUE)) # log-likelihood of the normal(0,1) draws - NOT NEEDED
-                path$lna_path_prop = path$lna_path # matrix for storing the LNA path for a proposed set of parameters
-                path$data_log_lik = sum(emitmat[,-1][measproc_indmat]) # sum of log emission probabilities
+                path$data_log_lik <- sum(emitmat[,-1][measproc_indmat]) # sum of log emission probabilities
                 return(path)
         }
 }

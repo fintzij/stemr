@@ -16,7 +16,8 @@
 #' @param initialization_attempts number of attempts to initialize the latent
 #'   path before breaking.
 #' @param messages should status messages be generated in an external text file?
-#'   If so, the iteration number is printed whenever the latent process is saved.
+#'   If so, the iteration number is printed whenever the latent process is
+#'   saved.
 #' @param priors a list of named functions for computing the prior density as
 #'   well as transforming parameters to and from their estimation scales. The
 #'   functions should have the following names: "prior_density",
@@ -28,10 +29,10 @@
 #'   a transformed vector (the function call has the form:
 #'   \code{transformed_vector <- conversion_function(original_vector)}).
 #'   Alternately, the conversion functions may be supplied with two arguments
-#'   passed by reference, the first of which is assumed to be the original
-#'   vector, and the second which is the transformed vector that will be
-#'   modified in place (this case, the function call has the form
-#'   \code{conversion_function(original_vector, transformed_vector)}.
+#'   passed by reference, the first of which is assumed to be the transformed
+#'   vector that will be modified in place (i.e. the destination), and the
+#'   second which is the original vector (this case, the function call has the
+#'   form \code{conversion_function(transformed_vector, original_vector)}.
 #' @param n_ess_updates number of elliptical slice sampling updates per
 #'   iteration
 #'
@@ -60,7 +61,6 @@ stem_inference_lna <- function(stem_object,
         n_compartments         <- ncol(flow_matrix)
         n_rates                <- nrow(flow_matrix)
         n_odes                 <- 2*n_rates + n_rates^2
-        comp_codes             <- stem_object$dynamics$lna_comp_codes
         do_prevalence          <- stem_object$measurement_process$lna_prevalence
         do_incidence           <- stem_object$measurement_process$lna_incidence
         incidence_codes        <- stem_object$measurement_process$incidence_codes_lna
@@ -75,6 +75,11 @@ stem_inference_lna <- function(stem_object,
         t0                     <- stem_object$dynamics$t0
         t0_fixed               <- stem_object$dynamics$t0_fixed
         n_ess_updates          <- n_ess_updates
+
+        # indices of parameters, constants, and time-varying covariates in the lna_params_* matrices
+        lna_param_inds <- seq_along(stem_object$dynamics$param_codes) - 1
+        lna_const_inds <- length(lna_param_inds) + seq_along(stem_object$dynamics$const_codes) - 1
+        lna_tcovar_inds <- length(lna_param_inds) + length(lna_const_inds) + seq_along(stem_object$dynamics$tcovar_codes) - 1
 
         # measurement process objects
         data                   <- stem_object$measurement_process$data
@@ -141,11 +146,13 @@ stem_inference_lna <- function(stem_object,
         model_params_nat <- parameters[param_names_nat]
         if(in_place_conversion) {
                 model_params_est <- double(length(model_params_nat))
-                to_estimation_scale(model_params_nat, model_params_est)
+                to_estimation_scale(model_params_est, model_params_nat)
         } else {
                 model_params_est <- to_estimation_scale(model_params_nat)
         }
 
+        # vector for grabbing the parameters from the lna parameter matrices
+        lna_params_temp <- rep(0.0, length(stem_object$dynamics$lna_rates$lna_param_codes))
 
         # create analogous vectors for storing the proposed parameter values
         params_prop_nat  <- double(length(param_names_nat)); copy_vec(params_prop_nat, model_params_nat)
@@ -160,7 +167,7 @@ stem_inference_lna <- function(stem_object,
         n_times           <- length(lna_times)
         n_census_times    <- length(obstimes)
         param_update_inds <- is.na(match(lna_times, obstimes))
-        census_indices    <- findInterval(obstimes, lna_times) - 1
+        census_indices    <- unique(c(0, findInterval(obstimes, lna_times) - 1))
 
         # set up the MCMC kernel
         if(mcmc_kernel$method == "mvn_rw") {
@@ -308,20 +315,16 @@ stem_inference_lna <- function(stem_object,
 
         # matrix in which to store the emission probabilities
         emitmat <- cbind(data[, 1, drop = F],
-                         matrix(
-                                 0.0,
-                                 nrow = nrow(measproc_indmat),
-                                 ncol = ncol(measproc_indmat),
+                         matrix(0.0, nrow = nrow(measproc_indmat), ncol = ncol(measproc_indmat),
                                  dimnames = list(NULL, colnames(measproc_indmat))
                          ))
 
-        pathmat <- cbind(lna_times,
-                         matrix(
-                                 0.0,
-                                 nrow = length(lna_times),
-                                 ncol = nrow(flow_matrix),
-                                 dimnames = list(NULL, c(rownames(flow_matrix)))
+        pathmat_prop <- cbind(lna_times,
+                         matrix(0.0, nrow = length(lna_times), ncol = nrow(flow_matrix),
+                                dimnames = list(NULL, c(rownames(flow_matrix)))
                          ))
+
+        draws_prop <- matrix(0.0, nrow = nrow(flow_matrix), ncol = length(lna_times) - 1)
 
         # set up MCMC objects
         parameter_samples_nat <-
@@ -356,6 +359,10 @@ stem_inference_lna <- function(stem_object,
                 lna_pointer             = lna_pointer,
                 lna_set_pars_pointer    = lna_set_pars_pointer,
                 lna_times               = lna_times,
+                lna_params_temp         = lna_params_temp,
+                lna_param_inds          = lna_param_inds,
+                lna_const_inds          = lna_const_inds,
+                lna_tcovar_inds         = lna_tcovar_inds,
                 lna_initdist_inds       = lna_initdist_inds,
                 param_update_inds       = param_update_inds,
                 incidence_codes         = incidence_codes,
@@ -364,13 +371,12 @@ stem_inference_lna <- function(stem_object,
                 measproc_indmat         = measproc_indmat,
                 obstime_inds            = obstime_inds,
                 d_meas_pointer          = d_meas_pointer,
-                parameters              = parameters,
-                constants               = constants,
-                tcovar_censmat          = tcovar_censmat,
                 do_prevalence           = do_prevalence,
-                do_incidence            = do_incidence,
                 initialization_attempts = initialization_attempts
         )
+
+        # add a vector for the ESS record to the path
+        path$ess_record <- rep(1.0, n_ess_updates)
 
         # set the current LNA log likelihood, data log likelihood, and prior log likelihood
         params_logprior_cur <- prior_density(model_params_nat, model_params_est)
@@ -419,18 +425,23 @@ stem_inference_lna <- function(stem_object,
                 }
 
                 # Update the path via elliptical slice sampling
-                path <- update_lna_path(
+                update_lna_path(
                         path_cur                = path,
                         data                    = data,
                         lna_parameters          = lna_params_cur,
-                        pathmat                 = pathmat,
+                        pathmat_prop            = pathmat_prop,
                         censusmat               = censusmat,
+                        draws_prop              = draws_prop,
                         emitmat                 = emitmat,
                         flow_matrix             = flow_matrix,
                         stoich_matrix           = stoich_matrix,
                         lna_pointer             = lna_pointer,
-                        lna_set_pars_ptr        = lna_set_pars_pointer,
+                        lna_set_pars_pointer    = lna_set_pars_pointer,
                         lna_times               = lna_times,
+                        lna_params_temp         = lna_params_temp,
+                        lna_param_inds          = lna_param_inds,
+                        lna_const_inds          = lna_const_inds,
+                        lna_tcovar_inds         = lna_tcovar_inds,
                         lna_initdist_inds       = lna_initdist_inds,
                         param_update_inds       = param_update_inds,
                         incidence_codes         = incidence_codes,
@@ -439,11 +450,7 @@ stem_inference_lna <- function(stem_object,
                         measproc_indmat         = measproc_indmat,
                         obstime_inds            = obstime_inds,
                         d_meas_pointer          = d_meas_pointer,
-                        parameters              = parameters,
-                        constants               = constants,
-                        tcovar_censmat          = tcovar_censmat,
                         do_prevalence           = do_prevalence,
-                        do_incidence            = do_incidence,
                         n_ess_updates           = n_ess_updates
                 )
 
@@ -463,7 +470,7 @@ stem_inference_lna <- function(stem_object,
 
                                 # Convert the proposed parameters to their natural scale
                                 if(in_place_conversion) {
-                                        from_estimation_scale(params_prop_est, params_prop_nat)
+                                        from_estimation_scale(params_prop_nat, params_prop_est)
                                 } else {
                                         params_prop_nat <- from_estimation_scale(params_prop_est)
                                 }
@@ -472,13 +479,13 @@ stem_inference_lna <- function(stem_object,
                                 params_logprior_prop <- prior_density(params_prop_nat, params_prop_est)
 
                                 # Insert the proposed parameters into the parameter proposal matrix
-                                pars2lnapars(lna_params_prop, c(params_prop_nat, t0_prop, init_volumes_prop))
+                                pars2lnapars(lna_params_prop, c(params_prop_nat, t0, init_volumes_cur))
 
                                 # set the data log likelihood for the proposal to NULL
                                 data_log_lik_prop <- NULL
 
                                 try({
-                                        map_draws_2_lna(pathmat           = path$lna_path_prop,
+                                        map_draws_2_lna(pathmat           = pathmat_prop,
                                                         draws             = path$draws,
                                                         lna_times         = lna_times,
                                                         lna_pars          = lna_params_prop,
@@ -489,27 +496,30 @@ stem_inference_lna <- function(stem_object,
                                                         set_pars_pointer  = lna_set_pars_pointer
                                         )
 
-                                        # census the LNA
                                         census_lna(
-                                                path                = path$lna_path_prop,
+                                                path                = pathmat_prop,
                                                 census_path         = censusmat,
                                                 census_inds         = census_indices,
-                                                flow_matrix_lna     = flow_matrix,
+                                                flow_matrix_lna     = t(stoich_matrix),
                                                 do_prevalence       = do_prevalence,
-                                                init_state          = lna_params_prop[1, lna_initdist_inds + 1],
+                                                init_state          = init_volumes_cur,
                                                 incidence_codes_lna = incidence_codes
                                         )
 
                                         # evaluate the density of the incidence counts
-                                        evaluate_d_measure(
-                                                emitmat          = emitmat,
-                                                obsmat           = data,
-                                                statemat         = censusmat,
-                                                measproc_indmat  = measproc_indmat,
-                                                parameters       = parameters,
-                                                constants        = constants,
-                                                tcovar_censusmat = tcovar_censmat,
-                                                d_meas_ptr       = d_meas_pointer
+                                        evaluate_d_measure_LNA(
+                                                emitmat           = emitmat,
+                                                obsmat            = data,
+                                                censusmat         = censusmat,
+                                                measproc_indmat   = measproc_indmat,
+                                                lna_parameters    = lna_params_prop,
+                                                lna_params_temp   = lna_params_temp,
+                                                lna_param_inds    = lna_param_inds,
+                                                lna_const_inds    = lna_const_inds,
+                                                lna_tcovar_inds   = lna_tcovar_inds,
+                                                param_update_inds = param_update_inds,
+                                                census_indices    = census_indices,
+                                                d_meas_ptr        = d_meas_pointer
                                         )
 
                                         # compute the data log likelihood
@@ -552,7 +562,7 @@ stem_inference_lna <- function(stem_object,
 
                         # Convert the proposed parameters to their natural scale
                         if(in_place_conversion) {
-                                from_estimation_scale(params_prop_est, params_prop_nat)
+                                from_estimation_scale(params_prop_nat, params_prop_est)
                         } else {
                                 params_prop_nat <- from_estimation_scale(params_prop_est)
                         }
@@ -561,13 +571,13 @@ stem_inference_lna <- function(stem_object,
                         params_logprior_prop <- prior_density(params_prop_nat, params_prop_est)
 
                         # Insert the proposed parameters into the parameter proposal matrix
-                        pars2lnapars(lna_params_prop, c(params_prop_nat, t0_prop, init_volumes_prop))
+                        pars2lnapars(lna_params_prop, c(params_prop_nat, t0, init_volumes_cur))
 
                         # set the data log likelihood for the proposal to NULL
                         data_log_lik_prop <- NULL
 
                         try({
-                                map_draws_2_lna(pathmat           = path$lna_path_prop,
+                                map_draws_2_lna(pathmat           = pathmat_prop,
                                                 draws             = path$draws,
                                                 lna_times         = lna_times,
                                                 lna_pars          = lna_params_prop,
@@ -578,27 +588,30 @@ stem_inference_lna <- function(stem_object,
                                                 set_pars_pointer  = lna_set_pars_pointer
                                 )
 
-                                # census the LNA
                                 census_lna(
-                                        path                = path$lna_path_prop,
+                                        path                = pathmat_prop,
                                         census_path         = censusmat,
                                         census_inds         = census_indices,
-                                        flow_matrix_lna     = flow_matrix,
+                                        flow_matrix_lna     = t(stoich_matrix),
                                         do_prevalence       = do_prevalence,
-                                        init_state          = lna_params_prop[1, lna_initdist_inds + 1],
+                                        init_state          = init_volumes_cur,
                                         incidence_codes_lna = incidence_codes
                                 )
 
                                 # evaluate the density of the incidence counts
-                                evaluate_d_measure(
-                                        emitmat          = emitmat,
-                                        obsmat           = data,
-                                        statemat         = censusmat,
-                                        measproc_indmat  = measproc_indmat,
-                                        parameters       = parameters,
-                                        constants        = constants,
-                                        tcovar_censusmat = tcovar_censmat,
-                                        d_meas_ptr       = d_meas_pointer
+                                evaluate_d_measure_LNA(
+                                        emitmat           = emitmat,
+                                        obsmat            = data,
+                                        censusmat         = censusmat,
+                                        measproc_indmat   = measproc_indmat,
+                                        lna_parameters    = lna_params_prop,
+                                        lna_params_temp   = lna_params_temp,
+                                        lna_param_inds    = lna_param_inds,
+                                        lna_const_inds    = lna_const_inds,
+                                        lna_tcovar_inds   = lna_tcovar_inds,
+                                        param_update_inds = param_update_inds,
+                                        census_indices    = census_indices,
+                                        d_meas_ptr        = d_meas_pointer
                                 )
 
                                 # compute the data log likelihood
@@ -641,7 +654,7 @@ stem_inference_lna <- function(stem_object,
 
                                 # Convert the proposed parameters to their natural scale
                                 if(in_place_conversion) {
-                                        from_estimation_scale(params_prop_est, params_prop_nat)
+                                        from_estimation_scale(params_prop_nat, params_prop_est)
                                 } else {
                                         params_prop_nat <- from_estimation_scale(params_prop_est)
                                 }
@@ -650,14 +663,14 @@ stem_inference_lna <- function(stem_object,
                                 params_logprior_prop <- prior_density(params_prop_nat, params_prop_est)
 
                                 # Insert the proposed parameters into the parameter proposal matrix
-                                pars2lnapars(lna_params_prop, c(params_prop_nat, t0_prop, init_volumes_prop))
+                                pars2lnapars(lna_params_prop, c(params_prop_nat, t0, init_volumes_cur))
 
                                 # set the data log likelihood for the proposal to NULL
                                 data_log_lik_prop <- NULL
 
                                 # evaluate the data log likelihood
                                 try({
-                                        map_draws_2_lna(pathmat           = path$lna_path_prop,
+                                        map_draws_2_lna(pathmat           = pathmat_prop,
                                                         draws             = path$draws,
                                                         lna_times         = lna_times,
                                                         lna_pars          = lna_params_prop,
@@ -668,27 +681,30 @@ stem_inference_lna <- function(stem_object,
                                                         set_pars_pointer  = lna_set_pars_pointer
                                         )
 
-                                        # census the LNA
                                         census_lna(
-                                                path                = path$lna_path_prop,
+                                                path                = pathmat_prop,
                                                 census_path         = censusmat,
                                                 census_inds         = census_indices,
-                                                flow_matrix_lna     = flow_matrix,
+                                                flow_matrix_lna     = t(stoich_matrix),
                                                 do_prevalence       = do_prevalence,
-                                                init_state          = lna_params_prop[1, lna_initdist_inds + 1],
+                                                init_state          = init_volumes_cur,
                                                 incidence_codes_lna = incidence_codes
                                         )
 
                                         # evaluate the density of the incidence counts
-                                        evaluate_d_measure(
-                                                emitmat          = emitmat,
-                                                obsmat           = data,
-                                                statemat         = censusmat,
-                                                measproc_indmat  = measproc_indmat,
-                                                parameters       = parameters,
-                                                constants        = constants,
-                                                tcovar_censusmat = tcovar_censmat,
-                                                d_meas_ptr       = d_meas_pointer
+                                        evaluate_d_measure_LNA(
+                                                emitmat           = emitmat,
+                                                obsmat            = data,
+                                                censusmat         = censusmat,
+                                                measproc_indmat   = measproc_indmat,
+                                                lna_parameters    = lna_params_prop,
+                                                lna_params_temp   = lna_params_temp,
+                                                lna_param_inds    = lna_param_inds,
+                                                lna_const_inds    = lna_const_inds,
+                                                lna_tcovar_inds   = lna_tcovar_inds,
+                                                param_update_inds = param_update_inds,
+                                                census_indices    = census_indices,
+                                                d_meas_ptr        = d_meas_pointer
                                         )
 
                                         # compute the data log likelihood
@@ -745,7 +761,7 @@ stem_inference_lna <- function(stem_object,
 
                         # Convert the proposed parameters to their natural scale
                         if(in_place_conversion) {
-                                from_estimation_scale(params_prop_est, params_prop_nat)
+                                from_estimation_scale(params_prop_nat, params_prop_est)
                         } else {
                                 params_prop_nat <- from_estimation_scale(params_prop_est)
                         }
@@ -758,13 +774,13 @@ stem_inference_lna <- function(stem_object,
                         params_logprior_prop <- prior_density(params_prop_nat, params_prop_est)
 
                         # Insert the proposed parameters into the parameter proposal matrix
-                        pars2lnapars(lna_params_prop, c(params_prop_nat, t0_prop, init_volumes_prop))
+                        pars2lnapars(lna_params_prop, c(params_prop_nat, t0, init_volumes_cur))
 
                         # set the data log likelihood for the proposal to NULL
                         data_log_lik_prop <- NULL
 
                         try({
-                                map_draws_2_lna(pathmat           = path$lna_path_prop,
+                                map_draws_2_lna(pathmat           = pathmat_prop,
                                                 draws             = path$draws,
                                                 lna_times         = lna_times,
                                                 lna_pars          = lna_params_prop,
@@ -775,27 +791,30 @@ stem_inference_lna <- function(stem_object,
                                                 set_pars_pointer  = lna_set_pars_pointer
                                 )
 
-                                # census the LNA
                                 census_lna(
-                                        path                = path$lna_path_prop,
+                                        path                = pathmat_prop,
                                         census_path         = censusmat,
                                         census_inds         = census_indices,
-                                        flow_matrix_lna     = flow_matrix,
+                                        flow_matrix_lna     = t(stoich_matrix),
                                         do_prevalence       = do_prevalence,
-                                        init_state          = lna_params_prop[1, lna_initdist_inds + 1],
+                                        init_state          = init_volumes_cur,
                                         incidence_codes_lna = incidence_codes
                                 )
 
                                 # evaluate the density of the incidence counts
-                                evaluate_d_measure(
-                                        emitmat          = emitmat,
-                                        obsmat           = data,
-                                        statemat         = censusmat,
-                                        measproc_indmat  = measproc_indmat,
-                                        parameters       = parameters,
-                                        constants        = constants,
-                                        tcovar_censusmat = tcovar_censmat,
-                                        d_meas_ptr       = d_meas_pointer
+                                evaluate_d_measure_LNA(
+                                        emitmat           = emitmat,
+                                        obsmat            = data,
+                                        censusmat         = censusmat,
+                                        measproc_indmat   = measproc_indmat,
+                                        lna_parameters    = lna_params_prop,
+                                        lna_params_temp   = lna_params_temp,
+                                        lna_param_inds    = lna_param_inds,
+                                        lna_const_inds    = lna_const_inds,
+                                        lna_tcovar_inds   = lna_tcovar_inds,
+                                        param_update_inds = param_update_inds,
+                                        census_indices    = census_indices,
+                                        d_meas_ptr        = d_meas_pointer
                                 )
 
                                 # compute the data log likelihood
@@ -831,23 +850,23 @@ stem_inference_lna <- function(stem_object,
 
                                 # Convert the proposed parameters to their natural scale
                                 if(in_place_conversion) {
-                                        from_estimation_scale(g2c_mat[s,], params_prop_nat)
+                                        from_estimation_scale(params_prop_nat, g2c_mat[s,])
                                 } else {
                                         params_prop_nat <- from_estimation_scale(g2c_mat[s,])
                                 }
 
                                 # Compute the log prior for the proposed parameters
-                                params_logprior_prop <- prior_density(params_prop_nat, params_prop_est)
+                                params_logprior_prop <- prior_density(params_prop_nat, g2c_mat[s,])
 
                                 # Insert the proposed parameters into the parameter proposal matrix
-                                pars2lnapars(lna_params_prop, c(params_prop_nat, t0_prop, init_volumes_prop))
+                                pars2lnapars(lna_params_prop, c(params_prop_nat, t0, init_volumes_cur))
 
                                 # set the data log likelihood for the proposal to NULL
                                 data_log_lik_prop <- NULL
 
                                 # evaluate the data log likelihood
                                 try({
-                                        map_draws_2_lna(pathmat           = path$lna_path_prop,
+                                        map_draws_2_lna(pathmat           = pathmat_prop,
                                                         draws             = path$draws,
                                                         lna_times         = lna_times,
                                                         lna_pars          = lna_params_prop,
@@ -858,27 +877,30 @@ stem_inference_lna <- function(stem_object,
                                                         set_pars_pointer  = lna_set_pars_pointer
                                         )
 
-                                        # census the LNA
                                         census_lna(
-                                                path                = path$lna_path_prop,
+                                                path                = pathmat_prop,
                                                 census_path         = censusmat,
                                                 census_inds         = census_indices,
-                                                flow_matrix_lna     = flow_matrix,
+                                                flow_matrix_lna     = t(stoich_matrix),
                                                 do_prevalence       = do_prevalence,
-                                                init_state          = lna_params_prop[1, lna_initdist_inds + 1],
+                                                init_state          = init_volumes_cur,
                                                 incidence_codes_lna = incidence_codes
                                         )
 
                                         # evaluate the density of the incidence counts
-                                        evaluate_d_measure(
-                                                emitmat          = emitmat,
-                                                obsmat           = data,
-                                                statemat         = censusmat,
-                                                measproc_indmat  = measproc_indmat,
-                                                parameters       = parameters,
-                                                constants        = constants,
-                                                tcovar_censusmat = tcovar_censmat,
-                                                d_meas_ptr       = d_meas_pointer
+                                        evaluate_d_measure_LNA(
+                                                emitmat           = emitmat,
+                                                obsmat            = data,
+                                                censusmat         = censusmat,
+                                                measproc_indmat   = measproc_indmat,
+                                                lna_parameters    = lna_params_prop,
+                                                lna_params_temp   = lna_params_temp,
+                                                lna_param_inds    = lna_param_inds,
+                                                lna_const_inds    = lna_const_inds,
+                                                lna_tcovar_inds   = lna_tcovar_inds,
+                                                param_update_inds = param_update_inds,
+                                                census_indices    = census_indices,
+                                                d_meas_ptr        = d_meas_pointer
                                         )
 
                                         # compute the data log likelihood
@@ -924,7 +946,7 @@ stem_inference_lna <- function(stem_object,
 
                         # Convert the proposed parameters to their natural scale
                         if(in_place_conversion) {
-                                from_estimation_scale(params_prop_est, params_prop_nat)
+                                from_estimation_scale(params_prop_nat, params_prop_est)
                         } else {
                                 params_prop_nat <- from_estimation_scale(params_prop_est)
                         }
@@ -933,13 +955,13 @@ stem_inference_lna <- function(stem_object,
                         params_logprior_prop <- prior_density(params_prop_nat, params_prop_est)
 
                         # Insert the proposed parameters into the parameter proposal matrix
-                        pars2lnapars(lna_params_prop, c(params_prop_nat, t0_prop, init_volumes_prop))
+                        pars2lnapars(lna_params_prop, c(params_prop_nat, t0, init_volumes_cur))
 
                         # set the data log likelihood for the proposal to NULL
                         data_log_lik_prop <- NULL
 
                         try({
-                                map_draws_2_lna(pathmat           = path$lna_path_prop,
+                                map_draws_2_lna(pathmat           = pathmat_prop,
                                                 draws             = path$draws,
                                                 lna_times         = lna_times,
                                                 lna_pars          = lna_params_prop,
@@ -950,27 +972,30 @@ stem_inference_lna <- function(stem_object,
                                                 set_pars_pointer  = lna_set_pars_pointer
                                 )
 
-                                # census the LNA
                                 census_lna(
-                                        path                = path$lna_path_prop,
+                                        path                = pathmat_prop,
                                         census_path         = censusmat,
                                         census_inds         = census_indices,
-                                        flow_matrix_lna     = flow_matrix,
+                                        flow_matrix_lna     = t(stoich_matrix),
                                         do_prevalence       = do_prevalence,
-                                        init_state          = lna_params_prop[1, lna_initdist_inds + 1],
+                                        init_state          = init_volumes_cur,
                                         incidence_codes_lna = incidence_codes
                                 )
 
                                 # evaluate the density of the incidence counts
-                                evaluate_d_measure(
-                                        emitmat          = emitmat,
-                                        obsmat           = data,
-                                        statemat         = censusmat,
-                                        measproc_indmat  = measproc_indmat,
-                                        parameters       = parameters,
-                                        constants        = constants,
-                                        tcovar_censusmat = tcovar_censmat,
-                                        d_meas_ptr       = d_meas_pointer
+                                evaluate_d_measure_LNA(
+                                        emitmat           = emitmat,
+                                        obsmat            = data,
+                                        censusmat         = censusmat,
+                                        measproc_indmat   = measproc_indmat,
+                                        lna_parameters    = lna_params_prop,
+                                        lna_params_temp   = lna_params_temp,
+                                        lna_param_inds    = lna_param_inds,
+                                        lna_const_inds    = lna_const_inds,
+                                        lna_tcovar_inds   = lna_tcovar_inds,
+                                        param_update_inds = param_update_inds,
+                                        census_indices    = census_indices,
+                                        d_meas_ptr        = d_meas_pointer
                                 )
 
                                 # compute the data log likelihood
@@ -1066,7 +1091,7 @@ stem_inference_lna <- function(stem_object,
                         data_log_lik_prop <- NULL
 
                         try({
-                                map_draws_2_lna(pathmat           = path$lna_path_prop,
+                                map_draws_2_lna(pathmat           = pathmat_prop,
                                                 draws             = path$draws,
                                                 lna_times         = lna_times,
                                                 lna_pars          = lna_params_prop,
@@ -1077,27 +1102,30 @@ stem_inference_lna <- function(stem_object,
                                                 set_pars_pointer  = lna_set_pars_pointer
                                 )
 
-                                # census the LNA
                                 census_lna(
-                                        path                = path$lna_path_prop,
+                                        path                = pathmat_prop,
                                         census_path         = censusmat,
                                         census_inds         = census_indices,
-                                        flow_matrix_lna     = flow_matrix,
+                                        flow_matrix_lna     = t(stoich_matrix),
                                         do_prevalence       = do_prevalence,
-                                        init_state          = lna_params_prop[1, lna_initdist_inds + 1],
+                                        init_state          = init_volumes_prop,
                                         incidence_codes_lna = incidence_codes
                                 )
 
                                 # evaluate the density of the incidence counts
-                                evaluate_d_measure(
-                                        emitmat          = emitmat,
-                                        obsmat           = data,
-                                        statemat         = censusmat,
-                                        measproc_indmat  = measproc_indmat,
-                                        parameters       = parameters,
-                                        constants        = constants,
-                                        tcovar_censusmat = tcovar_censmat,
-                                        d_meas_ptr       = d_meas_pointer
+                                evaluate_d_measure_LNA(
+                                        emitmat           = emitmat,
+                                        obsmat            = data,
+                                        censusmat         = censusmat,
+                                        measproc_indmat   = measproc_indmat,
+                                        lna_parameters    = lna_params_prop,
+                                        lna_params_temp   = lna_params_temp,
+                                        lna_param_inds    = lna_param_inds,
+                                        lna_const_inds    = lna_const_inds,
+                                        lna_tcovar_inds   = lna_tcovar_inds,
+                                        param_update_inds = param_update_inds,
+                                        census_indices    = census_indices,
+                                        d_meas_ptr        = d_meas_pointer
                                 )
 
                                 # compute the data log likelihood
@@ -1121,8 +1149,8 @@ stem_inference_lna <- function(stem_object,
                         if(acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
 
                                 ### ACCEPTANCE
-                                acceptances_init    <- acceptances_init + 1 # increment acceptances
-                                path$data_log_lik   <- data_log_lik_prop    # save the data log likelihood
+                                acceptances_init  <- acceptances_init + 1 # increment acceptances
+                                path$data_log_lik <- data_log_lik_prop    # save the data log likelihood
                                 copy_mat(lna_params_cur, lna_params_prop)   # update LNA parameter matrix
 
                                 # Update the initial distribution parameters and log prior if not fixed
@@ -1142,7 +1170,7 @@ stem_inference_lna <- function(stem_object,
                                 if(!t0_fixed) {
                                         lna_times[1] <- t0
                                         path$lna_path[1,1] <- t0
-                                        path$lna_path_prop[1,1] <- t0
+                                        pathmat_prop[1,1] <- t0
                                 }
                         }
                 }

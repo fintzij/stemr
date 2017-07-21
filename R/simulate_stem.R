@@ -340,14 +340,15 @@ simulate_stem <-
 
                                 for(j in 1:100) {
                                         try({
-                                        census_paths[[k]] <- propose_lna(lna_times         = lna_times,
-                                                                         lna_pars          = lna_pars,
-                                                                         init_start        = stem_object$dynamics$lna_initdist_inds[1],
-                                                                         param_update_inds = param_update_inds,
-                                                                         stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
-                                                                         lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
-                                                                         set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)$lna_path
-                                        break
+                                        census_paths[[k]] <-
+                                                propose_lna(lna_times         = lna_times,
+                                                            lna_pars          = lna_pars,
+                                                            init_start        = stem_object$dynamics$lna_initdist_inds[1],
+                                                            param_update_inds = param_update_inds,
+                                                            stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
+                                                            lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
+                                                            set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)$lna_path
+
                                         }, silent = TRUE)
                                 }
 
@@ -433,7 +434,9 @@ simulate_stem <-
                                 constants        <- stem_object$dynamics$parameters
                                 tcovar           <- tcovar_obstimes
                                 r_measure_ptr    <- stem_object$measurement_process$meas_pointers$r_measure_ptr
-                                cens_inds        <- findInterval(stem_object$measurement_process$obstimes, census_times) - 1
+                                cens_inds        <- unique(c(0,
+                                                             findInterval(stem_object$measurement_process$obstimes,
+                                                                          census_times) - 1))
                                 do_prevalence    <- stem_object$measurement_process$lna_prevalence
                                 do_incidence     <- stem_object$measurement_process$lna_incidence
                                 incidence_codes  <- stem_object$measurement_process$incidence_codes_lna
@@ -452,7 +455,7 @@ simulate_stem <-
                                                    do_prevalence       = do_prevalence,
                                                    init_state          = init_state,
                                                    incidence_codes_lna = incidence_codes)
-#
+
                                         # simulate the dataset
                                         datasets[[k]] <- simulate_r_measure(pathmat,
                                                                             measproc_indmat,

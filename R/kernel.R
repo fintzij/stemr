@@ -16,7 +16,7 @@
 #'   scale_constant/(iteration+1)^scale_cooling. The
 #'   \link{\code{plot_adaptations}} function may be used to plot the adaptation
 #'   factors.
-#' @param max_scaling maximum scale factor, defaults to 50.
+#' @param max_scaling maximum scale factor, defaults to Inf.
 #' @param target_g target acceptance rate for global Metropolis proposals.
 #' @param target_c target acceptance rate for componentwise Metropolis proposals
 #' @param nugget fixed nugget contribution, defaults to 0.01.
@@ -42,7 +42,7 @@ kernel <-
                  sigma,
                  scale_constant = 0.5,
                  scale_cooling = 0.5,
-                 max_scaling = 50,
+                 max_scaling = Inf,
                  target_g = 0.234,
                  target_c = 0.44,
                  nugget = 0.01,
