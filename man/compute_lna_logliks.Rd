@@ -53,8 +53,6 @@ process is evaluated}
 
 \item{do_prevalence}{should prevalence be computed?}
 
-\item{do_incidence}{should incidence be computed?}
-
 \item{lna_pointer}{external LNA pointer}
 
 \item{lna_set_pars_pointer}{pointer for setting the LNA parameters}

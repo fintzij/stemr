@@ -488,6 +488,18 @@ copy_col <- function(dest, orig, ind) {
     invisible(.Call('_stemr_copy_col', PACKAGE = 'stemr', dest, orig, ind))
 }
 
+#' Copy some of the rows of one matrix into another
+#'
+#' @param dest destination matrix
+#' @param orig origin matrix
+#' @param inds column index
+#'
+#' @return copy the elements of one matrix into another.
+#' @export
+copy_2_rows <- function(dest, orig, inds) {
+    invisible(.Call('_stemr_copy_2_rows', PACKAGE = 'stemr', dest, orig, inds))
+}
+
 #' Simulate an LNA path using a non-centered parameterization for the
 #' log-transformed counting process LNA.
 #'

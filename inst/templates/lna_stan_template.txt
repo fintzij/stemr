@@ -3,25 +3,19 @@ functions{
         // compute the LNA moments - state is an array with the current state
         real[] lna_fcn(real t, real[] state, real[] lna_params, real[] rdummy, int[] idummy) {
 
-                // compute hazards and jacobian
-                vector[__NCOMPS__] Z;
-                vector[__NCOMPS__] exp_Z;
-                vector[__NCOMPS__] exp_negZ;
-                vector[__NCOMPS__] exp_neg2Z;
+                // create some objects
                 vector[__NCOMPS__] haz;
                 matrix[__NCOMPS__,__NCOMPS__] jac;
-                matrix[__NCOMPS__,__NCOMPS__] V0;
                 matrix[__NCOMPS__,__NCOMPS__] Vt;
                 real newstate[__NSTATE__];
-
-                // get the state and current value of the diffusion
-                Z  = to_vector(state[1:__NCOMPS__]);
-                V0 = to_matrix(state[__COVSTART__:__COVEND__],__NCOMPS__,__NCOMPS__);
-
-                // compute exp_Z, exp_negZ, and exp_neg2Z
-                exp_Z     = exp(Z);
-                exp_negZ  = exp(-Z);
-                exp_neg2Z = exp_negZ .* exp_negZ;
+                
+                // compute hazards and jacobian
+                vector[__NCOMPS__] Z = to_vector(state[1:__NCOMPS__]);
+                matrix[__NCOMPS__,__NCOMPS__] V0 = to_matrix(state[__COVSTART__:__COVEND__],__NCOMPS__,__NCOMPS__);
+                
+                vector[__NCOMPS__] exp_Z = exp(Z) - 1.0;
+                vector[__NCOMPS__] exp_negZ = exp(-Z);
+                vector[__NCOMPS__] exp_neg2Z = exp_negZ .* exp_negZ;
 
                 // compute the hazards and the jacobian
                 __HAZCODE__
@@ -40,13 +34,7 @@ functions{
         // integrate over one time interval
         real[] lna_step(real t_l, real[] t_r, real[] state, real[] lna_params, real[] rdummy, int[] idummy) {
 
-                // temporary container for output of stepper
-                real lnastep[1, __NSTATE__];
-
-                // integrate LNA
-                lnastep = integrate_ode_bdf(lna_fcn, state, t_l, t_r, lna_params, rdummy, idummy); // integrate ODEs
-
-                return to_array_1d(lnastep);
+                return integrate_ode_bdf(lna_fcn, state, t_l, t_r, lna_params, rdummy, idummy, 1e-6, 1e-6, 100000)[1];
         }
 
         // function to map the standard normal draws to the log-LNA increments and return incidence (increments in N_SI)
@@ -98,13 +86,25 @@ functions{
                         // map N_raw values to the sampled LNA value
                         log_LNA = mu + Sig_chol * N_raw[(__NCOMPS__*(k-1)+1):(__NCOMPS__*k)];
 
-                        // save new state
-                        nat_LNA      = exp(log_LNA); // LNA increment on the natural scale
-                        incidence[k] = to_row_vector(nat_LNA[incid_inds]);      // save incidence
+                        // compute the new increment
+                        nat_LNA      = exp(log_LNA) - 1;                   // LNA increment on its natural scale
+
+                        // ensure positivity of the incidence increment
+                        for(j in 1:__NCOMPS__) {
+                                nat_LNA[j] = fmax(nat_LNA[j], 0.0);
+                        }
+
+                        incidence[k] = to_row_vector(nat_LNA[incid_inds]); // save incidence
 
                         // update the cumulative incidence and set the new initial state
-                        c_incid = c_incid + nat_LNA;            // update cumulative incidence
-                        SIR_cur = X0 + stoich * c_incid;        // update the current compartment counts
+                        c_incid = c_incid + nat_LNA;           // update cumulative incidence
+                        SIR_cur = X0 + stoich * c_incid;       // update the current compartment counts
+
+                        // ensure positivity of the compartment counts
+                        for(j in 1:__NMODCOMPS__){
+                                SIR_cur = fmax(SIR_cur[j], 0.0);
+                        }
+
                         state   = rep_array(0.0,__NSTATE__);   // reset the increment
                         lna_params[__INITSTART__:__INITEND__] = to_array_1d(SIR_cur); // set the new initial values
                 }
@@ -161,8 +161,7 @@ transformed parameters {
                 times:  vector of interval endpoints (includes t0)
                 rdummy,idummy: generated above, serve no role
         */
-        matrix<lower=0>[__NTIMES__,__NEMITS__] lna_incidence;
-        lna_incidence = get_lna(N_raw, theta, X0, stoich, times, incid_inds, rdummy, idummy);
+        matrix<lower=0>[__NTIMES__,__NEMITS__] lna_incidence = get_lna(N_raw, theta, X0, stoich, times, incid_inds, rdummy, idummy);
 }
 model {
         // Model priors (parameters listed for convenience, but should be specified by the user)

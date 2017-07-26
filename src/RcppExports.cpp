@@ -439,6 +439,18 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// copy_2_rows
+void copy_2_rows(arma::mat& dest, const arma::mat& orig, const arma::uvec& inds);
+RcppExport SEXP _stemr_copy_2_rows(SEXP destSEXP, SEXP origSEXP, SEXP indsSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat& >::type dest(destSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type orig(origSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type inds(indsSEXP);
+    copy_2_rows(dest, orig, inds);
+    return R_NilValue;
+END_RCPP
+}
 // propose_lna
 Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix& lna_pars, const int init_start, const Rcpp::LogicalVector& param_update_inds, const arma::mat& stoich_matrix, SEXP lna_pointer, SEXP set_pars_pointer);
 RcppExport SEXP _stemr_propose_lna(SEXP lna_timesSEXP, SEXP lna_parsSEXP, SEXP init_startSEXP, SEXP param_update_indsSEXP, SEXP stoich_matrixSEXP, SEXP lna_pointerSEXP, SEXP set_pars_pointerSEXP) {
@@ -541,6 +553,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_copy_vec", (DL_FUNC) &_stemr_copy_vec, 2},
     {"_stemr_copy_mat", (DL_FUNC) &_stemr_copy_mat, 2},
     {"_stemr_copy_col", (DL_FUNC) &_stemr_copy_col, 3},
+    {"_stemr_copy_2_rows", (DL_FUNC) &_stemr_copy_2_rows, 3},
     {"_stemr_propose_lna", (DL_FUNC) &_stemr_propose_lna, 7},
     {"_stemr_rate_update_event", (DL_FUNC) &_stemr_rate_update_event, 3},
     {"_stemr_rate_update_tcovar", (DL_FUNC) &_stemr_rate_update_tcovar, 3},

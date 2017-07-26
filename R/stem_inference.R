@@ -32,7 +32,7 @@
 #' @return list with posterior samples for the parameters and the latent
 #'   process, along with MCMC diagnostics.
 #' @export
-stem_inference <- function(stem_object, method, iterations, priors, mcmc_kernel, t0_kernel = NULL, thin_params = 1, thin_latent_proc = ceiling(iterations/100), initialization_attempts = 500, n_ess_updates = 1, messages = FALSE) {
+stem_inference <- function(stem_object, method, iterations, priors, mcmc_kernel, t0_kernel = NULL, thin_params = 1, thin_latent_proc = ceiling(iterations/100), initialization_attempts = 500, ess_args = NULL, messages = FALSE) {
 
         # check that the data, dynamics and measurement process are all supplied
         if (is.null(stem_object$measurement_process$data) ||
@@ -56,8 +56,8 @@ stem_inference <- function(stem_object, method, iterations, priors, mcmc_kernel,
                                               t0_kernel,
                                               thin_params,
                                               thin_latent_proc,
-                                              initialization_attempts = 500,
-                                              n_ess_updates = n_ess_updates,
+                                              initialization_attempts,
+                                              ess_args,
                                               messages)
 
         } else if (method == "bda") {
