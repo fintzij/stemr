@@ -8,7 +8,7 @@ census_lna(path, census_path, census_inds, flow_matrix_lna, do_prevalence,
   init_state, incidence_codes_lna)
 }
 \arguments{
-\item{path}{matrix containing the path to be censused.}
+\item{path}{matrix containing the path to be censused (cumulative incidence).}
 
 \item{census_path}{matrix to be filled out with the path.}
 

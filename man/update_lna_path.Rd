@@ -4,11 +4,13 @@
 \alias{update_lna_path}
 \title{Sample a new LNA path via elliptical slice sampling.}
 \usage{
-update_lna_path(path_cur, data, lna_parameters, pathmat, censusmat, emitmat,
-  flow_matrix, stoich_matrix, lna_pointer, lna_set_pars_ptr, lna_times,
-  lna_initdist_inds, param_update_inds, incidence_codes, census_incidence_codes,
-  census_indices, measproc_indmat, obstime_inds, d_meas_pointer, parameters,
-  constants, tcovar_censmat, do_prevalence, do_incidence, n_ess_updates)
+update_lna_path(path_cur, data, lna_parameters, pathmat_prop, censusmat,
+  draws_prop, emitmat, flow_matrix, stoich_matrix, lna_pointer,
+  lna_set_pars_pointer, lna_times, lna_params_temp, lna_param_inds,
+  lna_const_inds, lna_tcovar_inds, lna_initdist_inds, param_update_inds,
+  incidence_codes, census_incidence_codes, census_indices, measproc_indmat,
+  obstime_inds, d_meas_pointer, do_prevalence, n_ess_updates, ess_schedule,
+  randomize_schedule)
 }
 \arguments{
 \item{path_cur}{list with the current LNA path along with its ODE paths}
@@ -26,6 +28,8 @@ observation times}
 \item{stoich_matrix}{LNA stoichiometry matrix}
 
 \item{lna_pointer}{external LNA pointer}
+
+\item{lna_set_pars_pointer}{pointer for setting the LNA parameters}
 
 \item{lna_times}{times at whicht eh LNA should be evaluated}
 
@@ -51,15 +55,9 @@ process is evaluated}
 
 \item{d_meas_pointer}{external pointer for the measurement process function}
 
-\item{parameters}{vector of model parameters}
-
-\item{constants}{vector of model constants}
-
-\item{tcovar_censmat}{time-varying covariates at LNA times}
-
 \item{do_prevalence}{should prevalence be computed?}
 
-\item{do_incidence}{should incidence be computed?}
+\item{n_ess_updates}{number of elliptical slice sampling updates}
 }
 \value{
 list with an updated LNA path along with its stochastic

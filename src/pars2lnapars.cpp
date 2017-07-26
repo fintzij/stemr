@@ -70,3 +70,17 @@ void copy_col(arma::mat& dest, const arma::mat& orig, int ind) {
         dest.col(ind) = orig.col(ind);
 }
 
+//' Copy some of the rows of one matrix into another
+//'
+//' @param dest destination matrix
+//' @param orig origin matrix
+//' @param inds column index
+//'
+//' @return copy the elements of one matrix into another.
+//' @export
+// [[Rcpp::export]]
+void copy_2_rows(arma::mat& dest, const arma::mat& orig, const arma::uvec& inds) {
+
+        dest.rows(inds) = orig;
+}
+
