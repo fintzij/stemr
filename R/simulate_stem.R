@@ -273,7 +273,7 @@ simulate_stem <-
                                             dimnames = list(NULL, names(stem_object$dynamics$lna_rates$lna_param_codes)))
 
                         # insert parameters, constants, and time-varying covariates
-                        parameter_inds <- 1:length(stem_object$dynamics$param_codes)
+                        parameter_inds <- seq_along(stem_object$dynamics$param_codes)
                         constant_inds  <- (length(parameter_inds)+1):(length(parameter_inds) + length(stem_object$dynamics$const_codes))
                         tcovar_inds    <- (max(constant_inds)+1):ncol(lna_pars)
                         lna_pars[, parameter_inds] <- matrix(stem_object$dynamics$parameters,

@@ -139,6 +139,75 @@ convert_lna2 <- function(path, flow_matrix, init_state, statemat) {
     invisible(.Call('_stemr_convert_lna2', PACKAGE = 'stemr', path, flow_matrix, init_state, statemat))
 }
 
+#' Identify which rates to update when a state transition event occurs.
+#'
+#' @param lnapars matrix of lna parameters, constants, and time-varying covars
+#' @param parameters vector of parameters to be copied into the matrix
+#'
+#' @return modifies the lna parameter matrix in place
+#' @export
+pars2lnapars <- function(lnapars, parameters) {
+    invisible(.Call('_stemr_pars2lnapars', PACKAGE = 'stemr', lnapars, parameters))
+}
+
+#' Copy an element from one vector into another
+#'
+#' @param dest destination row vector
+#' @param orig origin row vector
+#' @param ind C++ style index for the element to be copied
+#'
+#' @return copy an element of one row vector into another.
+#' @export
+copy_elem <- function(dest, orig, ind) {
+    invisible(.Call('_stemr_copy_elem', PACKAGE = 'stemr', dest, orig, ind))
+}
+
+#' Copy the contents of one vector into another
+#'
+#' @param dest destination row vector
+#' @param orig origin row vector
+#'
+#' @return copy the elements of one row vector into another.
+#' @export
+copy_vec <- function(dest, orig) {
+    invisible(.Call('_stemr_copy_vec', PACKAGE = 'stemr', dest, orig))
+}
+
+#' Copy the contents of one matrix into another
+#'
+#' @param dest destination matrix
+#' @param orig origin matrix
+#'
+#' @return copy the elements of one matrix into another.
+#' @export
+copy_mat <- function(dest, orig) {
+    invisible(.Call('_stemr_copy_mat', PACKAGE = 'stemr', dest, orig))
+}
+
+#' Copy the contents of one matrix into another
+#'
+#' @param dest destination matrix
+#' @param orig origin matrix
+#' @param ind column index
+#'
+#' @return copy the elements of one matrix into another.
+#' @export
+copy_col <- function(dest, orig, ind) {
+    invisible(.Call('_stemr_copy_col', PACKAGE = 'stemr', dest, orig, ind))
+}
+
+#' Copy some of the rows of one matrix into another
+#'
+#' @param dest destination matrix
+#' @param orig origin matrix
+#' @param inds column index
+#'
+#' @return copy the elements of one matrix into another.
+#' @export
+copy_2_rows <- function(dest, orig, inds) {
+    invisible(.Call('_stemr_copy_2_rows', PACKAGE = 'stemr', dest, orig, inds))
+}
+
 #' Componentwise Metropolis random walk transition kernel with componentwise
 #'   adaptive scaling
 #'
@@ -429,75 +498,6 @@ mvn_g_adaptive <- function(params_prop, params_cur, kernel_cov, proposal_scaling
 #' @export
 mvn_rw <- function(params_prop, params_cur, sigma_chol) {
     invisible(.Call('_stemr_mvn_rw', PACKAGE = 'stemr', params_prop, params_cur, sigma_chol))
-}
-
-#' Identify which rates to update when a state transition event occurs.
-#'
-#' @param lnapars matrix of lna parameters, constants, and time-varying covars
-#' @param parameters vector of parameters to be copied into the matrix
-#'
-#' @return modifies the lna parameter matrix in place
-#' @export
-pars2lnapars <- function(lnapars, parameters) {
-    invisible(.Call('_stemr_pars2lnapars', PACKAGE = 'stemr', lnapars, parameters))
-}
-
-#' Copy an element from one vector into another
-#'
-#' @param dest destination row vector
-#' @param orig origin row vector
-#' @param ind C++ style index for the element to be copied
-#'
-#' @return copy an element of one row vector into another.
-#' @export
-copy_elem <- function(dest, orig, ind) {
-    invisible(.Call('_stemr_copy_elem', PACKAGE = 'stemr', dest, orig, ind))
-}
-
-#' Copy the contents of one vector into another
-#'
-#' @param dest destination row vector
-#' @param orig origin row vector
-#'
-#' @return copy the elements of one row vector into another.
-#' @export
-copy_vec <- function(dest, orig) {
-    invisible(.Call('_stemr_copy_vec', PACKAGE = 'stemr', dest, orig))
-}
-
-#' Copy the contents of one matrix into another
-#'
-#' @param dest destination matrix
-#' @param orig origin matrix
-#'
-#' @return copy the elements of one matrix into another.
-#' @export
-copy_mat <- function(dest, orig) {
-    invisible(.Call('_stemr_copy_mat', PACKAGE = 'stemr', dest, orig))
-}
-
-#' Copy the contents of one matrix into another
-#'
-#' @param dest destination matrix
-#' @param orig origin matrix
-#' @param ind column index
-#'
-#' @return copy the elements of one matrix into another.
-#' @export
-copy_col <- function(dest, orig, ind) {
-    invisible(.Call('_stemr_copy_col', PACKAGE = 'stemr', dest, orig, ind))
-}
-
-#' Copy some of the rows of one matrix into another
-#'
-#' @param dest destination matrix
-#' @param orig origin matrix
-#' @param inds column index
-#'
-#' @return copy the elements of one matrix into another.
-#' @export
-copy_2_rows <- function(dest, orig, inds) {
-    invisible(.Call('_stemr_copy_2_rows', PACKAGE = 'stemr', dest, orig, inds))
 }
 
 #' Simulate an LNA path using a non-centered parameterization for the

@@ -140,6 +140,7 @@ stem_inference_lna <- function(stem_object,
 
         concs2vols <- function(concentrations, size_vec = comp_size_vec) concentrations*size_vec
         vols2concs <- function(volumes, size_vec = comp_size_vec) volumes/size_vec
+        initdist_names <- names(stem_object$dynamics$initdist_params)
 
         # if the initial counts are not fixed, construct the initial distribution prior
         if(!fixed_inits) {
@@ -161,14 +162,14 @@ stem_inference_lna <- function(stem_object,
                 init_volumes_prop    <- initdist_params_cur
                 initdist_params_cur  <- vols2concs(initdist_params_cur)
                 initdist_params_prop <- initdist_params_cur
-                names(init_volumes_cur) <- names(init_volumes_prop) <- names(initdist_params_prop) <- names(initdist_params_cur)
+                names(init_volumes_cur) <- names(init_volumes_prop) <- names(initdist_params_prop) <- initdist_names
 
         } else {
 
                 acceptances_init         <- NULL
                 init_volumes_cur         <- initdist_params_cur # vector of initial compartment volumes
                 initdist_params_cur      <- vols2concs(initdist_params_cur) # vector of initial distribution parameters
-                names(init_volumes_cur)  <- names(initdist_params_cur)
+                names(init_volumes_cur)  <- initdist_names
                 initdist_params_prop     <- NULL # vector for storing the proposed compartment counts
                 init_volumes_prop        <- NULL # vector of initial compartment volumes
                 initdist_sampler         <- NULL # function for sampling new values
@@ -275,7 +276,6 @@ stem_inference_lna <- function(stem_object,
 
                 # MCMC objects
                 acceptances_g    <- 0.0
-                acceptances_c    <- rep(0.0, n_model_params)
                 proposal_scaling <- rep(1.0, n_model_params)
                 sqrt_scalemat    <- diag(1.0, n_model_params)
                 nugget           <- mcmc_kernel$kernel_settings$nugget
@@ -369,16 +369,16 @@ stem_inference_lna <- function(stem_object,
                 matrix(
                         0.0,
                         nrow = 1 + floor(iterations / thin_params),
-                        ncol = length(stem_object$dynamics$parameters) + !t0_fixed,
-                        dimnames = list(NULL, c(names(model_params_nat), t0_name, names(initdist_params_cur)))
+                        ncol = n_model_params + as.numeric(!t0_fixed) + as.numeric(!fixed_inits) * n_compartments,
+                        dimnames = list(NULL, c(names(model_params_nat), t0_name, paste0("p_",names(initdist_params_prop))))
                 )
 
         parameter_samples_est <-
                 matrix(
                         0.0,
                         nrow = 1 + floor(iterations / thin_params),
-                        ncol = length(stem_object$dynamics$parameters) + !t0_fixed,
-                        dimnames = list(NULL, c(param_names_est, t0_name, names(initdist_params_cur)))
+                        ncol = n_model_params + as.numeric(!t0_fixed) + as.numeric(!fixed_inits) * n_compartments,
+                        dimnames = list(NULL, c(param_names_est, t0_name, names(initdist_params_prop)))
                 )
 
         lna_paths <- array(0.0, dim = c(n_times, 1 + n_rates, 1 + floor(iterations / thin_latent_proc)))
@@ -968,14 +968,6 @@ stem_inference_lna <- function(stem_object,
                                 ## Compute the acceptance probability
                                 acceptance_prob <- logpost_prop - logpost_g2c_cur
 
-                                # Accept/Reject via metropolis-hastings
-                                if(acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
-
-                                        ### ACCEPTANCE
-                                        acceptances_c[s]    <- acceptances_c[s] + 1  # increment acceptances
-
-                                }
-
                                 # Adapt the proposal scalings
                                 proposal_scaling[s] <- min(proposal_scaling[s] *
                                                                    exp(adaptations[iter] *
@@ -1134,8 +1126,8 @@ stem_inference_lna <- function(stem_object,
 
                         # If the initial compartment counts are not fixed, sample new values
                         if(!fixed_inits) {
-                                initdist_params_prop    <- initdist_sampler() # sample new initial compartment concentrations
-                                init_volumes_prop       <- concs2vols(initdist_params_prop) # convert to volumes
+                                initdist_params_prop <- initdist_sampler() # sample new initial compartment concentrations
+                                init_volumes_prop    <- concs2vols(initdist_params_prop) # convert to volumes
                         }
 
                         # Insert the proposed parameters into the parameter proposal matrix
@@ -1270,9 +1262,6 @@ stem_inference_lna <- function(stem_object,
 
                                 if(messages) cat(paste0("Global acceptances: ", acceptances_g),
                                                  paste0("Global acceptance rate: ", acceptances_g/(iter-1)),
-                                                 paste0("Componentwise acceptances: ", paste0(acceptances_c, collapse=", ")),
-                                                 paste0("Componentwise acceptance rates: ",
-                                                        paste0(acceptances_c / (iter-1), collapse = ",")),
                                                  paste0("Scaling factors: ",
                                                         paste0(round(proposal_scaling, digits = 3), collapse = ",")),
                                                  file = status_file, sep = "\n", append = TRUE)
@@ -1297,11 +1286,11 @@ stem_inference_lna <- function(stem_object,
 
         # compile the results
         MCMC_results <- data.frame(
-                data_log_lik     = data_log_lik,
-                lna_log_lik      = lna_log_lik,
-                params_log_prior = params_log_prior,
-                initdist_log_prior = initdist_log_prior
-                )
+                data_log_lik       = data_log_lik,
+                lna_log_lik        = lna_log_lik,
+                params_log_prior   = params_log_prior,
+                initdist_log_prior = initdist_log_prior,
+                row.names          = seq(1, iterations+1, by=thin_params)-1)
 
         if(!t0_fixed) MCMC_results <- cbind(MCMC_results, t0_log_prior = t0_log_prior)
 
@@ -1319,10 +1308,13 @@ stem_inference_lna <- function(stem_object,
                 ess_record <- ess_record[seq_len(n_ess_updates), 1,]
         }
 
-        # return the results
-        stem_object$dynamics$parameters         <- c(model_params_nat, t0, init_volumes_cur)
-        names(stem_object$dynamics$parameters)  <- names(stem_object$dynamics$param_codes)
-        if(!fixed_inits) stem_object$dynamics$initdist_params <- init_volumes_cur
+        # set the parameters (for restart) and save the results
+        stem_object$dynamics$parameters         <- model_params_nat
+        if(!t0_fixed) stem_object$dynamics$t0   <- t0
+        if(!fixed_inits) {
+                stem_object$dynamics$initdist_params <- init_volumes_cur
+                names(stem_object$dynamics$initdist_params) <- initdist_names
+        }
 
         stem_object$results <- list(time         = difftime(end.time, start.time, units = "hours"),
                                     lna_paths    = lna_paths,
@@ -1342,7 +1334,6 @@ stem_inference_lna <- function(stem_object,
 
         } else if(mcmc_kernel$method == "mvn_c_adaptive") {
                 stem_object$results$acceptances_g = acceptances_g
-                stem_object$results$acceptances_c = acceptances_c
                 stem_object$results$adaptation_record = list(adaptation_scale_record = t(adaptation_scale_record),
                                                              adaptation_shape_record = adaptation_shape_record)
 
