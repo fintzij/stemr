@@ -6,7 +6,7 @@
 \usage{
 kernel(method = "c_rw", sigma, scale_constant = 0.5, scale_cooling = 0.5,
   max_scaling = Inf, target_g = 0.234, target_c = 0.44, nugget = 0.01,
-  messages = TRUE)
+  stop_adaptation = Inf, messages = TRUE)
 }
 \arguments{
 \item{method}{algorithm to be used in generating parameter updates, see
@@ -32,6 +32,9 @@ factors.}
 \item{target_c}{target acceptance rate for componentwise Metropolis proposals}
 
 \item{nugget}{fixed nugget contribution, defaults to 0.01.}
+
+\item{stop_adaptation}{iteration at which to stop adapting the proposal
+distribution.}
 
 \item{messages}{should messages be printed?}
 }

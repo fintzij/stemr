@@ -267,7 +267,7 @@ evaluate_d_measure <- function(emitmat, obsmat, statemat, measproc_indmat, param
 #'   observed at every observation time
 #' @param lna_parameters matrix containing the LNA parameters, constants and
 #'   time-varying coariates.
-#' @param lna_params_temp container for storing the LNA parameters at each
+#' @param current_params container for storing the LNA parameters at each
 #'   observation time.
 #' @param lna_param_inds indices for the model parameters.
 #' @param lna_const_inds indices for the constants.
@@ -278,8 +278,8 @@ evaluate_d_measure <- function(emitmat, obsmat, statemat, measproc_indmat, param
 #' @param d_meas_ptr external pointer to measurement process density function
 #'
 #' @export
-evaluate_d_measure_LNA <- function(emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_params_temp, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, d_meas_ptr) {
-    invisible(.Call('_stemr_evaluate_d_measure_LNA', PACKAGE = 'stemr', emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_params_temp, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, d_meas_ptr))
+evaluate_d_measure_LNA <- function(emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, d_meas_ptr) {
+    invisible(.Call('_stemr_evaluate_d_measure_LNA', PACKAGE = 'stemr', emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, d_meas_ptr))
 }
 
 #' Simulate a stochastic epidemic model path via Gillespie's direct method and

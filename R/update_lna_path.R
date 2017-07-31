@@ -12,10 +12,10 @@
 update_lna_path <-
         function(path_cur, data, lna_parameters, pathmat_prop, censusmat, draws_prop, emitmat,
                  flow_matrix, stoich_matrix, lna_pointer, lna_set_pars_pointer, lna_times,
-                 lna_params_temp, lna_param_inds, lna_const_inds, lna_tcovar_inds,
-                 lna_initdist_inds, param_update_inds, incidence_codes,
-                 census_incidence_codes, census_indices, measproc_indmat, obstime_inds,
-                 d_meas_pointer, do_prevalence, n_ess_updates, ess_schedule, randomize_schedule) {
+                 lna_param_inds, lna_const_inds, lna_tcovar_inds, lna_initdist_inds,
+                 param_update_inds, incidence_codes, census_incidence_codes, census_indices,
+                 measproc_indmat, obstime_inds, d_meas_pointer, do_prevalence, n_ess_updates,
+                 ess_schedule, randomize_schedule) {
 
         # vector for storing the number of steps in each ESS update
         ess_record <- matrix(1, nrow = n_ess_updates, ncol = length(ess_schedule[[1]]))
@@ -89,7 +89,6 @@ update_lna_path <-
                                         censusmat         = censusmat,
                                         measproc_indmat   = measproc_indmat,
                                         lna_parameters    = lna_parameters,
-                                        lna_params_temp   = lna_params_temp,
                                         lna_param_inds    = lna_param_inds,
                                         lna_const_inds    = lna_const_inds,
                                         lna_tcovar_inds   = lna_tcovar_inds,
@@ -164,7 +163,6 @@ update_lna_path <-
                                                 censusmat         = censusmat,
                                                 measproc_indmat   = measproc_indmat,
                                                 lna_parameters    = lna_parameters,
-                                                lna_params_temp   = lna_params_temp,
                                                 lna_param_inds    = lna_param_inds,
                                                 lna_const_inds    = lna_const_inds,
                                                 lna_tcovar_inds   = lna_tcovar_inds,
@@ -191,7 +189,7 @@ update_lna_path <-
                                 } else {
                                         copy_2_rows(path_cur$draws,
                                                     draws_prop[ess_schedule[[1]][[j]],],
-                                                    ess_schedule[[1]][[j]]-1)
+                                                    ess_schedule[[1]][[j]] - 1)
                                 }
 
                                 # copy the LNA path and the data log likelihood

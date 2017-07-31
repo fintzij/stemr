@@ -252,8 +252,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // evaluate_d_measure_LNA
-void evaluate_d_measure_LNA(Rcpp::NumericMatrix& emitmat, const Rcpp::NumericMatrix& obsmat, const Rcpp::NumericMatrix& censusmat, const Rcpp::LogicalMatrix& measproc_indmat, const Rcpp::NumericMatrix& lna_parameters, Rcpp::NumericVector& lna_params_temp, const Rcpp::IntegerVector& lna_param_inds, const Rcpp::IntegerVector& lna_const_inds, const Rcpp::IntegerVector& lna_tcovar_inds, const Rcpp::LogicalVector& param_update_inds, const Rcpp::IntegerVector& census_indices, SEXP d_meas_ptr);
-RcppExport SEXP _stemr_evaluate_d_measure_LNA(SEXP emitmatSEXP, SEXP obsmatSEXP, SEXP censusmatSEXP, SEXP measproc_indmatSEXP, SEXP lna_parametersSEXP, SEXP lna_params_tempSEXP, SEXP lna_param_indsSEXP, SEXP lna_const_indsSEXP, SEXP lna_tcovar_indsSEXP, SEXP param_update_indsSEXP, SEXP census_indicesSEXP, SEXP d_meas_ptrSEXP) {
+void evaluate_d_measure_LNA(Rcpp::NumericMatrix& emitmat, const Rcpp::NumericMatrix& obsmat, const Rcpp::NumericMatrix& censusmat, const Rcpp::LogicalMatrix& measproc_indmat, const Rcpp::NumericMatrix& lna_parameters, const Rcpp::IntegerVector& lna_param_inds, const Rcpp::IntegerVector& lna_const_inds, const Rcpp::IntegerVector& lna_tcovar_inds, const Rcpp::LogicalVector& param_update_inds, const Rcpp::IntegerVector& census_indices, SEXP d_meas_ptr);
+RcppExport SEXP _stemr_evaluate_d_measure_LNA(SEXP emitmatSEXP, SEXP obsmatSEXP, SEXP censusmatSEXP, SEXP measproc_indmatSEXP, SEXP lna_parametersSEXP, SEXP lna_param_indsSEXP, SEXP lna_const_indsSEXP, SEXP lna_tcovar_indsSEXP, SEXP param_update_indsSEXP, SEXP census_indicesSEXP, SEXP d_meas_ptrSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix& >::type emitmat(emitmatSEXP);
@@ -261,14 +261,13 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type censusmat(censusmatSEXP);
     Rcpp::traits::input_parameter< const Rcpp::LogicalMatrix& >::type measproc_indmat(measproc_indmatSEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type lna_parameters(lna_parametersSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type lna_params_temp(lna_params_tempSEXP);
     Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type lna_param_inds(lna_param_indsSEXP);
     Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type lna_const_inds(lna_const_indsSEXP);
     Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type lna_tcovar_inds(lna_tcovar_indsSEXP);
     Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type param_update_inds(param_update_indsSEXP);
     Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type census_indices(census_indicesSEXP);
     Rcpp::traits::input_parameter< SEXP >::type d_meas_ptr(d_meas_ptrSEXP);
-    evaluate_d_measure_LNA(emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_params_temp, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, d_meas_ptr);
+    evaluate_d_measure_LNA(emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, d_meas_ptr);
     return R_NilValue;
 END_RCPP
 }
@@ -541,7 +540,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_c_rw_adaptive", (DL_FUNC) &_stemr_c_rw_adaptive, 6},
     {"_stemr_c_rw", (DL_FUNC) &_stemr_c_rw, 4},
     {"_stemr_evaluate_d_measure", (DL_FUNC) &_stemr_evaluate_d_measure, 8},
-    {"_stemr_evaluate_d_measure_LNA", (DL_FUNC) &_stemr_evaluate_d_measure_LNA, 12},
+    {"_stemr_evaluate_d_measure_LNA", (DL_FUNC) &_stemr_evaluate_d_measure_LNA, 11},
     {"_stemr_simulate_gillespie", (DL_FUNC) &_stemr_simulate_gillespie, 10},
     {"_stemr_find_interval", (DL_FUNC) &_stemr_find_interval, 4},
     {"_stemr_g_prop2c_prop", (DL_FUNC) &_stemr_g_prop2c_prop, 3},

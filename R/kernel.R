@@ -20,6 +20,8 @@
 #' @param target_g target acceptance rate for global Metropolis proposals.
 #' @param target_c target acceptance rate for componentwise Metropolis proposals
 #' @param nugget fixed nugget contribution, defaults to 0.01.
+#' @param stop_adaptation iteration at which to stop adapting the proposal
+#'   distribution.
 #' @param messages should messages be printed?
 #'
 #' @details Specifies a Metropolis transition kernel wtih symmetric Gaussian
@@ -46,6 +48,7 @@ kernel <-
                  target_g = 0.234,
                  target_c = 0.44,
                  nugget = 0.01,
+                 stop_adaptation = Inf,
                  messages = TRUE) {
 
         if(!method %in% c("c_rw", "mvn_rw", "c_rw_adaptive", "mvn_c_adaptive", "mvn_g_adaptive")) {
@@ -58,14 +61,6 @@ kernel <-
 
         if(target_c <= 0 || target_c >=1) {
                 stop("The target acceptance rate must be between 0 and 1.")
-        }
-
-        if(scale_cooling <= 0 || scale_cooling >=1) {
-                stop("The scale cooling rate must be between 0 and 1.")
-        }
-
-        if(scale_constant <= 0) {
-                stop("The scale constant must be positive.")
         }
 
         if(!is.null(nugget) && (nugget < 0 || nugget > 1)) {
@@ -83,7 +78,8 @@ kernel <-
                                 max_scaling   = as.numeric(max_scaling),
                                 target_g      = target_g,
                                 target_c      = target_c,
-                                nugget        = nugget)
+                                nugget        = nugget,
+                                stop_adaptation = stop_adaptation)
 
         return(list(method = method, sigma = sigma, kernel_settings = kernel_settings))
 }
