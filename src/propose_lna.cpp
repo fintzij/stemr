@@ -40,12 +40,12 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix&
         // initialize the objects used in each time interval
         double t_L = 0;
         double t_R = 0;
-        Rcpp::NumericVector current_params(lna_pars.ncol());    // vector for storing the current parameter values
-        current_params = lna_pars.row(0);                       // set the current parameter values
+        Rcpp::NumericVector current_params = lna_pars.row(0);   // vector for storing the current parameter values
+        CALL_SET_LNA_PARAMS(current_params, set_pars_pointer);  // set the parameters in the odeintr namespace
 
         // initial state vector - copy elements from the current parameter vector
-        arma::vec init_state(n_comps);
-        std::copy(current_params.begin()+init_start, current_params.begin()+init_end, init_state.begin());
+        arma::vec init_state(current_params.begin() + init_start, n_comps);
+        arma::vec init_volumes(init_state.begin(), n_comps);
 
         // initialize the LNA objects - the vector for storing the current state
         Rcpp::NumericVector lna_state_vec(n_odes);   // vector to store the results of the ODEs
@@ -56,13 +56,10 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix&
         arma::vec log_lna(n_events, arma::fill::zeros);  // LNA increment, log scale
         arma::vec nat_lna(n_events, arma::fill::zeros);  // LNA increment, natural scale
         arma::vec c_incid(n_events, arma::fill::zeros);  // cumulative incidence
-        arma::vec init_volumes = init_state; // initial compartment counts/volumes
-        arma::mat lna_path(n_events+1, n_times, arma::fill::zeros); // matrix to store the path
-        lna_path.row(0) = lna_times;     // save the observation times
 
-        // set the initial volumes and the LNA parameters
-        std::copy(init_volumes.begin(), init_volumes.end(), current_params.begin()+init_start); // copy initial volumes
-        CALL_SET_LNA_PARAMS(current_params, set_pars_pointer);  // set the parameters in the odeintr namespace
+        // matrix in which to store the LNA path
+        arma::mat lna_path(n_events+1, n_times, arma::fill::zeros);
+        lna_path.row(0) = lna_times;
 
         // indices at which the diffusion elements of lna_state vec start
         int diff_start = n_events;
@@ -95,26 +92,22 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix&
                         forward_exception_to_r(err);
                 }
 
+                // compute the LNA increment and clamp below by 0
                 nat_lna = arma::exp(log_lna) - 1;
-
-                // clamp the LNA increment below by 0
                 nat_lna.elem(arma::find(nat_lna < 0)).zeros();
+
+                // update the cumulative incidence
+                c_incid += nat_lna;
+                lna_path(arma::span(1,n_events), j+1) = c_incid;
+
+                // update the compartment volumes
+                init_volumes = init_state + stoich_matrix * c_incid;
+                init_volumes.elem(arma::find(init_volumes < 0)).zeros();
 
                 // update the parameters if they need to be updated
                 if(param_update_inds[j+1]) {
                         current_params = lna_pars.row(j+1);
                 }
-
-                // update the cumulative incidence, compartment volumes, and the parameter vector
-                c_incid += nat_lna;
-                init_volumes = init_state + stoich_matrix * c_incid;
-
-                // save the new state
-                // lna_path(arma::span(1,n_events),j+1) = nat_lna;
-                lna_path(arma::span(1,n_events), j+1) = c_incid;
-
-                // clamp the compartment volumes below by 0
-                init_volumes.elem(arma::find(init_volumes < 0)).zeros();
 
                 // copy the compartment volumes to the current parameters
                 std::copy(init_volumes.begin(), init_volumes.end(), current_params.begin() + init_start);

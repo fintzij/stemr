@@ -135,6 +135,8 @@ stem_inference_lna <- function(stem_object,
         concs2vols <- function(concentrations, size_vec = comp_size_vec) concentrations*size_vec
         vols2concs <- function(volumes, size_vec = comp_size_vec) volumes/size_vec
         initdist_names <- names(stem_object$dynamics$initdist_params)
+        convrec_initprob_names  <- paste0("p_", initdist_names)
+        convrec_initvol_names   <- initdist_names
 
         # if the initial counts are not fixed, construct the initial distribution prior
         if(!fixed_inits) {
@@ -161,6 +163,8 @@ stem_inference_lna <- function(stem_object,
         } else {
 
                 acceptances_init         <- NULL
+                initdist_prior           <- NULL
+                initdist_log_prior       <- NULL
                 init_volumes_cur         <- initdist_params_cur # vector of initial compartment volumes
                 initdist_params_cur      <- vols2concs(initdist_params_cur) # vector of initial distribution parameters
                 names(init_volumes_cur)  <- initdist_names
@@ -369,16 +373,16 @@ stem_inference_lna <- function(stem_object,
                 matrix(
                         0.0,
                         nrow = 1 + floor(iterations / thin_params),
-                        ncol = n_model_params + as.numeric(!t0_fixed) + as.numeric(!fixed_inits) * n_compartments,
-                        dimnames = list(NULL, c(names(model_params_nat), t0_name, paste0("p_",names(initdist_params_prop))))
+                        ncol = n_model_params + as.numeric(!t0_fixed) + n_compartments,
+                        dimnames = list(NULL, c(names(model_params_nat), t0_name, convrec_initprob_names))
                 )
 
         parameter_samples_est <-
                 matrix(
                         0.0,
                         nrow = 1 + floor(iterations / thin_params),
-                        ncol = n_model_params + as.numeric(!t0_fixed) + as.numeric(!fixed_inits) * n_compartments,
-                        dimnames = list(NULL, c(param_names_est, t0_name, names(initdist_params_prop)))
+                        ncol = n_model_params + as.numeric(!t0_fixed) + n_compartments,
+                        dimnames = list(NULL, c(param_names_est, t0_name, convrec_initvol_names))
                 )
 
         lna_paths <- array(0.0, dim = c(n_times, 1 + n_rates, 1 + floor(iterations / thin_latent_proc)))
@@ -815,6 +819,7 @@ stem_inference_lna <- function(stem_object,
                         data_log_lik_prop <- NULL
 
                         try({
+                                ### Check whether the pathmat is correctly specified
                                 map_draws_2_lna(pathmat           = pathmat_prop,
                                                 draws             = path$draws,
                                                 lna_times         = lna_times,
@@ -868,7 +873,7 @@ stem_inference_lna <- function(stem_object,
                         if(acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
 
                                 ### ACCEPTANCE
-                                acceptances_g       <- acceptances_g + 1    # increment acceptances
+                                acceptances_g <- acceptances_g + 1    # increment acceptances
 
                                 copy_vec(path$data_log_lik, data_log_lik_prop)      # update the data log likelihood
                                 copy_vec(params_logprior_cur, params_logprior_prop) # update the prior density
@@ -893,6 +898,11 @@ stem_inference_lna <- function(stem_object,
 
                                 # evaluate the data log likelihood
                                 try({
+                                        ## Mapping function leads to issues
+                                        ## BUG IS Probably HERE
+                                        ## Or, the pathmat is getting changed, and it affects usage downstream
+                                        ## Perhaps not being in sync with path$lna_path is problematic
+                                        ## It should probaly be copied over anyway in the acceptance step.
                                         map_draws_2_lna(pathmat           = pathmat_prop,
                                                         draws             = path$draws,
                                                         lna_times         = lna_times,
@@ -941,13 +951,15 @@ stem_inference_lna <- function(stem_object,
 
                                 ## Compute the acceptance probability
                                 acceptance_prob_g2c <- logpost_g2c_prop - logpost_g2c_cur
+                                # acceptance_prob_g2c <- 0
 
                                 # Adapt the proposal scalings
                                 if(iter < stop_adaptation) {
-                                        proposal_scaling[s] <- min(proposal_scaling[s] *
-                                                                           exp(adaptations[iter] *
-                                                                                       (min(exp(acceptance_prob_g2c),1) - target_c)),
-                                                                   max_scaling)
+                                        proposal_scaling[s] <-
+                                                min(proposal_scaling[s] *
+                                                            exp(adaptations[iter] *
+                                                                        (min(exp(acceptance_prob_g2c),1) - target_c)),
+                                                    max_scaling)
                                 }
                         }
 
@@ -1101,8 +1113,8 @@ stem_inference_lna <- function(stem_object,
 
                         # If the initial compartment counts are not fixed, sample new values
                         if(!fixed_inits) {
-                                copy_vec(initdist_params_prop, initdist_sampler())
-                                copy_vec(init_volumes_prop, concs2vols(initdist_params_prop))
+                                initdist_params_prop <- initdist_sampler()
+                                init_volumes_prop    <- concs2vols(initdist_params_prop)
                         }
 
                         # Insert the proposed parameters into the parameter proposal matrix
@@ -1170,7 +1182,8 @@ stem_inference_lna <- function(stem_object,
 
                                 ### ACCEPTANCE
                                 acceptances_init  <- acceptances_init + 1      # increment acceptances
-                                copy_vec(path$data_log_lik, data_log_lik_prop) # save the data log likelihood
+                                copy_vec(path$data_log_lik, data_log_lik_prop) # update the data log likelihood
+                                copy_vec(logpost_cur, path$data_log_lik + params_logprior_cur) # update log posterior
                                 copy_mat(lna_params_cur, lna_params_prop)      # update LNA parameter matrix
 
                                 # Update the initial distribution parameters and log prior if not fixed
@@ -1263,10 +1276,10 @@ stem_inference_lna <- function(stem_object,
                 data_log_lik       = data_log_lik,
                 lna_log_lik        = lna_log_lik,
                 params_log_prior   = params_log_prior,
-                initdist_log_prior = initdist_log_prior,
                 row.names          = seq(1, iterations+1, by=thin_params)-1)
 
-        if(!t0_fixed) MCMC_results <- cbind(MCMC_results, t0_log_prior = t0_log_prior)
+        if(!fixed_inits) MCMC_results <- cbind(MCMC_results, initdist_log_prior = initdist_log_prior)
+        if(!t0_fixed)    MCMC_results <- cbind(MCMC_results, t0_log_prior = t0_log_prior)
 
         # append the parameter samples on their natural and estimation scales
         MCMC_results <- cbind(MCMC_results, parameter_samples_nat, parameter_samples_est)
