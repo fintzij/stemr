@@ -39,7 +39,8 @@ void evaluate_d_measure_LNA(Rcpp::NumericMatrix& emitmat, const Rcpp::NumericMat
 
         // get parameters
         Rcpp::NumericVector current_params(lna_parameters.ncol());    // vector for storing the current parameter values
-        current_params = lna_parameters.row(0);                       // set the current parameter values
+        std::copy(lna_parameters.row(0).begin(), lna_parameters.row(0).end(), current_params.begin());
+        // current_params = lna_parameters.row(0);                       // set the current parameter values
 
         // evaluate the densities
         for(int j=0; j < n_obstimes; ++j) {
@@ -47,7 +48,8 @@ void evaluate_d_measure_LNA(Rcpp::NumericMatrix& emitmat, const Rcpp::NumericMat
                 // update the model parameters if called for
                 // measurement process is right continuous, hence indexing by j+1, not j
                 if(param_update_inds[j]) {
-                        current_params = lna_parameters.row(census_indices[j+1]);
+                        std::copy(lna_parameters.row(j+1).begin(), lna_parameters.row(j+1).end(), current_params.begin());
+                        // current_params = lna_parameters.row(census_indices[j+1]);
                 }
 
                 // args: emitmat, emit_inds, record_ind, record, state, parameters, constants, tcovar, pointer

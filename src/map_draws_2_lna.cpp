@@ -43,7 +43,11 @@ void map_draws_2_lna(arma::mat& pathmat, const arma::mat& draws,
         // initialize the objects used in each time interval
         double t_L = 0;
         double t_R = 0;
-        Rcpp::NumericVector current_params = lna_pars.row(0);  // vector for storing the current parameter values
+
+        // vector of parameters, initial compartment columes, constants, and time-varying covariates
+        Rcpp::NumericVector current_params(lna_pars.ncol());
+        std::copy(lna_pars.row(0).begin(), lna_pars.row(0).end(), current_params.begin());
+
         CALL_SET_LNA_PARAMS(current_params, set_pars_pointer); // set the parameters in the odeintr namespace
 
         // initial state vector - copy elements from the current parameter vector
@@ -102,7 +106,7 @@ void map_draws_2_lna(arma::mat& pathmat, const arma::mat& draws,
 
                 // update the parameters if they need to be updated
                 if(param_update_inds[j+1]) {
-                        current_params = lna_pars.row(j+1);
+                        std::copy(lna_pars.row(j+1).begin(), lna_pars.row(j+1).end(), current_params.begin());
                 }
 
                 // copy the new initial volumes into the vector of parameters
