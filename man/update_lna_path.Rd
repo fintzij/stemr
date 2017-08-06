@@ -6,10 +6,10 @@
 \usage{
 update_lna_path(path_cur, data, lna_parameters, pathmat_prop, censusmat,
   draws_prop, emitmat, flow_matrix, stoich_matrix, lna_pointer,
-  lna_set_pars_pointer, lna_times, lna_params_temp, lna_param_inds,
-  lna_const_inds, lna_tcovar_inds, lna_initdist_inds, param_update_inds,
-  incidence_codes, census_incidence_codes, census_indices, measproc_indmat,
-  obstime_inds, d_meas_pointer, do_prevalence, n_ess_updates, ess_schedule,
+  lna_set_pars_pointer, lna_times, lna_param_inds, lna_const_inds,
+  lna_tcovar_inds, lna_initdist_inds, param_update_inds, incidence_codes,
+  census_incidence_codes, census_indices, measproc_indmat, obstime_inds,
+  d_meas_pointer, do_prevalence, n_ess_updates, ess_schedule,
   randomize_schedule)
 }
 \arguments{

@@ -293,6 +293,7 @@ simulate_stem <-
 
                         # simulate the LNA paths
                         census_paths <- vector(mode = "list", length = nsim)
+                        lna_draws    <- vector(mode = "list", length = nsim)
                         lna_paths    <- vector(mode = "list", length = nsim)
 
                         # retrieve the initial state
@@ -340,14 +341,15 @@ simulate_stem <-
 
                                 for(j in 1:100) {
                                         try({
-                                        census_paths[[k]] <-
-                                                propose_lna(lna_times         = lna_times,
-                                                            lna_pars          = lna_pars,
-                                                            init_start        = stem_object$dynamics$lna_initdist_inds[1],
-                                                            param_update_inds = param_update_inds,
-                                                            stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
-                                                            lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
-                                                            set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)$lna_path
+                                                path <- propose_lna(lna_times         = lna_times,
+                                                                    lna_pars          = lna_pars,
+                                                                    init_start        = stem_object$dynamics$lna_initdist_inds[1],
+                                                                    param_update_inds = param_update_inds,
+                                                                    stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
+                                                                    lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
+                                                                    set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
+                                        census_paths[[k]] <- path$lna_path
+                                        lna_draws[[k]]    <- path$draws
 
                                         }, silent = TRUE)
                                 }
@@ -480,6 +482,7 @@ simulate_stem <-
                 }
                 if(observations)  stem_simulations$datasets      <- datasets
                 if(subject_paths) stem_simulations$subject_paths <- subject_paths
+                if(method == "lna") stem_simulations$lna_draws   <- lna_draws
 
                 return(stem_simulations)
         }

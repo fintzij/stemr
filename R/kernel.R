@@ -47,7 +47,7 @@ kernel <-
                  max_scaling = Inf,
                  target_g = 0.234,
                  target_c = 0.44,
-                 nugget = 0.01,
+                 nugget = NULL,
                  stop_adaptation = Inf,
                  messages = TRUE) {
 
@@ -63,8 +63,8 @@ kernel <-
                 stop("The target acceptance rate must be between 0 and 1.")
         }
 
-        if(!is.null(nugget) && (nugget < 0 || nugget > 1)) {
-                stop("The nugget must be between 0 and 1.")
+        if(is.null(nugget)) {
+                nugget <- 0.01 * min(diag(sigma))
         }
 
         if(method == "c_rw_adaptive" && length(nugget) != nrow(sigma)) {

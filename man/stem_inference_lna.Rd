@@ -24,12 +24,7 @@ compartment volumes and t0) on their natural scales, and the model
 parameters on their estimation scales. The functions for converting between
 parameter scales should take vector of parameters as an argument, returning
 a transformed vector (the function call has the form:
-\code{transformed_vector <- conversion_function(original_vector)}).
-Alternately, the conversion functions may be supplied with two arguments
-passed by reference, the first of which is assumed to be the transformed
-vector that will be modified in place (i.e. the destination), and the
-second which is the original vector (this case, the function call has the
-form \code{conversion_function(transformed_vector, original_vector)}.}
+\code{transformed_vector <- conversion_function(original_vector)}).}
 
 \item{mcmc_kernel}{list containing the mcmc_kernel method, proposal
 covariance matrix, and an external pointer for the compiled mcmc_kernel

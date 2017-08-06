@@ -689,6 +689,7 @@ stem_inference_lna <- function(stem_object,
 
                         if(iter == stop_adaptation) {
                                 kernel_cov <- proposal_scaling * kernel_cov
+                                mcmc_kernel$sigma = diag(kernel_cov)
                         }
 
                         for(s in component_order) {
@@ -801,6 +802,7 @@ stem_inference_lna <- function(stem_object,
 
                         if(iter == stop_adaptation) {
                                 sigma_chol = chol(diag(sqrt(proposal_scaling)) %*% kernel_cov%*% diag(sqrt(proposal_scaling)))
+                                mcmc_kernel$sigma = diag(sqrt(proposal_scaling)) %*% kernel_cov%*% diag(sqrt(proposal_scaling))
                         }
 
                         # propose new parameters
@@ -985,6 +987,7 @@ stem_inference_lna <- function(stem_object,
 
                         if(iter == stop_adaptation) {
                                 sigma_chol = chol(sqrt(proposal_scaling) * kernel_cov)
+                                mcmc_kernel$sigma = proposal_scaling * kernel_cov
                         }
 
                         # propose new parameters

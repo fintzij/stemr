@@ -5,10 +5,10 @@
 \title{Initialize the LNA path}
 \usage{
 initialize_lna(data, lna_parameters, censusmat, emitmat, stoich_matrix,
-  lna_pointer, lna_set_pars_pointer, lna_times, lna_params_temp, lna_param_inds,
-  lna_const_inds, lna_tcovar_inds, lna_initdist_inds, param_update_inds,
-  incidence_codes, census_incidence_codes, census_indices, measproc_indmat,
-  obstime_inds, d_meas_pointer, do_prevalence, initialization_attempts)
+  lna_pointer, lna_set_pars_pointer, lna_times, lna_param_inds, lna_const_inds,
+  lna_tcovar_inds, lna_initdist_inds, param_update_inds, incidence_codes,
+  census_incidence_codes, census_indices, measproc_indmat, obstime_inds,
+  d_meas_pointer, do_prevalence, initialization_attempts)
 }
 \arguments{
 \item{data}{matrix containing the dataset}
