@@ -967,7 +967,6 @@ stem_inference_lna <- function(stem_object,
 
                                         ## Compute the acceptance probability
                                         acceptance_prob_g2c <- logpost_g2c_prop - logpost_g2c_cur
-                                        # acceptance_prob_g2c <- 0
 
                                         # Adapt the proposal scalings
                                         proposal_scaling[s] <-
