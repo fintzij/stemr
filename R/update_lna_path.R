@@ -76,7 +76,7 @@ update_lna_path <-
                                         path                = pathmat_prop,
                                         census_path         = censusmat,
                                         census_inds         = census_indices,
-                                        flow_matrix_lna     = t(stoich_matrix),
+                                        flow_matrix_lna     = flow_matrix,
                                         do_prevalence       = do_prevalence,
                                         init_state          = init_state,
                                         incidence_codes_lna = incidence_codes
@@ -150,7 +150,7 @@ update_lna_path <-
                                                 path                = pathmat_prop,
                                                 census_path         = censusmat,
                                                 census_inds         = census_indices,
-                                                flow_matrix_lna     = t(stoich_matrix),
+                                                flow_matrix_lna     = flow_matrix,
                                                 do_prevalence       = do_prevalence,
                                                 init_state          = init_state,
                                                 incidence_codes_lna = incidence_codes

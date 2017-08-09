@@ -45,6 +45,9 @@ stem_inference_lna <- function(stem_object,
                                ess_args = NULL,
                                messages) {
 
+        # if the MCMC is being restarted, save the existing results
+        mcmc_restart <- !is.null(stem_object$results)
+
         # extract the model objects from the stem_object
         flow_matrix            <- stem_object$dynamics$flow_matrix_lna
         stoich_matrix          <- stem_object$dynamics$stoich_matrix_lna
@@ -393,29 +396,73 @@ stem_inference_lna <- function(stem_object,
         ess_record        <- array(1, dim = c(n_ess_updates, length(ess_schedule[[1]]), floor(iterations / thin_params)))
 
         # initialize the latent path
-        path <- initialize_lna(
-                data                    = data,
-                lna_parameters          = lna_params_cur,
-                censusmat               = censusmat,
-                emitmat                 = emitmat,
-                stoich_matrix           = stoich_matrix,
-                lna_pointer             = lna_pointer,
-                lna_set_pars_pointer    = lna_set_pars_pointer,
-                lna_times               = lna_times,
-                lna_param_inds          = lna_param_inds,
-                lna_const_inds          = lna_const_inds,
-                lna_tcovar_inds         = lna_tcovar_inds,
-                lna_initdist_inds       = lna_initdist_inds,
-                param_update_inds       = param_update_inds,
-                incidence_codes         = incidence_codes,
-                census_incidence_codes  = census_incidence_codes,
-                census_indices          = census_indices,
-                measproc_indmat         = measproc_indmat,
-                obstime_inds            = obstime_inds,
-                d_meas_pointer          = d_meas_pointer,
-                do_prevalence           = do_prevalence,
-                initialization_attempts = initialization_attempts
-        )
+        if(mcmc_restart) {
+
+                # extract the path
+                assign("path", stem_object$stem_settings$path_for_restart)
+                data_log_lik_prop <- NULL
+
+                # recompute the data log likelihood
+                try({
+                        census_lna(
+                                path                = path$lna_path,
+                                census_path         = censusmat,
+                                census_inds         = census_indices,
+                                flow_matrix_lna     = t(stoich_matrix),
+                                do_prevalence       = do_prevalence,
+                                init_state          = init_state,
+                                incidence_codes_lna = incidence_codes
+                        )
+
+                        # evaluate the density of the incidence counts
+                        evaluate_d_measure_LNA(
+                                emitmat           = emitmat,
+                                obsmat            = data,
+                                censusmat         = censusmat,
+                                measproc_indmat   = measproc_indmat,
+                                lna_parameters    = lna_params_cur,
+                                lna_param_inds    = lna_param_inds,
+                                lna_const_inds    = lna_const_inds,
+                                lna_tcovar_inds   = lna_tcovar_inds,
+                                param_update_inds = param_update_inds,
+                                census_indices    = census_indices,
+                                d_meas_ptr        = d_meas_pointer
+                        )
+
+                        # compute the data log likelihood
+                        data_log_lik_prop <- sum(emitmat[,-1][measproc_indmat])
+                        if(is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
+                }, silent = TRUE)
+
+                if(is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
+
+                path$data_log_lik <- data_log_lik_prop
+
+        } else {
+                path <- initialize_lna(
+                        data                    = data,
+                        lna_parameters          = lna_params_cur,
+                        censusmat               = censusmat,
+                        emitmat                 = emitmat,
+                        stoich_matrix           = stoich_matrix,
+                        lna_pointer             = lna_pointer,
+                        lna_set_pars_pointer    = lna_set_pars_pointer,
+                        lna_times               = lna_times,
+                        lna_param_inds          = lna_param_inds,
+                        lna_const_inds          = lna_const_inds,
+                        lna_tcovar_inds         = lna_tcovar_inds,
+                        lna_initdist_inds       = lna_initdist_inds,
+                        param_update_inds       = param_update_inds,
+                        incidence_codes         = incidence_codes,
+                        census_incidence_codes  = census_incidence_codes,
+                        census_indices          = census_indices,
+                        measproc_indmat         = measproc_indmat,
+                        obstime_inds            = obstime_inds,
+                        d_meas_pointer          = d_meas_pointer,
+                        do_prevalence           = do_prevalence,
+                        initialization_attempts = initialization_attempts
+                )
+        }
 
         # object for proposing new stochastic perturbations
         draws_prop <- matrix(0.0, nrow = nrow(flow_matrix), ncol = length(lna_times) - 1)
@@ -546,7 +593,7 @@ stem_inference_lna <- function(stem_object,
                                                 path                = pathmat_prop,
                                                 census_path         = censusmat,
                                                 census_inds         = census_indices,
-                                                flow_matrix_lna     = t(stoich_matrix),
+                                                flow_matrix_lna     = flow_matrix,
                                                 do_prevalence       = do_prevalence,
                                                 init_state          = init_volumes_cur,
                                                 incidence_codes_lna = incidence_codes
@@ -633,7 +680,7 @@ stem_inference_lna <- function(stem_object,
                                         path                = pathmat_prop,
                                         census_path         = censusmat,
                                         census_inds         = census_indices,
-                                        flow_matrix_lna     = t(stoich_matrix),
+                                        flow_matrix_lna     = flow_matrix,
                                         do_prevalence       = do_prevalence,
                                         init_state          = init_volumes_cur,
                                         incidence_codes_lna = incidence_codes
@@ -732,7 +779,7 @@ stem_inference_lna <- function(stem_object,
                                                 path                = pathmat_prop,
                                                 census_path         = censusmat,
                                                 census_inds         = census_indices,
-                                                flow_matrix_lna     = t(stoich_matrix),
+                                                flow_matrix_lna     = flow_matrix,
                                                 do_prevalence       = do_prevalence,
                                                 init_state          = init_volumes_cur,
                                                 incidence_codes_lna = incidence_codes
@@ -853,7 +900,7 @@ stem_inference_lna <- function(stem_object,
                                         path                = pathmat_prop,
                                         census_path         = censusmat,
                                         census_inds         = census_indices,
-                                        flow_matrix_lna     = t(stoich_matrix),
+                                        flow_matrix_lna     = flow_matrix,
                                         do_prevalence       = do_prevalence,
                                         init_state          = init_volumes_cur,
                                         incidence_codes_lna = incidence_codes
@@ -934,7 +981,7 @@ stem_inference_lna <- function(stem_object,
                                                         path                = pathmat_prop,
                                                         census_path         = censusmat,
                                                         census_inds         = census_indices,
-                                                        flow_matrix_lna     = t(stoich_matrix),
+                                                        flow_matrix_lna     = flow_matrix,
                                                         do_prevalence       = do_prevalence,
                                                         init_state          = init_volumes_cur,
                                                         incidence_codes_lna = incidence_codes
@@ -978,7 +1025,7 @@ stem_inference_lna <- function(stem_object,
 
                                 # Adapt the proposal kernel
                                 kernel_resid <- model_params_est - kernel_mean
-                                kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid%*%t(kernel_resid) - kernel_cov)
+                                kernel_cov   <- kernel_cov + adaptations[iter] * ((kernel_resid %o% kernel_resid) - kernel_cov)
                                 kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
                         }
 
@@ -1032,7 +1079,7 @@ stem_inference_lna <- function(stem_object,
                                         path                = pathmat_prop,
                                         census_path         = censusmat,
                                         census_inds         = census_indices,
-                                        flow_matrix_lna     = t(stoich_matrix),
+                                        flow_matrix_lna     = flow_matrix,
                                         do_prevalence       = do_prevalence,
                                         init_state          = init_volumes_cur,
                                         incidence_codes_lna = incidence_codes
@@ -1164,7 +1211,7 @@ stem_inference_lna <- function(stem_object,
                                         path                = pathmat_prop,
                                         census_path         = censusmat,
                                         census_inds         = census_indices,
-                                        flow_matrix_lna     = t(stoich_matrix),
+                                        flow_matrix_lna     = flow_matrix,
                                         do_prevalence       = do_prevalence,
                                         init_state          = init_volumes_prop,
                                         incidence_codes_lna = incidence_codes
@@ -1368,7 +1415,8 @@ stem_inference_lna <- function(stem_object,
                                           prior_density    = prior_density,
                                           mcmc_kernel      = mcmc_kernel,
                                           t0_kernel        = t0_kernel,
-                                          initdist_sampler = initdist_sampler)
+                                          initdist_sampler = initdist_sampler,
+                                          path_for_restart = path)
 
         return(stem_object)
 }
