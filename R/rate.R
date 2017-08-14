@@ -56,7 +56,7 @@
 #'   \sum_s I_s}, regardless of stratum. Note that 'I_ALL' will be replaced by a
 #'   vector of I_strata, therefore using 'I_all' outside of a function, e.g.
 #'   beta * I_ALL, will result in an error. However, beta * comp_fcn(I_ALL, sum)
-#'   is well defined. \item rate("beta1 * I_SELF + beta2 * comp_fcn(I_adj,
+#'   is well defined. \item rate("beta1 * I_SELF + beta2 * comp_fcn(I_ADJ,
 #'   sum)", "S", "I", "ALL"): each susceptible contacts infecteds in her own
 #'   stratum at rate \eqn{\beta1 * I_SELF}, and contacts infecteds in adjacent
 #'   strata (specified in the adjacency matrix) at rate \eqn{\beta * \sum_{s:
