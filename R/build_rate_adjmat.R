@@ -18,7 +18,7 @@ build_rate_adjmat <- function(rates, compartment_codes) {
         affects     <- matrix(0, nrow = length(rates), ncol = length(compartment_codes))
 
         colnames(depends_on) <- colnames(affects) <- names(compartment_codes)
-        rownames(depends_on) <- rownames(affects) <- paste0("RATE",1:length(rates))
+        rownames(depends_on) <- rownames(affects) <- unlist(lapply(rates, function(x) paste0(x$from,"2",x$to)))
 
         code_strings <- paste0("state\\[",compartment_codes,"\\]")
 

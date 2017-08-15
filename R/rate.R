@@ -1,15 +1,18 @@
 #' Generates a rate list to be supplied to the \code{\link{stem_dynamics}}
 #' funciton.
 #'
-#' @param rate unlumped rate, a string
+#' @param rate string for computing the rate (unlumped by default unless
+#'   \code{lumped=TRUE})
 #' @param from compartment from which an individual exits, a string
 #' @param to compartment into which an individual enters, a string
 #' @param strata character vector of strata to which the rate applies, may be
 #'   supplied as "ALL"
+#' @param seasonality string returned by the \code{\link{seasonality}} function
 #' @param incidence should an artificial compartment be created for th purpose
 #'   of simulating or making inference based on incidence data for this
 #'   transition or set of transitions? Defaults to FALSE.
-#' @param seasonality string returned by the \code{\link{seasonality}} function
+#' @param lumped is the rate string provided on the lumped state space of
+#'   compartment counts.
 #' @section Specifying the rate functions:
 #'
 #'   Each rate list specifies, at a minimum, the rate function, the compartment
@@ -25,12 +28,13 @@
 #'   "beta * I + eta *TIME" would indicate a linear trend in the infectivity
 #'   rate.
 #'
-#'   \emph{VERY IMPORTANT:} The rate functions must be specified at the subject
-#'   level as they are parsed internally and converted to lumped rates. For
-#'   example, in a standard SIR model, the subject-level infectivity and
-#'   recovery rates are \eqn{\beta * I} and \eqn{\mu}, whereas the lumped rates
-#'   which will be generated automatically are \eqn{\beta * I * S} and \eqn{\mu
-#'   * I}.
+#'   \emph{VERY IMPORTANT:} The rate functions are assumed to be specified at
+#'   the subject level and they are parsed internally and converted to lumped
+#'   rates. For example, in a standard SIR model, the subject-level infectivity
+#'   and recovery rates are \eqn{\beta * I} and \eqn{\mu}, whereas the lumped
+#'   rates which will be generated automatically are \eqn{\beta * I * S} and
+#'   \eqn{\mu * I}. When a lumped string is provided, no internal conversion
+#'   will occur.
 #'
 #'   The rate functions should be provided as string snippets of valid C++ code
 #'   (though if the snippet is a single line, no semicolon needs to be added).
@@ -93,9 +97,9 @@
 #' @export
 #'
 #' @examples rate("beta*I", "S", "I", "ALL", seasonality(period = c(12,52), timevar = "t", common_seasonality = FALSE))
-rate <- function(rate, from, to, strata = NULL, seasonality = NULL, incidence = FALSE) {
+rate <- function(rate, from, to, strata = NULL, seasonality = NULL, incidence = FALSE, lumped = FALSE) {
 
         # generate the formula
-        list(rate = rate, from = from, to = to, strata = strata, seasonality = seasonality, incidence = incidence)
+        list(rate = rate, from = from, to = to, strata = strata, seasonality = seasonality, incidence = incidence, lumped = lumped)
 
 }

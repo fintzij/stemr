@@ -222,7 +222,6 @@ stem_dynamics <-
                 compartment_names <- unlist(compartment_names)
         }
 
-
         if(messages) {
                 if(any(sapply(c(compartment_names, names(parameters), colnames(tcovar), names(constants)), function(x) nchar(x) < 4))) {
                         warning("It is highly suggested that all compartments, parameters, time-varying covariates, and constants have names that are at least four characters long to avoid errors when parsing the rate functions!")
@@ -246,7 +245,8 @@ stem_dynamics <-
 
         # ensure that time and time-varying covariates will be properly accounted for
         timevarying <- any(sapply(rates, function(x) grepl("TIME", x[["rate"]]))) ||
-                           any(sapply(rates, function(x)! is.null(x[["seasonality"]])))
+                           any(sapply(rates, function(x)! is.null(x[["seasonality"]]))) ||
+                                !is.null(tcovar)
 
         if(!timevarying) {
                 tcovar_names <- tcovar_codes <- NULL
@@ -255,17 +255,19 @@ stem_dynamics <-
                 if(is.null(tcovar)) {
                         tcovar_names <- "TIME"
                         n_tcovar <- 1
-                        tcovar_codes <- 1; names(tcovar_codes) <- "TIME"
+                        tcovar_codes <- 0
+                        names(tcovar_codes) <- "TIME"
                 } else {
                         tcovar_names    <- c(colnames(tcovar)[2:ncol(tcovar)], "TIME")
                         n_tcovar        <- length(tcovar_names)
-                        tcovar_codes    <- seq_len(n_tcovar); names(tcovar_codes) <- tcovar_names # the first column will be the times, so codes start at 1
+                        tcovar_codes    <- seq_len(n_tcovar) - 1
+                        names(tcovar_codes) <- tcovar_names # the first column will be the times, so codes start at 1
                 }
         }
 
         # compute the time discretization interval if it is not supplied and there are smooth time-varying covariates
         if(is.null(timestep) && timevarying) {
-                timestep <- (tmax - t0)/50
+                timestep <- (tmax - t0)/nrow(dat)
 
         } else if(is.null(timestep) && !timevarying){
                 timestep <- tmax - t0
@@ -408,23 +410,21 @@ stem_dynamics <-
                                         }
                                 }
 
-
-
                                 # make substitutions in the rate string
                                 # SELF substitution
                                 if(grepl("SELF", rates[[k]][[1]])) {
-                                        rate_fcns[[k]][[j]][[1]] <- gsub("SELF", strat_self, rate_fcns[[k]][[j]][[1]])
+                                        rate_fcns[[k]][[j]]$unlumped <- gsub("SELF", strat_self, rate_fcns[[k]][[j]]$unlumped)
                                 }
 
                                 # ALL substitution
                                 if(grepl("ALL", rates[[k]][[1]])) {
-                                        which_all <- sapply(comp_all, FUN = grepl, rate_fcns[[k]][[j]][[1]])
+                                        which_all <- sapply(comp_all, FUN = grepl, rate_fcns[[k]][[j]]$unlumped)
                                         which_sub <- comp_all[which_all]
 
                                         for(l in seq_along(which_sub)) {
                                                 sub_comp <- comp_names[which(comp_all == which_sub[l])]
                                                 sub_all  <- compartment_names[compartment_names %in% paste(sub_comp, strata, sep = "_")]
-                                                rate_fcns[[k]][[j]][[1]] <- sub_comp_rate(rate_fcns[[k]][[j]][[1]], comp = which_sub, subs = sub_all)
+                                                rate_fcns[[k]][[j]]$unlumped <- sub_comp_rate(rate_fcns[[k]][[j]]$unlumped, comp = which_sub, subs = sub_all)
                                         }
                                 }
 
@@ -433,7 +433,7 @@ stem_dynamics <-
                                         # vector of adjacent strata
                                         strat_adj <- colnames(adjacency)[adjacency[strat_self,] == 1] # names of adjacent strata
 
-                                        which_adj <- sapply(comp_adj, FUN = grepl, rate_fcns[[k]][[j]][[1]])
+                                        which_adj <- sapply(comp_adj, FUN = grepl, rate_fcns[[k]][[j]]$unlumped)
                                         which_sub <- comp_adj[which_adj] # string to be replaced, *_ADJ
 
                                         for(l in seq_along(which_sub)) {
@@ -444,17 +444,23 @@ stem_dynamics <-
                                                 sub_adj  <- compartment_names[which(compartment_names %in% paste(sub_comp, strat_adj, sep = "_"))]
 
                                                 # make the substitution
-                                                rate_fcns[[k]][[j]][[1]] <- sub_comp_rate(rate_fcns[[k]][[j]][[1]], comp = which_sub, subs = sub_adj)
+                                                rate_fcns[[k]][[j]]$unlumped <- sub_comp_rate(rate_fcns[[k]][[j]]$unlumped, comp = which_sub, subs = sub_adj)
                                         }
                                 }
 
                                 # make substitutions in the 'from' and 'to' arguments
-                                if((!rate_fcns[[k]][[j]][[3]] %in% compartment_names) && (rate_fcns[[k]][[j]][[3]] %in% comp_names)) {
-                                        rate_fcns[[k]][[j]][[3]] <- paste(rate_fcns[[k]][[j]][[3]], strat_self, sep = "_")
+                                if((!rate_fcns[[k]][[j]]$from %in% compartment_names) && (rate_fcns[[k]][[j]]$from %in% comp_names)) {
+                                        rate_fcns[[k]][[j]]$from <- paste(rate_fcns[[k]][[j]]$from, strat_self, sep = "_")
                                 }
 
-                                if((!rate_fcns[[k]][[j]][[4]] %in% compartment_names) && (rate_fcns[[k]][[j]][[4]] %in% comp_names)) {
-                                        rate_fcns[[k]][[j]][[4]] <- paste(rate_fcns[[k]][[j]][[4]], strat_self, sep = "_")
+                                if((!rate_fcns[[k]][[j]]$to %in% compartment_names) && (rate_fcns[[k]][[j]]$to %in% comp_names)) {
+                                        rate_fcns[[k]][[j]]$to <- paste(rate_fcns[[k]][[j]]$to, strat_self, sep = "_")
+                                }
+
+                                # if the lumped rates were provided, save them in the lumped rate slot
+                                if(rates[[k]]$lumped == TRUE) {
+                                        rate_fcns[[k]][[j]]$lumped <- rate_fcns[[k]][[j]]$unlumped
+                                        rate_fcns[[k]][[j]]["unlumped"] <- list(NULL)
                                 }
                         }
                 }
@@ -466,33 +472,68 @@ stem_dynamics <-
                 for(k in seq_along(rate_fcns)) {
 
                         # instatiate lumped rate functions
-                        rate_fcns[[k]][[6]] <- paste0("(", rate_fcns[[k]][[1]], ") * ", rate_fcns[[k]][[3]])
+                        if(is.null(rate_fcns[[k]]$lumped)) {
 
-                        # make the substitutions for the parameter codes
-                        for(s in seq_along(param_codes)) {
-                                code_name <- param_names[s]
-                                code      <- param_codes[s]
-                                rate_fcns[[k]][[1]] <- gsub(code_name, paste0("parameters[",code,"]"), rate_fcns[[k]][[1]])
-                        }
+                                # save the unparsed lumped rate
+                                rate_fcns[[k]]$unparsed <- paste0("(", rate_fcns[[k]]$unlumped, ") * ", rate_fcns[[k]]$from)
 
-                        # make the substitutions for the constant codes
-                        for(s in seq_along(tcovar_codes)) {
-                                code_name <- names(tcovar_codes)[s]
-                                code      <- tcovar_codes[s]
-                                rate_fcns[[k]][[1]] <- gsub(code_name, paste0("tcovar[",code,"]"), rate_fcns[[k]][[1]])
-                        }
+                                # make the substitutions for the parameter codes
+                                for(s in seq_along(param_codes)) {
+                                        code_name <- param_names[s]
+                                        code      <- param_codes[s]
+                                        rate_fcns[[k]]$unlumped <- gsub(code_name,
+                                                                        paste0("parameters[",code,"]"), rate_fcns[[k]]$unlumped)
+                                }
 
-                        # make the substitutions for the constant codes
-                        if(!is.null(const_codes)) {
-                                for(s in seq_along(const_codes)) {
-                                        code_name <- names(const_codes)[s]
-                                        code      <- const_codes[s]
-                                        rate_fcns[[k]][[1]] <- gsub(code_name, paste0("constants[",code,"]"), rate_fcns[[k]][[1]])
+                                # make the substitutions for the constant codes
+                                for(s in seq_along(tcovar_codes)) {
+                                        code_name <- names(tcovar_codes)[s]
+                                        code      <- tcovar_codes[s]
+                                        rate_fcns[[k]]$unlumped <- gsub(code_name, paste0("tcovar[",code,"]"), rate_fcns[[k]]$unlumped)
+                                }
+
+                                # make the substitutions for the constant codes
+                                if(!is.null(const_codes)) {
+                                        for(s in seq_along(const_codes)) {
+                                                code_name <- names(const_codes)[s]
+                                                code      <- const_codes[s]
+                                                rate_fcns[[k]]$unlumped <- gsub(code_name, paste0("constants[",code,"]"), rate_fcns[[k]]$unlumped)
+                                        }
+                                }
+
+                                # instatiate lumped rate functions
+                                rate_fcns[[k]]$lumped <- paste0("(", rate_fcns[[k]]$unlumped, ") * ", rate_fcns[[k]]$from)
+
+                        } else {
+                                # save the unparsed lumped rate
+                                rate_fcns[[k]]$unparsed <- rate_fcns[[k]]$lumped
+
+                                # make the substitutions for the parameter codes
+                                for(s in seq_along(param_codes)) {
+                                        code_name <- param_names[s]
+                                        code      <- param_codes[s]
+                                        rate_fcns[[k]]$lumped <- gsub(code_name,
+                                                                      paste0("parameters[",code,"]"), rate_fcns[[k]]$lumped)
+                                }
+
+                                # make the substitutions for the constant codes
+                                for(s in seq_along(tcovar_codes)) {
+                                        code_name <- names(tcovar_codes)[s]
+                                        code      <- tcovar_codes[s]
+                                        rate_fcns[[k]]$lumped <- gsub(code_name,
+                                                                        paste0("tcovar[",code,"]"), rate_fcns[[k]]$lumped)
+                                }
+
+                                # make the substitutions for the constant codes
+                                if(!is.null(const_codes)) {
+                                        for(s in seq_along(const_codes)) {
+                                                code_name <- names(const_codes)[s]
+                                                code      <- const_codes[s]
+                                                rate_fcns[[k]]$lumped <- gsub(code_name, paste0("constants[",code,"]"),
+                                                                              rate_fcns[[k]]$lumped)
+                                        }
                                 }
                         }
-
-                        # instatiate lumped rate functions
-                        rate_fcns[[k]][[2]] <- paste0("(", rate_fcns[[k]][[1]], ") * ", rate_fcns[[k]][[3]])
 
                         # make substitutions for compartment codes
                         for(t in seq_along(compartment_codes)) {
@@ -519,7 +560,7 @@ stem_dynamics <-
                                 rel_strata <- state_initializer[[k]]$strata
                         }
 
-                        # ensure that there is one initializer function per stratum
+                        # ensure that there is one initializer function per relevant stratum
                         initializer[[k]] <- vector(mode = "list", length = length(rel_strata))
 
                         # handle initial parameters
@@ -556,7 +597,7 @@ stem_dynamics <-
                         }
                 }
 
-                initializer     <- unlist(initializer, recursive = FALSE);
+                initializer     <- unlist(initializer, recursive = FALSE)
                 initdist_params <- unlist(initdist_params)
                 initdist_priors <- unlist(initdist_priors)
 
@@ -570,12 +611,6 @@ stem_dynamics <-
                 constants   <- c(constants, popsize = popsize, strata_sizes)
                 const_codes <- seq_along(c(const_codes, popsize, strata_sizes)) - 1
                 names(const_codes) <- names(constants)
-
-                # check that either all parameters are random or that initial state is fixed for each stratum
-                if (!(all(sapply(initializer, function(x) x$fixed == TRUE)) ||
-                      all(sapply(initializer, function(x) x$fixed == FALSE)))) {
-                        stop("All of the initial state parameters must either be fixed, or all must be random.")
-                }
 
         } else {
 
@@ -605,44 +640,85 @@ stem_dynamics <-
                                 param_codes <- seq(0, length(parameters)-1); names(param_codes) <- param_names <- names(parameters)
 
                                 # add the seasonality
-                                rate_fcns[[k]][[1]] <- paste(rate_fcns[[k]][[1]], rates[[k]]$seasonality$seasonality, sep = " + ")
+                                rate_fcns[[k]]$unlumped <- paste(rate_fcns[[k]]$unlumped, rates[[k]]$seasonality$seasonality, sep = " + ")
                         }
 
-                        # save the unparsed rate
-                        rate_fcns[[k]][[6]] <- paste0("(", rate_fcns[[k]][[1]], ") * ", rate_fcns[[k]][[3]])
+                        # if the lumped rates were provided, save them in the lumped rate slot
+                        if(rates[[k]]$lumped == TRUE) {
+                                rate_fcns[[k]]$lumped <- rate_fcns[[k]]$unlumped
+                                rate_fcns[[k]]["unlumped"] <- list(NULL)
 
-                        # make the substitutions for the parameter codes
-                        for(s in seq_along(param_codes)) {
-                                code_name <- names(param_codes)[s]
-                                code      <- param_codes[s]
-                                rate_fcns[[k]]$unlumped <- gsub(code_name, paste0("parameters[",code,"]"), rate_fcns[[k]]$unlumped)
-                        }
+                                # save the unparsed rate
+                                rate_fcns[[k]]$unparsed <- rate_fcns$lumped
 
-                        # make the substitutions for the covariate codes
-                        for(s in seq_along(tcovar_codes)) {
-                                code_name <- names(tcovar_codes)[s]
-                                code      <- tcovar_codes[s]
-                                rate_fcns[[k]]$unlumped <- gsub(code_name, paste0("tcovar[",code,"]"), rate_fcns[[k]]$unlumped)
-                        }
-
-                        # make the substitutions for the constant codes
-                        if(!is.null(const_codes)) {
-                                for(s in seq_along(const_codes)) {
-                                        code_name <- names(const_codes)[s]
-                                        code      <- const_codes[s]
-                                        rate_fcns[[k]]$unlumped <- gsub(code_name, paste0("constants[",code,"]"), rate_fcns[[k]]$unlumped)
+                                # make the substitutions for the parameter codes
+                                for(s in seq_along(param_codes)) {
+                                        code_name <- names(param_codes)[s]
+                                        code      <- param_codes[s]
+                                        rate_fcns[[k]]$lumped <- gsub(code_name, paste0("parameters[",code,"]"), rate_fcns[[k]]$lumped)
                                 }
-                        }
 
-                        # make the substitutions for the compartment codes
-                        for(s in seq_along(compartment_codes)) {
-                                code_name <- names(compartment_codes)[s]
-                                code      <- compartment_codes[s]
-                                rate_fcns[[k]]$unlumped <- gsub(code_name, paste0("state[",code,"]"), rate_fcns[[k]]$unlumped)
-                        }
+                                # make the substitutions for the covariate codes
+                                for(s in seq_along(tcovar_codes)) {
+                                        code_name <- names(tcovar_codes)[s]
+                                        code      <- tcovar_codes[s]
+                                        rate_fcns[[k]]$lumped <- gsub(code_name, paste0("tcovar[",code,"]"), rate_fcns[[k]]$lumped)
+                                }
 
-                        # instatiate the lumped rate function
-                        rate_fcns[[k]][[2]] <- paste0("(", rate_fcns[[k]][[1]], ") * state[", compartment_codes[rate_fcns[[k]][[3]]], "]")
+                                # make the substitutions for the constant codes
+                                if(!is.null(const_codes)) {
+                                        for(s in seq_along(const_codes)) {
+                                                code_name <- names(const_codes)[s]
+                                                code      <- const_codes[s]
+                                                rate_fcns[[k]]$lumped <- gsub(code_name, paste0("constants[",code,"]"), rate_fcns[[k]]$lumped)
+                                        }
+                                }
+
+                                # make the substitutions for the compartment codes
+                                for(s in seq_along(compartment_codes)) {
+                                        code_name <- names(compartment_codes)[s]
+                                        code      <- compartment_codes[s]
+                                        rate_fcns[[k]]$lumped <- gsub(code_name, paste0("state[",code,"]"), rate_fcns[[k]]$lumped)
+                                }
+
+                        } else if(rates[[k]]$lumped == FALSE) {
+
+                                # construct and save the unparsed lumped rate
+                                rate_fcns[[k]]$unparsed <- paste0("(", rate_fcns[[k]]$unlumped, ") * ", rate_fcns[[k]]$from)
+
+                                # make the substitutions for the parameter codes
+                                for(s in seq_along(param_codes)) {
+                                        code_name <- names(param_codes)[s]
+                                        code      <- param_codes[s]
+                                        rate_fcns[[k]]$unlumped <- gsub(code_name, paste0("parameters[",code,"]"), rate_fcns[[k]]$unlumped)
+                                }
+
+                                # make the substitutions for the covariate codes
+                                for(s in seq_along(tcovar_codes)) {
+                                        code_name <- names(tcovar_codes)[s]
+                                        code      <- tcovar_codes[s]
+                                        rate_fcns[[k]]$unlumped <- gsub(code_name, paste0("tcovar[",code,"]"), rate_fcns[[k]]$unlumped)
+                                }
+
+                                # make the substitutions for the constant codes
+                                if(!is.null(const_codes)) {
+                                        for(s in seq_along(const_codes)) {
+                                                code_name <- names(const_codes)[s]
+                                                code      <- const_codes[s]
+                                                rate_fcns[[k]]$unlumped <- gsub(code_name, paste0("constants[",code,"]"), rate_fcns[[k]]$unlumped)
+                                        }
+                                }
+
+                                # make the substitutions for the compartment codes
+                                for(s in seq_along(compartment_codes)) {
+                                        code_name <- names(compartment_codes)[s]
+                                        code      <- compartment_codes[s]
+                                        rate_fcns[[k]]$unlumped <- gsub(code_name, paste0("state[",code,"]"), rate_fcns[[k]]$unlumped)
+                                }
+
+                                # instatiate the lumped rate function
+                                rate_fcns[[k]]$lumped <- paste0("(", rate_fcns[[k]]$unlumped, ") * state[", compartment_codes[rate_fcns[[k]]$from], "]")
+                        }
                 }
 
                 initializer            <- unlist(state_initializer, recursive = FALSE)
@@ -672,10 +748,6 @@ stem_dynamics <-
                 names(const_codes) <- names(constants)
         }
 
-        if(popsize < 5000 & (is.character(compile_lna) || compile_lna || stan_lna_code)) {
-                warning("The population size is possibly too small for the LNA approximation to be valid. Proceed with caution.")
-        }
-
         # construct the flow matrix
         flow_matrix <- build_flowmat(rate_fcns, compartment_names)
 
@@ -700,7 +772,12 @@ stem_dynamics <-
         rate_adjmat <- build_rate_adjmat(rate_fcns, compartment_codes)
 
         # build the time-varying covariate matrix so that it contains the census intervals
-        tcovar              <- build_tcovar_matrix(tcovar = tcovar, timestep = timestep, t0 = t0, tmax = tmax)
+        tcovar <- build_tcovar_matrix(tcovar   = tcovar,
+                                      timestep = timestep,
+                                      t0       = t0,
+                                      tmax     = tmax,
+                                      messages = messages)
+
         tcovar_codes        <- seq_len(ncol(tcovar) - 1)
         names(tcovar_codes) <- colnames(tcovar)[2:ncol(tcovar)]
         n_tcovar            <- ncol(tcovar) - 1
@@ -744,7 +821,7 @@ stem_dynamics <-
                 rate_ptrs <- NULL
         }
 
-        # compile LNA functions
+        # compile LNA functions -- RESUME HERE
         if(is.character(compile_lna) || compile_lna | stan_lna_code) {
 
                 # remove the incidence codes from the flow matrix, we don't need them

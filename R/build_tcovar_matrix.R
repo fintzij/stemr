@@ -12,7 +12,7 @@
 #'   matrix or a timestep is supplied, TCOVAR will just be a matrix with the
 #'   left and right endpoints of the time-period.
 #' @export
-build_tcovar_matrix <- function(tcovar = NULL, timestep = NULL, t0, tmax) {
+build_tcovar_matrix <- function(tcovar = NULL, timestep = NULL, t0, tmax, messages) {
 
         if(is.null(tcovar) & is.null(timestep)) {
                 TCOVAR <- matrix(c(t0,tmax,t0,tmax), ncol = 2)
@@ -24,7 +24,7 @@ build_tcovar_matrix <- function(tcovar = NULL, timestep = NULL, t0, tmax) {
                 }
 
                 if(!is.null(timestep)) {
-                        timeseq <- unique(c(seq(t0,tmax,timestep), tmax))
+                        timeseq <- unique(c(seq(t0, tmax, timestep), tmax))
                 } else {
                         timeseq <- NULL
                 }
@@ -39,7 +39,7 @@ build_tcovar_matrix <- function(tcovar = NULL, timestep = NULL, t0, tmax) {
                         TCOVAR[,2] <- TCOVAR_TIMES
                         colnames(TCOVAR) <- c("_time", "TIME")
                 } else {
-                        tcovar_inds <- findInterval(TCOVAR_TIMES, tcovar[,1])
+                        tcovar_inds <- findInterval(TCOVAR_TIMES, tcovar[,1], all.inside = T)
                         TCOVAR[,2:(ncol(TCOVAR)-1)] <- tcovar[tcovar_inds, 2:ncol(tcovar)]
                         TCOVAR[,ncol(TCOVAR)] <- timeseq[findInterval(TCOVAR_TIMES, timeseq, all.inside = TRUE)]
                         colnames(TCOVAR) <- c("_time", colnames(tcovar)[2:ncol(tcovar)], "TIME")
