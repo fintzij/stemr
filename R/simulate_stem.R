@@ -151,7 +151,20 @@ simulate_stem <-
                                         colnames(init_states) <- names(stem_object$dynamics$comp_codes)
 
                                         for(s in seq_len(stem_object$dynamics$n_strata)) {
-                                                init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <- as.matrix(t(rmultinom(nsim, stem_object$dynamics$strata_sizes[s], stem_object$dynamics$state_initializer[[s]]$prior)))
+
+                                                if(!stem_object$dynamics$state_initializer[[s]]$fixed) {
+                                                        init_states[, stem_object$dynamics$state_initializer[[s]]$codes] <-
+                                                                as.matrix(t(rmultinom(nsim,
+                                                                                      stem_object$dynamics$strata_sizes[s],
+                                                                                      stem_object$dynamics$state_initializer[[s]]$prior)))
+
+                                                } else {
+                                                        init_states[, stem_object$dynamics$state_initializer[[s]]$codes] <-
+                                                                matrix(stem_object$dynamics$state_initializer[[s]]$init_states,
+                                                                       nrow = nsim,
+                                                                       ncol = length(stem_object$dynamics$state_initializer[[s]]$init_states),
+                                                                       byrow = T)
+                                                }
                                         }
                                 }
                         }
@@ -284,8 +297,8 @@ simulate_stem <-
                                                              ncol = length(constant_inds), byrow = T)
 
                         if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
-                                tcovar_rowinds          <- findInterval(lna_times, stem_object$dynamics$dynamics_args$tcovar[,1])
-                                lna_pars[, tcovar_inds] <- stem_object$dynamics$dynamics_args$tcovar[tcovar_rowinds,-1]
+                                tcovar_rowinds          <- findInterval(lna_times, stem_object$dynamics$dynamics_args$tcovar[,1], all.inside = TRUE)
+                                lna_pars[, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
                         }
 
                         # generate some auxilliary objects
@@ -314,8 +327,19 @@ simulate_stem <-
                                         colnames(init_states) <- names(stem_object$dynamics$comp_codes)
 
                                         for(s in seq_len(stem_object$dynamics$n_strata)) {
-                                                init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <-
-                                                        stem_object$dynamics$strata_sizes[s] * extraDistr::rdirichlet(nsim, stem_object$dynamics$state_initializer[[s]]$prior)
+
+                                                if(!stem_object$dynamics$state_initializer[[s]]$fixed) {
+
+                                                        init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <-
+                                                                stem_object$dynamics$strata_sizes[s] * extraDistr::rdirichlet(nsim, stem_object$dynamics$state_initializer[[s]]$prior)
+
+                                                } else {
+                                                        init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <-
+                                                                matrix(stem_object$dynamics$state_initializer[[s]]$init_states,
+                                                                       nrow = nsim,
+                                                                       ncol = length(stem_object$dynamics$state_initializer[[s]]$init_states),
+                                                                       byrow = TRUE)
+                                                }
                                         }
                                 }
                         } else {
@@ -328,7 +352,10 @@ simulate_stem <-
 
                                         for(s in seq_len(stem_object$dynamics$n_strata)) {
                                                 init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <-
-                                                        stem_object$dynamics$strata_sizes[s] * stem_object$dynamics$state_initializer[[s]]$init_states
+                                                        matrix(stem_object$dynamics$state_initializer[[s]]$init_states,
+                                                               nrow = nsim,
+                                                               ncol = length(stem_object$dynamics$state_initializer[[s]]$init_states),
+                                                               byrow = TRUE)
                                         }
                                 }
                         }
@@ -339,7 +366,7 @@ simulate_stem <-
                                         pars2lnapars(lna_pars, c(parameters, init_states[k,]))
                                 }
 
-                                for(j in 1:100) {
+                                for(j in 1:max_attempts) {
                                         try({
                                                 path <- propose_lna(lna_times         = lna_times,
                                                                     lna_pars          = lna_pars,

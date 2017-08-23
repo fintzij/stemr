@@ -10,7 +10,7 @@
 #' @export
 parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, lna_comp_codes) {
 
-        lna_param_codes <- c(param_codes, const_codes + length(param_codes), tcovar_codes + length(param_codes) + length(const_codes)-1)
+        lna_param_codes <- c(param_codes, const_codes + length(param_codes), tcovar_codes + length(param_codes) + length(const_codes) - 1)
 
         lookup_table <- data.frame(varname     = c(paste("odeintr::pars[", lna_param_codes, "]", sep = ""),
                                                    paste("Z[", lna_comp_codes, "]", sep = "")),

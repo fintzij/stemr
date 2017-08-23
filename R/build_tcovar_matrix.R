@@ -19,7 +19,7 @@ build_tcovar_matrix <- function(tcovar = NULL, timestep = NULL, t0, tmax, messag
                 colnames(TCOVAR) <- c("_time", "TIME")
 
         } else {
-                if(!is.null(tcovar) && tcovar[1,1] != t0) {
+                if(messages && !is.null(tcovar) && tcovar[1,1] != t0) {
                         warning("Time varying covariates were only specified beginning at some time after t0. It will be assumed that the values of the time-varying covariates at the first time indicated in that matrix are the same for all prior times.")
                 }
 

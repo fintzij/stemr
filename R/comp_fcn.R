@@ -12,9 +12,9 @@
 #' that is to be applied to each desired model compartment, and whether the
 #' resulting quantities should be added or multiplied together.
 #'
-#' @param fcn function of each of the model compartments, e.g. log(I_ADJ) would
+#' @param fcn function of each the model compartments, e.g. log(I_ADJ) would
 #'   apply the log function to each of the adjacent compartments prior to
-#'   aggregation
+#'   aggregation.
 #' @param aggregation either sum or prod for whether the sum or product of the
 #'   model compartments is desired.
 #' @param compartments list of compartments to be substituted for the reserved

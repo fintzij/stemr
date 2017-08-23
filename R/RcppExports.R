@@ -419,6 +419,11 @@ lna_incid2prev <- function(path, flow_matrix, init_state) {
 #'   LNA parameters need to be updated.
 #' @param stoich_matrix stoichiometry matrix giving the changes to compartments
 #'   from each reaction
+#' @param svd_sqrt matrix in which to compute the matrix square root of the LNA
+#'   covariance matrices
+#' @param svd_d vector in which to store SVD singular values
+#' @param svd_U matrix in which to store the U matrix of the SVD
+#' @param svd_V matrix in which to store the V matrix of the SVD
 #' @param lna_pointer external pointer to LNA integration function.
 #' @param set_pars_pointer external pointer to the function for setting the LNA
 #'   parameters.
@@ -427,8 +432,8 @@ lna_incid2prev <- function(path, flow_matrix, init_state) {
 #'   perturbations.
 #'
 #' @export
-map_draws_2_lna <- function(pathmat, draws, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, lna_pointer, set_pars_pointer) {
-    invisible(.Call('_stemr_map_draws_2_lna', PACKAGE = 'stemr', pathmat, draws, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, lna_pointer, set_pars_pointer))
+map_draws_2_lna <- function(pathmat, draws, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, svd_sqrt, svd_d, svd_U, svd_V, lna_pointer, set_pars_pointer) {
+    invisible(.Call('_stemr_map_draws_2_lna', PACKAGE = 'stemr', pathmat, draws, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, svd_sqrt, svd_d, svd_U, svd_V, lna_pointer, set_pars_pointer))
 }
 
 #' Produce samples from a multivariate normal density using the Cholesky
@@ -512,6 +517,7 @@ mvn_rw <- function(params_prop, params_cur, sigma_chol) {
 #'   LNA parameters need to be updated.
 #' @param stoich_matrix stoichiometry matrix giving the changes to compartments
 #'   from each reaction
+#' @param lna_covmat matrix that can be used for computing the
 #' @param lna_pointer external pointer to LNA integration function.
 #' @param set_pars_pointer external pointer to the function for setting the LNA
 #'   parameters.

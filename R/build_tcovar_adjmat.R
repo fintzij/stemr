@@ -15,7 +15,7 @@
 build_tcovar_adjmat <- function(rates, tcovar_codes = NULL) {
         tcovar_adjmat <- matrix(FALSE, ncol = length(tcovar_codes), nrow = length(rates))
         colnames(tcovar_adjmat) <- adjmat_names <- names(tcovar_codes)
-        rownames(tcovar_adjmat) <- paste0("RATE", 1:length(rates))
+        rownames(tcovar_adjmat) <- unlist(lapply(rates, function(x) paste0(x$from,"2",x$to)))
 
         tcovar_names <- paste0("tcovar\\[",tcovar_codes,"\\]")
 

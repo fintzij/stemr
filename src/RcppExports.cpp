@@ -365,8 +365,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // map_draws_2_lna
-void map_draws_2_lna(arma::mat& pathmat, const arma::mat& draws, const arma::rowvec& lna_times, const Rcpp::NumericMatrix& lna_pars, const int init_start, const Rcpp::LogicalVector& param_update_inds, const arma::mat& stoich_matrix, SEXP lna_pointer, SEXP set_pars_pointer);
-RcppExport SEXP _stemr_map_draws_2_lna(SEXP pathmatSEXP, SEXP drawsSEXP, SEXP lna_timesSEXP, SEXP lna_parsSEXP, SEXP init_startSEXP, SEXP param_update_indsSEXP, SEXP stoich_matrixSEXP, SEXP lna_pointerSEXP, SEXP set_pars_pointerSEXP) {
+void map_draws_2_lna(arma::mat& pathmat, const arma::mat& draws, const arma::rowvec& lna_times, const Rcpp::NumericMatrix& lna_pars, const int init_start, const Rcpp::LogicalVector& param_update_inds, const arma::mat& stoich_matrix, arma::mat& svd_sqrt, arma::vec& svd_d, arma::mat& svd_U, arma::mat& svd_V, SEXP lna_pointer, SEXP set_pars_pointer);
+RcppExport SEXP _stemr_map_draws_2_lna(SEXP pathmatSEXP, SEXP drawsSEXP, SEXP lna_timesSEXP, SEXP lna_parsSEXP, SEXP init_startSEXP, SEXP param_update_indsSEXP, SEXP stoich_matrixSEXP, SEXP svd_sqrtSEXP, SEXP svd_dSEXP, SEXP svd_USEXP, SEXP svd_VSEXP, SEXP lna_pointerSEXP, SEXP set_pars_pointerSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::mat& >::type pathmat(pathmatSEXP);
@@ -376,9 +376,13 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const int >::type init_start(init_startSEXP);
     Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type param_update_inds(param_update_indsSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type stoich_matrix(stoich_matrixSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type svd_sqrt(svd_sqrtSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type svd_d(svd_dSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type svd_U(svd_USEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type svd_V(svd_VSEXP);
     Rcpp::traits::input_parameter< SEXP >::type lna_pointer(lna_pointerSEXP);
     Rcpp::traits::input_parameter< SEXP >::type set_pars_pointer(set_pars_pointerSEXP);
-    map_draws_2_lna(pathmat, draws, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, lna_pointer, set_pars_pointer);
+    map_draws_2_lna(pathmat, draws, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, svd_sqrt, svd_d, svd_U, svd_V, lna_pointer, set_pars_pointer);
     return R_NilValue;
 END_RCPP
 }
@@ -547,7 +551,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_lna_density2", (DL_FUNC) &_stemr_lna_density2, 7},
     {"_stemr_lna_density", (DL_FUNC) &_stemr_lna_density, 7},
     {"_stemr_lna_incid2prev", (DL_FUNC) &_stemr_lna_incid2prev, 3},
-    {"_stemr_map_draws_2_lna", (DL_FUNC) &_stemr_map_draws_2_lna, 9},
+    {"_stemr_map_draws_2_lna", (DL_FUNC) &_stemr_map_draws_2_lna, 13},
     {"_stemr_rmvtn", (DL_FUNC) &_stemr_rmvtn, 3},
     {"_stemr_dmvtn", (DL_FUNC) &_stemr_dmvtn, 4},
     {"_stemr_mvn_c_adaptive", (DL_FUNC) &_stemr_mvn_c_adaptive, 6},

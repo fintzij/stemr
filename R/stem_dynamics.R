@@ -137,10 +137,6 @@ stem_dynamics <-
                 stop("'TIME' is a reserved word and should not be one of the names of constants.")
         }
 
-        if(!is.null(strata) && (any(sapply(state_initializer, "[[", 2) == TRUE) & any(sapply(state_initializer, "[[", 2) == FALSE))) {
-                stop("The initial states in each stratum must either all be fixed, or all be random.")
-        }
-
         if(!all(sapply(state_initializer, is.list))) {
                 stop("The state_initializer argument must be a list of lists.")
         }
@@ -260,7 +256,7 @@ stem_dynamics <-
                 } else {
                         tcovar_names    <- c(colnames(tcovar)[2:ncol(tcovar)], "TIME")
                         n_tcovar        <- length(tcovar_names)
-                        tcovar_codes    <- seq_len(n_tcovar) - 1
+                        tcovar_codes    <- seq_len(n_tcovar)
                         names(tcovar_codes) <- tcovar_names # the first column will be the times, so codes start at 1
                 }
         }
@@ -337,6 +333,7 @@ stem_dynamics <-
                 rate_fcns <- vector(mode = "list", length = length(rates))
                 comp_all  <- paste(comp_names, "ALL", sep = "_")
                 comp_adj  <- paste(comp_names, "ADJ", sep = "_")
+                comp_rel  <- paste(comp_names, "REL", sep = "_")
 
                 for(k in seq_along(rates)) {
 
@@ -445,6 +442,26 @@ stem_dynamics <-
 
                                                 # make the substitution
                                                 rate_fcns[[k]][[j]]$unlumped <- sub_comp_rate(rate_fcns[[k]][[j]]$unlumped, comp = which_sub, subs = sub_adj)
+                                        }
+                                }
+
+                                # REL substitution
+                                if(grepl("REL", rates[[k]][[1]])) {
+
+                                        strat_rel <- rel_strata # names of relevant strata
+
+                                        which_rel <- sapply(comp_rel, FUN = grepl, rate_fcns[[k]][[j]]$unlumped)
+                                        which_sub <- comp_rel[which_rel] # string to be replaced, *_ADJ
+
+                                        for(l in seq_along(which_sub)) {
+                                                sub_comp <- comp_names[which(comp_rel == which_sub[l])]
+                                                sub_rel  <- compartment_names[grepl(pattern = sub_comp, x = compartment_names)]
+
+                                                # names of compartments to be substituted for *_ADJ
+                                                sub_rel  <- compartment_names[which(compartment_names %in% paste(sub_comp, strat_rel, sep = "_"))]
+
+                                                # make the substitution
+                                                rate_fcns[[k]][[j]]$unlumped <- sub_comp_rate(rate_fcns[[k]][[j]]$unlumped, comp = which_sub, subs = sub_rel)
                                         }
                                 }
 
@@ -863,8 +880,10 @@ stem_dynamics <-
                         lna_comp_codes  <- lna_rates$lna_comp_codes
                         lna_rates       <- lna_rates$lna_rates
 
-                        lna_rates       <- parse_lna_rates(lna_rates = lna_rates, param_codes = param_codes,
-                                                           const_codes = const_codes, tcovar_codes = tcovar_codes,
+                        lna_rates       <- parse_lna_rates(lna_rates      = lna_rates,
+                                                           param_codes    = param_codes,
+                                                           const_codes    = const_codes,
+                                                           tcovar_codes   = tcovar_codes,
                                                            lna_comp_codes = lna_comp_codes)
 
                         # compile the LNA functions

@@ -19,6 +19,11 @@ using namespace arma;
 //'   LNA parameters need to be updated.
 //' @param stoich_matrix stoichiometry matrix giving the changes to compartments
 //'   from each reaction
+//' @param svd_sqrt matrix in which to compute the matrix square root of the LNA
+//'   covariance matrices
+//' @param svd_d vector in which to store SVD singular values
+//' @param svd_U matrix in which to store the U matrix of the SVD
+//' @param svd_V matrix in which to store the V matrix of the SVD
 //' @param lna_pointer external pointer to LNA integration function.
 //' @param set_pars_pointer external pointer to the function for setting the LNA
 //'   parameters.
@@ -31,7 +36,8 @@ using namespace arma;
 void map_draws_2_lna(arma::mat& pathmat, const arma::mat& draws,
                  const arma::rowvec& lna_times, const Rcpp::NumericMatrix& lna_pars,
                  const int init_start, const Rcpp::LogicalVector& param_update_inds,
-                 const arma::mat& stoich_matrix, SEXP lna_pointer, SEXP set_pars_pointer) {
+                 const arma::mat& stoich_matrix, arma::mat& svd_sqrt, arma::vec& svd_d,
+                 arma::mat& svd_U, arma::mat& svd_V, SEXP lna_pointer, SEXP set_pars_pointer) {
 
         // get the dimensions of various objects
         int n_events = stoich_matrix.n_cols;         // number of transition events, e.g., S2I, I2R
@@ -87,7 +93,13 @@ void map_draws_2_lna(arma::mat& pathmat, const arma::mat& draws,
 
                 // map the stochastic perturbation to the LNA path on its natural scale
                 try{
-                        log_lna = lna_drift + arma::chol(lna_diffusion, "lower") * draws.col(j);
+                        arma::svd(svd_U, svd_d, svd_V, lna_diffusion); // compute the SVD
+                        svd_d.elem(arma::find(svd_d < 0)).zeros();     // zero out negative singular values
+                        svd_U.each_row() %= arma::sqrt(svd_d).t();     // multiply rows of U by sqrt of singular vals
+                        svd_sqrt = svd_U * svd_V.t();                  // compute svd_sqrt
+
+                        log_lna = lna_drift + svd_sqrt * draws.col(j); // map the LNA draws
+
                 } catch(std::runtime_error &err) {
                         forward_exception_to_r(err);
                 }

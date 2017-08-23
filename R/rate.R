@@ -41,10 +41,11 @@
 #'   Each function is parsed internally for references to parameters,
 #'   compartments, strata, constants, and the time variable. There are a few
 #'   case-sensitive reserved words that are provided to facilitate the
-#'   specification of rate functions when there are multiple strata: "ALL",
-#'   "ADJ", "SELF". "ALL" and "ADJ" will be parsed as a vector of compartments,
-#'   and therefore must be wrapped using the \code{\link{comp_fcn}} function,
-#'   which specifies how the compartments in that vector should be aggregated.
+#'   specification of rate functions when there are multiple strata that factor
+#'   into a rate: "ALL", "REL", "ADJ", "SELF". "ALL", "REL", and "ADJ" will be
+#'   parsed as a vector of compartments, and therefore must be wrapped using the
+#'   \code{\link{comp_fcn}} function, which specifies how the compartments in
+#'   that vector should be aggregated.
 #'
 #'   In an SIR model with multiple strata, for example, we could specify
 #'   infectivity rates as follows: \enumerate{ \item rate("beta * I_SELF", "S",
@@ -60,12 +61,17 @@
 #'   \sum_s I_s}, regardless of stratum. Note that 'I_ALL' will be replaced by a
 #'   vector of I_strata, therefore using 'I_all' outside of a function, e.g.
 #'   beta * I_ALL, will result in an error. However, beta * comp_fcn(I_ALL, sum)
-#'   is well defined. \item rate("beta1 * I_SELF + beta2 * comp_fcn(I_ADJ,
-#'   sum)", "S", "I", "ALL"): each susceptible contacts infecteds in her own
-#'   stratum at rate \eqn{\beta1 * I_SELF}, and contacts infecteds in adjacent
-#'   strata (specified in the adjacency matrix) at rate \eqn{\beta * \sum_{s:
-#'   stratum 's' is adjacent} I_s}. Note that in this case, the diagonal entries
-#'   in the adjacency matrix should be set to zero.}
+#'   is well defined. \item rate("beta * comp_fcn(I_REL), sum,", "S", "I",
+#'   c("young", "old")): each suscpetible contacts infecteds in the young and
+#'   old strata with rate beta. N.B. when the "REL" keyword is used in a
+#'   \code{comp_fcn} call, the relevant strata will be pulled from the strata
+#'   supplied in the rate. \item rate("beta1
+#'   * I_SELF + beta2 * comp_fcn(I_ADJ, sum)", "S", "I", "ALL"): each
+#'   susceptible contacts infecteds in her own stratum at rate \eqn{\beta1 *
+#'   I_SELF}, and contacts infecteds in adjacent strata (specified in the
+#'   adjacency matrix) at rate \eqn{\beta * \sum_{s: stratum 's' is adjacent}
+#'   I_s}. Note that in this case, the diagonal entries in the adjacency matrix
+#'   should be set to zero.}
 #'
 #'   The \code{from} and \code{to} arguments will automatically be updated when
 #'   the rate is parsed within the \code{stem_dynamics} function to reflect the

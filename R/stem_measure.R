@@ -102,11 +102,11 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                                 meas_procs[[k]][[j]]$meas_var     <- emissions[[k]]$meas_var
                                 meas_procs[[k]][[j]]$incidence    <- emissions[[k]]$incidence
 
-                                # make SELF replacements in the meas_var argument
-                                meas_procs[[k]][[j]]$meas_var <- gsub("SELF", rel_strata[[j]], meas_procs[[k]][[j]]$meas_var)
-
                                 # get the observation times
                                 if(is.null(data)) meas_procs[[k]][[j]]$obstimes <- emissions[[k]]$obstimes
+
+                                # make SELF replacements in the meas_var argument
+                                meas_procs[[k]][[j]]$meas_var <- gsub("SELF", rel_strata[[j]], meas_procs[[k]][[j]]$meas_var)
 
                                 # get the emission distribution params
                                 meas_procs[[k]][[j]]$emission_params <- sapply(emissions[[k]]$emission_params,
@@ -155,6 +155,7 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
         obscomp_names <- colnames(measproc_indmat)
 
         for(s in seq_along(meas_procs)) {
+
                 # make the substitution for meas_var so it is the location in a rowvector of observations
                 meas_procs[[s]]$meas_var <- paste0("record[", obscomp_codes[meas_procs[[s]]$meas_var], "]")
 
