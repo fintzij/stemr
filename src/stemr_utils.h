@@ -34,19 +34,29 @@ void rate_update_tcovar(Rcpp::LogicalVector& rate_inds, const arma::mat& M, cons
 void rate_update_event(Rcpp::LogicalVector& rate_inds, const Rcpp::LogicalMatrix& M, int event_code);
 
 // gillespie simulation
-arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::mat& tcovar, const arma::rowvec& init_states, const Rcpp::LogicalMatrix& rate_adjmat, const arma::mat& tcovar_adjmat, const arma::mat& tcovar_changemat, const Rcpp::IntegerVector init_dims, SEXP rate_ptr);
+arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& parameters,
+                             const Rcpp::NumericVector& constants, const arma::mat& tcovar,
+                             const arma::rowvec& init_states, const Rcpp::LogicalMatrix& rate_adjmat,
+                             const arma::mat& tcovar_adjmat, const arma::mat& tcovar_changemat,
+                             const Rcpp::IntegerVector init_dims, const arma::vec& forcing_inds,
+                             const arma::mat& forcing_matrix, SEXP rate_ptr);
 
 // simulation from the measurement process
-Rcpp::NumericMatrix simulate_r_measure(const Rcpp::NumericMatrix& censusmat, const Rcpp::LogicalMatrix& measproc_indmat, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::mat& tcovar, SEXP r_measure_ptr);
+Rcpp::NumericMatrix simulate_r_measure(const Rcpp::NumericMatrix& censusmat, const Rcpp::LogicalMatrix& measproc_indmat,
+                                       const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants,
+                                       const arma::mat& tcovar, SEXP r_measure_ptr);
 
 // build a census matrix with compartment counts at observation times
 arma::mat build_census_path(Rcpp::NumericMatrix& path, Rcpp::NumericVector& census_times, Rcpp::IntegerVector& census_columns);
 
 // census the lna path matrix, possibly computing prevalence and filling out cumulative incidence
-void census_lna(const arma::mat& path, arma::mat& census_path, const arma::uvec& census_inds, const arma::mat& flow_matrix_lna, bool do_prevalence, const arma::rowvec& init_state, const arma::uvec& incidence_codes_lna);
+void census_lna(const arma::mat& path, arma::mat& census_path, const arma::uvec& census_inds,
+                const arma::mat& flow_matrix_lna, bool do_prevalence, const arma::rowvec& init_state,
+                const arma::uvec& incidence_codes_lna);
 
 // update a census matrix with compartment counts at observation times
-void retrieve_census_path(arma::mat& cencusmat, Rcpp::NumericMatrix& path, Rcpp::NumericVector& census_times, Rcpp::IntegerVector& census_columns);
+void retrieve_census_path(arma::mat& cencusmat, Rcpp::NumericMatrix& path, Rcpp::NumericVector& census_times,
+                          Rcpp::IntegerVector& census_columns);
 
 // update the incidence in an existing census matrix
 void compute_incidence(arma::mat& censusmat, arma::uvec& col_inds, Rcpp::List& row_inds);
@@ -60,10 +70,13 @@ arma::vec dmvtn(const arma::mat& x, const arma::rowvec& mu, const arma::mat& sig
 
 // MCMC transition kernel functions
 void c_rw(arma::rowvec& params_prop, const arma::rowvec& params_cur, int ind, const arma::vec& kernel_cov);
-void c_rw_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, int ind, const arma::vec& kernel_cov, const arma::vec& proposal_scaling, const arma::vec& nugget);
+void c_rw_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, int ind, const arma::vec& kernel_cov,
+                   const arma::vec& proposal_scaling, const arma::vec& nugget);
 void mvn_rw(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& sigma_chol);
-void mvn_g_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& kernel_cov, double proposal_scaling, double nugget);
-void mvn_c_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& kernel_cov, const arma::vec& proposal_scaling, arma::mat& sqrt_scalemat, double nugget);
+void mvn_g_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& kernel_cov,
+                    double proposal_scaling, double nugget);
+void mvn_c_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& kernel_cov,
+                    const arma::vec& proposal_scaling, arma::mat& sqrt_scalemat, double nugget);
 
 // copy functions
 void copy_elem(arma::rowvec& dest, const arma::rowvec& orig, int ind);

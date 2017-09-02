@@ -271,26 +271,6 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// simulate_gillespie
-arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::mat& tcovar, const arma::rowvec& init_states, const Rcpp::LogicalMatrix& rate_adjmat, const arma::mat& tcovar_adjmat, const arma::mat& tcovar_changemat, const Rcpp::IntegerVector init_dims, SEXP rate_ptr);
-RcppExport SEXP _stemr_simulate_gillespie(SEXP flowSEXP, SEXP parametersSEXP, SEXP constantsSEXP, SEXP tcovarSEXP, SEXP init_statesSEXP, SEXP rate_adjmatSEXP, SEXP tcovar_adjmatSEXP, SEXP tcovar_changematSEXP, SEXP init_dimsSEXP, SEXP rate_ptrSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type flow(flowSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type parameters(parametersSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type constants(constantsSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type tcovar(tcovarSEXP);
-    Rcpp::traits::input_parameter< const arma::rowvec& >::type init_states(init_statesSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::LogicalMatrix& >::type rate_adjmat(rate_adjmatSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type tcovar_adjmat(tcovar_adjmatSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type tcovar_changemat(tcovar_changematSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type init_dims(init_dimsSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type rate_ptr(rate_ptrSEXP);
-    rcpp_result_gen = Rcpp::wrap(simulate_gillespie(flow, parameters, constants, tcovar, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, rate_ptr));
-    return rcpp_result_gen;
-END_RCPP
-}
 // find_interval
 Rcpp::IntegerVector find_interval(Rcpp::NumericVector& x, Rcpp::NumericVector& breaks, bool rightmost_closed, bool all_inside);
 RcppExport SEXP _stemr_find_interval(SEXP xSEXP, SEXP breaksSEXP, SEXP rightmost_closedSEXP, SEXP all_insideSEXP) {
@@ -455,8 +435,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // propose_lna
-Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix& lna_pars, const int init_start, const Rcpp::LogicalVector& param_update_inds, const arma::mat& stoich_matrix, SEXP lna_pointer, SEXP set_pars_pointer);
-RcppExport SEXP _stemr_propose_lna(SEXP lna_timesSEXP, SEXP lna_parsSEXP, SEXP init_startSEXP, SEXP param_update_indsSEXP, SEXP stoich_matrixSEXP, SEXP lna_pointerSEXP, SEXP set_pars_pointerSEXP) {
+Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix& lna_pars, const int init_start, const Rcpp::LogicalVector& param_update_inds, const arma::mat& stoich_matrix, double step_size, SEXP lna_pointer, SEXP set_pars_pointer);
+RcppExport SEXP _stemr_propose_lna(SEXP lna_timesSEXP, SEXP lna_parsSEXP, SEXP init_startSEXP, SEXP param_update_indsSEXP, SEXP stoich_matrixSEXP, SEXP step_sizeSEXP, SEXP lna_pointerSEXP, SEXP set_pars_pointerSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -465,9 +445,10 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const int >::type init_start(init_startSEXP);
     Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type param_update_inds(param_update_indsSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type stoich_matrix(stoich_matrixSEXP);
+    Rcpp::traits::input_parameter< double >::type step_size(step_sizeSEXP);
     Rcpp::traits::input_parameter< SEXP >::type lna_pointer(lna_pointerSEXP);
     Rcpp::traits::input_parameter< SEXP >::type set_pars_pointer(set_pars_pointerSEXP);
-    rcpp_result_gen = Rcpp::wrap(propose_lna(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, lna_pointer, set_pars_pointer));
+    rcpp_result_gen = Rcpp::wrap(propose_lna(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, step_size, lna_pointer, set_pars_pointer));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -508,6 +489,28 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// simulate_gillespie
+arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::mat& tcovar, const arma::rowvec& init_states, const Rcpp::LogicalMatrix& rate_adjmat, const arma::mat& tcovar_adjmat, const arma::mat& tcovar_changemat, const Rcpp::IntegerVector init_dims, const Rcpp::LogicalVector& forcing_inds, const arma::mat& forcing_matrix, SEXP rate_ptr);
+RcppExport SEXP _stemr_simulate_gillespie(SEXP flowSEXP, SEXP parametersSEXP, SEXP constantsSEXP, SEXP tcovarSEXP, SEXP init_statesSEXP, SEXP rate_adjmatSEXP, SEXP tcovar_adjmatSEXP, SEXP tcovar_changematSEXP, SEXP init_dimsSEXP, SEXP forcing_indsSEXP, SEXP forcing_matrixSEXP, SEXP rate_ptrSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type flow(flowSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type parameters(parametersSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type constants(constantsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type tcovar(tcovarSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type init_states(init_statesSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::LogicalMatrix& >::type rate_adjmat(rate_adjmatSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type tcovar_adjmat(tcovar_adjmatSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type tcovar_changemat(tcovar_changematSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type init_dims(init_dimsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type forcing_inds(forcing_indsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type forcing_matrix(forcing_matrixSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type rate_ptr(rate_ptrSEXP);
+    rcpp_result_gen = Rcpp::wrap(simulate_gillespie(flow, parameters, constants, tcovar, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, forcing_inds, forcing_matrix, rate_ptr));
+    return rcpp_result_gen;
+END_RCPP
+}
 // simulate_r_measure
 Rcpp::NumericMatrix simulate_r_measure(Rcpp::NumericMatrix& censusmat, Rcpp::LogicalMatrix& measproc_indmat, Rcpp::NumericVector& parameters, Rcpp::NumericVector& constants, Rcpp::NumericMatrix& tcovar, SEXP r_measure_ptr);
 RcppExport SEXP _stemr_simulate_r_measure(SEXP censusmatSEXP, SEXP measproc_indmatSEXP, SEXP parametersSEXP, SEXP constantsSEXP, SEXP tcovarSEXP, SEXP r_measure_ptrSEXP) {
@@ -545,7 +548,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_c_rw", (DL_FUNC) &_stemr_c_rw, 4},
     {"_stemr_evaluate_d_measure", (DL_FUNC) &_stemr_evaluate_d_measure, 8},
     {"_stemr_evaluate_d_measure_LNA", (DL_FUNC) &_stemr_evaluate_d_measure_LNA, 11},
-    {"_stemr_simulate_gillespie", (DL_FUNC) &_stemr_simulate_gillespie, 10},
     {"_stemr_find_interval", (DL_FUNC) &_stemr_find_interval, 4},
     {"_stemr_g_prop2c_prop", (DL_FUNC) &_stemr_g_prop2c_prop, 3},
     {"_stemr_lna_density2", (DL_FUNC) &_stemr_lna_density2, 7},
@@ -557,10 +559,11 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_mvn_c_adaptive", (DL_FUNC) &_stemr_mvn_c_adaptive, 6},
     {"_stemr_mvn_g_adaptive", (DL_FUNC) &_stemr_mvn_g_adaptive, 5},
     {"_stemr_mvn_rw", (DL_FUNC) &_stemr_mvn_rw, 3},
-    {"_stemr_propose_lna", (DL_FUNC) &_stemr_propose_lna, 7},
+    {"_stemr_propose_lna", (DL_FUNC) &_stemr_propose_lna, 8},
     {"_stemr_rate_update_event", (DL_FUNC) &_stemr_rate_update_event, 3},
     {"_stemr_rate_update_tcovar", (DL_FUNC) &_stemr_rate_update_tcovar, 3},
     {"_stemr_retrieve_census_path", (DL_FUNC) &_stemr_retrieve_census_path, 4},
+    {"_stemr_simulate_gillespie", (DL_FUNC) &_stemr_simulate_gillespie, 12},
     {"_stemr_simulate_r_measure", (DL_FUNC) &_stemr_simulate_r_measure, 6},
     {NULL, NULL, 0}
 };

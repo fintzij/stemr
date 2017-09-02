@@ -195,12 +195,12 @@ stem_inference_lna <- function(stem_object,
 
         # generate other derived objects
         lna_times         <- sort(unique(c(obstimes,
-                                           stem_object$dynamics$.dynamics_args$tcovar[,1],
+                                           stem_object$dynamics$tcovar[,1],
                                            stem_object$dynamics$t0,
                                            stem_object$dynamics$tmax)))
         n_times           <- length(lna_times)
         n_census_times    <- length(obstimes)
-        param_update_inds <- is.na(match(lna_times, obstimes))
+        param_update_inds <- lna_times %in% unique(c(t0, tmax, stem_object$dynamics$tcovar[,1]))
         census_indices    <- unique(c(0, findInterval(obstimes, lna_times) - 1))
 
         # set up the MCMC kernel
@@ -736,7 +736,7 @@ stem_inference_lna <- function(stem_object,
 
                         if(iter == stop_adaptation) {
                                 kernel_cov <- proposal_scaling * kernel_cov
-                                mcmc_kernel$sigma = diag(kernel_cov)
+                                mcmc_kernel$sigma <- diag(kernel_cov)
                         }
 
                         for(s in component_order) {

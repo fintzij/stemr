@@ -17,7 +17,8 @@ using namespace arma;
 //'   LNA parameters need to be updated.
 //' @param stoich_matrix stoichiometry matrix giving the changes to compartments
 //'   from each reaction
-//' @param lna_covmat matrix that can be used for computing the
+//' @param step_size initial step size for the ODE solver (adapted internally,
+//' but too large of an initial step can lead to failure in stiff systems).
 //' @param lna_pointer external pointer to LNA integration function.
 //' @param set_pars_pointer external pointer to the function for setting the LNA
 //'   parameters.
@@ -29,7 +30,8 @@ using namespace arma;
 // [[Rcpp::export]]
 Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix& lna_pars,
                        const int init_start, const Rcpp::LogicalVector& param_update_inds,
-                       const arma::mat& stoich_matrix, SEXP lna_pointer, SEXP set_pars_pointer) {
+                       const arma::mat& stoich_matrix, double step_size,
+                       SEXP lna_pointer, SEXP set_pars_pointer) {
 
         // get the dimensions of various objects
         int n_events = stoich_matrix.n_cols;         // number of transition events, e.g., S2I, I2R
@@ -58,8 +60,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix&
         arma::vec nat_lna(n_events, arma::fill::zeros);  // LNA increment, natural scale
         arma::vec c_incid(n_events, arma::fill::zeros);  // cumulative incidence
 
-        // Objects for computing the SVD of the LNA covariance matrices
-        arma::mat svd_sqrt(n_events, n_events, arma::fill::zeros);
+        // Objects for computing the eigen decomposition of the LNA covariance matrices
         arma::vec svd_d(n_events, arma::fill::zeros);
         arma::mat svd_U(n_events, n_events, arma::fill::zeros);
         arma::mat svd_V(n_events, n_events, arma::fill::zeros);
@@ -83,7 +84,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix&
 
                 // Reset the LNA state vector and integrate the LNA ODEs over the next interval to 0
                 std::fill(lna_state_vec.begin(), lna_state_vec.end(), 0.0);
-                CALL_INTEGRATE_STEM_LNA(lna_state_vec, t_L, t_R, 0.001, lna_pointer);
+                CALL_INTEGRATE_STEM_LNA(lna_state_vec, t_L, t_R, step_size, lna_pointer);
 
                 // transfer the elements of the lna_state_vec to the process objects
                 std::copy(lna_state_vec.begin(), lna_state_vec.begin() + n_events, lna_drift.begin());
@@ -92,21 +93,17 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix&
                 // ensure symmetry of the diffusion matrix
                 lna_diffusion = arma::symmatu(lna_diffusion);
 
-                cout << lna_state_vec << endl;
-
                 // map the stochastic perturbation to the LNA path on its natural scale
                 try{
                         arma::svd(svd_U, svd_d, svd_V, lna_diffusion); // compute the SVD
                         svd_d.elem(arma::find(svd_d < 0)).zeros();     // zero out negative singular values
-                        svd_U.each_row() %= arma::sqrt(svd_d).t();     // multiply rows of U by sqrt of singular vals
-                        svd_sqrt = svd_U * svd_V.t();                  // compute svd_sqrt
+                        svd_V.each_row() %= arma::sqrt(svd_d).t();     // multiply rows of V by sqrt of singular vals
 
-                        log_lna = lna_drift + svd_sqrt * draws.col(j); // map the LNA draws
+                        log_lna = lna_drift + (svd_U * svd_V.t()) * draws.col(j); // map the LNA draws
 
                 } catch(std::runtime_error &err) {
 
                         // reinstatiate the SVD objects
-                        arma::mat svd_sqrt(n_events, n_events, arma::fill::zeros);
                         arma::vec svd_d(n_events, arma::fill::zeros);
                         arma::mat svd_U(n_events, n_events, arma::fill::zeros);
                         arma::mat svd_V(n_events, n_events, arma::fill::zeros);

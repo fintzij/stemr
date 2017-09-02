@@ -28,7 +28,18 @@ using namespace Rcpp;
 //' @return matrix with a simulated path from a stochastic epidemic model.
 //' @export
 // [[Rcpp::export]]
-arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::mat& tcovar, const arma::rowvec& init_states, const Rcpp::LogicalMatrix& rate_adjmat, const arma::mat& tcovar_adjmat, const arma::mat& tcovar_changemat, const Rcpp::IntegerVector init_dims, SEXP rate_ptr) {
+arma::mat simulate_gillespie(const arma::mat& flow,
+                             const Rcpp::NumericVector& parameters,
+                             const Rcpp::NumericVector& constants,
+                             const arma::mat& tcovar,
+                             const arma::rowvec& init_states,
+                             const Rcpp::LogicalMatrix& rate_adjmat,
+                             const arma::mat& tcovar_adjmat,
+                             const arma::mat& tcovar_changemat,
+                             const Rcpp::IntegerVector init_dims,
+                             const Rcpp::LogicalVector& forcing_inds,
+                             const arma::mat& forcing_matrix,
+                             SEXP rate_ptr) {
 
         // Get dimensions of various objects
         Rcpp::IntegerVector flow_dims(2);       // size of flow matrix
@@ -47,12 +58,6 @@ arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& p
         Rcpp::IntegerVector events = Rcpp::seq_len(flow_dims[0]) - 1; // vector of event codes
         Rcpp::IntegerVector next_event(1);                            // next event
 
-        // insert the initial compartment counts
-        path(0, arma::span(2,init_dims[1]-1)) = init_states;
-
-        // initialize a state vector
-        arma::rowvec state = init_states;
-
         // initialize the time varying covariates and the left and right
         // endpoints of the first piecewise homogeneous interval
         int tcov_ind = 0;                                // row index in the time-varying covariate matrix
@@ -62,6 +67,17 @@ arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& p
         double t_cur = t_L;                             // current time
         double t_max = tcovar(tcovar_dims[0] - 1, 0);   // maximum time
         Rcpp::NumericVector dt(1);                      // time increment
+
+        // insert the initial compartment counts
+        path(0, arma::span(2,init_dims[1]-1)) = init_states;
+
+        // initialize a state vector
+        arma::rowvec state = init_states;
+
+        // apply forcings if necessary
+        if(forcing_inds[tcov_ind]) {
+                state = state + forcing_matrix.row(tcov_ind);
+        }
 
         // insert the initial time into the path matrix
         path(0, 0) = t_cur;
@@ -89,7 +105,7 @@ arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& p
 
                 if(t_cur > t_R) {
 
-                        if(t_cur > t_max) {        // stop simulating
+                        if((t_R == t_max) && (t_cur > t_max)) {        // stop simulating
                                 keep_going = false;
 
                         } else {                   // increment the time-homogeneous interval and the rates
@@ -100,10 +116,19 @@ arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& p
                                 t_cur     = t_R;                     // set current time to right endpoint
                                 t_R       = tcovar(tcov_ind + 1, 0); // increment the right endpoint
 
-                                rate_update_tcovar(rate_inds, tcovar_adjmat, tcovar_changemat.row(tcov_ind)); // identify rates that need to be updated
-                                CALL_RATE_FCN(rates, rate_inds, state, parameters, constants, tcovs, rate_ptr); // update the rate functions
+                                // identify rates that need to be updated
+                                rate_update_tcovar(rate_inds, tcovar_adjmat, tcovar_changemat.row(tcov_ind));
 
-                                event_probs = rates / sum(rates); // update event probabilities
+                                // apply forcings if necessary
+                                if(forcing_inds[tcov_ind]) {
+                                        state += forcing_matrix.row(tcov_ind);
+                                }
+
+                                // update the rate functions
+                                CALL_RATE_FCN(rates, rate_inds, state, parameters, constants, tcovs, rate_ptr);
+
+                                // update event probabilities
+                                event_probs = rates / sum(rates);
                         }
 
                 } else {
@@ -111,7 +136,7 @@ arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& p
                         next_event = Rcpp::RcppArmadillo::sample(events, 1, false, event_probs);
 
                         // update the state vector
-                        state = state + flow.row(next_event[0]);
+                        state += flow.row(next_event[0]);
 
                         // insert the time, event, and new state vector into the path matrix
                         path(ind_cur, 0) = t_cur;                       // insert new time

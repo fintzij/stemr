@@ -282,31 +282,6 @@ evaluate_d_measure_LNA <- function(emitmat, obsmat, censusmat, measproc_indmat, 
     invisible(.Call('_stemr_evaluate_d_measure_LNA', PACKAGE = 'stemr', emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, d_meas_ptr))
 }
 
-#' Simulate a stochastic epidemic model path via Gillespie's direct method and
-#' returns a matrix containing a simulated path from a stochastic epidemic
-#' model.
-#'
-#' @param flow Flow matrix
-#' @param parameters Vector of parameters
-#' @param constants vector of constants
-#' @param tcovar matrix of time-varying covariates
-#' @param init_states vector of initial compartment counts
-#' @param rate_adjmat adjacency matrix for updating rates after each event
-#' @param tcovar_adjmat adjacency matrix for updating rates after each time a
-#'   covariate changes
-#' @param tcovar_changemat indicator matrix identifying which covariates change
-#'   at each time
-#' @param init_dims initial estimate for dimensions of the bookkeeping matrix,
-#'   calculated as sum_strata(stratum size x number states x 3), rounded to the
-#'   next greatest power of 2.
-#' @param rate_ptr external function pointer to the lumped rate functions.
-#'
-#' @return matrix with a simulated path from a stochastic epidemic model.
-#' @export
-simulate_gillespie <- function(flow, parameters, constants, tcovar, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, rate_ptr) {
-    .Call('_stemr_simulate_gillespie', PACKAGE = 'stemr', flow, parameters, constants, tcovar, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, rate_ptr)
-}
-
 #' Given a vector of interval endpoints \code{breaks}, determine in which
 #' intervals the elements of a vector \code{x} fall.
 #'
@@ -517,7 +492,8 @@ mvn_rw <- function(params_prop, params_cur, sigma_chol) {
 #'   LNA parameters need to be updated.
 #' @param stoich_matrix stoichiometry matrix giving the changes to compartments
 #'   from each reaction
-#' @param lna_covmat matrix that can be used for computing the
+#' @param step_size initial step size for the ODE solver (adapted internally,
+#' but too large of an initial step can lead to failure in stiff systems).
 #' @param lna_pointer external pointer to LNA integration function.
 #' @param set_pars_pointer external pointer to the function for setting the LNA
 #'   parameters.
@@ -526,8 +502,8 @@ mvn_rw <- function(params_prop, params_cur, sigma_chol) {
 #' the LNA path on its natural scale which is determined by the perturbations.
 #'
 #' @export
-propose_lna <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, lna_pointer, set_pars_pointer) {
-    .Call('_stemr_propose_lna', PACKAGE = 'stemr', lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, lna_pointer, set_pars_pointer)
+propose_lna <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, step_size, lna_pointer, set_pars_pointer) {
+    .Call('_stemr_propose_lna', PACKAGE = 'stemr', lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, step_size, lna_pointer, set_pars_pointer)
 }
 
 #' Identify which rates to update when a state transition event occurs.
@@ -566,6 +542,31 @@ rate_update_tcovar <- function(rate_inds, M, I) {
 #' @export
 retrieve_census_path <- function(censusmat, path, census_times, census_columns) {
     invisible(.Call('_stemr_retrieve_census_path', PACKAGE = 'stemr', censusmat, path, census_times, census_columns))
+}
+
+#' Simulate a stochastic epidemic model path via Gillespie's direct method and
+#' returns a matrix containing a simulated path from a stochastic epidemic
+#' model.
+#'
+#' @param flow Flow matrix
+#' @param parameters Vector of parameters
+#' @param constants vector of constants
+#' @param tcovar matrix of time-varying covariates
+#' @param init_states vector of initial compartment counts
+#' @param rate_adjmat adjacency matrix for updating rates after each event
+#' @param tcovar_adjmat adjacency matrix for updating rates after each time a
+#'   covariate changes
+#' @param tcovar_changemat indicator matrix identifying which covariates change
+#'   at each time
+#' @param init_dims initial estimate for dimensions of the bookkeeping matrix,
+#'   calculated as sum_strata(stratum size x number states x 3), rounded to the
+#'   next greatest power of 2.
+#' @param rate_ptr external function pointer to the lumped rate functions.
+#'
+#' @return matrix with a simulated path from a stochastic epidemic model.
+#' @export
+simulate_gillespie <- function(flow, parameters, constants, tcovar, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, forcing_inds, forcing_matrix, rate_ptr) {
+    .Call('_stemr_simulate_gillespie', PACKAGE = 'stemr', flow, parameters, constants, tcovar, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, forcing_inds, forcing_matrix, rate_ptr)
 }
 
 #' Simulate a data matrix from the measurement process of a stochastic epidemic
