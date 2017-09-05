@@ -34,9 +34,7 @@ method="gillespie". If not supplied, \code{timestep} will default to
 \code{(tmax - t0)/50}.}
 
 \item{census_times}{vector of times at which compartment counts should be
-recorded. Required for \code{method = "lna"}. If supplied and \code{method
-= "gillespie"}, the compartment counts at census times are returned rather
-than the full paths.}
+recorded.}
 
 \item{max_attempts}{maximum number of times to attempt simulating an LNA path
 before aborting due to the moments of the path being degenerate at some

@@ -48,6 +48,7 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol) {
                 # strings to construct the drift and diffusion vectors, and to exponentiate the current state
                 # exponentiate the current state
                 exp_Z_terms     <- paste(paste0("odeintr::Z = arma::vec(x).subvec(0,",n_rates-1,");"),
+                                         "Z.elem(arma::find(Z<0)).zeros();", # ensures compartment counts are nonnegative
                                          "odeintr::exp_Z = arma::exp(odeintr::Z);",
                                          "odeintr::exp_neg_Z = arma::exp(-odeintr::Z);",
                                          "odeintr::exp_neg_2Z = arma::square(odeintr::exp_neg_Z);", sep = "\n")

@@ -17,6 +17,9 @@ using namespace arma;
 //'   LNA parameters need to be updated.
 //' @param stoich_matrix stoichiometry matrix giving the changes to compartments
 //'   from each reaction
+//' @param forcing_inds logical vector of indicating at which times in the
+//'   time-varying covariance matrix a forcing is applied.
+//' @param forcing_matrix matrix containing the forcings.
 //' @param step_size initial step size for the ODE solver (adapted internally,
 //' but too large of an initial step can lead to failure in stiff systems).
 //' @param lna_pointer external pointer to LNA integration function.
@@ -28,9 +31,14 @@ using namespace arma;
 //'
 //' @export
 // [[Rcpp::export]]
-Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix& lna_pars,
-                       const int init_start, const Rcpp::LogicalVector& param_update_inds,
-                       const arma::mat& stoich_matrix, double step_size,
+Rcpp::List propose_lna(const arma::rowvec& lna_times,
+                       const Rcpp::NumericMatrix& lna_pars,
+                       const int init_start,
+                       const Rcpp::LogicalVector& param_update_inds,
+                       const arma::mat& stoich_matrix,
+                       double step_size,
+                       const Rcpp::LogicalVector& forcing_inds,
+                       const arma::mat& forcing_matrix,
                        SEXP lna_pointer, SEXP set_pars_pointer) {
 
         // get the dimensions of various objects
@@ -49,6 +57,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix&
         // initial state vector - copy elements from the current parameter vector
         arma::vec init_state(current_params.begin() + init_start, n_comps);
         arma::vec init_volumes(init_state.begin(), n_comps);
+        arma::vec init_volumes_prop(init_state.begin(), n_comps);
 
         // initialize the LNA objects - the vector for storing the current state
         Rcpp::NumericVector lna_state_vec(n_odes);   // vector to store the results of the ODEs
@@ -58,7 +67,6 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix&
 
         arma::vec log_lna(n_events, arma::fill::zeros);  // LNA increment, log scale
         arma::vec nat_lna(n_events, arma::fill::zeros);  // LNA increment, natural scale
-        arma::vec c_incid(n_events, arma::fill::zeros);  // cumulative incidence
 
         // Objects for computing the eigen decomposition of the LNA covariance matrices
         arma::vec svd_d(n_events, arma::fill::zeros);
@@ -66,8 +74,17 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix&
         arma::mat svd_V(n_events, n_events, arma::fill::zeros);
 
         // matrix in which to store the LNA path
-        arma::mat lna_path(n_events+1, n_times, arma::fill::zeros);
+        arma::mat lna_path(n_events+1, n_times, arma::fill::zeros); // incidence path
+        arma::mat prev_path(n_comps+1, n_times, arma::fill::zeros); // prevalence path (compartment volumes)
         lna_path.row(0) = lna_times;
+        prev_path.row(0) = lna_times;
+        prev_path(arma::span(1,n_comps), 0) = init_volumes;
+
+        // apply forcings if called for - applied after censusing at the first time
+        if(forcing_inds[0]) {
+                init_volumes += forcing_matrix.col(0);
+                init_volumes_prop += forcing_matrix.col(0);
+        }
 
         // indices at which the diffusion elements of lna_state vec start
         int diff_start = n_events;
@@ -111,17 +128,43 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix&
                         forward_exception_to_r(err);
                 }
 
-                // compute the LNA increment and clamp below by 0
+                // compute the LNA increment
                 nat_lna = arma::exp(log_lna) - 1;
-                nat_lna.elem(arma::find(nat_lna < 0)).zeros();
-
-                // update the cumulative incidence
-                c_incid += nat_lna;
-                lna_path(arma::span(1,n_events), j+1) = c_incid;
+                // nat_lna.elem(arma::find(nat_lna < 0)).zeros();
 
                 // update the compartment volumes
-                init_volumes = init_state + stoich_matrix * c_incid;
-                init_volumes.elem(arma::find(init_volumes < 0)).zeros();
+                init_volumes_prop = init_volumes + stoich_matrix * nat_lna;
+                // init_volumes += stoich_matrix * nat_lna;
+                // init_volumes.elem(arma::find(init_volumes < 0)).zeros();
+
+                // ensure that the LNA increment is positive and that the volumes are positive
+                while(any(nat_lna < 0) | any(init_volumes < 0)) {
+                        draws.col(j) = arma::randn(n_events);                          // draw a new vector of N(0,1)
+                        log_lna      = lna_drift + (svd_U * svd_V.t()) * draws.col(j); // map the new draws to
+                        nat_lna      = arma::exp(log_lna) - 1;                         // compute the LNA increment
+                        init_volumes_prop = init_volumes + stoich_matrix * nat_lna;    // compute new initial volumes
+                }
+
+                // set the initial volumes to the proposed initial volumes
+                init_volumes = init_volumes_prop;
+
+                // save the increment and the prevalence
+                lna_path(arma::span(1,n_events), j+1) = nat_lna;
+                prev_path(arma::span(1,n_comps), j+1) = init_volumes;
+
+                // apply forcings if called for - applied after censusing the path
+                if(forcing_inds[j+1]) {
+                        init_volumes += forcing_matrix.col(j+1);
+                }
+
+                // if any volumes are negative, throw an error so simulation is restarted
+                try{
+                        if(any(init_volumes < 0)) {
+                                throw std::runtime_error("Negative compartment volumes.");
+                        }
+                } catch(std::runtime_error &err) {
+                        forward_exception_to_r(err);
+                }
 
                 // update the parameters if they need to be updated
                 if(param_update_inds[j+1]) {
@@ -137,5 +180,6 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix&
 
         // return the paths
         return Rcpp::List::create(Rcpp::Named("draws")     = draws,
-                                  Rcpp::Named("lna_path")  = lna_path.t());
+                                  Rcpp::Named("lna_path")  = lna_path.t(),
+                                  Rcpp::Named("prev_path") = prev_path.t());
 }

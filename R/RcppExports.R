@@ -371,14 +371,16 @@ lna_density <- function(path, lna_times, lna_pars, param_update_inds, flow_matri
 #'   processes on transition events (incidence)
 #' @param flow_matrix stoichiometry matrix (the transpose of the flow matrix)
 #' @param init_state initial compartment counts on the natural scale
-#' @param t0 initial time
+#' @param forcing_inds logical vector of indicating at which times in the
+#'   time-varying covariance matrix a forcing is applied.
+#' @param forcing_matrix matrix containing the forcings.
 #'
 #' The process can be re-expressed by left-multiplying each row in the path
 #' matrix by the stoichiometry matrix: \eqn{X_t = X_0 + A'N_t}.
 #'
 #' @export
-lna_incid2prev <- function(path, flow_matrix, init_state) {
-    .Call('_stemr_lna_incid2prev', PACKAGE = 'stemr', path, flow_matrix, init_state)
+lna_incid2prev <- function(path, flow_matrix, init_state, forcing_inds, forcing_matrix) {
+    .Call('_stemr_lna_incid2prev', PACKAGE = 'stemr', path, flow_matrix, init_state, forcing_inds, forcing_matrix)
 }
 
 #' Map N(0,1) stochastic perturbations to an LNA path.
@@ -492,6 +494,9 @@ mvn_rw <- function(params_prop, params_cur, sigma_chol) {
 #'   LNA parameters need to be updated.
 #' @param stoich_matrix stoichiometry matrix giving the changes to compartments
 #'   from each reaction
+#' @param forcing_inds logical vector of indicating at which times in the
+#'   time-varying covariance matrix a forcing is applied.
+#' @param forcing_matrix matrix containing the forcings.
 #' @param step_size initial step size for the ODE solver (adapted internally,
 #' but too large of an initial step can lead to failure in stiff systems).
 #' @param lna_pointer external pointer to LNA integration function.
@@ -502,8 +507,8 @@ mvn_rw <- function(params_prop, params_cur, sigma_chol) {
 #' the LNA path on its natural scale which is determined by the perturbations.
 #'
 #' @export
-propose_lna <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, step_size, lna_pointer, set_pars_pointer) {
-    .Call('_stemr_propose_lna', PACKAGE = 'stemr', lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, step_size, lna_pointer, set_pars_pointer)
+propose_lna <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, step_size, forcing_inds, forcing_matrix, lna_pointer, set_pars_pointer) {
+    .Call('_stemr_propose_lna', PACKAGE = 'stemr', lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, step_size, forcing_inds, forcing_matrix, lna_pointer, set_pars_pointer)
 }
 
 #' Identify which rates to update when a state transition event occurs.
@@ -561,6 +566,9 @@ retrieve_census_path <- function(censusmat, path, census_times, census_columns) 
 #' @param init_dims initial estimate for dimensions of the bookkeeping matrix,
 #'   calculated as sum_strata(stratum size x number states x 3), rounded to the
 #'   next greatest power of 2.
+#' @param forcing_inds logical vector of indicating at which times in the
+#'   time-varying covariance matrix a forcing is applied.
+#' @param forcing_matrix matrix containing the forcings.
 #' @param rate_ptr external function pointer to the lumped rate functions.
 #'
 #' @return matrix with a simulated path from a stochastic epidemic model.

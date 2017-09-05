@@ -7,7 +7,8 @@ returns a matrix containing a simulated path from a stochastic epidemic
 model.}
 \usage{
 simulate_gillespie(flow, parameters, constants, tcovar, init_states,
-  rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, rate_ptr)
+  rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, forcing_inds,
+  forcing_matrix, rate_ptr)
 }
 \arguments{
 \item{flow}{Flow matrix}

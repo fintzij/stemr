@@ -245,12 +245,12 @@ simulate_stem <-
                                 ))
 
                         # generate forcings if they are specified
-                        if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
+                        forcing_matrix <- matrix(0.0,
+                                                 nrow = nrow(stem_object$dynamics$tcovar),
+                                                 ncol = length(path_colnames)-2,
+                                                 dimnames = list(NULL, path_colnames[-c(1:2)]))
 
-                                forcing_matrix <- matrix(0.0,
-                                                         nrow = nrow(stem_object$dynamics$tcovar),
-                                                         ncol = length(path_colnames)-2,
-                                                         dimnames = list(NULL, path_colnames[-c(1:2)]))
+                        if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
 
                                 for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
 
@@ -277,9 +277,6 @@ simulate_stem <-
                                                 xor(stem_object$dynamics$tcovar_adjmat[,stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name],
                                                     affected_rates)
                                 }
-                        } else {
-                                # empty, dimensionless, forcing matrix
-                                forcing_matrix <- matrix(nrow = 0, ncol = 0)
                         }
 
                         if(is.null(census_times)) {
@@ -303,10 +300,10 @@ simulate_stem <-
                                                                                            forcing_inds     = forcing_inds,
                                                                                            forcing_matrix   = forcing_matrix,
                                                                                            rate_ptr         = stem_object$dynamics$rate_ptrs[[1]])
-                                                attempt <- attempt + 1},
-                                                silent = TRUE)
+                                                }, silent = TRUE)
                                         }
 
+                                        attempt <- attempt + 1
                                         colnames(paths_full[[k]]) <- path_colnames
                                 }
 
@@ -344,6 +341,7 @@ simulate_stem <-
                                                                                         forcing_matrix   = forcing_matrix,
                                                                                         rate_ptr         = stem_object$dynamics$rate_ptrs[[1]])
                                                 }, silent = TRUE)
+                                                attempt <- attempt + 1
                                         }
 
                                         # get the census path
@@ -384,8 +382,25 @@ simulate_stem <-
                                                              ncol = length(constant_inds), byrow = T)
 
                         if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
-                                tcovar_rowinds          <- findInterval(lna_times, stem_object$dynamics$dynamics_args$tcovar[,1], all.inside = TRUE)
+                                tcovar_rowinds          <- findInterval(lna_times, stem_object$dynamics$dynamics_args$tcovar[,1], rightmost.closed = FALSE) + 1
                                 lna_pars[, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
+
+                                # zero out forcings if necessary
+                                if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
+
+                                        # get the forcing indices (supplied in the original tcovar matrix)
+                                        forcing_inds <- as.logical(match(lna_times,
+                                                                         stem_object$dynamics$dynamics_args$tcovar[,1],
+                                                                         nomatch = FALSE))
+                                        zero_inds    <- !forcing_inds
+
+                                        # zero out the tcovar elements corresponding to times with no forcings
+                                        for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
+                                                lna_pars[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] = 0
+                                        }
+                                } else {
+                                        forcing_inds   <- rep(FALSE, nrow(stem_object$dynamics$tcovar))
+                                }
                         }
 
                         # generate some auxilliary objects
@@ -447,32 +462,77 @@ simulate_stem <-
                                 }
                         }
 
+                        # generate forcings if they are specified
+                        forcing_matrix <- matrix(0.0,
+                                                 nrow = length(lna_times),
+                                                 ncol = length(stem_object$dynamics$comp_codes),
+                                                 dimnames = list(NULL, names(stem_object$dynamics$comp_codes)))
+
+                        if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
+
+                                for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
+
+                                        # insert the flow into the forcing matrix
+                                        forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$from] <-
+                                                forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$from] -
+                                                stem_object$dynamics$dynamics_args$tcovar[, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]
+
+                                        forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$to] <-
+                                                forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$to] +
+                                                stem_object$dynamics$dynamics_args$tcovar[, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]
+
+                                        # update the adjacency matrix to indicate which rates need to be updated
+                                        affected_rates <- rep(FALSE, nrow(stem_object$dynamics$tcovar_adjmat))
+
+                                        for(n in seq_along(stem_object$dynamics$rates)) {
+                                                affected_rates[n] = grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$from,
+                                                                          stem_object$dynamics$rates[[n]]$unparsed) |
+                                                        grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$to,
+                                                              stem_object$dynamics$rates[[n]]$unparsed)
+                                        }
+
+                                        stem_object$dynamics$tcovar_adjmat[,stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] <-
+                                                xor(stem_object$dynamics$tcovar_adjmat[,stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name],
+                                                    affected_rates)
+                                }
+
+                                forcing_matrix <- t(forcing_matrix)
+                        }
+
                         for(k in seq_len(nsim)) {
 
                                 if(!stem_object$dynamics$fixed_inits) {
                                         pars2lnapars(lna_pars, c(parameters, init_states[k,]))
                                 }
 
-                                for(j in 1:max_attempts) {
+                                attempt <- 0
+                                path    <- NULL
+                                while(is.null(path) && attempt < max_attempts) {
                                         try({
                                                 path <- propose_lna(lna_times         = lna_times,
                                                                     lna_pars          = lna_pars,
                                                                     init_start        = stem_object$dynamics$lna_initdist_inds[1],
                                                                     param_update_inds = param_update_inds,
                                                                     stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
-                                                                    step_size         = stem_object$dynamics$dynamic_args$step_size,
+                                                                    forcing_inds      = forcing_inds,
+                                                                    forcing_matrix    = forcing_matrix,
+                                                                    step_size         = stem_object$dynamics$dynamics_args$step_size,
                                                                     lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
-                                                                    set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
-                                        census_paths[[k]] <- path$lna_path
-                                        lna_draws[[k]]    <- path$draws
+                                                                    set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)},
+                                        silent = TRUE)
 
-                                        }, silent = TRUE)
+                                        attempt           <- attempt + 1
+                                        if(!is.null(path)) {
+                                                census_paths[[k]] <- path$lna_path
+                                                lna_paths[[k]]    <- path$prev_path
+                                                lna_draws[[k]]    <- path$draws
+                                        }
                                 }
 
-                                lna_paths[[k]] <- lna_incid2prev(census_paths[[k]],
-                                                                 stem_object$dynamics$flow_matrix_lna,
-                                                                 init_states[k,])
-                                census_times <- as.numeric(sort(unique(c(t0, census_times, tmax))))
+                                if(is.null(census_paths[[k]])) {
+                                        stop("Simulation failed. Increase max attempts per simulation or try different parameter values.")
+                                }
+
                                 colnames(census_paths[[k]]) <- c("time", rownames(stem_object$dynamics$flow_matrix_lna))
                                 colnames(lna_paths[[k]]) <- c("time",colnames(stem_object$dynamics$flow_matrix_lna))
                         }
@@ -565,6 +625,7 @@ simulate_stem <-
                                 for(k in seq_len(nsim)) {
 
                                         # fill out the census matrix
+                                        #### RESUME HERE - FIX THIS FUNCTION
                                         census_lna(path                = census_paths[[k]],
                                                    census_path         = pathmat,
                                                    census_inds         = cens_inds,

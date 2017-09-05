@@ -18,7 +18,13 @@ using namespace Rcpp;
 //' @return matrix containing the compartment counts at census times.
 //' @export
 // [[Rcpp::export]]
-void census_lna(const arma::mat& path, arma::mat& census_path, const arma::uvec& census_inds, const arma::mat& flow_matrix_lna, bool do_prevalence, const arma::rowvec& init_state, const arma::uvec& incidence_codes_lna) {
+void census_lna(const arma::mat& path,
+                arma::mat& census_path,
+                const arma::uvec& census_inds,
+                const arma::mat& flow_matrix_lna,
+                bool do_prevalence,
+                const arma::rowvec& init_state,
+                const arma::uvec& incidence_codes_lna) {
 
         // get dimensions
         int n_census_times = census_inds.n_elem;

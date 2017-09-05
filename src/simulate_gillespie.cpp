@@ -23,6 +23,9 @@ using namespace Rcpp;
 //' @param init_dims initial estimate for dimensions of the bookkeeping matrix,
 //'   calculated as sum_strata(stratum size x number states x 3), rounded to the
 //'   next greatest power of 2.
+//' @param forcing_inds logical vector of indicating at which times in the
+//'   time-varying covariance matrix a forcing is applied.
+//' @param forcing_matrix matrix containing the forcings.
 //' @param rate_ptr external function pointer to the lumped rate functions.
 //'
 //' @return matrix with a simulated path from a stochastic epidemic model.

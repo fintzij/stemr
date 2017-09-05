@@ -39,9 +39,9 @@ build_tcovar_matrix <- function(tcovar = NULL, timestep = NULL, t0, tmax, messag
                         TCOVAR[,2] <- TCOVAR_TIMES
                         colnames(TCOVAR) <- c("_time", "TIME")
                 } else {
-                        tcovar_inds <- findInterval(TCOVAR_TIMES, tcovar[,1], all.inside = T)
-                        TCOVAR[,2:(ncol(TCOVAR)-1)] <- tcovar[tcovar_inds, 2:ncol(tcovar)]
-                        TCOVAR[,ncol(TCOVAR)] <- timeseq[findInterval(TCOVAR_TIMES, timeseq, all.inside = TRUE)]
+                        tcovar_inds <- findInterval(TCOVAR_TIMES, tcovar[,1], left.open = T) + 1
+                        TCOVAR[,seq(2,(ncol(TCOVAR)-1))] <- tcovar[tcovar_inds, seq(2,ncol(tcovar))]
+                        TCOVAR[,ncol(TCOVAR)] <- timeseq[findInterval(TCOVAR_TIMES, timeseq)]
                         colnames(TCOVAR) <- c("_time", colnames(tcovar)[2:ncol(tcovar)], "TIME")
                 }
         }

@@ -332,15 +332,17 @@ BEGIN_RCPP
 END_RCPP
 }
 // lna_incid2prev
-arma::mat lna_incid2prev(const arma::mat& path, const arma::mat& flow_matrix, const arma::rowvec& init_state);
-RcppExport SEXP _stemr_lna_incid2prev(SEXP pathSEXP, SEXP flow_matrixSEXP, SEXP init_stateSEXP) {
+arma::mat lna_incid2prev(const arma::mat& path, const arma::mat& flow_matrix, const arma::rowvec& init_state, const Rcpp::LogicalVector& forcing_inds, const arma::mat& forcing_matrix);
+RcppExport SEXP _stemr_lna_incid2prev(SEXP pathSEXP, SEXP flow_matrixSEXP, SEXP init_stateSEXP, SEXP forcing_indsSEXP, SEXP forcing_matrixSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::mat& >::type path(pathSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type flow_matrix(flow_matrixSEXP);
     Rcpp::traits::input_parameter< const arma::rowvec& >::type init_state(init_stateSEXP);
-    rcpp_result_gen = Rcpp::wrap(lna_incid2prev(path, flow_matrix, init_state));
+    Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type forcing_inds(forcing_indsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type forcing_matrix(forcing_matrixSEXP);
+    rcpp_result_gen = Rcpp::wrap(lna_incid2prev(path, flow_matrix, init_state, forcing_inds, forcing_matrix));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -435,8 +437,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // propose_lna
-Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix& lna_pars, const int init_start, const Rcpp::LogicalVector& param_update_inds, const arma::mat& stoich_matrix, double step_size, SEXP lna_pointer, SEXP set_pars_pointer);
-RcppExport SEXP _stemr_propose_lna(SEXP lna_timesSEXP, SEXP lna_parsSEXP, SEXP init_startSEXP, SEXP param_update_indsSEXP, SEXP stoich_matrixSEXP, SEXP step_sizeSEXP, SEXP lna_pointerSEXP, SEXP set_pars_pointerSEXP) {
+Rcpp::List propose_lna(const arma::rowvec& lna_times, const Rcpp::NumericMatrix& lna_pars, const int init_start, const Rcpp::LogicalVector& param_update_inds, const arma::mat& stoich_matrix, double step_size, const Rcpp::LogicalVector& forcing_inds, const arma::mat& forcing_matrix, SEXP lna_pointer, SEXP set_pars_pointer);
+RcppExport SEXP _stemr_propose_lna(SEXP lna_timesSEXP, SEXP lna_parsSEXP, SEXP init_startSEXP, SEXP param_update_indsSEXP, SEXP stoich_matrixSEXP, SEXP step_sizeSEXP, SEXP forcing_indsSEXP, SEXP forcing_matrixSEXP, SEXP lna_pointerSEXP, SEXP set_pars_pointerSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -446,9 +448,11 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type param_update_inds(param_update_indsSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type stoich_matrix(stoich_matrixSEXP);
     Rcpp::traits::input_parameter< double >::type step_size(step_sizeSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type forcing_inds(forcing_indsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type forcing_matrix(forcing_matrixSEXP);
     Rcpp::traits::input_parameter< SEXP >::type lna_pointer(lna_pointerSEXP);
     Rcpp::traits::input_parameter< SEXP >::type set_pars_pointer(set_pars_pointerSEXP);
-    rcpp_result_gen = Rcpp::wrap(propose_lna(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, step_size, lna_pointer, set_pars_pointer));
+    rcpp_result_gen = Rcpp::wrap(propose_lna(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, step_size, forcing_inds, forcing_matrix, lna_pointer, set_pars_pointer));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -552,14 +556,14 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_g_prop2c_prop", (DL_FUNC) &_stemr_g_prop2c_prop, 3},
     {"_stemr_lna_density2", (DL_FUNC) &_stemr_lna_density2, 7},
     {"_stemr_lna_density", (DL_FUNC) &_stemr_lna_density, 7},
-    {"_stemr_lna_incid2prev", (DL_FUNC) &_stemr_lna_incid2prev, 3},
+    {"_stemr_lna_incid2prev", (DL_FUNC) &_stemr_lna_incid2prev, 5},
     {"_stemr_map_draws_2_lna", (DL_FUNC) &_stemr_map_draws_2_lna, 13},
     {"_stemr_rmvtn", (DL_FUNC) &_stemr_rmvtn, 3},
     {"_stemr_dmvtn", (DL_FUNC) &_stemr_dmvtn, 4},
     {"_stemr_mvn_c_adaptive", (DL_FUNC) &_stemr_mvn_c_adaptive, 6},
     {"_stemr_mvn_g_adaptive", (DL_FUNC) &_stemr_mvn_g_adaptive, 5},
     {"_stemr_mvn_rw", (DL_FUNC) &_stemr_mvn_rw, 3},
-    {"_stemr_propose_lna", (DL_FUNC) &_stemr_propose_lna, 8},
+    {"_stemr_propose_lna", (DL_FUNC) &_stemr_propose_lna, 10},
     {"_stemr_rate_update_event", (DL_FUNC) &_stemr_rate_update_event, 3},
     {"_stemr_rate_update_tcovar", (DL_FUNC) &_stemr_rate_update_tcovar, 3},
     {"_stemr_retrieve_census_path", (DL_FUNC) &_stemr_retrieve_census_path, 4},

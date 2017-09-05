@@ -33,7 +33,7 @@ arma::mat build_census_path(Rcpp::NumericMatrix& path, Rcpp::NumericVector& cens
         // get vector of times in the path matrix and the census time indices
         Rcpp::NumericVector timevec = path(_,0);
         Rcpp::IntegerVector census_inds(n_census_times);
-        census_inds = find_interval(census_times, timevec, true, true) - 1; // rightmost_closed = true, all.inside = true
+        census_inds = find_interval(census_times, timevec, false, false) - 1; // rightmost_closed = true, all.inside = true
 
         // fill out the census matrix
         census_matrix.cols(1, n_comps) = path_mat.submat(Rcpp::as<arma::uvec>(census_inds), Rcpp::as<arma::uvec>(census_columns));
