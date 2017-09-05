@@ -97,18 +97,18 @@ BEGIN_RCPP
 END_RCPP
 }
 // census_lna
-void census_lna(const arma::mat& path, arma::mat& census_path, const arma::uvec& census_inds, const arma::mat& flow_matrix_lna, bool do_prevalence, const arma::rowvec& init_state, const arma::uvec& incidence_codes_lna);
-RcppExport SEXP _stemr_census_lna(SEXP pathSEXP, SEXP census_pathSEXP, SEXP census_indsSEXP, SEXP flow_matrix_lnaSEXP, SEXP do_prevalenceSEXP, SEXP init_stateSEXP, SEXP incidence_codes_lnaSEXP) {
+void census_lna(const arma::mat& path, arma::mat& census_path, arma::uvec& census_inds, const arma::mat& flow_matrix_lna, bool do_prevalence, const arma::rowvec& init_state, const arma::mat& forcing_matrix);
+RcppExport SEXP _stemr_census_lna(SEXP pathSEXP, SEXP census_pathSEXP, SEXP census_indsSEXP, SEXP flow_matrix_lnaSEXP, SEXP do_prevalenceSEXP, SEXP init_stateSEXP, SEXP forcing_matrixSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::mat& >::type path(pathSEXP);
     Rcpp::traits::input_parameter< arma::mat& >::type census_path(census_pathSEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type census_inds(census_indsSEXP);
+    Rcpp::traits::input_parameter< arma::uvec& >::type census_inds(census_indsSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type flow_matrix_lna(flow_matrix_lnaSEXP);
     Rcpp::traits::input_parameter< bool >::type do_prevalence(do_prevalenceSEXP);
     Rcpp::traits::input_parameter< const arma::rowvec& >::type init_state(init_stateSEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type incidence_codes_lna(incidence_codes_lnaSEXP);
-    census_lna(path, census_path, census_inds, flow_matrix_lna, do_prevalence, init_state, incidence_codes_lna);
+    Rcpp::traits::input_parameter< const arma::mat& >::type forcing_matrix(forcing_matrixSEXP);
+    census_lna(path, census_path, census_inds, flow_matrix_lna, do_prevalence, init_state, forcing_matrix);
     return R_NilValue;
 END_RCPP
 }

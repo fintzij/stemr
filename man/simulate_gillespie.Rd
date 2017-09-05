@@ -33,6 +33,11 @@ at each time}
 calculated as sum_strata(stratum size x number states x 3), rounded to the
 next greatest power of 2.}
 
+\item{forcing_inds}{logical vector of indicating at which times in the
+time-varying covariance matrix a forcing is applied.}
+
+\item{forcing_matrix}{matrix containing the forcings.}
+
 \item{rate_ptr}{external function pointer to the lumped rate functions.}
 }
 \value{

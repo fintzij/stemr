@@ -33,19 +33,15 @@ arma::mat lna_incid2prev(const arma::mat& path,
         arma::mat conv_path(n_times, n_comps+1);
         conv_path.col(0) = path.col(0);
 
-        conv_path.cols(1, n_comps) = arma::repmat(init_state, n_times, 1) + arma::cumsum(path.cols(1, n_rates), 0) * flow_matrix;
+        // set the initial state
+        conv_path(0, arma::span(1,n_comps)) = init_state;
 
-        // apply forcings if necessary
-        if(forcing_matrix.n_rows != 0) {
-                for(int k = 0; k < n_times; ++k) {
-                        if(forcing_inds[k]) {
-                                conv_path(k, arma::span(1, n_comps)) += forcing_matrix.col(k).t();
-                        }
-                }
+        // Loop through the path to compute the compartment counts
+        for(int k = 1; k < n_times; ++k) {
+                conv_path(k, arma::span(1, n_comps)) =
+                        conv_path(k-1, arma::span(1, n_comps)) + path(k, arma::span(1, n_rates)) * flow_matrix +
+                        forcing_matrix.col(k-1).t();
         }
-
-        // zero out negative compartment volumes
-        conv_path.elem(arma::find(conv_path < 0)).zeros();
 
         return conv_path;
 }

@@ -611,28 +611,24 @@ simulate_stem <-
                                 constants        <- stem_object$dynamics$parameters
                                 tcovar           <- tcovar_obstimes
                                 r_measure_ptr    <- stem_object$measurement_process$meas_pointers$r_measure_ptr
-                                cens_inds        <- unique(c(0,
-                                                             findInterval(stem_object$measurement_process$obstimes,
-                                                                          census_times) - 1))
+                                cens_inds        <- c(0,match(stem_object$measurement_process$obstimes, census_times) - 1)
                                 do_prevalence    <- stem_object$measurement_process$lna_prevalence
                                 do_incidence     <- stem_object$measurement_process$lna_incidence
-                                incidence_codes  <- stem_object$measurement_process$incidence_codes_lna
                                 obstime_inds     <- stem_object$measurement_process$obstime_inds
                                 pathmat          <- stem_object$measurement_process$censusmat
                                 flow_matrix_lna  <- stem_object$dynamics$flow_matrix_lna
-                                cens_incid_codes <- incidence_codes + ncol(pathmat) - (1 + length(incidence_codes))
+                                incidence_codes  <- seq_len(nrow(flow_matrix_lna)) + ncol(flow_matrix_lna)
 
                                 for(k in seq_len(nsim)) {
 
                                         # fill out the census matrix
-                                        #### RESUME HERE - FIX THIS FUNCTION
                                         census_lna(path                = census_paths[[k]],
                                                    census_path         = pathmat,
                                                    census_inds         = cens_inds,
                                                    flow_matrix_lna     = flow_matrix_lna,
                                                    do_prevalence       = do_prevalence,
-                                                   init_state          = init_state,
-                                                   incidence_codes_lna = incidence_codes)
+                                                   init_state          = init_states[k,],
+                                                   forcing_matrix      = forcing_matrix)
 
                                         # simulate the dataset
                                         datasets[[k]] <- simulate_r_measure(pathmat,

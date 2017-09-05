@@ -130,15 +130,12 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
 
                 // compute the LNA increment
                 nat_lna = arma::exp(log_lna) - 1;
-                // nat_lna.elem(arma::find(nat_lna < 0)).zeros();
 
                 // update the compartment volumes
                 init_volumes_prop = init_volumes + stoich_matrix * nat_lna;
-                // init_volumes += stoich_matrix * nat_lna;
-                // init_volumes.elem(arma::find(init_volumes < 0)).zeros();
 
                 // ensure that the LNA increment is positive and that the volumes are positive
-                while(any(nat_lna < 0) | any(init_volumes < 0)) {
+                while(any(nat_lna < 0) | any(init_volumes_prop < 0)) {
                         draws.col(j) = arma::randn(n_events);                          // draw a new vector of N(0,1)
                         log_lna      = lna_drift + (svd_U * svd_V.t()) * draws.col(j); // map the new draws to
                         nat_lna      = arma::exp(log_lna) - 1;                         // compute the LNA increment

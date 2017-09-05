@@ -98,14 +98,16 @@ CALL_SET_LNA_PARAMS <- function(p, set_lna_params_ptr) {
 #' @param flow_matrix_lna matrix containing the flow matrix for the LNA (no incidence)
 #' @param do_prevalence should the prevalence be computed
 #' @param init_state the initial compartment counts
-#' @param incidence_codes_lna vector of column indices in the LNA path for which
-#'   incidence will be computed. This function merely records the cumulative
-#'   incidence at the census times from the LNA path.
+#' @param incidence_codes vector of column indices in the LNA path for which
+#'   incidence will be computed.
+#' @param forcing_inds logical vector of indicating at which times in the
+#'   time-varying covariance matrix a forcing is applied.
+#' @param forcing_matrix matrix containing the forcings.
 #'
 #' @return matrix containing the compartment counts at census times.
 #' @export
-census_lna <- function(path, census_path, census_inds, flow_matrix_lna, do_prevalence, init_state, incidence_codes_lna) {
-    invisible(.Call('_stemr_census_lna', PACKAGE = 'stemr', path, census_path, census_inds, flow_matrix_lna, do_prevalence, init_state, incidence_codes_lna))
+census_lna <- function(path, census_path, census_inds, flow_matrix_lna, do_prevalence, init_state, forcing_matrix) {
+    invisible(.Call('_stemr_census_lna', PACKAGE = 'stemr', path, census_path, census_inds, flow_matrix_lna, do_prevalence, init_state, forcing_matrix))
 }
 
 #' Difference an incidence variable in a census matrix.
