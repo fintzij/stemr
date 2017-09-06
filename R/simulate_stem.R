@@ -382,8 +382,8 @@ simulate_stem <-
                                                              ncol = length(constant_inds), byrow = T)
 
                         if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
-                                tcovar_rowinds          <- findInterval(lna_times, stem_object$dynamics$dynamics_args$tcovar[,1], rightmost.closed = FALSE) + 1
-                                lna_pars[, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
+                                tcovar_rowinds <- match(lna_times, stem_object$dynamics$tcovar[,1])
+                                lna_pars[tcovar_rowinds, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
 
                                 # zero out forcings if necessary
                                 if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
@@ -399,7 +399,7 @@ simulate_stem <-
                                                 lna_pars[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] = 0
                                         }
                                 } else {
-                                        forcing_inds   <- rep(FALSE, nrow(stem_object$dynamics$tcovar))
+                                        forcing_inds   <- rep(FALSE, length(lna_times))
                                 }
                         }
 

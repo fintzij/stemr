@@ -108,10 +108,13 @@ arma::mat simulate_gillespie(const arma::mat& flow,
 
                 if(t_cur > t_R) {
 
-                        if((t_R == t_max) && (t_cur > t_max)) {        // stop simulating
+                        if((t_R == t_max) && (t_cur > t_max)) {
+
+                                // stop simulating
                                 keep_going = false;
 
-                        } else {                   // increment the time-homogeneous interval and the rates
+                        } else {
+                                // increment the time-homogeneous interval and the rates
 
                                 tcov_ind += 1;                       // increment the index in the time-varying covariate matrix
                                 tcovs     = tcovar.row(tcov_ind);    // time-varying covariate vector

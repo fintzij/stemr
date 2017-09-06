@@ -355,9 +355,60 @@ stem_inference_lna <- function(stem_object,
 
         # insert time varying covariates
         if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
-                tcovar_rowinds                <- findInterval(lna_times, stem_object$dynamics$.dynamics_args$tcovar[,1])
-                lna_params_cur[, tcovar_inds] <- stem_object$dynamics$.dynamics_args$tcovar[tcovar_rowinds,-1]
-                lna_params_prop[,tcovar_inds] <- stem_object$dynamics$.dynamics_args$tcovar[tcovar_rowinds,-1]
+                tcovar_rowinds <- match(lna_times, stem_object$dynamics$tcovar[,1])
+                lna_params_cur[tcovar_rowinds, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
+                lna_params_prop[tcovar_rowinds,tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
+        }
+
+        # generate forcing indices and forcing matrix if required
+        forcing_matrix <- matrix(0.0,
+                                 nrow = length(lna_times),
+                                 ncol = length(stem_object$dynamics$comp_codes),
+                                 dimnames = list(NULL, names(stem_object$dynamics$comp_codes)))
+
+        forcing_inds   <- rep(FALSE, length(lna_times))
+
+        if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
+
+                # get the forcing indices (supplied in the original tcovar matrix)
+                forcing_inds <- as.logical(match(lna_times,
+                                                 stem_object$dynamics$dynamics_args$tcovar[,1],
+                                                 nomatch = FALSE))
+                zero_inds    <- !forcing_inds
+
+                # zero out the tcovar elements corresponding to times with no forcings
+                for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
+                        lna_params_cur[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]  = 0
+                        lna_params_prop[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] = 0
+                }
+
+                for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
+
+                        # insert the flow into the forcing matrix
+                        forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$from] <-
+                                forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$from] -
+                                stem_object$dynamics$dynamics_args$tcovar[, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]
+
+                        forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$to] <-
+                                forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$to] +
+                                stem_object$dynamics$dynamics_args$tcovar[, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]
+
+                        # update the adjacency matrix to indicate which rates need to be updated
+                        affected_rates <- rep(FALSE, nrow(stem_object$dynamics$tcovar_adjmat))
+
+                        for(n in seq_along(stem_object$dynamics$rates)) {
+                                affected_rates[n] = grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$from,
+                                                          stem_object$dynamics$rates[[n]]$unparsed) |
+                                        grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$to,
+                                              stem_object$dynamics$rates[[n]]$unparsed)
+                        }
+
+                        stem_object$dynamics$tcovar_adjmat[,stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] <-
+                                xor(stem_object$dynamics$tcovar_adjmat[,stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name],
+                                    affected_rates)
+                }
+
+                forcing_matrix <- t(forcing_matrix)
         }
 
         # matrix in which to store the emission probabilities
@@ -411,7 +462,7 @@ stem_inference_lna <- function(stem_object,
                                 flow_matrix_lna     = t(stoich_matrix),
                                 do_prevalence       = do_prevalence,
                                 init_state          = init_state,
-                                incidence_codes_lna = incidence_codes
+                                forcing_matrix      = forcing_matrix
                         )
 
                         # evaluate the density of the incidence counts
@@ -420,7 +471,7 @@ stem_inference_lna <- function(stem_object,
                                 obsmat            = data,
                                 censusmat         = censusmat,
                                 measproc_indmat   = measproc_indmat,
-                                lna_parameters    = lna_params_cur,
+                                lna_parameters    = lna_parameters,
                                 lna_param_inds    = lna_param_inds,
                                 lna_const_inds    = lna_const_inds,
                                 lna_tcovar_inds   = lna_tcovar_inds,
@@ -434,9 +485,11 @@ stem_inference_lna <- function(stem_object,
                         if(is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
                 }, silent = TRUE)
 
-                if(is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
-
-                path$data_log_lik <- data_log_lik_prop
+                if(is.null(data_log_lik_prop)) {
+                        stop("Restart attempted with data log likelihood of negative infinity.")
+                } else {
+                        path$data_log_lik <- data_log_lik_prop
+                }
 
         } else {
                 path <- initialize_lna(
@@ -453,13 +506,13 @@ stem_inference_lna <- function(stem_object,
                         lna_tcovar_inds         = lna_tcovar_inds,
                         lna_initdist_inds       = lna_initdist_inds,
                         param_update_inds       = param_update_inds,
-                        incidence_codes         = incidence_codes,
-                        census_incidence_codes  = census_incidence_codes,
                         census_indices          = census_indices,
                         measproc_indmat         = measproc_indmat,
                         obstime_inds            = obstime_inds,
                         d_meas_pointer          = d_meas_pointer,
                         do_prevalence           = do_prevalence,
+                        forcing_inds            = forcing_inds,
+                        forcing_matrix          = forcing_matrix,
                         initialization_attempts = initialization_attempts
                 )
         }

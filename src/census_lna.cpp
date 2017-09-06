@@ -8,6 +8,7 @@ using namespace Rcpp;
 //'
 //' @param path matrix containing the path to be censused (cumulative incidence).
 //' @param census_path matrix to be filled out with the path.
+//' @param census_inds vector of indices for census interval endpoints
 //' @param flow_matrix_lna matrix containing the flow matrix for the LNA (no incidence)
 //' @param do_prevalence should the prevalence be computed
 //' @param init_state the initial compartment counts
