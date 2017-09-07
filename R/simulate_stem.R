@@ -381,6 +381,9 @@ simulate_stem <-
                                                              nrow = nrow(lna_pars),
                                                              ncol = length(constant_inds), byrow = T)
 
+                        # Generate forcing indices and update the LNA parameter matrix with forcings
+                        forcing_inds <- rep(FALSE, length(lna_times))
+
                         if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
                                 tcovar_rowinds <- match(lna_times, stem_object$dynamics$tcovar[,1])
                                 lna_pars[tcovar_rowinds, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
@@ -398,8 +401,6 @@ simulate_stem <-
                                         for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
                                                 lna_pars[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] = 0
                                         }
-                                } else {
-                                        forcing_inds   <- rep(FALSE, length(lna_times))
                                 }
                         }
 
@@ -495,9 +496,9 @@ simulate_stem <-
                                                 xor(stem_object$dynamics$tcovar_adjmat[,stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name],
                                                     affected_rates)
                                 }
-
-                                forcing_matrix <- t(forcing_matrix)
                         }
+
+                        forcing_matrix <- t(forcing_matrix)
 
                         for(k in seq_len(nsim)) {
 
@@ -507,7 +508,7 @@ simulate_stem <-
 
                                 attempt <- 0
                                 path    <- NULL
-                                while(is.null(path) && attempt < max_attempts) {
+                                while(is.null(path) && (attempt < max_attempts)) {
                                         try({
                                                 path <- propose_lna(lna_times         = lna_times,
                                                                     lna_pars          = lna_pars,
@@ -518,8 +519,8 @@ simulate_stem <-
                                                                     forcing_matrix    = forcing_matrix,
                                                                     step_size         = stem_object$dynamics$dynamics_args$step_size,
                                                                     lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
-                                                                    set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)},
-                                        silent = TRUE)
+                                                                    set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
+                                                }, silent = TRUE)
 
                                         attempt           <- attempt + 1
                                         if(!is.null(path)) {
@@ -617,7 +618,7 @@ simulate_stem <-
                                 obstime_inds     <- stem_object$measurement_process$obstime_inds
                                 pathmat          <- stem_object$measurement_process$censusmat
                                 flow_matrix_lna  <- stem_object$dynamics$flow_matrix_lna
-                                incidence_codes  <- seq_len(nrow(flow_matrix_lna)) + ncol(flow_matrix_lna)
+                                lna_event_inds   <- stem_object$measurement_process$incidence_codes_lna
 
                                 for(k in seq_len(nsim)) {
 
@@ -625,6 +626,7 @@ simulate_stem <-
                                         census_lna(path                = census_paths[[k]],
                                                    census_path         = pathmat,
                                                    census_inds         = cens_inds,
+                                                   lna_event_inds      = lna_event_inds,
                                                    flow_matrix_lna     = flow_matrix_lna,
                                                    do_prevalence       = do_prevalence,
                                                    init_state          = init_states[k,],

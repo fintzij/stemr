@@ -95,7 +95,9 @@ CALL_SET_LNA_PARAMS <- function(p, set_lna_params_ptr) {
 #'
 #' @param path matrix containing the path to be censused (cumulative incidence).
 #' @param census_path matrix to be filled out with the path.
-#' @param census_inds vector of indices for census interval endpoints
+#' @param census_inds vector of indices for census interval endpoints.
+#' @param lna_event_inds vector of column indices in the path matrix for events that
+#'   should be censused.
 #' @param flow_matrix_lna matrix containing the flow matrix for the LNA (no incidence)
 #' @param do_prevalence should the prevalence be computed
 #' @param init_state the initial compartment counts
@@ -107,8 +109,8 @@ CALL_SET_LNA_PARAMS <- function(p, set_lna_params_ptr) {
 #'
 #' @return matrix containing the compartment counts at census times.
 #' @export
-census_lna <- function(path, census_path, census_inds, flow_matrix_lna, do_prevalence, init_state, forcing_matrix) {
-    invisible(.Call('_stemr_census_lna', PACKAGE = 'stemr', path, census_path, census_inds, flow_matrix_lna, do_prevalence, init_state, forcing_matrix))
+census_lna <- function(path, census_path, census_inds, lna_event_inds, flow_matrix_lna, do_prevalence, init_state, forcing_matrix) {
+    invisible(.Call('_stemr_census_lna', PACKAGE = 'stemr', path, census_path, census_inds, lna_event_inds, flow_matrix_lna, do_prevalence, init_state, forcing_matrix))
 }
 
 #' Difference an incidence variable in a census matrix.
@@ -399,11 +401,16 @@ lna_incid2prev <- function(path, flow_matrix, init_state, forcing_inds, forcing_
 #'   LNA parameters need to be updated.
 #' @param stoich_matrix stoichiometry matrix giving the changes to compartments
 #'   from each reaction
+#' @param forcing_inds logical vector of indicating at which times in the
+#'   time-varying covariance matrix a forcing is applied.
+#' @param forcing_matrix matrix containing the forcings.
 #' @param svd_sqrt matrix in which to compute the matrix square root of the LNA
 #'   covariance matrices
 #' @param svd_d vector in which to store SVD singular values
 #' @param svd_U matrix in which to store the U matrix of the SVD
 #' @param svd_V matrix in which to store the V matrix of the SVD
+#' @param step_size initial step size for the ODE solver (adapted internally,
+#' but too large of an initial step can lead to failure in stiff systems).
 #' @param lna_pointer external pointer to LNA integration function.
 #' @param set_pars_pointer external pointer to the function for setting the LNA
 #'   parameters.
@@ -412,8 +419,8 @@ lna_incid2prev <- function(path, flow_matrix, init_state, forcing_inds, forcing_
 #'   perturbations.
 #'
 #' @export
-map_draws_2_lna <- function(pathmat, draws, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, svd_sqrt, svd_d, svd_U, svd_V, lna_pointer, set_pars_pointer) {
-    invisible(.Call('_stemr_map_draws_2_lna', PACKAGE = 'stemr', pathmat, draws, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, svd_sqrt, svd_d, svd_U, svd_V, lna_pointer, set_pars_pointer))
+map_draws_2_lna <- function(pathmat, draws, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, svd_sqrt, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer) {
+    invisible(.Call('_stemr_map_draws_2_lna', PACKAGE = 'stemr', pathmat, draws, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, svd_sqrt, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer))
 }
 
 #' Produce samples from a multivariate normal density using the Cholesky
@@ -510,8 +517,8 @@ mvn_rw <- function(params_prop, params_cur, sigma_chol) {
 #' the LNA path on its natural scale which is determined by the perturbations.
 #'
 #' @export
-propose_lna <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, step_size, forcing_inds, forcing_matrix, lna_pointer, set_pars_pointer) {
-    .Call('_stemr_propose_lna', PACKAGE = 'stemr', lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, step_size, forcing_inds, forcing_matrix, lna_pointer, set_pars_pointer)
+propose_lna <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, lna_pointer, set_pars_pointer) {
+    .Call('_stemr_propose_lna', PACKAGE = 'stemr', lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, lna_pointer, set_pars_pointer)
 }
 
 #' Identify which rates to update when a state transition event occurs.

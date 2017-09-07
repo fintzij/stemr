@@ -2,6 +2,8 @@
 #'
 #' @param path_cur list with the current LNA path along with its ODE paths
 #' @param n_ess_updates number of elliptical slice sampling updates
+#' @param svd_sqrt,svd_d,svd_U,svd_V objects for computing the SVD of LNA
+#'   diffusion matrics
 #' @inheritParams initialize_lna
 #'
 #' @return list with an updated LNA path along with its stochastic
@@ -10,12 +12,41 @@
 #'   proposals
 #' @export
 update_lna_path <-
-        function(path_cur, data, lna_parameters, pathmat_prop, censusmat, draws_prop, emitmat,
-                 flow_matrix, stoich_matrix, lna_pointer, lna_set_pars_pointer, lna_times,
-                 lna_param_inds, lna_const_inds, lna_tcovar_inds, lna_initdist_inds,
-                 param_update_inds, incidence_codes, census_incidence_codes, census_indices,
-                 measproc_indmat, obstime_inds, d_meas_pointer, do_prevalence, n_ess_updates,
-                 ess_schedule, randomize_schedule) {
+        function(path_cur,
+                 data,
+                 lna_parameters,
+                 pathmat_prop,
+                 censusmat,
+                 draws_prop,
+                 emitmat,
+                 flow_matrix,
+                 stoich_matrix,
+                 lna_times,
+                 forcing_inds,
+                 forcing_matrix,
+                 lna_param_inds,
+                 lna_const_inds,
+                 lna_tcovar_inds,
+                 lna_initdist_inds,
+                 param_update_inds,
+                 incidence_codes,
+                 census_incidence_codes,
+                 census_indices,
+                 measproc_indmat,
+                 obstime_inds,
+                 svd_sqrt,
+                 svd_d,
+                 svd_U,
+                 svd_V,
+                 lna_pointer,
+                 lna_set_pars_pointer,
+                 d_meas_pointer,
+                 do_prevalence,
+                 n_ess_updates,
+                 ess_schedule,
+                 randomize_schedule,
+                 step_size) {
+
 
         # vector for storing the number of steps in each ESS update
         ess_record <- matrix(1, nrow = n_ess_updates, ncol = length(ess_schedule[[1]]))
@@ -61,15 +92,23 @@ update_lna_path <-
 
                         # map the perturbations to an LNA path
                         try({
-                                map_draws_2_lna(pathmat           = pathmat_prop,
-                                                draws             = draws_prop,
-                                                lna_times         = lna_times,
-                                                lna_pars          = lna_parameters,
-                                                init_start        = lna_initdist_inds[1],
-                                                param_update_inds = param_update_inds,
-                                                stoich_matrix     = stoich_matrix,
-                                                lna_pointer       = lna_pointer,
-                                                set_pars_pointer  = lna_set_pars_pointer
+                                map_draws_2_lna(
+                                        pathmat           = pathmat_prop,
+                                        draws             = draws_prop,
+                                        lna_times         = lna_times,
+                                        lna_pars          = lna_parameters,
+                                        init_start        = lna_initdist_inds[1],
+                                        param_update_inds = param_update_inds,
+                                        stoich_matrix     = stoich_matrix,
+                                        forcing_inds      = forcing_inds,
+                                        forcing_matrix    = forcing_matrix,
+                                        svd_sqrt          = svd_sqrt,
+                                        svd_d             = svd_d,
+                                        svd_U             = svd_U,
+                                        svd_V             = svd_V,
+                                        lna_pointer       = lna_pointer,
+                                        set_pars_pointer  = lna_set_pars_pointer,
+                                        step_size         = step_size
                                 )
 
                                 census_lna(
@@ -79,7 +118,7 @@ update_lna_path <-
                                         flow_matrix_lna     = flow_matrix,
                                         do_prevalence       = do_prevalence,
                                         init_state          = init_state,
-                                        incidence_codes_lna = incidence_codes
+                                        forcing_matrix      = forcing_matrix
                                 )
 
                                 # evaluate the density of the incidence counts
@@ -135,15 +174,23 @@ update_lna_path <-
 
                                 # map the perturbations to an LNA path
                                 try({
-                                        map_draws_2_lna(pathmat           = pathmat_prop,
-                                                        draws             = draws_prop,
-                                                        lna_times         = lna_times,
-                                                        lna_pars          = lna_parameters,
-                                                        init_start        = lna_initdist_inds[1],
-                                                        param_update_inds = param_update_inds,
-                                                        stoich_matrix     = stoich_matrix,
-                                                        lna_pointer       = lna_pointer,
-                                                        set_pars_pointer  = lna_set_pars_pointer
+                                        map_draws_2_lna(
+                                                pathmat           = pathmat_prop,
+                                                draws             = draws_prop,
+                                                lna_times         = lna_times,
+                                                lna_pars          = lna_parameters,
+                                                init_start        = lna_initdist_inds[1],
+                                                param_update_inds = param_update_inds,
+                                                stoich_matrix     = stoich_matrix,
+                                                forcing_inds      = forcing_inds,
+                                                forcing_matrix    = forcing_matrix,
+                                                svd_sqrt          = svd_sqrt,
+                                                svd_d             = svd_d,
+                                                svd_U             = svd_U,
+                                                svd_V             = svd_V,
+                                                lna_pointer       = lna_pointer,
+                                                set_pars_pointer  = lna_set_pars_pointer,
+                                                step_size         = step_size
                                         )
 
                                         census_lna(
@@ -153,7 +200,7 @@ update_lna_path <-
                                                 flow_matrix_lna     = flow_matrix,
                                                 do_prevalence       = do_prevalence,
                                                 init_state          = init_state,
-                                                incidence_codes_lna = incidence_codes
+                                                forcing_matrix      = forcing_matrix
                                         )
 
                                         # evaluate the density of the incidence counts

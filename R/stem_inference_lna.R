@@ -72,6 +72,7 @@ stem_inference_lna <- function(stem_object,
         initdist_params_cur    <- stem_object$dynamics$initdist_params
         t0                     <- stem_object$dynamics$t0
         t0_fixed               <- stem_object$dynamics$t0_fixed
+        step_size              <- stem_object$dynamics$dynamics_args$step_size
 
         # elliptical slice sampling settings
         if(is.null(ess_args)) {
@@ -202,6 +203,12 @@ stem_inference_lna <- function(stem_object,
         n_census_times    <- length(obstimes)
         param_update_inds <- lna_times %in% unique(c(t0, tmax, stem_object$dynamics$tcovar[,1]))
         census_indices    <- unique(c(0, findInterval(obstimes, lna_times) - 1))
+
+        # objects for computing the SVD of the LNA diffusion matrix
+        svd_sqrt <- diag(0.0, n_rates)
+        svd_U    <- diag(0.0, n_rates)
+        svd_V    <- diag(0.0, n_rates)
+        svd_d    <- rep(0.0, n_rates)
 
         # set up the MCMC kernel
         if(mcmc_kernel$method == "mvn_rw") {
@@ -508,12 +515,12 @@ stem_inference_lna <- function(stem_object,
                         param_update_inds       = param_update_inds,
                         census_indices          = census_indices,
                         measproc_indmat         = measproc_indmat,
-                        obstime_inds            = obstime_inds,
                         d_meas_pointer          = d_meas_pointer,
                         do_prevalence           = do_prevalence,
                         forcing_inds            = forcing_inds,
                         forcing_matrix          = forcing_matrix,
-                        initialization_attempts = initialization_attempts
+                        initialization_attempts = initialization_attempts,
+                        step_size               = step_size
                 )
         }
 
@@ -584,9 +591,9 @@ stem_inference_lna <- function(stem_object,
                         emitmat                 = emitmat,
                         flow_matrix             = flow_matrix,
                         stoich_matrix           = stoich_matrix,
-                        lna_pointer             = lna_pointer,
-                        lna_set_pars_pointer    = lna_set_pars_pointer,
                         lna_times               = lna_times,
+                        forcing_inds            = forcing_inds,
+                        forcing_matrix          = forcing_matrix,
                         lna_param_inds          = lna_param_inds,
                         lna_const_inds          = lna_const_inds,
                         lna_tcovar_inds         = lna_tcovar_inds,
@@ -597,11 +604,18 @@ stem_inference_lna <- function(stem_object,
                         census_indices          = census_indices,
                         measproc_indmat         = measproc_indmat,
                         obstime_inds            = obstime_inds,
+                        svd_sqrt                = svd_sqrt,
+                        svd_d                   = svd_d,
+                        svd_U                   = svd_U,
+                        svd_V                   = svd_V,
+                        lna_pointer             = lna_pointer,
+                        lna_set_pars_pointer    = lna_set_pars_pointer,
                         d_meas_pointer          = d_meas_pointer,
                         do_prevalence           = do_prevalence,
                         n_ess_updates           = n_ess_updates,
                         ess_schedule            = ess_schedule,
-                        randomize_schedule      = randomize_schedule
+                        randomize_schedule      = randomize_schedule,
+                        step_size               = step_size
                 )
 
                 # compute the current log posterior
@@ -631,15 +645,23 @@ stem_inference_lna <- function(stem_object,
                                 data_log_lik_prop <- NULL
 
                                 try({
-                                        map_draws_2_lna(pathmat           = pathmat_prop,
-                                                        draws             = path$draws,
-                                                        lna_times         = lna_times,
-                                                        lna_pars          = lna_params_prop,
-                                                        init_start        = lna_initdist_inds[1],
-                                                        param_update_inds = param_update_inds,
-                                                        stoich_matrix     = stoich_matrix,
-                                                        lna_pointer       = lna_pointer,
-                                                        set_pars_pointer  = lna_set_pars_pointer
+                                        map_draws_2_lna(
+                                                pathmat           = pathmat_prop,
+                                                draws             = path$draws,
+                                                lna_times         = lna_times,
+                                                lna_pars          = lna_params_prop,
+                                                init_start        = lna_initdist_inds[1],
+                                                param_update_inds = param_update_inds,
+                                                stoich_matrix     = stoich_matrix,
+                                                forcing_inds      = forcing_inds,
+                                                forcing_matrix    = forcing_matrix,
+                                                svd_sqrt          = svd_sqrt,
+                                                svd_d             = svd_d,
+                                                svd_U             = svd_U,
+                                                svd_V             = svd_V,
+                                                lna_pointer       = lna_pointer,
+                                                set_pars_pointer  = lna_set_pars_pointer,
+                                                step_size         = step_size
                                         )
 
                                         census_lna(
@@ -649,7 +671,7 @@ stem_inference_lna <- function(stem_object,
                                                 flow_matrix_lna     = flow_matrix,
                                                 do_prevalence       = do_prevalence,
                                                 init_state          = init_volumes_cur,
-                                                incidence_codes_lna = incidence_codes
+                                                forcing_matrix      = forcing_matrix
                                         )
 
                                         # evaluate the density of the incidence counts
@@ -658,7 +680,7 @@ stem_inference_lna <- function(stem_object,
                                                 obsmat            = data,
                                                 censusmat         = censusmat,
                                                 measproc_indmat   = measproc_indmat,
-                                                lna_parameters    = lna_params_prop,
+                                                lna_parameters    = lna_parameters,
                                                 lna_param_inds    = lna_param_inds,
                                                 lna_const_inds    = lna_const_inds,
                                                 lna_tcovar_inds   = lna_tcovar_inds,
@@ -718,15 +740,23 @@ stem_inference_lna <- function(stem_object,
                         data_log_lik_prop <- NULL
 
                         try({
-                                map_draws_2_lna(pathmat           = pathmat_prop,
-                                                draws             = path$draws,
-                                                lna_times         = lna_times,
-                                                lna_pars          = lna_params_prop,
-                                                init_start        = lna_initdist_inds[1],
-                                                param_update_inds = param_update_inds,
-                                                stoich_matrix     = stoich_matrix,
-                                                lna_pointer       = lna_pointer,
-                                                set_pars_pointer  = lna_set_pars_pointer
+                                map_draws_2_lna(
+                                        pathmat           = pathmat_prop,
+                                        draws             = path$draws,
+                                        lna_times         = lna_times,
+                                        lna_pars          = lna_params_prop,
+                                        init_start        = lna_initdist_inds[1],
+                                        param_update_inds = param_update_inds,
+                                        stoich_matrix     = stoich_matrix,
+                                        forcing_inds      = forcing_inds,
+                                        forcing_matrix    = forcing_matrix,
+                                        svd_sqrt          = svd_sqrt,
+                                        svd_d             = svd_d,
+                                        svd_U             = svd_U,
+                                        svd_V             = svd_V,
+                                        lna_pointer       = lna_pointer,
+                                        set_pars_pointer  = lna_set_pars_pointer,
+                                        step_size         = step_size
                                 )
 
                                 census_lna(
@@ -736,7 +766,7 @@ stem_inference_lna <- function(stem_object,
                                         flow_matrix_lna     = flow_matrix,
                                         do_prevalence       = do_prevalence,
                                         init_state          = init_volumes_cur,
-                                        incidence_codes_lna = incidence_codes
+                                        forcing_matrix      = forcing_matrix
                                 )
 
                                 # evaluate the density of the incidence counts
@@ -745,7 +775,7 @@ stem_inference_lna <- function(stem_object,
                                         obsmat            = data,
                                         censusmat         = censusmat,
                                         measproc_indmat   = measproc_indmat,
-                                        lna_parameters    = lna_params_prop,
+                                        lna_parameters    = lna_parameters,
                                         lna_param_inds    = lna_param_inds,
                                         lna_const_inds    = lna_const_inds,
                                         lna_tcovar_inds   = lna_tcovar_inds,
@@ -817,15 +847,23 @@ stem_inference_lna <- function(stem_object,
                                 data_log_lik_prop <- NULL
 
                                 try({
-                                        map_draws_2_lna(pathmat           = pathmat_prop,
-                                                        draws             = path$draws,
-                                                        lna_times         = lna_times,
-                                                        lna_pars          = lna_params_prop,
-                                                        init_start        = lna_initdist_inds[1],
-                                                        param_update_inds = param_update_inds,
-                                                        stoich_matrix     = stoich_matrix,
-                                                        lna_pointer       = lna_pointer,
-                                                        set_pars_pointer  = lna_set_pars_pointer
+                                        map_draws_2_lna(
+                                                pathmat           = pathmat_prop,
+                                                draws             = path$draws,
+                                                lna_times         = lna_times,
+                                                lna_pars          = lna_params_prop,
+                                                init_start        = lna_initdist_inds[1],
+                                                param_update_inds = param_update_inds,
+                                                stoich_matrix     = stoich_matrix,
+                                                forcing_inds      = forcing_inds,
+                                                forcing_matrix    = forcing_matrix,
+                                                svd_sqrt          = svd_sqrt,
+                                                svd_d             = svd_d,
+                                                svd_U             = svd_U,
+                                                svd_V             = svd_V,
+                                                lna_pointer       = lna_pointer,
+                                                set_pars_pointer  = lna_set_pars_pointer,
+                                                step_size         = step_size
                                         )
 
                                         census_lna(
@@ -835,7 +873,7 @@ stem_inference_lna <- function(stem_object,
                                                 flow_matrix_lna     = flow_matrix,
                                                 do_prevalence       = do_prevalence,
                                                 init_state          = init_volumes_cur,
-                                                incidence_codes_lna = incidence_codes
+                                                forcing_matrix      = forcing_matrix
                                         )
 
                                         # evaluate the density of the incidence counts
@@ -844,7 +882,7 @@ stem_inference_lna <- function(stem_object,
                                                 obsmat            = data,
                                                 censusmat         = censusmat,
                                                 measproc_indmat   = measproc_indmat,
-                                                lna_parameters    = lna_params_prop,
+                                                lna_parameters    = lna_parameters,
                                                 lna_param_inds    = lna_param_inds,
                                                 lna_const_inds    = lna_const_inds,
                                                 lna_tcovar_inds   = lna_tcovar_inds,
@@ -937,16 +975,23 @@ stem_inference_lna <- function(stem_object,
                         data_log_lik_prop <- NULL
 
                         try({
-                                ### Check whether the pathmat is correctly specified
-                                map_draws_2_lna(pathmat           = pathmat_prop,
-                                                draws             = path$draws,
-                                                lna_times         = lna_times,
-                                                lna_pars          = lna_params_prop,
-                                                init_start        = lna_initdist_inds[1],
-                                                param_update_inds = param_update_inds,
-                                                stoich_matrix     = stoich_matrix,
-                                                lna_pointer       = lna_pointer,
-                                                set_pars_pointer  = lna_set_pars_pointer
+                                map_draws_2_lna(
+                                        pathmat           = pathmat_prop,
+                                        draws             = path$draws,
+                                        lna_times         = lna_times,
+                                        lna_pars          = lna_params_prop,
+                                        init_start        = lna_initdist_inds[1],
+                                        param_update_inds = param_update_inds,
+                                        stoich_matrix     = stoich_matrix,
+                                        forcing_inds      = forcing_inds,
+                                        forcing_matrix    = forcing_matrix,
+                                        svd_sqrt          = svd_sqrt,
+                                        svd_d             = svd_d,
+                                        svd_U             = svd_U,
+                                        svd_V             = svd_V,
+                                        lna_pointer       = lna_pointer,
+                                        set_pars_pointer  = lna_set_pars_pointer,
+                                        step_size         = step_size
                                 )
 
                                 census_lna(
@@ -956,7 +1001,7 @@ stem_inference_lna <- function(stem_object,
                                         flow_matrix_lna     = flow_matrix,
                                         do_prevalence       = do_prevalence,
                                         init_state          = init_volumes_cur,
-                                        incidence_codes_lna = incidence_codes
+                                        forcing_matrix      = forcing_matrix
                                 )
 
                                 # evaluate the density of the incidence counts
@@ -965,7 +1010,7 @@ stem_inference_lna <- function(stem_object,
                                         obsmat            = data,
                                         censusmat         = censusmat,
                                         measproc_indmat   = measproc_indmat,
-                                        lna_parameters    = lna_params_prop,
+                                        lna_parameters    = lna_parameters,
                                         lna_param_inds    = lna_param_inds,
                                         lna_const_inds    = lna_const_inds,
                                         lna_tcovar_inds   = lna_tcovar_inds,
@@ -1016,18 +1061,24 @@ stem_inference_lna <- function(stem_object,
                                         # set the data log likelihood for the proposal to NULL
                                         data_log_lik_g2c <- NULL
 
-                                        # evaluate the data log likelihood
                                         try({
-                                                ## Mapping function leads to issues
-                                                map_draws_2_lna(pathmat           = pathmat_prop,
-                                                                draws             = path$draws,
-                                                                lna_times         = lna_times,
-                                                                lna_pars          = lna_params_prop,
-                                                                init_start        = lna_initdist_inds[1],
-                                                                param_update_inds = param_update_inds,
-                                                                stoich_matrix     = stoich_matrix,
-                                                                lna_pointer       = lna_pointer,
-                                                                set_pars_pointer  = lna_set_pars_pointer
+                                                map_draws_2_lna(
+                                                        pathmat           = pathmat_prop,
+                                                        draws             = path$draws,
+                                                        lna_times         = lna_times,
+                                                        lna_pars          = lna_params_prop,
+                                                        init_start        = lna_initdist_inds[1],
+                                                        param_update_inds = param_update_inds,
+                                                        stoich_matrix     = stoich_matrix,
+                                                        forcing_inds      = forcing_inds,
+                                                        forcing_matrix    = forcing_matrix,
+                                                        svd_sqrt          = svd_sqrt,
+                                                        svd_d             = svd_d,
+                                                        svd_U             = svd_U,
+                                                        svd_V             = svd_V,
+                                                        lna_pointer       = lna_pointer,
+                                                        set_pars_pointer  = lna_set_pars_pointer,
+                                                        step_size         = step_size
                                                 )
 
                                                 census_lna(
@@ -1037,7 +1088,7 @@ stem_inference_lna <- function(stem_object,
                                                         flow_matrix_lna     = flow_matrix,
                                                         do_prevalence       = do_prevalence,
                                                         init_state          = init_volumes_cur,
-                                                        incidence_codes_lna = incidence_codes
+                                                        forcing_matrix      = forcing_matrix
                                                 )
 
                                                 # evaluate the density of the incidence counts
@@ -1046,7 +1097,7 @@ stem_inference_lna <- function(stem_object,
                                                         obsmat            = data,
                                                         censusmat         = censusmat,
                                                         measproc_indmat   = measproc_indmat,
-                                                        lna_parameters    = lna_params_prop,
+                                                        lna_parameters    = lna_parameters,
                                                         lna_param_inds    = lna_param_inds,
                                                         lna_const_inds    = lna_const_inds,
                                                         lna_tcovar_inds   = lna_tcovar_inds,
@@ -1057,10 +1108,10 @@ stem_inference_lna <- function(stem_object,
 
                                                 # compute the data log likelihood
                                                 data_log_lik_g2c <- sum(emitmat[,-1][measproc_indmat])
-                                                if(is.nan(data_log_lik_prop)) data_log_lik_g2c <- -Inf
+                                                if(is.nan(data_log_lik_g2c)) data_log_lik_g2c <- -Inf
                                         }, silent = TRUE)
 
-                                        if(is.null(data_log_lik_prop)) data_log_lik_g2c <- -Inf
+                                        if(is.null(data_log_lik_g2c)) data_log_lik_g2c <- -Inf
 
                                         # compute the log posterior for the proposed parameters
                                         logpost_g2c_prop <- data_log_lik_g2c + params_logprior_g2c
@@ -1117,15 +1168,23 @@ stem_inference_lna <- function(stem_object,
                         data_log_lik_prop <- NULL
 
                         try({
-                                map_draws_2_lna(pathmat           = pathmat_prop,
-                                                draws             = path$draws,
-                                                lna_times         = lna_times,
-                                                lna_pars          = lna_params_prop,
-                                                init_start        = lna_initdist_inds[1],
-                                                param_update_inds = param_update_inds,
-                                                stoich_matrix     = stoich_matrix,
-                                                lna_pointer       = lna_pointer,
-                                                set_pars_pointer  = lna_set_pars_pointer
+                                map_draws_2_lna(
+                                        pathmat           = pathmat_prop,
+                                        draws             = path$draws,
+                                        lna_times         = lna_times,
+                                        lna_pars          = lna_params_prop,
+                                        init_start        = lna_initdist_inds[1],
+                                        param_update_inds = param_update_inds,
+                                        stoich_matrix     = stoich_matrix,
+                                        forcing_inds      = forcing_inds,
+                                        forcing_matrix    = forcing_matrix,
+                                        svd_sqrt          = svd_sqrt,
+                                        svd_d             = svd_d,
+                                        svd_U             = svd_U,
+                                        svd_V             = svd_V,
+                                        lna_pointer       = lna_pointer,
+                                        set_pars_pointer  = lna_set_pars_pointer,
+                                        step_size         = step_size
                                 )
 
                                 census_lna(
@@ -1135,7 +1194,7 @@ stem_inference_lna <- function(stem_object,
                                         flow_matrix_lna     = flow_matrix,
                                         do_prevalence       = do_prevalence,
                                         init_state          = init_volumes_cur,
-                                        incidence_codes_lna = incidence_codes
+                                        forcing_matrix      = forcing_matrix
                                 )
 
                                 # evaluate the density of the incidence counts
@@ -1144,7 +1203,7 @@ stem_inference_lna <- function(stem_object,
                                         obsmat            = data,
                                         censusmat         = censusmat,
                                         measproc_indmat   = measproc_indmat,
-                                        lna_parameters    = lna_params_prop,
+                                        lna_parameters    = lna_parameters,
                                         lna_param_inds    = lna_param_inds,
                                         lna_const_inds    = lna_const_inds,
                                         lna_tcovar_inds   = lna_tcovar_inds,
@@ -1249,15 +1308,23 @@ stem_inference_lna <- function(stem_object,
                         data_log_lik_prop <- NULL
 
                         try({
-                                map_draws_2_lna(pathmat           = pathmat_prop,
-                                                draws             = path$draws,
-                                                lna_times         = lna_times,
-                                                lna_pars          = lna_params_prop,
-                                                init_start        = lna_initdist_inds[1],
-                                                param_update_inds = param_update_inds,
-                                                stoich_matrix     = stoich_matrix,
-                                                lna_pointer       = lna_pointer,
-                                                set_pars_pointer  = lna_set_pars_pointer
+                                map_draws_2_lna(
+                                        pathmat           = pathmat_prop,
+                                        draws             = path$draws,
+                                        lna_times         = lna_times,
+                                        lna_pars          = lna_params_prop,
+                                        init_start        = lna_initdist_inds[1],
+                                        param_update_inds = param_update_inds,
+                                        stoich_matrix     = stoich_matrix,
+                                        forcing_inds      = forcing_inds,
+                                        forcing_matrix    = forcing_matrix,
+                                        svd_sqrt          = svd_sqrt,
+                                        svd_d             = svd_d,
+                                        svd_U             = svd_U,
+                                        svd_V             = svd_V,
+                                        lna_pointer       = lna_pointer,
+                                        set_pars_pointer  = lna_set_pars_pointer,
+                                        step_size         = step_size
                                 )
 
                                 census_lna(
@@ -1267,7 +1334,7 @@ stem_inference_lna <- function(stem_object,
                                         flow_matrix_lna     = flow_matrix,
                                         do_prevalence       = do_prevalence,
                                         init_state          = init_volumes_prop,
-                                        incidence_codes_lna = incidence_codes
+                                        forcing_matrix      = forcing_matrix
                                 )
 
                                 # evaluate the density of the incidence counts
@@ -1276,7 +1343,7 @@ stem_inference_lna <- function(stem_object,
                                         obsmat            = data,
                                         censusmat         = censusmat,
                                         measproc_indmat   = measproc_indmat,
-                                        lna_parameters    = lna_params_prop,
+                                        lna_parameters    = lna_parameters,
                                         lna_param_inds    = lna_param_inds,
                                         lna_const_inds    = lna_const_inds,
                                         lna_tcovar_inds   = lna_tcovar_inds,

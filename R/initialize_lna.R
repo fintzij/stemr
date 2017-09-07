@@ -10,6 +10,9 @@
 #' @param lna_pointer external LNA pointer
 #' @param lna_set_pars_pointer pointer for setting the LNA parameters
 #' @param lna_times times at whicht eh LNA should be evaluated
+#' @param lna_param_inds C++ column indices for parameters
+#' @param lna_const_inds C++ column indices for constants
+#' @param lna_tcovar_inds C++ column indices for time varying covariates
 #' @param lna_initdist_inds C++ column indices in the LNA parameter matrix for
 #'   the initial state
 #' @param param_update_inds logical vector indicating when to update the
@@ -17,17 +20,14 @@
 #' @param census_indices C++ row indices of LNA times when the path is to be
 #'   censused
 #' @param measproc_indmat logical matrix for evaluating the measuement process
-#' @param obstime_inds list of C++ indices indicating when each measurement
-#'   process is evaluated
 #' @param d_meas_pointer external pointer for the measurement process function
-#' @param parameters vector of model parameters
-#' @param constants vector of model constants
-#' @param tcovar_censmat time-varying covariates at LNA times
 #' @param do_prevalence should prevalence be computed?
 #' @param forcing_inds logical vector of indicating at which times in the
 #'   time-varying covariance matrix a forcing is applied.
 #' @param forcing_matrix matrix containing the forcings.
 #' @param initialization_attempts number of initialization attempts
+#' @param step_size initial step size for the ODE solver (adapted internally,
+#'   but too large of an initial step can lead to failure in stiff systems).
 #'
 #' @return LNA path along with its stochastic perturbations
 #' @export
@@ -47,12 +47,12 @@ initialize_lna <-
                  param_update_inds,
                  census_indices,
                  measproc_indmat,
-                 obstime_inds,
                  d_meas_pointer,
                  do_prevalence,
                  forcing_inds,
                  forcing_matrix,
-                 initialization_attempts) {
+                 initialization_attempts,
+                 step_size) {
 
         # get the initial state parameters
         init_state <- lna_parameters[1, lna_initdist_inds + 1]
@@ -67,14 +67,14 @@ initialize_lna <-
                         path <- propose_lna(
                                 lna_times         = lna_times,
                                 lna_pars          = lna_parameters,
-                                init_start        = stem_object$dynamics$lna_initdist_inds[1],
+                                init_start        = lna_initdist_inds[1],
                                 param_update_inds = param_update_inds,
                                 stoich_matrix     = stoich_matrix,
                                 forcing_inds      = forcing_inds,
                                 forcing_matrix    = forcing_matrix,
-                                step_size         = stem_object$dynamics$dynamics_args$step_size,
-                                lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
-                                set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr
+                                step_size         = step_size,
+                                lna_pointer       = lna_pointer,
+                                set_pars_pointer  = lna_set_pars_pointer
                         )
 
                         path$prev_path <- NULL

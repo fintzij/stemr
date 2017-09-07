@@ -19,11 +19,16 @@ using namespace arma;
 //'   LNA parameters need to be updated.
 //' @param stoich_matrix stoichiometry matrix giving the changes to compartments
 //'   from each reaction
+//' @param forcing_inds logical vector of indicating at which times in the
+//'   time-varying covariance matrix a forcing is applied.
+//' @param forcing_matrix matrix containing the forcings.
 //' @param svd_sqrt matrix in which to compute the matrix square root of the LNA
 //'   covariance matrices
 //' @param svd_d vector in which to store SVD singular values
 //' @param svd_U matrix in which to store the U matrix of the SVD
 //' @param svd_V matrix in which to store the V matrix of the SVD
+//' @param step_size initial step size for the ODE solver (adapted internally,
+//' but too large of an initial step can lead to failure in stiff systems).
 //' @param lna_pointer external pointer to LNA integration function.
 //' @param set_pars_pointer external pointer to the function for setting the LNA
 //'   parameters.
@@ -33,11 +38,22 @@ using namespace arma;
 //'
 //' @export
 // [[Rcpp::export]]
-void map_draws_2_lna(arma::mat& pathmat, const arma::mat& draws,
-                 const arma::rowvec& lna_times, const Rcpp::NumericMatrix& lna_pars,
-                 const int init_start, const Rcpp::LogicalVector& param_update_inds,
-                 const arma::mat& stoich_matrix, arma::mat& svd_sqrt, arma::vec& svd_d,
-                 arma::mat& svd_U, arma::mat& svd_V, SEXP lna_pointer, SEXP set_pars_pointer) {
+void map_draws_2_lna(arma::mat& pathmat,
+                     const arma::mat& draws,
+                     const arma::rowvec& lna_times,
+                     const Rcpp::NumericMatrix& lna_pars,
+                     const int init_start,
+                     const Rcpp::LogicalVector& param_update_inds,
+                     const arma::mat& stoich_matrix,
+                     const Rcpp::LogicalVector& forcing_inds,
+                     const arma::mat& forcing_matrix,
+                     arma::mat& svd_sqrt,
+                     arma::vec& svd_d,
+                     arma::mat& svd_U,
+                     arma::mat& svd_V,
+                     double step_size,
+                     SEXP lna_pointer,
+                     SEXP set_pars_pointer) {
 
         // get the dimensions of various objects
         int n_events = stoich_matrix.n_cols;         // number of transition events, e.g., S2I, I2R
@@ -57,8 +73,7 @@ void map_draws_2_lna(arma::mat& pathmat, const arma::mat& draws,
         CALL_SET_LNA_PARAMS(current_params, set_pars_pointer); // set the parameters in the odeintr namespace
 
         // initial state vector - copy elements from the current parameter vector
-        arma::vec init_state(current_params.begin() + init_start, n_comps);
-        arma::vec init_volumes(init_state.begin(), n_comps);
+        arma::vec init_volumes(current_params.begin() + init_start, n_comps);
 
         // initialize the LNA objects
         Rcpp::NumericVector lna_state_vec(n_odes); // the vector for storing the current state of the LNA ODEs
@@ -68,10 +83,14 @@ void map_draws_2_lna(arma::mat& pathmat, const arma::mat& draws,
 
         arma::vec log_lna(n_events, arma::fill::zeros);  // LNA increment, log scale
         arma::vec nat_lna(n_events, arma::fill::zeros);  // LNA increment, natural scale
-        arma::vec c_incid(n_events, arma::fill::zeros);  // cumulative incidence
 
         // indices at which the diffusion elements of lna_state vec start
         int diff_start = n_events;
+
+        // apply forcings if called for - applied after censusing at the first time
+        if(forcing_inds[0]) {
+                init_volumes += forcing_matrix.col(0);
+        }
 
         // iterate over the time sequence, solving the LNA over each interval
         for(int j=0; j < (n_times-1); ++j) {
@@ -82,7 +101,7 @@ void map_draws_2_lna(arma::mat& pathmat, const arma::mat& draws,
 
                 // Reset the LNA state vector and integrate the LNA ODEs over the next interval to 0
                 std::fill(lna_state_vec.begin(), lna_state_vec.end(), 0.0);
-                CALL_INTEGRATE_STEM_LNA(lna_state_vec, t_L, t_R, 0.001, lna_pointer);
+                CALL_INTEGRATE_STEM_LNA(lna_state_vec, t_L, t_R, step_size, lna_pointer);
 
                 // transfer the elements of the lna_state_vec to the process objects
                 std::copy(lna_state_vec.begin(), lna_state_vec.begin() + n_events, lna_drift.begin());
@@ -95,26 +114,42 @@ void map_draws_2_lna(arma::mat& pathmat, const arma::mat& draws,
                 try{
                         arma::svd(svd_U, svd_d, svd_V, lna_diffusion); // compute the SVD
                         svd_d.elem(arma::find(svd_d < 0)).zeros();     // zero out negative singular values
-                        svd_U.each_row() %= arma::sqrt(svd_d).t();     // multiply rows of U by sqrt of singular vals
-                        svd_sqrt = svd_U * svd_V.t();                  // compute svd_sqrt
+                        svd_V.each_row() %= arma::sqrt(svd_d).t();     // multiply rows of V by sqrt of singular vals
 
-                        log_lna = lna_drift + svd_sqrt * draws.col(j); // map the LNA draws
+                        log_lna = lna_drift + (svd_U * svd_V.t()) * draws.col(j); // map the LNA draws
 
                 } catch(std::runtime_error &err) {
+
+                        // reinstatiate the SVD objects
+                        arma::vec svd_d(n_events, arma::fill::zeros);
+                        arma::mat svd_U(n_events, n_events, arma::fill::zeros);
+                        arma::mat svd_V(n_events, n_events, arma::fill::zeros);
+
                         forward_exception_to_r(err);
                 }
 
                 // compute the LNA increment and clamp below by 0
                 nat_lna = arma::exp(log_lna) - 1;
-                nat_lna.elem(arma::find(nat_lna < 0)).zeros();
 
-                // update the cumulative incidence
-                c_incid += nat_lna;
-                pathmat(j+1, arma::span(1, n_events)) = c_incid.t();
+                // save the LNA increment
+                pathmat(j+1, arma::span(1, n_events)) = nat_lna.t();
 
                 // update the initial volumes
-                init_volumes = init_state + stoich_matrix * c_incid;
-                init_volumes.elem(arma::find(init_volumes < 0)).zeros();
+                init_volumes += stoich_matrix * nat_lna;
+
+                // apply forcings if called for - applied after censusing the path
+                if(forcing_inds[j+1]) {
+                        init_volumes += forcing_matrix.col(j+1);
+                }
+
+                // if any increments or volumes are negative, throw an error
+                try{
+                        if(any(nat_lna < 0) || any(init_volumes < 0)) {
+                                throw std::runtime_error("Negative compartment volumes.");
+                        }
+                } catch(std::runtime_error &err) {
+                        forward_exception_to_r(err);
+                }
 
                 // update the parameters if they need to be updated
                 if(param_update_inds[j+1]) {

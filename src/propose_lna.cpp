@@ -36,10 +36,11 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                        const int init_start,
                        const Rcpp::LogicalVector& param_update_inds,
                        const arma::mat& stoich_matrix,
-                       double step_size,
                        const Rcpp::LogicalVector& forcing_inds,
                        const arma::mat& forcing_matrix,
-                       SEXP lna_pointer, SEXP set_pars_pointer) {
+                       double step_size,
+                       SEXP lna_pointer,
+                       SEXP set_pars_pointer) {
 
         // get the dimensions of various objects
         int n_events = stoich_matrix.n_cols;         // number of transition events, e.g., S2I, I2R
@@ -55,9 +56,8 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
         CALL_SET_LNA_PARAMS(current_params, set_pars_pointer);  // set the parameters in the odeintr namespace
 
         // initial state vector - copy elements from the current parameter vector
-        arma::vec init_state(current_params.begin() + init_start, n_comps);
-        arma::vec init_volumes(init_state.begin(), n_comps);
-        arma::vec init_volumes_prop(init_state.begin(), n_comps);
+        arma::vec init_volumes(current_params.begin() + init_start, n_comps);
+        arma::vec init_volumes_prop(init_volumes.begin(), n_comps);
 
         // initialize the LNA objects - the vector for storing the current state
         Rcpp::NumericVector lna_state_vec(n_odes);   // vector to store the results of the ODEs
