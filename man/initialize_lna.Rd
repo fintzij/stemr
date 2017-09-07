@@ -6,9 +6,9 @@
 \usage{
 initialize_lna(data, lna_parameters, censusmat, emitmat, stoich_matrix,
   lna_pointer, lna_set_pars_pointer, lna_times, lna_param_inds, lna_const_inds,
-  lna_tcovar_inds, lna_initdist_inds, param_update_inds, incidence_codes,
-  census_incidence_codes, census_indices, measproc_indmat, obstime_inds,
-  d_meas_pointer, do_prevalence, initialization_attempts)
+  lna_tcovar_inds, lna_initdist_inds, param_update_inds, census_indices,
+  lna_event_inds, measproc_indmat, d_meas_pointer, do_prevalence, forcing_inds,
+  forcing_matrix, initialization_attempts, step_size)
 }
 \arguments{
 \item{data}{matrix containing the dataset}
@@ -29,37 +29,39 @@ observation times}
 
 \item{lna_times}{times at whicht eh LNA should be evaluated}
 
+\item{lna_param_inds}{C++ column indices for parameters}
+
+\item{lna_const_inds}{C++ column indices for constants}
+
+\item{lna_tcovar_inds}{C++ column indices for time varying covariates}
+
 \item{lna_initdist_inds}{C++ column indices in the LNA parameter matrix for
 the initial state}
 
 \item{param_update_inds}{logical vector indicating when to update the
 parameters}
 
-\item{incidence_codes}{C++ indices for LNA count process compartments for
-which incidence is to be computed}
-
-\item{census_incidence_codes}{C++ indices for columns in the census matrix
-containing incidence data}
-
 \item{census_indices}{C++ row indices of LNA times when the path is to be
 censused}
 
-\item{measproc_indmat}{logical matrix for evaluating the measuement process}
+\item{lna_event_inds}{vector of column indices in the LNA path for which
+incidence will be computed.}
 
-\item{obstime_inds}{list of C++ indices indicating when each measurement
-process is evaluated}
+\item{measproc_indmat}{logical matrix for evaluating the measuement process}
 
 \item{d_meas_pointer}{external pointer for the measurement process function}
 
 \item{do_prevalence}{should prevalence be computed?}
 
+\item{forcing_inds}{logical vector of indicating at which times in the
+time-varying covariance matrix a forcing is applied.}
+
+\item{forcing_matrix}{matrix containing the forcings.}
+
 \item{initialization_attempts}{number of initialization attempts}
 
-\item{parameters}{vector of model parameters}
-
-\item{constants}{vector of model constants}
-
-\item{tcovar_censmat}{time-varying covariates at LNA times}
+\item{step_size}{initial step size for the ODE solver (adapted internally,
+but too large of an initial step can lead to failure in stiff systems).}
 }
 \value{
 LNA path along with its stochastic perturbations

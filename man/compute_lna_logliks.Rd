@@ -33,23 +33,10 @@ the initial state}
 \item{param_update_inds}{logical vector indicating when to update the
 parameters}
 
-\item{incidence_codes}{C++ indices for LNA count process compartments for
-which incidence is to be computed}
-
-\item{census_incidence_codes}{C++ indices for columns in the census matrix
-containing incidence data}
-
 \item{census_indices}{C++ row indices of LNA times when the path is to be
 censused}
 
 \item{measproc_indmat}{logical matrix for evaluating the measuement process}
-
-\item{obstime_inds}{list of C++ indices indicating when each measurement
-process is evaluated}
-
-\item{constants}{vector of model constants}
-
-\item{tcovar_censmat}{time-varying covariates at LNA times}
 
 \item{do_prevalence}{should prevalence be computed?}
 

@@ -5,12 +5,12 @@
 \title{Sample a new LNA path via elliptical slice sampling.}
 \usage{
 update_lna_path(path_cur, data, lna_parameters, pathmat_prop, censusmat,
-  draws_prop, emitmat, flow_matrix, stoich_matrix, lna_pointer,
-  lna_set_pars_pointer, lna_times, lna_param_inds, lna_const_inds,
-  lna_tcovar_inds, lna_initdist_inds, param_update_inds, incidence_codes,
-  census_incidence_codes, census_indices, measproc_indmat, obstime_inds,
-  d_meas_pointer, do_prevalence, n_ess_updates, ess_schedule,
-  randomize_schedule)
+  draws_prop, emitmat, flow_matrix, stoich_matrix, lna_times, forcing_inds,
+  forcing_matrix, lna_param_inds, lna_const_inds, lna_tcovar_inds,
+  lna_initdist_inds, param_update_inds, census_indices, lna_event_inds,
+  measproc_indmat, svd_sqrt, svd_d, svd_U, svd_V, lna_pointer,
+  lna_set_pars_pointer, d_meas_pointer, do_prevalence, n_ess_updates,
+  ess_schedule, randomize_schedule, step_size)
 }
 \arguments{
 \item{path_cur}{list with the current LNA path along with its ODE paths}
@@ -27,11 +27,18 @@ observation times}
 
 \item{stoich_matrix}{LNA stoichiometry matrix}
 
-\item{lna_pointer}{external LNA pointer}
-
-\item{lna_set_pars_pointer}{pointer for setting the LNA parameters}
-
 \item{lna_times}{times at whicht eh LNA should be evaluated}
+
+\item{forcing_inds}{logical vector of indicating at which times in the
+time-varying covariance matrix a forcing is applied.}
+
+\item{forcing_matrix}{matrix containing the forcings.}
+
+\item{lna_param_inds}{C++ column indices for parameters}
+
+\item{lna_const_inds}{C++ column indices for constants}
+
+\item{lna_tcovar_inds}{C++ column indices for time varying covariates}
 
 \item{lna_initdist_inds}{C++ column indices in the LNA parameter matrix for
 the initial state}
@@ -39,25 +46,29 @@ the initial state}
 \item{param_update_inds}{logical vector indicating when to update the
 parameters}
 
-\item{incidence_codes}{C++ indices for LNA count process compartments for
-which incidence is to be computed}
-
-\item{census_incidence_codes}{C++ indices for columns in the census matrix
-containing incidence data}
-
 \item{census_indices}{C++ row indices of LNA times when the path is to be
 censused}
 
+\item{lna_event_inds}{vector of column indices in the LNA path for which
+incidence will be computed.}
+
 \item{measproc_indmat}{logical matrix for evaluating the measuement process}
 
-\item{obstime_inds}{list of C++ indices indicating when each measurement
-process is evaluated}
+\item{svd_sqrt, svd_d, svd_U, svd_V}{objects for computing the SVD of LNA
+diffusion matrics}
+
+\item{lna_pointer}{external LNA pointer}
+
+\item{lna_set_pars_pointer}{pointer for setting the LNA parameters}
 
 \item{d_meas_pointer}{external pointer for the measurement process function}
 
 \item{do_prevalence}{should prevalence be computed?}
 
 \item{n_ess_updates}{number of elliptical slice sampling updates}
+
+\item{step_size}{initial step size for the ODE solver (adapted internally,
+but too large of an initial step can lead to failure in stiff systems).}
 }
 \value{
 list with an updated LNA path along with its stochastic

@@ -88,12 +88,11 @@ arma::mat build_census_path(Rcpp::NumericMatrix& path,
 void census_lna(const arma::mat& path,
                 arma::mat& census_path,
                 const arma::uvec& census_inds,
+                const arma::uvec& lna_event_inds,
                 const arma::mat& flow_matrix_lna,
                 bool do_prevalence,
                 const arma::rowvec& init_state,
-                const arma::uvec& incidence_codes_lna,
-                const Rcpp::LogicalVector& forcing_inds,
-                const arma::mat& forcing_matrix);
+                const arma::mat& forcing_matrix)
 
 // update a census matrix with compartment counts at observation times
 void retrieve_census_path(arma::mat& cencusmat,
@@ -161,8 +160,8 @@ void pars2lnapars(arma::mat& lnapars, const arma::rowvec& parameters);
 void g_prop2c_prop(arma::mat& g2c_mat, const arma::rowvec& params_cur, const arma::rowvec& params_prop);
 
 // convert the lna from the counting process on transition events to its natural state space
-arma::mat convert_lna(const arma::mat& path, const arma::mat& flow_matrix, const arma::rowvec& init_state);
-void convert_lna2(const arma::mat& path, const arma::mat& flow_matrix, const arma::rowvec& init_state, arma::mat& statemat);
+// arma::mat convert_lna(const arma::mat& path, const arma::mat& flow_matrix, const arma::rowvec& init_state);
+// void convert_lna2(const arma::mat& path, const arma::mat& flow_matrix, const arma::rowvec& init_state, arma::mat& statemat);
 
 // compute the lna density
 // retintegrating all LNA ODEs - required after updating parameters

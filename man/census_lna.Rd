@@ -4,13 +4,18 @@
 \alias{census_lna}
 \title{Construct a matrix containing the compartment counts and the incidence at a sequence of census times.}
 \usage{
-census_lna(path, census_path, census_inds, flow_matrix_lna, do_prevalence,
-  init_state, forcing_matrix)
+census_lna(path, census_path, census_inds, lna_event_inds, flow_matrix_lna,
+  do_prevalence, init_state, forcing_matrix)
 }
 \arguments{
 \item{path}{matrix containing the path to be censused (cumulative incidence).}
 
 \item{census_path}{matrix to be filled out with the path.}
+
+\item{census_inds}{vector of indices for census interval endpoints.}
+
+\item{lna_event_inds}{vector of column indices in the path matrix for events that
+should be censused.}
 
 \item{flow_matrix_lna}{matrix containing the flow matrix for the LNA (no incidence)}
 
@@ -20,7 +25,7 @@ census_lna(path, census_path, census_inds, flow_matrix_lna, do_prevalence,
 
 \item{forcing_matrix}{matrix containing the forcings.}
 
-\item{incidence_codes}{vector of column indices in the LNA path for which
+\item{lna_event_inds}{vector of column indices in the LNA path for which
 incidence will be computed.}
 
 \item{forcing_inds}{logical vector of indicating at which times in the

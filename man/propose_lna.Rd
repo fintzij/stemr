@@ -6,7 +6,7 @@
 log-transformed counting process LNA.}
 \usage{
 propose_lna(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix,
-  step_size, forcing_inds, forcing_matrix, lna_pointer, set_pars_pointer)
+  forcing_inds, forcing_matrix, step_size, lna_pointer, set_pars_pointer)
 }
 \arguments{
 \item{lna_times}{vector of interval endpoint times}
@@ -23,13 +23,13 @@ LNA parameters need to be updated.}
 \item{stoich_matrix}{stoichiometry matrix giving the changes to compartments
 from each reaction}
 
-\item{step_size}{initial step size for the ODE solver (adapted internally,
-but too large of an initial step can lead to failure in stiff systems).}
-
 \item{forcing_inds}{logical vector of indicating at which times in the
 time-varying covariance matrix a forcing is applied.}
 
 \item{forcing_matrix}{matrix containing the forcings.}
+
+\item{step_size}{initial step size for the ODE solver (adapted internally,
+but too large of an initial step can lead to failure in stiff systems).}
 
 \item{lna_pointer}{external pointer to LNA integration function.}
 

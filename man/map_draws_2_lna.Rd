@@ -5,8 +5,8 @@
 \title{Map N(0,1) stochastic perturbations to an LNA path.}
 \usage{
 map_draws_2_lna(pathmat, draws, lna_times, lna_pars, init_start,
-  param_update_inds, stoich_matrix, svd_sqrt, svd_d, svd_U, svd_V, lna_pointer,
-  set_pars_pointer)
+  param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, svd_sqrt,
+  svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer)
 }
 \arguments{
 \item{pathmat}{matrix where the LNA path should be stored}
@@ -27,6 +27,11 @@ LNA parameters need to be updated.}
 \item{stoich_matrix}{stoichiometry matrix giving the changes to compartments
 from each reaction}
 
+\item{forcing_inds}{logical vector of indicating at which times in the
+time-varying covariance matrix a forcing is applied.}
+
+\item{forcing_matrix}{matrix containing the forcings.}
+
 \item{svd_sqrt}{matrix in which to compute the matrix square root of the LNA
 covariance matrices}
 
@@ -35,6 +40,9 @@ covariance matrices}
 \item{svd_U}{matrix in which to store the U matrix of the SVD}
 
 \item{svd_V}{matrix in which to store the V matrix of the SVD}
+
+\item{step_size}{initial step size for the ODE solver (adapted internally,
+but too large of an initial step can lead to failure in stiff systems).}
 
 \item{lna_pointer}{external pointer to LNA integration function.}
 

@@ -19,6 +19,8 @@
 #'   parameters
 #' @param census_indices C++ row indices of LNA times when the path is to be
 #'   censused
+#' @param lna_event_inds vector of column indices in the LNA path for which
+#'   incidence will be computed.
 #' @param measproc_indmat logical matrix for evaluating the measuement process
 #' @param d_meas_pointer external pointer for the measurement process function
 #' @param do_prevalence should prevalence be computed?
@@ -46,6 +48,7 @@ initialize_lna <-
                  lna_initdist_inds,
                  param_update_inds,
                  census_indices,
+                 lna_event_inds,
                  measproc_indmat,
                  d_meas_pointer,
                  do_prevalence,
@@ -83,6 +86,7 @@ initialize_lna <-
                                 path                = path$lna_path,
                                 census_path         = censusmat,
                                 census_inds         = census_indices,
+                                lna_event_inds      = lna_event_inds,
                                 flow_matrix_lna     = t(stoich_matrix),
                                 do_prevalence       = do_prevalence,
                                 init_state          = init_state,
