@@ -7,7 +7,7 @@
 stem_dynamics(rates, parameters, state_initializer, compartments, tmax,
   tcovar = NULL, forcings = NULL, strata = NULL, constants = NULL,
   timestep = NULL, adjacency = NULL, messages = TRUE,
-  compile_rates = TRUE, compile_ode = FALSE, compile_lna = FALSE,
+  compile_rates = TRUE, compile_lna = FALSE, compile_ode = FALSE,
   step_size = 1e-06, rtol = 1e-09, atol = 1e-09, ...)
 }
 \arguments{
@@ -72,17 +72,17 @@ method="gillespie". If not supplied, \code{timestep} will default to
 \item{messages}{should a message be printed when parsing the rates?}
 
 \item{compile_rates}{should the rate functions for exact simulation and
-inference be compiled? Defaults to TRUE.}
+inference be compiled?}
 
-\item{compile_lna}{should the LNA functions be compiled? Defaults to FALSE.}
+\item{compile_lna}{should the LNA functions be compiled?}
+
+\item{compile_ode}{should the ODE functions for the deterministic mean process
+be compiled?}
 
 \item{step_size}{initial step size for ODE stepper. Adapted internally, but
 too large of an initial size can lead to failures in stiff systems.}
 
 \item{rtol, atol}{stepper error tolerance (see odeintr package documentation)}
-
-\item{stan_lna_code}{should the user defined functions for fitting the
-restarting log-transformed LNA in Stan be generated?}
 }
 \value{
 list with evaluated rate functions and objects for managing the

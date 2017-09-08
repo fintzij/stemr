@@ -63,8 +63,6 @@ stem_inference_lna <- function(stem_object,
         do_incidence           <- stem_object$measurement_process$lna_incidence
         lna_event_inds         <- stem_object$measurement_process$incidence_codes_lna
         n_incidence            <- ifelse(lna_event_inds[1] == -1, 0, length(lna_event_inds))
-        census_incidence_codes <- lna_event_inds + ncol(censusmat) - (1 + length(lna_event_inds))
-        names(census_incidence_codes) <- names(lna_event_inds)
         state_initializer      <- stem_object$dynamics$state_initializer
         fixed_inits            <- stem_object$dynamics$fixed_inits
         n_strata               <- stem_object$dynamics$n_strata

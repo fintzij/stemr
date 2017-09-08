@@ -137,7 +137,7 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol) {
 
                 # we don't need the odeintr functions exported to the R global environment,
                 # so remove the export attributes
-                # LNA_code <- gsub("// \\[\\[Rcpp::export\\]\\]", "", LNA_code)
+                LNA_code <- gsub("// \\[\\[Rcpp::export\\]\\]", "", LNA_code)
 
                 # paste the stemr LNA ode code to the end of the odeintr generated code
                 LNA_code <- paste(LNA_code, stemr_LNA_code, sep = "\n")

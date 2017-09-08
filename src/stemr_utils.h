@@ -48,6 +48,16 @@ void CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector& init,
 void CALL_SET_LNA_PARAMS(Rcpp::NumericVector& p,
                          SEXP set_lna_params_ptr);
 
+// integrate the ODEs, call via XPtr
+void CALL_INTEGRATE_STEM_ODE(Rcpp::NumericVector& init,
+                             double start,
+                             double end,
+                             double step_size,
+                             SEXP stemr_ode_ptr);
+
+// set the ODE parameters, call via XPtr
+void CALL_SET_ODE_PARAMS(Rcpp::NumericVector& p, SEXP set_ode_params_ptr);
+
 // update rates based on transition events or changes in time-varying covariates
 void rate_update_tcovar(Rcpp::LogicalVector& rate_inds,
                         const arma::mat& M,
@@ -92,7 +102,7 @@ void census_lna(const arma::mat& path,
                 const arma::mat& flow_matrix_lna,
                 bool do_prevalence,
                 const arma::rowvec& init_state,
-                const arma::mat& forcing_matrix)
+                const arma::mat& forcing_matrix);
 
 // update a census matrix with compartment counts at observation times
 void retrieve_census_path(arma::mat& cencusmat,
