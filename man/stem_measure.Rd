@@ -12,10 +12,7 @@ stem_measure(emissions, dynamics, data = NULL, messages = TRUE)
 \code{\link{emission}} function.}
 
 \item{dynamics}{processed list of objects governing the model dynamics,
-returned by the \code{\link{stem_dynamics}} function. If the
-\code{stan_lna_rates} slot is not null, the \code{stem_measure} function
-will generate code to be used in compiling the user defined functions for
-use in Stan and the measurement processes will not be compiled.}
+returned by the \code{\link{stem_dynamics}} function.}
 
 \item{data}{matrix/data frame, or a list of matrices/data frames. All columns
 must be named according to which compartment_strata are measured. The first

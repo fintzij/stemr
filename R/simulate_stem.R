@@ -4,6 +4,9 @@
 #'   supplied at a minimum. If simulations from the measurement process are
 #'   desired, the measurement process slot must also be supplied.
 #' @param nsim number of realizations to simulate
+#' @param simulation_parameters optional list of vectors of simulation
+#'   parameters. If NULL, paths are simulated using the parameters specified in
+#'   the stem object.
 #' @param paths Should population-level paths be returned?
 #' @param observations Should simulated observations be returned? Requires that
 #'   a measurement process be defined in the stem object.
@@ -12,13 +15,14 @@
 #'   collection of disease histories)? Only available for exact simulation via
 #'   the Gillespie direct method.
 #' @param method either "gillespie" if simulating via Gillespie's direct method,
-#'   or "lna" if simulating paths via the Linear Noise Approximation.
+#'   "lna" if simulating paths via the linear noise approximation, or "ode" if
+#'   simulating paths of the deterministic limit of the underlying Markov jump
+#'   process.
 #' @param tmax the time at which simulation of the system is terminated. If not
 #'   supplied, defaults to the last observation time if not supplied.
 #' @param timestep time discretization for smooth time-varying functions,
 #'   specifically seasonal terms, to be used in simulation when
-#'   method="gillespie". If not supplied, \code{timestep} will default to
-#'   \code{(tmax - t0)/50}.
+#'   method="gillespie". If not supplied, \code{timestep} will default to 1.
 #' @param census_times vector of times at which compartment counts should be
 #'   recorded.
 #' @param max_attempts maximum number of times to attempt simulating an LNA path
@@ -45,6 +49,7 @@
 simulate_stem <-
         function(stem_object,
                  nsim = 1,
+                 simulation_parameters = NULL,
                  paths = FALSE,
                  observations = FALSE,
                  subject_paths = FALSE,
@@ -52,21 +57,16 @@ simulate_stem <-
                  tmax = NULL,
                  timestep = NULL,
                  census_times = NULL,
-                 lna_path_type = "incidence",
                  max_attempts = 100,
                  messages = TRUE) {
 
                 # ensure that the method is correctly specified
-                if(!method %in% c("gillespie", "lna")) {
-                        stop("The simulation method must either be 'gillespie' or 'lna'.")
-                }
-
-                if(method == "lna" && !lna_path_type %in% c("incidence", "prevalence", "both")) {
-                        stop("The LNA path type must be specified as one of 'incidence', 'prevalence', or 'both'.")
+                if(!method %in% c("gillespie", "lna", "ode")) {
+                        stop("The simulation method must either be 'gillespie', 'lna', or 'ode'.")
                 }
 
                 # if lna, subject paths are not available
-                if(subject_paths && (method == "lna")) {
+                if(subject_paths && (method == "lna" | method == "ode")) {
                         warning("Subject-paths are only available when simulating paths when method='gillespie'.")
                 }
 
@@ -78,6 +78,23 @@ simulate_stem <-
                 # check that a measurement process is supplied if one is required
                 if(is.null(stem_object$measurement_process) & ((!paths & !observations) | observations)) {
                         stop("In order to simulate a dataset, a measurement process must be supplied in the stem_object.")
+                }
+
+                # check that if simulation parameters are supplied, they are supplied in a list of named vectors of
+                # length equal to the number of simulations. Also check that the parameters are supplied in the same
+                # order as the parameters in the stem object.
+                if(!is.null(simulation_parameters)) {
+                        if(!is.list(simulation_parameters)) {
+                                stop("Simulation parameters must be supplied as a list of vectors.")
+                        }
+
+                        if(length(simulation_parameters) != nsim) {
+                                stop("If simulation parameters are supplied, there must be an equal number of vectors in the list as requested paths to be simulated.")
+                        }
+
+                        if(!all(sapply(simulation_parameters, function(x) all(names(x) == names(stem_object$dynamics$parameters))))) {
+                                stop("The simulation parameters list must consist of named vectors with elements given in the same order as the parameters in the stem object.")
+                        }
                 }
 
                 if(paths == observations) {
@@ -284,12 +301,18 @@ simulate_stem <-
                                 # initialize the list of paths
                                 paths_full <- vector(mode = "list", length = nsim)
 
+                                # vector of model parameters
+                                sim_pars <- stem_object$dynamics$parameters
+
                                 # simulate the paths
                                 for(k in seq_len(nsim)) {
+
                                         attempt <- 0
+                                        if(!is.null(simulation_parameters)) sim_pars <- simulation_parameters[[k]]
+
                                         while(is.null(paths_full[[k]]) && attempt < max_attempts) {
                                                 try({paths_full[[k]] <- simulate_gillespie(flow             = stem_object$dynamics$flow_matrix,
-                                                                                           parameters       = stem_object$dynamics$parameters,
+                                                                                           parameters       = sim_pars,
                                                                                            constants        = stem_object$dynamics$constants,
                                                                                            tcovar           = stem_object$dynamics$tcovar,
                                                                                            init_states      = init_states[k,],
@@ -322,14 +345,19 @@ simulate_stem <-
                                                                      length(stem_object$dynamics$incidence_codes))
                                 }
 
+                                # vector of model parameters
+                                sim_pars <- stem_object$dynamics$parameters
+
                                 for(k in seq_len(nsim)) {
 
                                         attempt <- 0
                                         path_full <- NULL
+                                        if(!is.null(simulation_parameters)) sim_pars <- simulation_parameters[[k]]
+
                                         while(is.null(path_full) & attempt < max_attempts) {
                                                 try({
                                                         path_full <- simulate_gillespie(flow             = stem_object$dynamics$flow_matrix,
-                                                                                        parameters       = stem_object$dynamics$parameters,
+                                                                                        parameters       = sim_pars,
                                                                                         constants        = stem_object$dynamics$constants,
                                                                                         tcovar           = stem_object$dynamics$tcovar,
                                                                                         init_states      = init_states[k,],
@@ -500,11 +528,21 @@ simulate_stem <-
 
                         forcing_matrix <- t(forcing_matrix)
 
+                        sim_pars  <- stem_object$dynamics$parameters
+                        init_vols <- init_states[1,]
+
                         for(k in seq_len(nsim)) {
 
-                                if(!stem_object$dynamics$fixed_inits) {
-                                        pars2lnapars(lna_pars, c(parameters, init_states[k,]))
+                                if(!is.null(simulation_parameters)) {
+                                        sim_pars <- simulation_parameters[[k]]
                                 }
+
+                                if(!stem_object$dynamics$fixed_inits) {
+                                        init_vols <- init_states[k,]
+                                }
+
+                                # set the parameters and initial volumes
+                                pars2lnapars(lna_pars, c(sim_pars, init_vols))
 
                                 attempt <- 0
                                 path    <- NULL
@@ -521,6 +559,197 @@ simulate_stem <-
                                                                     lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
                                                                     set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
                                                 }, silent = TRUE)
+
+                                        attempt           <- attempt + 1
+                                        if(!is.null(path)) {
+                                                census_paths[[k]] <- path$lna_path
+                                                lna_paths[[k]]    <- path$prev_path
+                                                lna_draws[[k]]    <- path$draws
+                                        }
+                                }
+
+                                if(is.null(census_paths[[k]])) {
+                                        stop("Simulation failed. Increase max attempts per simulation or try different parameter values.")
+                                }
+
+                                colnames(census_paths[[k]]) <- c("time", rownames(stem_object$dynamics$flow_matrix_lna))
+                                colnames(lna_paths[[k]]) <- c("time",colnames(stem_object$dynamics$flow_matrix_lna))
+                        }
+
+                } else if(method == "ode") {
+
+                        ### RESUME HERE - ODE SIMULATION
+
+                        # set the vectors of times when the LNA is evaluated and censused
+                        lna_times <- sort(unique(c(t0, census_times, stem_object$dynamics$tcovar[,1], tmax)))
+
+                        # generate the matrix of parameters, constants, and time-varying covariates
+                        lna_pars  <- matrix(0.0,
+                                            nrow = length(lna_times),
+                                            ncol = length(stem_object$dynamics$lna_rates$lna_param_codes),
+                                            dimnames = list(NULL, names(stem_object$dynamics$lna_rates$lna_param_codes)))
+
+                        # insert parameters, constants, and time-varying covariates
+                        parameter_inds <- seq_along(stem_object$dynamics$param_codes)
+                        constant_inds  <- (length(parameter_inds)+1):(length(parameter_inds) + length(stem_object$dynamics$const_codes))
+                        tcovar_inds    <- (max(constant_inds)+1):ncol(lna_pars)
+                        lna_pars[, parameter_inds] <- matrix(stem_object$dynamics$parameters,
+                                                             nrow = nrow(lna_pars),
+                                                             ncol = length(parameter_inds), byrow = T)
+                        lna_pars[, constant_inds]  <- matrix(stem_object$dynamics$constants,
+                                                             nrow = nrow(lna_pars),
+                                                             ncol = length(constant_inds), byrow = T)
+
+                        # Generate forcing indices and update the LNA parameter matrix with forcings
+                        forcing_inds <- rep(FALSE, length(lna_times))
+
+                        if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
+                                tcovar_rowinds <- match(lna_times, stem_object$dynamics$tcovar[,1])
+                                lna_pars[tcovar_rowinds, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
+
+                                # zero out forcings if necessary
+                                if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
+
+                                        # get the forcing indices (supplied in the original tcovar matrix)
+                                        forcing_inds <- as.logical(match(lna_times,
+                                                                         stem_object$dynamics$dynamics_args$tcovar[,1],
+                                                                         nomatch = FALSE))
+                                        zero_inds    <- !forcing_inds
+
+                                        # zero out the tcovar elements corresponding to times with no forcings
+                                        for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
+                                                lna_pars[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] = 0
+                                        }
+                                }
+                        }
+
+                        # generate some auxilliary objects
+                        param_update_inds <- lna_times %in% unique(c(t0, tmax, stem_object$dynamics$tcovar[,1]))
+
+                        # simulate the LNA paths
+                        census_paths <- vector(mode = "list", length = nsim)
+                        lna_draws    <- vector(mode = "list", length = nsim)
+                        lna_paths    <- vector(mode = "list", length = nsim)
+
+                        # retrieve the initial state
+                        init_state <- lna_pars[1, stem_object$dynamics$lna_initdist_inds + 1]
+
+                        # if the initial state is not fixed, sample the collection of initial states
+                        if(!stem_object$dynamics$fixed_inits) {
+                                if(stem_object$dynamics$n_strata == 1) {
+
+                                        # simulate the initial compartment counts
+                                        init_states <- stem_object$dynamics$popsize * extraDistr::rdirichlet(nsim, stem_object$dynamics$initdist_priors)
+                                        colnames(init_states) <- names(stem_object$dynamics$comp_codes)
+
+                                } else if(stem_object$dynamics$n_strata > 1) {
+
+                                        # generate the matrix of initial compartment counts
+                                        init_states <- matrix(0.0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
+                                        colnames(init_states) <- names(stem_object$dynamics$comp_codes)
+
+                                        for(s in seq_len(stem_object$dynamics$n_strata)) {
+
+                                                if(!stem_object$dynamics$state_initializer[[s]]$fixed) {
+
+                                                        init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <-
+                                                                stem_object$dynamics$strata_sizes[s] * extraDistr::rdirichlet(nsim, stem_object$dynamics$state_initializer[[s]]$prior)
+
+                                                } else {
+                                                        init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <-
+                                                                matrix(stem_object$dynamics$state_initializer[[s]]$init_states,
+                                                                       nrow = nsim,
+                                                                       ncol = length(stem_object$dynamics$state_initializer[[s]]$init_states),
+                                                                       byrow = TRUE)
+                                                }
+                                        }
+                                }
+                        } else {
+                                if(stem_object$dynamics$n_strata == 1) {
+                                        init_states <- matrix(rep(stem_object$dynamics$state_initializer$init_states, nsim), nrow = nsim, byrow = T)
+
+                                } else {
+                                        init_states <- matrix(0.0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
+                                        colnames(init_states) <- names(stem_object$dynamics$comp_codes)
+
+                                        for(s in seq_len(stem_object$dynamics$n_strata)) {
+                                                init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <-
+                                                        matrix(stem_object$dynamics$state_initializer[[s]]$init_states,
+                                                               nrow = nsim,
+                                                               ncol = length(stem_object$dynamics$state_initializer[[s]]$init_states),
+                                                               byrow = TRUE)
+                                        }
+                                }
+                        }
+
+                        # generate forcings if they are specified
+                        forcing_matrix <- matrix(0.0,
+                                                 nrow = length(lna_times),
+                                                 ncol = length(stem_object$dynamics$comp_codes),
+                                                 dimnames = list(NULL, names(stem_object$dynamics$comp_codes)))
+
+                        if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
+
+                                for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
+
+                                        # insert the flow into the forcing matrix
+                                        forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$from] <-
+                                                forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$from] -
+                                                stem_object$dynamics$dynamics_args$tcovar[, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]
+
+                                        forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$to] <-
+                                                forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$to] +
+                                                stem_object$dynamics$dynamics_args$tcovar[, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]
+
+                                        # update the adjacency matrix to indicate which rates need to be updated
+                                        affected_rates <- rep(FALSE, nrow(stem_object$dynamics$tcovar_adjmat))
+
+                                        for(n in seq_along(stem_object$dynamics$rates)) {
+                                                affected_rates[n] = grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$from,
+                                                                          stem_object$dynamics$rates[[n]]$unparsed) |
+                                                        grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$to,
+                                                              stem_object$dynamics$rates[[n]]$unparsed)
+                                        }
+
+                                        stem_object$dynamics$tcovar_adjmat[,stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] <-
+                                                xor(stem_object$dynamics$tcovar_adjmat[,stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name],
+                                                    affected_rates)
+                                }
+                        }
+
+                        forcing_matrix <- t(forcing_matrix)
+
+                        sim_pars  <- stem_object$dynamics$parameters
+                        init_vols <- init_states[1,]
+
+                        for(k in seq_len(nsim)) {
+
+                                if(!is.null(simulation_parameters)) {
+                                        sim_pars <- simulation_parameters[[k]]
+                                }
+
+                                if(!stem_object$dynamics$fixed_inits) {
+                                        init_vols <- init_states[k,]
+                                }
+
+                                # set the parameters and initial volumes
+                                pars2lnapars(lna_pars, c(sim_pars, init_vols))
+
+                                attempt <- 0
+                                path    <- NULL
+                                while(is.null(path) && (attempt < max_attempts)) {
+                                        try({
+                                                path <- propose_lna(lna_times         = lna_times,
+                                                                    lna_pars          = lna_pars,
+                                                                    init_start        = stem_object$dynamics$lna_initdist_inds[1],
+                                                                    param_update_inds = param_update_inds,
+                                                                    stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
+                                                                    forcing_inds      = forcing_inds,
+                                                                    forcing_matrix    = forcing_matrix,
+                                                                    step_size         = stem_object$dynamics$dynamics_args$step_size,
+                                                                    lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
+                                                                    set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
+                                        }, silent = TRUE)
 
                                         attempt           <- attempt + 1
                                         if(!is.null(path)) {

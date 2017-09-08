@@ -319,56 +319,6 @@ g_prop2c_prop <- function(g2c_mat, params_cur, params_prop) {
     invisible(.Call('_stemr_g_prop2c_prop', PACKAGE = 'stemr', g2c_mat, params_cur, params_prop))
 }
 
-#' Compute the density of an LNA path, reintegrating only the drift and
-#' residual ODEs (sufficient after elliptical slice sampling).
-#'
-#' @param path list containing the lna_path, and the drift, residual, and
-#'   diffusion processes.
-#' @param lna_times vector of times at which the LNA must be evaluated
-#' @param lna_pars numeric matrix of parameters, constants, and time-varying
-#'   covariates at each of the lna_times
-#' @param param_update_inds logical vector indicating at which of the times the
-#'   LNA parameters need to be updated.
-#' @param flow_matrix original flow matrix giving the changes to compartments
-#'   from each reaction
-#' @param lna_pointer external pointer to LNA integration fcn
-#' @param set_pars_pointer external pointer to the function for setting the LNA
-#'   parameters.
-#'
-#' @return List containing the LNA path, the path of the residual
-#'   process, the drift process, the residual process (conditional means), and
-#'   diffusion process, along with the log density of the LNA path and the
-#'   measurement process.
-#' @export
-lna_density2 <- function(path, lna_times, lna_pars, param_update_inds, flow_matrix, lna_pointer_ess, lna_ess_set_pars_ptr) {
-    .Call('_stemr_lna_density2', PACKAGE = 'stemr', path, lna_times, lna_pars, param_update_inds, flow_matrix, lna_pointer_ess, lna_ess_set_pars_ptr)
-}
-
-#' Compute the density of an LNA path, reintegrating all LNA ODEs (as required,
-#' e.g. after updating the parameters).
-#'
-#' @param path list containing the lna_path, and the drift, residual, and
-#'   diffusion processes.
-#' @param lna_times vector of times at which the LNA must be evaluated
-#' @param lna_pars numeric matrix of parameters, constants, and time-varying
-#'   covariates at each of the lna_times
-#' @param param_update_inds logical vector indicating at which of the times the
-#'   LNA parameters need to be updated.
-#' @param flow_matrix original flow matrix giving the changes to compartments
-#'   from each reaction
-#' @param lna_pointer external pointer to LNA integration fcn
-#' @param set_pars_pointer external pointer to the function for setting the LNA
-#'   parameters.
-#'
-#' @return List containing the LNA path, the path of the residual
-#'   process, the drift process, the residual process (conditional means), and
-#'   diffusion process, along with the log density of the LNA path and the
-#'   measurement process.
-#' @export
-lna_density <- function(path, lna_times, lna_pars, param_update_inds, flow_matrix, lna_pointer, set_pars_pointer) {
-    .Call('_stemr_lna_density', PACKAGE = 'stemr', path, lna_times, lna_pars, param_update_inds, flow_matrix, lna_pointer, set_pars_pointer)
-}
-
 #' Convert an LNA path from the counting process on transition events to the
 #' compartment densities on their natural scale.
 #'

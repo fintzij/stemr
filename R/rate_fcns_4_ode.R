@@ -1,5 +1,4 @@
-#' Convert unparsed rate functions into rate functions appropriate for applying
-#' the LNA to the transition event count processes.
+#' Convert unparsed rate functions into deterministic mean ODE functions.
 #'
 #' @param rate_fcns list of rates, as returned by stem_dynamics
 #' @param compartment_codes vector of compartment codes
@@ -9,10 +8,7 @@
 #' @return list containing a character vector with the rate functions and a
 #'   named numeric vector of counting process compartment codes
 #' @export
-rate_fcns_4_lna_stan <- function(rate_fcns, compartment_codes, flow_matrix) {
-
-        # adjust compartment code indices for R/Stan style
-        compartment_codes <- compartment_codes + 1
+rate_fcns_4_ode <- function(rate_fcns, compartment_codes, flow_matrix) {
 
         # character vector for the rates
         n_rates    <- nrow(flow_matrix)
@@ -32,9 +28,9 @@ rate_fcns_4_lna_stan <- function(rate_fcns, compartment_codes, flow_matrix) {
         rate_names <- paste0(comps_from, "2", comps_to)
         comp_names <- names(compartment_codes)
 
-        # lna_compartment codes
-        lna_comp_codes        <- seq_len(n_rates)
-        names(lna_comp_codes) <- rate_names
+        # ode_compartment codes
+        ode_comp_codes        <- seq_len(n_rates) - 1
+        names(ode_comp_codes) <- rate_names
 
         # lookup table for making substitutions
         lookup_table <- data.frame(varname     = names(compartment_codes),
@@ -89,5 +85,5 @@ rate_fcns_4_lna_stan <- function(rate_fcns, compartment_codes, flow_matrix) {
                 }
         }
 
-        return(list(lna_rates = rate_strings, lna_comp_codes = lna_comp_codes))
+        return(list(ode_rates = rate_strings, ode_comp_codes = ode_comp_codes))
 }
