@@ -578,61 +578,65 @@ simulate_stem <-
 
                 } else if(method == "ode") {
 
-                        ### RESUME HERE - ODE SIMULATION
-
                         # set the vectors of times when the LNA is evaluated and censused
-                        lna_times <- sort(unique(c(t0, census_times, stem_object$dynamics$tcovar[,1], tmax)))
+                        ode_times <- sort(unique(c(t0, census_times, stem_object$dynamics$tcovar[,1], tmax)))
 
                         # generate the matrix of parameters, constants, and time-varying covariates
-                        lna_pars  <- matrix(0.0,
-                                            nrow = length(lna_times),
-                                            ncol = length(stem_object$dynamics$lna_rates$lna_param_codes),
-                                            dimnames = list(NULL, names(stem_object$dynamics$lna_rates$lna_param_codes)))
+                        ode_pars  <- matrix(0.0,
+                                            nrow = length(ode_times),
+                                            ncol = length(stem_object$dynamics$ode_rates$ode_param_codes),
+                                            dimnames = list(NULL, names(stem_object$dynamics$ode_rates$ode_param_codes)))
 
                         # insert parameters, constants, and time-varying covariates
                         parameter_inds <- seq_along(stem_object$dynamics$param_codes)
                         constant_inds  <- (length(parameter_inds)+1):(length(parameter_inds) + length(stem_object$dynamics$const_codes))
-                        tcovar_inds    <- (max(constant_inds)+1):ncol(lna_pars)
-                        lna_pars[, parameter_inds] <- matrix(stem_object$dynamics$parameters,
-                                                             nrow = nrow(lna_pars),
+                        tcovar_inds    <- (max(constant_inds)+1):ncol(ode_pars)
+                        ode_pars[, parameter_inds] <- matrix(stem_object$dynamics$parameters,
+                                                             nrow = nrow(ode_pars),
                                                              ncol = length(parameter_inds), byrow = T)
-                        lna_pars[, constant_inds]  <- matrix(stem_object$dynamics$constants,
-                                                             nrow = nrow(lna_pars),
+                        ode_pars[, constant_inds]  <- matrix(stem_object$dynamics$constants,
+                                                             nrow = nrow(ode_pars),
                                                              ncol = length(constant_inds), byrow = T)
 
-                        # Generate forcing indices and update the LNA parameter matrix with forcings
-                        forcing_inds <- rep(FALSE, length(lna_times))
+                        # Generate forcing indices and update the ODE parameter matrix with forcings
+                        forcing_inds <- rep(FALSE, length(ode_times))
 
                         if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
-                                tcovar_rowinds <- match(lna_times, stem_object$dynamics$tcovar[,1])
-                                lna_pars[tcovar_rowinds, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
+                                tcovar_rowinds <- match(ode_times, stem_object$dynamics$tcovar[,1])
+                                ode_pars[tcovar_rowinds, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
 
                                 # zero out forcings if necessary
                                 if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
 
                                         # get the forcing indices (supplied in the original tcovar matrix)
-                                        forcing_inds <- as.logical(match(lna_times,
+                                        forcing_inds <- as.logical(match(ode_times,
                                                                          stem_object$dynamics$dynamics_args$tcovar[,1],
                                                                          nomatch = FALSE))
                                         zero_inds    <- !forcing_inds
 
                                         # zero out the tcovar elements corresponding to times with no forcings
                                         for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
-                                                lna_pars[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] = 0
+                                                ode_pars[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] = 0
                                         }
                                 }
                         }
 
                         # generate some auxilliary objects
-                        param_update_inds <- lna_times %in% unique(c(t0, tmax, stem_object$dynamics$tcovar[,1]))
+                        param_update_inds <- ode_times %in% unique(c(t0, tmax, stem_object$dynamics$tcovar[,1]))
 
-                        # simulate the LNA paths
-                        census_paths <- vector(mode = "list", length = nsim)
-                        lna_draws    <- vector(mode = "list", length = nsim)
-                        lna_paths    <- vector(mode = "list", length = nsim)
+                        # objects for storing the ODE paths
+                        fixed_parameters <- !stem_object$dynamics$fixed_inits | !is.null(simulation_parameters)
+
+                        if(!fixed_parameters) {
+                                census_paths <- vector(mode = "list", length = nsim)
+                                ode_paths    <- vector(mode = "list", length = nsim)
+                        } else {
+                                census_paths <- vector(mode = "list", length = 1)
+                                ode_paths    <- vector(mode = "list", length = 1)
+                        }
 
                         # retrieve the initial state
-                        init_state <- lna_pars[1, stem_object$dynamics$lna_initdist_inds + 1]
+                        init_state <- ode_pars[1, stem_object$dynamics$ode_initdist_inds + 1]
 
                         # if the initial state is not fixed, sample the collection of initial states
                         if(!stem_object$dynamics$fixed_inits) {
@@ -684,7 +688,7 @@ simulate_stem <-
 
                         # generate forcings if they are specified
                         forcing_matrix <- matrix(0.0,
-                                                 nrow = length(lna_times),
+                                                 nrow = length(ode_times),
                                                  ncol = length(stem_object$dynamics$comp_codes),
                                                  dimnames = list(NULL, names(stem_object$dynamics$comp_codes)))
 
@@ -722,7 +726,7 @@ simulate_stem <-
                         sim_pars  <- stem_object$dynamics$parameters
                         init_vols <- init_states[1,]
 
-                        for(k in seq_len(nsim)) {
+                        for(k in seq_along(census_paths)) {
 
                                 if(!is.null(simulation_parameters)) {
                                         sim_pars <- simulation_parameters[[k]]
@@ -733,38 +737,36 @@ simulate_stem <-
                                 }
 
                                 # set the parameters and initial volumes
-                                pars2lnapars(lna_pars, c(sim_pars, init_vols))
+                                pars2lnapars(ode_pars, c(sim_pars, init_vols))
 
-                                attempt <- 0
                                 path    <- NULL
-                                while(is.null(path) && (attempt < max_attempts)) {
+
+                                while(is.null(path)) {
                                         try({
-                                                path <- propose_lna(lna_times         = lna_times,
-                                                                    lna_pars          = lna_pars,
-                                                                    init_start        = stem_object$dynamics$lna_initdist_inds[1],
-                                                                    param_update_inds = param_update_inds,
-                                                                    stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
-                                                                    forcing_inds      = forcing_inds,
-                                                                    forcing_matrix    = forcing_matrix,
-                                                                    step_size         = stem_object$dynamics$dynamics_args$step_size,
-                                                                    lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
-                                                                    set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
+                                                path <- integrate_odes(ode_times         = ode_times,
+                                                                       ode_pars          = ode_pars,
+                                                                       init_start        = stem_object$dynamics$ode_initdist_inds[1],
+                                                                       param_update_inds = param_update_inds,
+                                                                       stoich_matrix     = stem_object$dynamics$stoich_matrix_ode,
+                                                                       forcing_inds      = forcing_inds,
+                                                                       forcing_matrix    = forcing_matrix,
+                                                                       step_size         = stem_object$dynamics$dynamics_args$step_size,
+                                                                       ode_pointer       = stem_object$dynamics$ode_pointers$ode_ptr,
+                                                                       set_pars_pointer  = stem_object$dynamics$ode_pointers$set_ode_params_ptr)
                                         }, silent = TRUE)
 
-                                        attempt           <- attempt + 1
                                         if(!is.null(path)) {
-                                                census_paths[[k]] <- path$lna_path
-                                                lna_paths[[k]]    <- path$prev_path
-                                                lna_draws[[k]]    <- path$draws
+                                                census_paths[[k]] <- path$incid_path
+                                                ode_paths[[k]]    <- path$prev_path
                                         }
                                 }
 
                                 if(is.null(census_paths[[k]])) {
-                                        stop("Simulation failed. Increase max attempts per simulation or try different parameter values.")
+                                        stop("Simulation failed. Try different parameter values.")
                                 }
 
-                                colnames(census_paths[[k]]) <- c("time", rownames(stem_object$dynamics$flow_matrix_lna))
-                                colnames(lna_paths[[k]]) <- c("time",colnames(stem_object$dynamics$flow_matrix_lna))
+                                colnames(census_paths[[k]]) <- c("time", rownames(stem_object$dynamics$flow_matrix_ode))
+                                colnames(ode_paths[[k]]) <- c("time",colnames(stem_object$dynamics$flow_matrix_ode))
                         }
                 }
 
@@ -780,7 +782,7 @@ simulate_stem <-
                         colnames(tcovar_obstimes) <- colnames(stem_object$dynamics$tcovar)
 
                         # if incidence, the incidence codes are not null
-                        do_incidence <- !is.null(stem_object$dynamics$incidence_codes) & method != "lna"
+                        do_incidence <- !is.null(stem_object$dynamics$incidence_codes) & !(method %in% c("lna", "ode"))
 
                         # census if computing incidence or if computing prevalence and the obstimes != census_times
                         do_census <- do_incidence ||
@@ -799,6 +801,9 @@ simulate_stem <-
                                 census_codes    <- c(stem_object$dynamics$comp_codes,
                                                      stem_object$dynamics$incidence_codes) + 2
                                 censusmat       <- stem_object$measurement_process$censusmat
+
+                                # initialize simulation parameters
+                                sim_pars <- stem_object$dynamics$parameters
 
                                 for(k in seq_len(nsim)) {
 
@@ -823,10 +828,13 @@ simulate_stem <-
                                                 }
                                         }
 
+                                        # get the new simulation parameters if a list was supplied
+                                        if(!is.null(simulation_parameters)) sim_pars <- simulation_parameters[[k]]
+
                                         # simulate the data
                                         datasets[[k]] <- simulate_r_measure(censusmat = censusmat,
                                                                             measproc_indmat = stem_object$measurement_process$measproc_indmat,
-                                                                            parameters = stem_object$dynamics$parameters,
+                                                                            parameters = sim_pars,
                                                                             constants = stem_object$dynamics$constants,
                                                                             tcovar = tcovar_obstimes,
                                                                             r_measure_ptr = stem_object$measurement_process$meas_pointers$r_measure_ptr)
@@ -837,8 +845,8 @@ simulate_stem <-
 
                                 # get the objects for simulating from the measurement process
                                 measproc_indmat  <- stem_object$measurement_process$measproc_indmat
-                                parameters       <- stem_object$dynamics$parameters
-                                constants        <- stem_object$dynamics$parameters
+                                sim_pars         <- stem_object$dynamics$parameters
+                                constants        <- stem_object$dynamics$constants
                                 tcovar           <- tcovar_obstimes
                                 r_measure_ptr    <- stem_object$measurement_process$meas_pointers$r_measure_ptr
                                 cens_inds        <- c(0,match(stem_object$measurement_process$obstimes, census_times) - 1)
@@ -861,10 +869,52 @@ simulate_stem <-
                                                    init_state          = init_states[k,],
                                                    forcing_matrix      = forcing_matrix)
 
+                                        if(!is.null(simulation_parameters)) sim_pars <- simulation_parameters[[k]]
+
                                         # simulate the dataset
                                         datasets[[k]] <- simulate_r_measure(pathmat,
                                                                             measproc_indmat,
-                                                                            parameters,
+                                                                            sim_pars,
+                                                                            constants,
+                                                                            tcovar_obstimes,
+                                                                            r_measure_ptr)
+                                        colnames(datasets[[k]]) <- measvar_names
+                                }
+
+                        } else if(method == "ode") {
+
+                                # get the objects for simulating from the measurement process
+                                measproc_indmat  <- stem_object$measurement_process$measproc_indmat
+                                sim_pars         <- stem_object$dynamics$parameters
+                                constants        <- stem_object$dynamics$constants
+                                tcovar           <- tcovar_obstimes
+                                r_measure_ptr    <- stem_object$measurement_process$meas_pointers$r_measure_ptr
+                                cens_inds        <- c(0,match(stem_object$measurement_process$obstimes, census_times) - 1)
+                                do_prevalence    <- stem_object$measurement_process$ode_prevalence
+                                do_incidence     <- stem_object$measurement_process$ode_incidence
+                                obstime_inds     <- stem_object$measurement_process$obstime_inds
+                                pathmat          <- stem_object$measurement_process$censusmat
+                                flow_matrix_ode  <- stem_object$dynamics$flow_matrix_ode
+                                ode_event_inds   <- stem_object$measurement_process$incidence_codes_ode
+
+                                for(k in seq_along(census_paths)) {
+
+                                        # fill out the census matrix
+                                        census_lna(path                = census_paths[[k]],
+                                                   census_path         = pathmat,
+                                                   census_inds         = cens_inds,
+                                                   lna_event_inds      = ode_event_inds,
+                                                   flow_matrix_lna     = flow_matrix_ode,
+                                                   do_prevalence       = do_prevalence,
+                                                   init_state          = init_states[k,],
+                                                   forcing_matrix      = forcing_matrix)
+
+                                        if(!is.null(simulation_parameters)) sim_pars <- simulation_parameters[[k]]
+
+                                        # simulate the dataset
+                                        datasets[[k]] <- simulate_r_measure(pathmat,
+                                                                            measproc_indmat,
+                                                                            sim_pars,
                                                                             constants,
                                                                             tcovar_obstimes,
                                                                             r_measure_ptr)
@@ -880,6 +930,7 @@ simulate_stem <-
                 } else if(paths & !is.null(census_times)) {
                         stem_simulations$paths <- census_paths
                         if(method == "lna") stem_simulations$natural_paths <- lna_paths
+                        if(method == "ode") stem_simulations$natural_paths <- ode_paths
                 } else {
                         stem_simulations$paths <- NULL
                 }

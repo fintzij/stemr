@@ -20,7 +20,7 @@ typedef void(*r_measure_ptr)(Rcpp::NumericMatrix& obsmat, const Rcpp::LogicalVec
              const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar);
 
 // odeintr pointers
-typedef void(*lna_ptr)(Rcpp::NumericVector& init, double start, double end, double step_size);
+typedef void(*ode_ptr)(Rcpp::NumericVector& init, double start, double end, double step_size);
 typedef void(*set_pars_ptr)(Rcpp::NumericVector& p);
 
 #endif

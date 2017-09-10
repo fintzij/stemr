@@ -32,17 +32,17 @@ CALL_D_MEASURE <- function(emitmat, emit_inds, record_ind, record, state, parame
     invisible(.Call('_stemr_CALL_D_MEASURE', PACKAGE = 'stemr', emitmat, emit_inds, record_ind, record, state, parameters, constants, tcovar, d_meas_ptr))
 }
 
-#' Compute the hazards by calling the hazard functions via external Xptr.
+#' Integrate a system of ODEs via external Xptr.
 #'
 #' @param init initial condition
 #' @param state time at left endpoint of interval
 #' @param end time at right endpoint
 #' @param step_size set automatically by caller, required argument not specified by user
-#' @param lna_ode_ptr external pointer for calling the ODE integrator
+#' @param stem_ode_ptr external pointer for calling the ODE integrator
 #'
 #' @export
-CALL_INTEGRATE_STEM_LNA <- function(init, start, end, step_size, lna_ode_ptr) {
-    invisible(.Call('_stemr_CALL_INTEGRATE_STEM_LNA', PACKAGE = 'stemr', init, start, end, step_size, lna_ode_ptr))
+CALL_INTEGRATE_STEM_ODE <- function(init, start, end, step_size, stem_ode_ptr) {
+    invisible(.Call('_stemr_CALL_INTEGRATE_STEM_ODE', PACKAGE = 'stemr', init, start, end, step_size, stem_ode_ptr))
 }
 
 #' Update rates by calling rate functions via Xptr.
@@ -77,18 +77,14 @@ CALL_R_MEASURE <- function(obsmat, emit_inds, record_ind, state, parameters, con
     invisible(.Call('_stemr_CALL_R_MEASURE', PACKAGE = 'stemr', obsmat, emit_inds, record_ind, state, parameters, constants, tcovar, r_meas_ptr))
 }
 
-#' Compute the hazards by calling the hazard functions via external Xptr.
+#' Set the parameters for a system of ODEs via XPtr.
 #'
-#' @param t time
-#' @param state vector of compartment counts
-#' @param parameters vector of model parameters
-#' @param constants vector of constants
-#' @param vector of time-varying covariate values
-#' @param hazard_ptr external pointer to function used to compute the hazards
+#' @param p vector of parameters
+#' @param set_ode_params_ptr external pointer to the ODE parameter setting function.
 #'
 #' @export
-CALL_SET_LNA_PARAMS <- function(p, set_lna_params_ptr) {
-    invisible(.Call('_stemr_CALL_SET_LNA_PARAMS', PACKAGE = 'stemr', p, set_lna_params_ptr))
+CALL_SET_ODE_PARAMS <- function(p, set_ode_params_ptr) {
+    invisible(.Call('_stemr_CALL_SET_ODE_PARAMS', PACKAGE = 'stemr', p, set_ode_params_ptr))
 }
 
 #' Construct a matrix containing the compartment counts and the incidence at a sequence of census times.
@@ -205,7 +201,7 @@ copy_col <- function(dest, orig, ind) {
 #'
 #' @param dest destination matrix
 #' @param orig origin matrix
-#' @param inds column index
+#' @param inds row indices
 #'
 #' @return copy the elements of one matrix into another.
 #' @export
@@ -319,6 +315,34 @@ g_prop2c_prop <- function(g2c_mat, params_cur, params_prop) {
     invisible(.Call('_stemr_g_prop2c_prop', PACKAGE = 'stemr', g2c_mat, params_cur, params_prop))
 }
 
+#' Obtain the path of the deterministic mean of a stochastic epidemic model by
+#' integrating the corresponding ODE functions.
+#'
+#' @param ode_times vector of interval endpoint times
+#' @param ode_pars numeric matrix of parameters, constants, and time-varying
+#'   covariates at each of the ode_times
+#' @param init_start index in the parameter vector where the initial compartment
+#'   volumes start
+#' @param param_update_inds logical vector indicating at which of the times the
+#'   ode parameters need to be updated.
+#' @param stoich_matrix stoichiometry matrix giving the changes to compartments
+#'   from each reaction
+#' @param forcing_inds logical vector of indicating at which times in the
+#'   time-varying covariance matrix a forcing is applied.
+#' @param forcing_matrix matrix containing the forcings.
+#' @param step_size initial step size for the ODE solver (adapted internally,
+#' but too large of an initial step can lead to failure in stiff systems).
+#' @param ode_pointer external pointer to ode integration function.
+#' @param set_pars_pointer external pointer to the function for setting the ode
+#'   parameters.
+#'
+#' @return List containing the ODE incidence and prevalence paths.
+#'
+#' @export
+integrate_odes <- function(ode_times, ode_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer) {
+    .Call('_stemr_integrate_odes', PACKAGE = 'stemr', ode_times, ode_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer)
+}
+
 #' Convert an LNA path from the counting process on transition events to the
 #' compartment densities on their natural scale.
 #'
@@ -371,6 +395,35 @@ lna_incid2prev <- function(path, flow_matrix, init_state, forcing_inds, forcing_
 #' @export
 map_draws_2_lna <- function(pathmat, draws, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, svd_sqrt, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer) {
     invisible(.Call('_stemr_map_draws_2_lna', PACKAGE = 'stemr', pathmat, draws, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, svd_sqrt, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer))
+}
+
+#' Map parameters to the deterministic mean incidence increments for a stochastic
+#' epidemic model.
+#'
+#' @param pathmat matrix where the ODE path should be stored
+#' @param ode_times vector of interval endpoint times
+#' @param ode_pars numeric matrix of parameters, constants, and time-varying
+#'   covariates at each of the ode_times
+#' @param init_start index in the parameter vector where the initial compartment
+#'   volumes start
+#' @param param_update_inds logical vector indicating at which of the times the
+#'   ode parameters need to be updated.
+#' @param stoich_matrix stoichiometry matrix giving the changes to compartments
+#'   from each reaction
+#' @param forcing_inds logical vector of indicating at which times in the
+#'   time-varying covariance matrix a forcing is applied.
+#' @param forcing_matrix matrix containing the forcings.
+#' @param step_size initial step size for the ODE solver (adapted internally,
+#' but too large of an initial step can lead to failure in stiff systems).
+#' @param ode_pointer external pointer to ode integration function.
+#' @param set_pars_pointer external pointer to the function for setting the ode
+#'   parameters.
+#'
+#' @return List containing the ODE incidence and prevalence paths.
+#'
+#' @export
+map_pars_2_ode <- function(pathmat, ode_times, ode_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer) {
+    invisible(.Call('_stemr_map_pars_2_ode', PACKAGE = 'stemr', pathmat, ode_times, ode_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer))
 }
 
 #' Produce samples from a multivariate normal density using the Cholesky

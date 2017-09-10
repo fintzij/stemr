@@ -53,7 +53,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
         double t_L = 0;
         double t_R = 0;
         Rcpp::NumericVector current_params = lna_pars.row(0);   // vector for storing the current parameter values
-        CALL_SET_LNA_PARAMS(current_params, set_pars_pointer);  // set the parameters in the odeintr namespace
+        CALL_SET_ODE_PARAMS(current_params, set_pars_pointer);  // set the parameters in the odeintr namespace
 
         // initial state vector - copy elements from the current parameter vector
         arma::vec init_volumes(current_params.begin() + init_start, n_comps);
@@ -101,7 +101,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
 
                 // Reset the LNA state vector and integrate the LNA ODEs over the next interval to 0
                 std::fill(lna_state_vec.begin(), lna_state_vec.end(), 0.0);
-                CALL_INTEGRATE_STEM_LNA(lna_state_vec, t_L, t_R, step_size, lna_pointer);
+                CALL_INTEGRATE_STEM_ODE(lna_state_vec, t_L, t_R, step_size, lna_pointer);
 
                 // transfer the elements of the lna_state_vec to the process objects
                 std::copy(lna_state_vec.begin(), lna_state_vec.begin() + n_events, lna_drift.begin());
@@ -172,7 +172,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                 std::copy(init_volumes.begin(), init_volumes.end(), current_params.begin() + init_start);
 
                 // set the lna parameters and reset the LNA state vector
-                CALL_SET_LNA_PARAMS(current_params, set_pars_pointer);
+                CALL_SET_ODE_PARAMS(current_params, set_pars_pointer);
         }
 
         // return the paths

@@ -74,7 +74,7 @@ void copy_col(arma::mat& dest, const arma::mat& orig, int ind) {
 //'
 //' @param dest destination matrix
 //' @param orig origin matrix
-//' @param inds column index
+//' @param inds row indices
 //'
 //' @return copy the elements of one matrix into another.
 //' @export

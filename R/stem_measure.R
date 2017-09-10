@@ -268,7 +268,10 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                              tcovar_censmat      = tcovar_censmat,
                              lna_incidence       = lna_incidence,
                              lna_prevalence      = lna_prevalence,
-                             incidence_codes_lna = incidence_codes_lna)
+                             ode_incidence       = lna_incidence,
+                             ode_prevalence      = lna_prevalence,
+                             incidence_codes_lna = incidence_codes_lna,
+                             incidence_codes_ode = incidence_codes_lna)
 
         return(meas_process)
 }

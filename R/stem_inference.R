@@ -1,9 +1,10 @@
-#' Perform inference for a stochastic epidemic model using either the linear
-#' noise approximation or agent-based Bayesian data augmentation.
+#' Perform inference for a stochastic epidemic model using either ordinary
+#' differential equations, the linear noise approximation, or agent-based
+#' Bayesian data augmentation.
 #'
 #' @param stem_object a stochastic epidemic model object containing the dataset,
 #'   model dynamics, and measurement process.
-#' @param method either "lna" or "bda"
+#' @param method either "ode", "lna", or "bda".
 #' @param iterations number of iterations
 #' @param priors A list of three functions supplied by the user with names
 #'   "prior_density", "to_estimation_scale", and "from_estimation_scale" (N.B.
@@ -31,7 +32,18 @@
 #' @return list with posterior samples for the parameters and the latent
 #'   process, along with MCMC diagnostics.
 #' @export
-stem_inference <- function(stem_object, method, iterations, priors, mcmc_kernel, t0_kernel = NULL, thin_params = 1, thin_latent_proc = ceiling(iterations/100), initialization_attempts = 500, ess_args = NULL, messages = FALSE) {
+stem_inference <-
+        function(stem_object,
+                 method,
+                 iterations,
+                 priors,
+                 mcmc_kernel,
+                 t0_kernel = NULL,
+                 thin_params = 1,
+                 thin_latent_proc = ceiling(iterations / 100),
+                 initialization_attempts = 500,
+                 ess_args = NULL,
+                 messages = FALSE) {
 
         # check that the data, dynamics and measurement process are all supplied
         if (is.null(stem_object$measurement_process$data) ||
@@ -57,6 +69,18 @@ stem_inference <- function(stem_object, method, iterations, priors, mcmc_kernel,
                                               thin_latent_proc,
                                               initialization_attempts,
                                               ess_args,
+                                              messages)
+
+        } else if(method == "ode") {
+
+                # get the results
+                results <- stem_inference_ode(stem_object,
+                                              iterations,
+                                              priors,
+                                              mcmc_kernel,
+                                              t0_kernel,
+                                              thin_params,
+                                              thin_latent_proc,
                                               messages)
 
         } else if (method == "bda") {

@@ -4,13 +4,17 @@
 \alias{simulate_stem}
 \title{Simulations from a stochastic epidemic model.}
 \usage{
-simulate_stem(stem_object, nsim = 1, paths = FALSE, observations = FALSE,
-  subject_paths = FALSE, method = "gillespie", tmax = NULL,
-  timestep = NULL, census_times = NULL, lna_path_type = "incidence",
-  max_attempts = 100, messages = TRUE)
+simulate_stem(stem_object, nsim = 1, simulation_parameters = NULL,
+  paths = FALSE, observations = FALSE, subject_paths = FALSE,
+  method = "gillespie", tmax = NULL, timestep = NULL,
+  census_times = NULL, max_attempts = 100, messages = TRUE)
 }
 \arguments{
 \item{nsim}{number of realizations to simulate}
+
+\item{simulation_parameters}{optional list of vectors of simulation
+parameters. If NULL, paths are simulated using the parameters specified in
+the stem object.}
 
 \item{paths}{Should population-level paths be returned?}
 
@@ -23,15 +27,16 @@ collection of disease histories)? Only available for exact simulation via
 the Gillespie direct method.}
 
 \item{method}{either "gillespie" if simulating via Gillespie's direct method,
-or "lna" if simulating paths via the Linear Noise Approximation.}
+"lna" if simulating paths via the linear noise approximation, or "ode" if
+simulating paths of the deterministic limit of the underlying Markov jump
+process.}
 
 \item{tmax}{the time at which simulation of the system is terminated. If not
 supplied, defaults to the last observation time if not supplied.}
 
 \item{timestep}{time discretization for smooth time-varying functions,
 specifically seasonal terms, to be used in simulation when
-method="gillespie". If not supplied, \code{timestep} will default to
-\code{(tmax - t0)/50}.}
+method="gillespie". If not supplied, \code{timestep} will default to 1.}
 
 \item{census_times}{vector of times at which compartment counts should be
 recorded.}

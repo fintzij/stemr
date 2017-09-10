@@ -54,8 +54,7 @@ constants referenced in the rate functions.}
 
 \item{timestep}{time discretization for smooth time-varying functions,
 specifically seasonal terms, to be used in simulation when
-method="gillespie". If not supplied, \code{timestep} will default to
-\code{(tmax - t0)/50}.}
+method="gillespie". If not supplied, \code{timestep} will default to 1.}
 
 \item{adjacency}{optional matrix specifying the adjacency structure of strata,
  with 0 entries indicating non-adjacency and 1 for adjacency. Rows and

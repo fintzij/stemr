@@ -38,17 +38,17 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// CALL_INTEGRATE_STEM_LNA
-void CALL_INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP lna_ode_ptr);
-RcppExport SEXP _stemr_CALL_INTEGRATE_STEM_LNA(SEXP initSEXP, SEXP startSEXP, SEXP endSEXP, SEXP step_sizeSEXP, SEXP lna_ode_ptrSEXP) {
+// CALL_INTEGRATE_STEM_ODE
+void CALL_INTEGRATE_STEM_ODE(Rcpp::NumericVector& init, double start, double end, double step_size, SEXP stem_ode_ptr);
+RcppExport SEXP _stemr_CALL_INTEGRATE_STEM_ODE(SEXP initSEXP, SEXP startSEXP, SEXP endSEXP, SEXP step_sizeSEXP, SEXP stem_ode_ptrSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type init(initSEXP);
     Rcpp::traits::input_parameter< double >::type start(startSEXP);
     Rcpp::traits::input_parameter< double >::type end(endSEXP);
     Rcpp::traits::input_parameter< double >::type step_size(step_sizeSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type lna_ode_ptr(lna_ode_ptrSEXP);
-    CALL_INTEGRATE_STEM_LNA(init, start, end, step_size, lna_ode_ptr);
+    Rcpp::traits::input_parameter< SEXP >::type stem_ode_ptr(stem_ode_ptrSEXP);
+    CALL_INTEGRATE_STEM_ODE(init, start, end, step_size, stem_ode_ptr);
     return R_NilValue;
 END_RCPP
 }
@@ -85,14 +85,14 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// CALL_SET_LNA_PARAMS
-void CALL_SET_LNA_PARAMS(Rcpp::NumericVector& p, SEXP set_lna_params_ptr);
-RcppExport SEXP _stemr_CALL_SET_LNA_PARAMS(SEXP pSEXP, SEXP set_lna_params_ptrSEXP) {
+// CALL_SET_ODE_PARAMS
+void CALL_SET_ODE_PARAMS(Rcpp::NumericVector& p, SEXP set_ode_params_ptr);
+RcppExport SEXP _stemr_CALL_SET_ODE_PARAMS(SEXP pSEXP, SEXP set_ode_params_ptrSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type p(pSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type set_lna_params_ptr(set_lna_params_ptrSEXP);
-    CALL_SET_LNA_PARAMS(p, set_lna_params_ptr);
+    Rcpp::traits::input_parameter< SEXP >::type set_ode_params_ptr(set_ode_params_ptrSEXP);
+    CALL_SET_ODE_PARAMS(p, set_ode_params_ptr);
     return R_NilValue;
 END_RCPP
 }
@@ -298,6 +298,26 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// integrate_odes
+Rcpp::List integrate_odes(const arma::rowvec& ode_times, const Rcpp::NumericMatrix& ode_pars, const int init_start, const Rcpp::LogicalVector& param_update_inds, const arma::mat& stoich_matrix, const Rcpp::LogicalVector& forcing_inds, const arma::mat& forcing_matrix, double step_size, SEXP ode_pointer, SEXP set_pars_pointer);
+RcppExport SEXP _stemr_integrate_odes(SEXP ode_timesSEXP, SEXP ode_parsSEXP, SEXP init_startSEXP, SEXP param_update_indsSEXP, SEXP stoich_matrixSEXP, SEXP forcing_indsSEXP, SEXP forcing_matrixSEXP, SEXP step_sizeSEXP, SEXP ode_pointerSEXP, SEXP set_pars_pointerSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type ode_times(ode_timesSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type ode_pars(ode_parsSEXP);
+    Rcpp::traits::input_parameter< const int >::type init_start(init_startSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type param_update_inds(param_update_indsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type stoich_matrix(stoich_matrixSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type forcing_inds(forcing_indsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type forcing_matrix(forcing_matrixSEXP);
+    Rcpp::traits::input_parameter< double >::type step_size(step_sizeSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type ode_pointer(ode_pointerSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type set_pars_pointer(set_pars_pointerSEXP);
+    rcpp_result_gen = Rcpp::wrap(integrate_odes(ode_times, ode_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer));
+    return rcpp_result_gen;
+END_RCPP
+}
 // lna_incid2prev
 arma::mat lna_incid2prev(const arma::mat& path, const arma::mat& flow_matrix, const arma::rowvec& init_state, const Rcpp::LogicalVector& forcing_inds, const arma::mat& forcing_matrix);
 RcppExport SEXP _stemr_lna_incid2prev(SEXP pathSEXP, SEXP flow_matrixSEXP, SEXP init_stateSEXP, SEXP forcing_indsSEXP, SEXP forcing_matrixSEXP) {
@@ -335,6 +355,26 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< SEXP >::type lna_pointer(lna_pointerSEXP);
     Rcpp::traits::input_parameter< SEXP >::type set_pars_pointer(set_pars_pointerSEXP);
     map_draws_2_lna(pathmat, draws, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, svd_sqrt, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer);
+    return R_NilValue;
+END_RCPP
+}
+// map_pars_2_ode
+void map_pars_2_ode(arma::mat& pathmat, const arma::rowvec& ode_times, const Rcpp::NumericMatrix& ode_pars, const int init_start, const Rcpp::LogicalVector& param_update_inds, const arma::mat& stoich_matrix, const Rcpp::LogicalVector& forcing_inds, const arma::mat& forcing_matrix, double step_size, SEXP ode_pointer, SEXP set_pars_pointer);
+RcppExport SEXP _stemr_map_pars_2_ode(SEXP pathmatSEXP, SEXP ode_timesSEXP, SEXP ode_parsSEXP, SEXP init_startSEXP, SEXP param_update_indsSEXP, SEXP stoich_matrixSEXP, SEXP forcing_indsSEXP, SEXP forcing_matrixSEXP, SEXP step_sizeSEXP, SEXP ode_pointerSEXP, SEXP set_pars_pointerSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat& >::type pathmat(pathmatSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type ode_times(ode_timesSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type ode_pars(ode_parsSEXP);
+    Rcpp::traits::input_parameter< const int >::type init_start(init_startSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type param_update_inds(param_update_indsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type stoich_matrix(stoich_matrixSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type forcing_inds(forcing_indsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type forcing_matrix(forcing_matrixSEXP);
+    Rcpp::traits::input_parameter< double >::type step_size(step_sizeSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type ode_pointer(ode_pointerSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type set_pars_pointer(set_pars_pointerSEXP);
+    map_pars_2_ode(pathmat, ode_times, ode_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer);
     return R_NilValue;
 END_RCPP
 }
@@ -505,10 +545,10 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_stemr_build_census_path", (DL_FUNC) &_stemr_build_census_path, 3},
     {"_stemr_CALL_D_MEASURE", (DL_FUNC) &_stemr_CALL_D_MEASURE, 9},
-    {"_stemr_CALL_INTEGRATE_STEM_LNA", (DL_FUNC) &_stemr_CALL_INTEGRATE_STEM_LNA, 5},
+    {"_stemr_CALL_INTEGRATE_STEM_ODE", (DL_FUNC) &_stemr_CALL_INTEGRATE_STEM_ODE, 5},
     {"_stemr_CALL_RATE_FCN", (DL_FUNC) &_stemr_CALL_RATE_FCN, 7},
     {"_stemr_CALL_R_MEASURE", (DL_FUNC) &_stemr_CALL_R_MEASURE, 8},
-    {"_stemr_CALL_SET_LNA_PARAMS", (DL_FUNC) &_stemr_CALL_SET_LNA_PARAMS, 2},
+    {"_stemr_CALL_SET_ODE_PARAMS", (DL_FUNC) &_stemr_CALL_SET_ODE_PARAMS, 2},
     {"_stemr_census_lna", (DL_FUNC) &_stemr_census_lna, 8},
     {"_stemr_compute_incidence", (DL_FUNC) &_stemr_compute_incidence, 3},
     {"_stemr_convert_lna2", (DL_FUNC) &_stemr_convert_lna2, 4},
@@ -524,8 +564,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_evaluate_d_measure_LNA", (DL_FUNC) &_stemr_evaluate_d_measure_LNA, 11},
     {"_stemr_find_interval", (DL_FUNC) &_stemr_find_interval, 4},
     {"_stemr_g_prop2c_prop", (DL_FUNC) &_stemr_g_prop2c_prop, 3},
+    {"_stemr_integrate_odes", (DL_FUNC) &_stemr_integrate_odes, 10},
     {"_stemr_lna_incid2prev", (DL_FUNC) &_stemr_lna_incid2prev, 5},
     {"_stemr_map_draws_2_lna", (DL_FUNC) &_stemr_map_draws_2_lna, 16},
+    {"_stemr_map_pars_2_ode", (DL_FUNC) &_stemr_map_pars_2_ode, 11},
     {"_stemr_rmvtn", (DL_FUNC) &_stemr_rmvtn, 3},
     {"_stemr_dmvtn", (DL_FUNC) &_stemr_dmvtn, 4},
     {"_stemr_mvn_c_adaptive", (DL_FUNC) &_stemr_mvn_c_adaptive, 6},

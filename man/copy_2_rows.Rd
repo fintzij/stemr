@@ -11,7 +11,7 @@ copy_2_rows(dest, orig, inds)
 
 \item{orig}{origin matrix}
 
-\item{inds}{column index}
+\item{inds}{row indices}
 }
 \value{
 copy the elements of one matrix into another.
