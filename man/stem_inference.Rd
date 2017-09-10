@@ -2,8 +2,9 @@
 % Please edit documentation in R/stem_inference.R
 \name{stem_inference}
 \alias{stem_inference}
-\title{Perform inference for a stochastic epidemic model using either the linear
-noise approximation or agent-based Bayesian data augmentation.}
+\title{Perform inference for a stochastic epidemic model using either ordinary
+differential equations, the linear noise approximation, or agent-based
+Bayesian data augmentation.}
 \usage{
 stem_inference(stem_object, method, iterations, priors, mcmc_kernel,
   t0_kernel = NULL, thin_params = 1,
@@ -14,7 +15,7 @@ stem_inference(stem_object, method, iterations, priors, mcmc_kernel,
 \item{stem_object}{a stochastic epidemic model object containing the dataset,
 model dynamics, and measurement process.}
 
-\item{method}{either "lna" or "bda"}
+\item{method}{either "ode", "lna", or "bda".}
 
 \item{iterations}{number of iterations}
 
@@ -52,6 +53,7 @@ list with posterior samples for the parameters and the latent
   process, along with MCMC diagnostics.
 }
 \description{
-Perform inference for a stochastic epidemic model using either the linear
-noise approximation or agent-based Bayesian data augmentation.
+Perform inference for a stochastic epidemic model using either ordinary
+differential equations, the linear noise approximation, or agent-based
+Bayesian data augmentation.
 }

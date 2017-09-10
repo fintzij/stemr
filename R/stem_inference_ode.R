@@ -1,5 +1,5 @@
-#' Approximate Bayesian inference for a stochastic epidemic model via the linear
-#' noise approximation.
+#' Approximate Bayesian inference for a stochastic epidemic model via
+#' deterministic trajectory matching.
 #'
 #' @param stem_object stochastic epidemic model object with model dynamics, the
 #'   measurement process, and a dataset.
@@ -286,7 +286,7 @@ stem_inference_ode <- function(stem_object,
                 t0_name      <- NULL
         }
 
-        # matrix for storing the LNA parameters
+        # matrix for storing the model parameters
         ode_params_cur    <- matrix(0.0,
                                     nrow = length(ode_times),
                                     ncol = length(stem_object$dynamics$ode_rates$ode_param_codes),
@@ -296,7 +296,7 @@ stem_inference_ode <- function(stem_object,
                                     ncol = length(stem_object$dynamics$ode_rates$ode_param_codes),
                                     dimnames = list(NULL, names(stem_object$dynamics$ode_rates$ode_param_codes)))
 
-        # insert the lna parameters into the parameter matrix
+        # insert the ode parameters into the parameter matrix
         pars2lnapars(ode_params_cur, c(model_params_nat, t0, init_volumes_cur))
         pars2lnapars(ode_params_prop, c(params_prop_nat, t0_prop, init_volumes_prop))
 
@@ -704,8 +704,8 @@ stem_inference_ode <- function(stem_object,
                                 copy_vec(logpost_cur, logpost_prop)                 # update the log posterior
 
                                 copy_mat(ode_params_cur, ode_params_prop)   # update the model parameter
-                                copy_vec(model_params_nat, params_prop_nat) # update LNA parameters on their natural scales
-                                copy_vec(model_params_est, params_prop_est) # update LNA parameters on their estimation scales
+                                copy_vec(model_params_nat, params_prop_nat) # update ode parameters on their natural scales
+                                copy_vec(model_params_est, params_prop_est) # update ode parameters on their estimation scales
                         }
 
                 } else if(mcmc_kernel$method == "c_rw_adaptive") {
@@ -806,7 +806,7 @@ stem_inference_ode <- function(stem_object,
                                         copy_vec(params_logprior_cur, params_logprior_prop) # update the prior density
                                         copy_vec(logpost_cur, logpost_prop)                 # update the log posterior
 
-                                        copy_mat(ode_params_cur, ode_params_prop)   # copy the matrix of LNA model parameters
+                                        copy_mat(ode_params_cur, ode_params_prop)   # copy the matrix of ode model parameters
                                         copy_vec(model_params_nat, params_prop_nat) # copy proposed params on their natural scale
                                         copy_vec(model_params_est, params_prop_est) # copy proposed params on their estimation scale
 
@@ -932,8 +932,8 @@ stem_inference_ode <- function(stem_object,
                                 copy_vec(logpost_cur, logpost_prop)                 # update the log posterior
 
                                 copy_mat(ode_params_cur, ode_params_prop)   # update the model parameter
-                                copy_vec(model_params_nat, params_prop_nat) # update LNA parameters on their natural scales
-                                copy_vec(model_params_est, params_prop_est) # update LNA parameters on their estimation scales
+                                copy_vec(model_params_nat, params_prop_nat) # update ode parameters on their natural scales
+                                copy_vec(model_params_est, params_prop_est) # update ode parameters on their estimation scales
                         }
 
                         if(iter < stop_adaptation) {
@@ -1117,8 +1117,8 @@ stem_inference_ode <- function(stem_object,
                                 copy_vec(logpost_cur, logpost_prop)                 # update the log posterior
 
                                 copy_mat(ode_params_cur, ode_params_prop)   # update the model parameter
-                                copy_vec(model_params_nat, params_prop_nat) # update LNA parameters on their natural scales
-                                copy_vec(model_params_est, params_prop_est) # update LNA parameters on their estimation scales
+                                copy_vec(model_params_nat, params_prop_nat) # update ode parameters on their natural scales
+                                copy_vec(model_params_est, params_prop_est) # update ode parameters on their estimation scales
                         }
 
                         if(iter < stop_adaptation) {
@@ -1253,7 +1253,7 @@ stem_inference_ode <- function(stem_object,
                                 acceptances_init  <- acceptances_init + 1      # increment acceptances
                                 copy_vec(path$data_log_lik, data_log_lik_prop) # update the data log likelihood
                                 copy_vec(logpost_cur, path$data_log_lik + params_logprior_cur) # update log posterior
-                                copy_mat(ode_params_cur, ode_params_prop)      # update LNA parameter matrix
+                                copy_mat(ode_params_cur, ode_params_prop)      # update ode parameter matrix
 
                                 # Update the initial distribution parameters and log prior if not fixed
                                 if(!fixed_inits) {
@@ -1286,7 +1286,7 @@ stem_inference_ode <- function(stem_object,
                 # Save the parameters if called for in this iteration
                 if(iter %% thin_params == 0) {
 
-                        # Save the lna log likelihood, data log likelihood, and log priors
+                        # Save the ode log likelihood, data log likelihood, and log priors
                         data_log_lik[param_rec_ind]     <- path$data_log_lik
                         params_log_prior[param_rec_ind] <- params_logprior_cur
 
