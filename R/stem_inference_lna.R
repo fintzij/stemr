@@ -197,6 +197,7 @@ stem_inference_lna <- function(stem_object,
                                            stem_object$dynamics$tcovar[,1],
                                            stem_object$dynamics$t0,
                                            stem_object$dynamics$tmax)))
+        tmax              <- max(lna_times)
         n_times           <- length(lna_times)
         n_census_times    <- length(obstimes)
         param_update_inds <- lna_times %in% unique(c(t0, tmax, stem_object$dynamics$tcovar[,1]))

@@ -2,8 +2,8 @@
 % Please edit documentation in R/stem_inference_ode.R
 \name{stem_inference_ode}
 \alias{stem_inference_ode}
-\title{Approximate Bayesian inference for a stochastic epidemic model via the linear
-noise approximation.}
+\title{Approximate Bayesian inference for a stochastic epidemic model via
+deterministic trajectory matching.}
 \usage{
 stem_inference_ode(stem_object, iterations, priors, mcmc_kernel, t0_kernel,
   thin_params, thin_latent_proc, messages)
@@ -46,6 +46,6 @@ saved.}
 list with parameter posterior samples and MCMC diagnostics
 }
 \description{
-Approximate Bayesian inference for a stochastic epidemic model via the linear
-noise approximation.
+Approximate Bayesian inference for a stochastic epidemic model via
+deterministic trajectory matching.
 }

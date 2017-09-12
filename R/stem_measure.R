@@ -243,15 +243,30 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
         lna_prevalence <- any(sapply(meas_procs, "[[", "incidence") == FALSE)
         lna_incidence  <- any(sapply(meas_procs, "[[", "incidence"))
 
-        # identify reactions for which incidence needs to be computed
-        if(lna_incidence) {
-                rate_names <- rownames(dynamics$flow_matrix_lna)
+        if(!is.null(dynamics$lna_pointers)) {
+                # identify reactions for which incidence needs to be computed
+                if(lna_incidence) {
+                        rate_names <- rownames(dynamics$flow_matrix_lna)
 
-                # C++ column indices of LNA count compartments for which incidence is desired
-                incidence_codes_lna <- which(!is.na(match(rate_names, colnames(censusmat))))
-                names(incidence_codes_lna) <- rate_names[incidence_codes_lna]
+                        # C++ column indices of LNA count compartments for which incidence is desired
+                        incidence_codes_lna <- which(!is.na(match(rate_names, colnames(censusmat))))
+                        names(incidence_codes_lna) <- rate_names[incidence_codes_lna]
+                }
         } else {
                 incidence_codes_lna <- -1
+        }
+
+        if(!is.null(dynamics$ode_pointers)) {
+                # identify reactions for which incidence needs to be computed
+                if(lna_incidence) {
+                        rate_names <- rownames(dynamics$flow_matrix_ode)
+
+                        # C++ column indices of LNA count compartments for which incidence is desired
+                        incidence_codes_ode <- which(!is.na(match(rate_names, colnames(censusmat))))
+                        names(incidence_codes_ode) <- rate_names[incidence_codes_ode]
+                }
+        } else {
+                incidence_codes_ode <- -1
         }
 
         # generate the measurement process list
@@ -271,7 +286,7 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                              ode_incidence       = lna_incidence,
                              ode_prevalence      = lna_prevalence,
                              incidence_codes_lna = incidence_codes_lna,
-                             incidence_codes_ode = incidence_codes_lna)
+                             incidence_codes_ode = incidence_codes_ode)
 
         return(meas_process)
 }

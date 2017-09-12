@@ -856,11 +856,10 @@ stem_dynamics <-
         }
 
         # compile LNA and/or ODE
-        if((is.character(compile_lna) || compile_lna) | (is.character(compile_ode) || compile_ode)) {
+        do_ode <- is.character(compile_ode) || compile_ode
+        do_lna <- is.character(compile_lna) || compile_lna
 
-                # logicals for what to generate
-                do_ode <- is.character(compile_ode) || compile_ode
-                do_lna <- is.character(compile_lna) || compile_lna
+        if(do_ode | do_lna) {
 
                 # remove the incidence codes from the flow matrix, we don't need them
                 if(!is.null(incidence_codes)) {
@@ -917,12 +916,6 @@ stem_dynamics <-
                         # get the C++ indices for the initial distribution parameters in the lna_pars matrix
                         lna_initdist_inds <- sapply(paste0(names(compartment_codes), "_0"),
                                                     grep, names(lna_rates$lna_param_codes)) - 1
-                } else {
-                        lna_rates         <- list(hazards = NULL, derivatives = NULL, lna_param_codes = NULL)
-                        stoich_matrix_lna <- NULL
-                        lna_initdist_inds <- NULL
-                        lna_pointers      <- NULL
-                        flow_matrix_lna   <- NULL
                 }
 
                 if(do_ode) {
@@ -956,28 +949,25 @@ stem_dynamics <-
                         # get the C++ indices for the initial distribution parameters in the lna_pars matrix
                         ode_initdist_inds <- sapply(paste0(names(compartment_codes), "_0"),
                                                     grep, names(ode_rates$ode_param_codes)) - 1
-                } else {
-                        ode_rates         <- list(hazards = NULL, ode_param_codes = NULL)
-                        flow_matrix_ode   <- NULL
-                        ode_pointers      <- NULL
-                        ode_initdist_inds <- NULL
-                        stoich_matrix_ode <- NULL
                 }
 
-        } else {
+        }
+
+        if(!do_lna) {
                 lna_rates         <- list(hazards = NULL, derivatives = NULL, lna_param_codes = NULL)
                 stoich_matrix_lna <- NULL
                 lna_initdist_inds <- NULL
                 lna_pointers      <- NULL
                 flow_matrix_lna   <- NULL
+        }
 
+        if(!do_ode) {
                 ode_rates         <- list(hazards = NULL, ode_param_codes = NULL)
                 flow_matrix_ode   <- NULL
                 ode_pointers      <- NULL
                 ode_initdist_inds <- NULL
                 stoich_matrix_ode <- NULL
         }
-
 
         # create the list determining the stem dynamics
         dynamics <- list(rates               = rate_fcns,

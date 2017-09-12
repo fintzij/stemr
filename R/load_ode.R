@@ -52,10 +52,10 @@ load_ode <- function(ode_rates, compile_ode, messages, atol, rtol) {
                                         "odeint::integrate_adaptive(odeintr::stepper, odeintr::sys, odeintr::state, start, end, step_size);",
                                         "std::copy(odeintr::state.begin(), odeintr::state.end(), init.begin());",
                                         "}\n",
-                                        "typedef void(*lna_ptr)(Rcpp::NumericVector& init, double start, double end, double step_size);",
+                                        "typedef void(*ode_ptr)(Rcpp::NumericVector& init, double start, double end, double step_size);",
                                         "// [[Rcpp::export]]",
-                                        "Rcpp::XPtr<lna_ptr> ODE_XPtr() {",
-                                        "return(Rcpp::XPtr<lna_ptr>(new lna_ptr(&INTEGRATE_STEM_ODE)));",
+                                        "Rcpp::XPtr<ode_ptr> ODE_XPtr() {",
+                                        "return(Rcpp::XPtr<ode_ptr>(new ode_ptr(&INTEGRATE_STEM_ODE)));",
                                         "}", sep = "\n")
 
                 # function to set the ODE parameters,

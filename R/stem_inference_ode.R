@@ -158,6 +158,7 @@ stem_inference_ode <- function(stem_object,
                                            stem_object$dynamics$tcovar[,1],
                                            stem_object$dynamics$t0,
                                            stem_object$dynamics$tmax)))
+        tmax              <- max(obstimes)
         n_times           <- length(ode_times)
         n_census_times    <- length(obstimes)
         param_update_inds <- ode_times %in% unique(c(t0, tmax, stem_object$dynamics$tcovar[,1]))
@@ -1350,17 +1351,6 @@ stem_inference_ode <- function(stem_object,
         # append the parameter samples on their natural and estimation scales
         MCMC_results <- cbind(MCMC_results, parameter_samples_nat, parameter_samples_est)
 
-        # coerce the ESS record to a vector if there is only one ESS update per iteration
-        if(n_ess_updates == 1 & length(ess_schedule[[1]]) == 1) {
-                ess_record <- as.vector(ess_record)
-
-        } else if(n_ess_updates == 1 & length(ess_schedule[[1]] != 1)) {
-                ess_record <- ess_record[1,seq_along(ess_schedule[[1]]),]
-
-        } else if(n_ess_updates == 1 & length(ess_schedule[[1]] == 1)) {
-                ess_record <- ess_record[seq_len(n_ess_updates), 1,]
-        }
-
         # set the parameters (for restart) and save the results
         stem_object$dynamics$parameters         <- model_params_nat
         if(!t0_fixed) stem_object$dynamics$t0   <- t0
@@ -1371,8 +1361,7 @@ stem_inference_ode <- function(stem_object,
 
         stem_object$results <- list(time         = difftime(end.time, start.time, units = "hours"),
                                     ode_paths    = ode_paths,
-                                    MCMC_results = MCMC_results,
-                                    ess_record   = ess_record)
+                                    MCMC_results = MCMC_results)
 
         if(mcmc_kernel$method == "c_rw") {
                 stem_object$results$acceptances_c = acceptances_c
@@ -1404,7 +1393,6 @@ stem_inference_ode <- function(stem_object,
         stem_object$stem_settings <- list(iterations       = iterations,
                                           thin_params      = thin_params,
                                           thin_latent_proc = thin_latent_proc,
-                                          n_ess_updates    = n_ess_updates,
                                           priors           = priors,
                                           prior_density    = prior_density,
                                           mcmc_kernel      = mcmc_kernel,
