@@ -33,6 +33,14 @@ parse_ode_rates <- function(ode_rates, param_codes, const_codes, tcovar_codes, o
                                        paste(sample(c(letters, LETTERS), 15, replace = TRUE), collapse = ""),
                                        simplify = T)
 
+        # make sure there are no partial matches between columns in the lookup table
+        while(any(sapply(lookup_table[,"search_name"], grepl, x = lookup_table[,"code"]))) {
+                which_match <- which(apply(sapply(lookup_table[,"search_name"], grepl, x = lookup_table[,"code"]), 1, any))
+                for(m in which_match) {
+                        lookup_table[which_match,"code"] <- paste(sample(c(letters,LETTERS), 15, replace = TRUE), collapse = "")
+                }
+        }
+
         # make the substitutions in the rate strings
         for(s in seq_along(ode_rates)) {
                 for(j in seq_len(nrow(lookup_table))) {

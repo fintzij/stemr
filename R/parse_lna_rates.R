@@ -34,6 +34,14 @@ parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, l
                                        paste(sample(c(letters, LETTERS), 15, replace = TRUE), collapse = ""),
                                        simplify = T)
 
+        # make sure there are no partial matches between columns in the lookup table
+        while(any(sapply(lookup_table[,"search_name"], grepl, x = lookup_table[,"code"]))) {
+                which_match <- which(apply(sapply(lookup_table[,"search_name"], grepl, x = lookup_table[,"code"]), 1, any))
+                for(m in which_match) {
+                        lookup_table[which_match,"code"] <- paste(sample(c(letters,LETTERS), 15, replace = TRUE), collapse = "")
+                }
+        }
+
         lookup_table$log_code[comp_inds] <- paste0("(exp(", lookup_table$code[comp_inds], ")-1)")
 
         # make the substitutions in the rate strings
