@@ -468,7 +468,7 @@ stem_inference_lna <- function(stem_object,
                                 lna_event_inds      = lna_event_inds,
                                 flow_matrix_lna     = t(stoich_matrix),
                                 do_prevalence       = do_prevalence,
-                                init_state          = init_state,
+                                init_state          = init_volumes_cur,
                                 forcing_matrix      = forcing_matrix
                         )
 
@@ -576,7 +576,7 @@ stem_inference_lna <- function(stem_object,
         for(iter in (seq_len(iterations) + 1)) {
 
                 # Print the status if messages are enabled
-                if((messages) && k%%thin_latent_proc == 0) {
+                if(messages && iter%%thin_latent_proc == 0) {
                         # print the iteration
                         cat(paste0("Iteration ", iter-1), file = status_file, sep = "\n \n", append = TRUE)
                 }
@@ -1434,7 +1434,7 @@ stem_inference_lna <- function(stem_object,
                                 adaptation_scale_record[, param_rec_ind] <- proposal_scaling
                                 adaptation_shape_record[, param_rec_ind] <- kernel_cov
 
-                                if(messages) cat(paste0("Componentwise acceptances: ", paste0(acceptances_c, collapse=", ")),
+                                if(messages && iter<stop_adaptation) cat(paste0("Componentwise acceptances: ", paste0(acceptances_c, collapse=", ")),
                                                  paste0("Acceptance rates: ", paste0(acceptances_c / (iter-1), collapse = ",")),
                                                  paste0("Scaling factors: ",
                                                         paste0(round(proposal_scaling, digits = 3), collapse = ",")),
@@ -1445,7 +1445,7 @@ stem_inference_lna <- function(stem_object,
                                 adaptation_scale_record[, param_rec_ind] <- proposal_scaling
                                 adaptation_shape_record[,,param_rec_ind] <- kernel_cov
 
-                                if(messages) cat(paste0("Global acceptances: ", acceptances_g),
+                                if(messages && iter<stop_adaptation) cat(paste0("Global acceptances: ", acceptances_g),
                                                  paste0("Global acceptance rate: ", acceptances_g/(iter-1)),
                                                  paste0("Scaling factors: ",
                                                         paste0(round(proposal_scaling, digits = 3), collapse = ",")),
@@ -1456,7 +1456,8 @@ stem_inference_lna <- function(stem_object,
                                 adaptation_scale_record[param_rec_ind]   <- proposal_scaling
                                 adaptation_shape_record[,,param_rec_ind] <- kernel_cov
 
-                                if(messages) cat(paste0("Global acceptances: ", acceptances_g),
+                                if(messages && iter<stop_adaptation)
+                                        cat(paste0("Global acceptances: ", acceptances_g),
                                                  paste0("Global acceptance rate: ", acceptances_g/(iter-1)),
                                                  paste0("Scaling factor: ",
                                                         paste0(round(proposal_scaling, digits = 3), collapse = ",")),
