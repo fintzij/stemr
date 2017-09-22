@@ -526,6 +526,7 @@ stem_inference_ode <- function(stem_object,
                         cat(paste0("Iteration ", iter-1), file = status_file, sep = "\n \n", append = TRUE)
                 }
 
+
                 # Sample new parameter values
                 if(mcmc_kernel$method == "c_rw") {
 
