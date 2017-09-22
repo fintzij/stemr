@@ -6,17 +6,13 @@
 #' Rather, it is perhaps useful as a method for obtaining initial values for
 #' other methods.
 #'
-#' @param stem_object stem_object with
-#' @param bounds list containing named vectors of lower and upper bounds for the
-#'   model parameters and initial compartment volumes, e.g., \code{list(upper =
-#'   c(beta = 1, mu = 1, S_0 = 99, I_0 = 10, R_0 = 10), lower = c(beta = 0, mu =
-#'   0, S_0 = 90, I_0 = 1, R_0 = 0))}.
-#' @param method optimization method to be passed to \code{optim}.
+#' @param stem_object stem_object for which the ODE code and measurement process
+#'   have been compiled.
 #'
 #' @return list containing the parameter estimates and the inverse of the
 #'   Hessian.
 #' @export
-maximize_loglik_ode <- function(stem_object, bounds, method = "spg") {
+maximize_loglik_ode <- function(stem_object) {
 
         # get ode times
         t0        <- stem_object$dynamics$t0
@@ -220,7 +216,7 @@ maximize_loglik_ode <- function(stem_object, bounds, method = "spg") {
                 return(-data_log_lik)
         }
 
-        ests <- optim(optim_pars, ode_loglik, method = method, lower = lower, upper = upper, hessian = TRUE)
+        ests <- optim(optim_pars, ode_loglik)
         hess <- numDeriv::hessian(ode_loglik, ests$par)
 
         return(list(ests = ests, hessian = hess))
