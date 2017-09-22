@@ -16,7 +16,7 @@
 #' @return list containing the parameter estimates and the inverse of the
 #'   Hessian.
 #' @export
-maximize_loglik_ode <- function(stem_object, bounds) {
+maximize_loglik_ode <- function(stem_object, bounds, method = "spg") {
 
         # get ode times
         t0        <- stem_object$dynamics$t0
@@ -220,8 +220,8 @@ maximize_loglik_ode <- function(stem_object, bounds) {
                 return(-data_log_lik)
         }
 
-        ests <- optimx::optimx(optim_pars, ode_loglik, method = c("spg"), lower = lower, upper = upper, hessian = TRUE)
-        hess <- attr(ests, "details")[,"nhatend"]
+        ests <- optim(optim_pars, ode_loglik, method = method, lower = lower, upper = upper, hessian = TRUE)
+        hess <- numDeriv::hessian(ode_loglik, ests$par)
 
         return(list(ests = ests, hessian = hess))
 }
