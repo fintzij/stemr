@@ -3,7 +3,7 @@
 #' approximated by its deterministic ODE limit.
 #'
 #' NOTE: This should not be considered a reliable method for inference for SEMs.
-#' Rather, it is perhaps useful as a method for obtaining initial values for
+#' Rather, it is, perhaps, useful as a method for obtaining initial values for
 #' other methods.
 #'
 #' @param stem_object stem_object for which the ODE code and measurement process
@@ -11,9 +11,11 @@
 #' @param transformations named list of functions for transforming to and from
 #'   the estimation scale, which should be unconstrained (i.e., R^n).
 #'
-#' @return list containing the parameter estimates on their estimation scales
-#'   and Hessian of the data log likelihood evaluated at the maximum likelihood
-#'   estimates on their estimation scales.
+#' @return list containing the parameter estimates on their estimation scales,
+#'   Hessian of the data log likelihood evaluated at the maximum likelihood
+#'   estimates on their estimation scales, the maximum likelihood ODE path, the
+#'   data log-likelihood under the MLEs, and the quasi-likelihood variance
+#'   inflation factor.
 #' @export
 maximize_loglik_ode <- function(stem_object, transformations = NULL) {
 
@@ -280,5 +282,23 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL) {
                 if(is.nan(data_log_lik)) data_log_lik <- -Inf
         }, silent = TRUE)
 
-        return(list(ests = ests, hessian = hess, path = path, data_log_lik = data_log_lik))
+        # compute the quasilikelihood variance inflation coefficient
+        mean_mat <- simulate_r_measure(censusmat       = censusmat,
+                                       measproc_indmat = measproc_indmat,
+                                       parameters      = ml_pars,
+                                       constants       = constants,
+                                       tcovar          = tcovar_censmat,
+                                       r_measure_ptr   = stem_object$measurement_process$meas_pointers$m_measure_ptr)
+
+        var_mat <- simulate_r_measure(censusmat       = censusmat,
+                                      measproc_indmat = measproc_indmat,
+                                      parameters      = ml_pars,
+                                      constants       = constants,
+                                      tcovar          = tcovar_censmat,
+                                      r_measure_ptr   = stem_object$measurement_process$meas_pointers$v_measure_ptr)
+
+        alpha <- sum((mean_mat[,-1][measproc_indmat] - data[,-1][measproc_indmat])^2 / var_mat[,-1][measproc_indmat]) /
+                (sum(measproc_indmat) - length(ml_pars) - 1)
+
+        return(list(ests = ests, hessian = hess, path = path, data_log_lik = data_log_lik, alpha = alpha))
 }
