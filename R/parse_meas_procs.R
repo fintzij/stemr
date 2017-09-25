@@ -18,7 +18,10 @@ parse_meas_procs <- function(meas_procs, messages = TRUE) {
         r_meas <- d_meas <- character(0)
 
         for(i in seq_along(meas_procs)) {
-                r_meas <- paste(r_meas,paste0("if(emit_inds[",i-1,"] && (",meas_procs[[i]]$emission_params[1]," != 0)) obsmat(record_ind,",i,") = ", meas_procs[[i]]$rmeasure,"[0];"), sep = "\n ")
+                r_meas <- paste(r_meas,paste0("if(emit_inds[",i-1,"] && (",
+                                              meas_procs[[i]]$emission_params[1]," != 0)) obsmat(record_ind,",i,") = ",
+                                              meas_procs[[i]]$rmeasure,"[0];"), sep = "\n ")
+
                 d_meas <- paste(d_meas,paste(paste0("if(emit_inds[",i-1,"]) {"),
                                              paste0("Rcpp::NumericVector obs(1,",meas_procs[[i]]$meas_var,");"),
                                              paste0("emitmat(record_ind,",i,") = ", meas_procs[[i]]$dmeasure,"[0];"),
@@ -50,7 +53,6 @@ parse_meas_procs <- function(meas_procs, messages = TRUE) {
                                "return(Rcpp::XPtr<d_measure_ptr>(new d_measure_ptr(&D_MEASURE)));",
                                "}", sep = "\n")
 
-
         if(messages) {
                 print("Compiling measurement process functions.")
         }
@@ -60,7 +62,7 @@ parse_meas_procs <- function(meas_procs, messages = TRUE) {
 
         measproc_pointers <- c(r_measure_ptr = R_MEASURE_XPtr(),
                                d_measure_ptr = D_MEASURE_XPtr(),
-                               meas_proc_code = paste(code_r_measure, code_d_measure, sep = "\n"))
+                               meas_proc_code = paste(code_r_measure, code_d_measure, sep = "\n\n"))
 
         return(measproc_pointers)
 }

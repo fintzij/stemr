@@ -1,6 +1,6 @@
-#' Obtain estimates of stochastic epidemic model (SEM) parameters that maximize
-#' the observed data likelihood for a SEM approximated by its deterministic ODE
-#' limit.
+#' Obtain estimates of stochastic epidemic model (SEM) parameters on their
+#' estimation scales that maximize the observed data likelihood for a SEM
+#' approximated by its deterministic ODE limit.
 #'
 #' NOTE: This should not be considered a reliable method for inference for SEMs.
 #' Rather, it is perhaps useful as a method for obtaining initial values for
@@ -8,11 +8,14 @@
 #'
 #' @param stem_object stem_object for which the ODE code and measurement process
 #'   have been compiled.
+#' @param transformations named list of functions for transforming to and from
+#'   the estimation scale, which should be unconstrained (i.e., R^n).
 #'
-#' @return list containing the parameter estimates and the inverse of the
-#'   Hessian.
+#' @return list containing the parameter estimates on their estimation scales
+#'   and Hessian of the data log likelihood evaluated at the maximum likelihood
+#'   estimates on their estimation scales.
 #' @export
-maximize_loglik_ode <- function(stem_object) {
+maximize_loglik_ode <- function(stem_object, transformations = NULL) {
 
         # get ode times
         t0        <- stem_object$dynamics$t0
@@ -151,17 +154,23 @@ maximize_loglik_ode <- function(stem_object) {
                                      dimnames = list(NULL, c(rownames(flow_matrix)))
                               ))
 
-        # vector of parameters to be optimized over
-        optim_pars <- stem_object$dynamics$parameters
+        # scale transformation functions
+        if(is.null(transformations)) {
+                transformations <- list(
+                        to_estimation_scale   = function(pars) {pars},
+                        from_estimation_scale = function(pars) {pars}
+                )
+        }
 
-        # bounds for model parameters
-        lower = bounds$lower
-        upper = bounds$upper
+        # vector of parameters to be optimized over
+        optim_pars <- transformations$to_estimation_scale(stem_object$dynamics$parameters)
 
         # log-likelihood function
         ode_loglik <- function(pars) {
 
-                pars2lnapars(ode_pars, pars)
+                pars_nat <- transformations$from_estimation_scale(pars)
+
+                pars2lnapars(ode_pars, pars_nat)
                 if(!fixed_inits) init_state <- pars[ode_initdist_inds + 1]
 
                 data_log_lik <- -Inf
@@ -219,5 +228,57 @@ maximize_loglik_ode <- function(stem_object) {
         ests <- optim(optim_pars, ode_loglik)
         hess <- numDeriv::hessian(ode_loglik, ests$par)
 
-        return(list(ests = ests, hessian = hess))
+        # get the ML ODE path and data log likelihood
+        ml_pars <- transformations$from_estimation_scale(ests$par)
+
+        pars2lnapars(ode_pars, ml_pars)
+        if(!fixed_inits) init_state <- ml_pars[ode_initdist_inds + 1]
+
+        data_log_lik <- -Inf
+        try({
+                # integrate the ODEs
+                path <- integrate_odes(ode_times         = ode_times,
+                                       ode_pars          = ode_pars,
+                                       init_start        = ode_initdist_inds[1],
+                                       param_update_inds = param_update_inds,
+                                       stoich_matrix     = stoich_matrix,
+                                       forcing_inds      = forcing_inds,
+                                       forcing_matrix    = forcing_matrix,
+                                       step_size         = step_size,
+                                       ode_pointer       = ode_pointer,
+                                       set_pars_pointer  = ode_set_pars_pointer
+                )
+
+                census_lna(
+                        path                = path$incid_path,
+                        census_path         = censusmat,
+                        census_inds         = census_indices,
+                        lna_event_inds      = ode_event_inds,
+                        flow_matrix_lna     = t(stoich_matrix),
+                        do_prevalence       = do_prevalence,
+                        init_state          = init_state,
+                        forcing_matrix      = forcing_matrix
+                )
+
+                # evaluate the density of the incidence counts
+                evaluate_d_measure_LNA(
+                        emitmat           = emitmat,
+                        obsmat            = stem_object$measurement_process$data,
+                        censusmat         = censusmat,
+                        measproc_indmat   = measproc_indmat,
+                        lna_parameters    = ode_pars,
+                        lna_param_inds    = ode_param_inds,
+                        lna_const_inds    = ode_const_inds,
+                        lna_tcovar_inds   = ode_tcovar_inds,
+                        param_update_inds = param_update_inds,
+                        census_indices    = census_indices,
+                        d_meas_ptr        = d_meas_pointer
+                )
+
+                # compute the data log likelihood
+                data_log_lik <- sum(emitmat[,-1][measproc_indmat])
+                if(is.nan(data_log_lik)) data_log_lik <- -Inf
+        }, silent = TRUE)
+
+        return(list(ests = ests, hessian = hess, path = path, data_log_lik = data_log_lik))
 }
