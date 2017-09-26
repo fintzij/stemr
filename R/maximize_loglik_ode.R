@@ -14,8 +14,9 @@
 #' @return list containing the parameter estimates on their estimation scales,
 #'   Hessian of the data log likelihood evaluated at the maximum likelihood
 #'   estimates on their estimation scales, the maximum likelihood ODE path, the
-#'   data log-likelihood under the MLEs, and the quasi-likelihood variance
-#'   inflation factor.
+#'   data log-likelihood under the MLEs, the quasi-likelihood variance inflation
+#'   factor, and an estimate of the sandwich standard errors for non-nuisance
+#'   parameters.
 #' @export
 maximize_loglik_ode <- function(stem_object, transformations = NULL) {
 
@@ -156,6 +157,7 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL) {
                                      dimnames = list(NULL, c(rownames(flow_matrix)))
                               ))
 
+        ### CREATE AUXILLIARY FUNCTIONS ------------------------------------
         # scale transformation functions
         if(is.null(transformations)) {
                 transformations <- list(
@@ -163,9 +165,6 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL) {
                         from_estimation_scale = function(pars) {pars}
                 )
         }
-
-        # vector of parameters to be optimized over
-        optim_pars <- transformations$to_estimation_scale(stem_object$dynamics$parameters)
 
         # log-likelihood function
         ode_loglik <- function(pars) {
@@ -190,11 +189,8 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL) {
                                                set_pars_pointer  = ode_set_pars_pointer
                         )
 
-                        path$prev_path <- NULL
-                        names(path) <- "ode_path"
-
                         census_lna(
-                                path                = path$ode_path,
+                                path                = path$incid_path,
                                 census_path         = censusmat,
                                 census_inds         = census_indices,
                                 lna_event_inds      = ode_event_inds,
@@ -227,6 +223,132 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL) {
                 return(-data_log_lik)
         }
 
+        # Compute mean observd incidence
+        get_means <- function(pars) {
+
+                pars_nat <- transformations$from_estimation_scale(pars)
+
+                pars2lnapars(ode_pars, pars_nat)
+                if(!fixed_inits) init_state <- pars[ode_initdist_inds + 1]
+
+                try({
+                        # integrate the ODEs
+                        path <- integrate_odes(ode_times         = ode_times,
+                                               ode_pars          = ode_pars,
+                                               init_start        = ode_initdist_inds[1],
+                                               param_update_inds = param_update_inds,
+                                               stoich_matrix     = stoich_matrix,
+                                               forcing_inds      = forcing_inds,
+                                               forcing_matrix    = forcing_matrix,
+                                               step_size         = step_size,
+                                               ode_pointer       = ode_pointer,
+                                               set_pars_pointer  = ode_set_pars_pointer
+                        )
+
+                        census_lna(
+                                path                = path$incid_path,
+                                census_path         = censusmat,
+                                census_inds         = census_indices,
+                                lna_event_inds      = ode_event_inds,
+                                flow_matrix_lna     = t(stoich_matrix),
+                                do_prevalence       = do_prevalence,
+                                init_state          = init_state,
+                                forcing_matrix      = forcing_matrix
+                        )
+
+                }, silent = TRUE)
+
+                return(simulate_r_measure(censusmat       = censusmat,
+                                          measproc_indmat = measproc_indmat,
+                                          parameters      = pars_nat,
+                                          constants       = constants,
+                                          tcovar          = tcovar_censmat,
+                                          r_measure_ptr   = stem_object$measurement_process$meas_pointers$m_measure_ptr))
+        }
+
+        # compute gradients of the means
+        get_grads <- function(pars) {
+
+                grads <- matrix(0.0, nrow = sum(measproc_indmat), ncol = length(pars))
+                get_one_mean <- function(pars, j, k) get_means(pars)[j,k+1]
+
+                for(k in seq_len(ncol(measproc_indmat))) {
+                        for(j in seq_len(nrow(measproc_indmat))) {
+                                if(measproc_indmat[j,k]) grads[(k-1)+j,] <-
+                                                numDeriv::grad(get_one_mean, pars, j=j,k=k)
+                        }
+                }
+
+                return(grads[measproc_indmat,])
+        }
+
+        # Compute expected variances of observd incidence
+        get_vars <- function(pars) {
+
+                pars_nat <- transformations$from_estimation_scale(pars)
+
+                pars2lnapars(ode_pars, pars_nat)
+                if(!fixed_inits) init_state <- pars[ode_initdist_inds + 1]
+
+                try({
+                        # integrate the ODEs
+                        path <- integrate_odes(ode_times         = ode_times,
+                                               ode_pars          = ode_pars,
+                                               init_start        = ode_initdist_inds[1],
+                                               param_update_inds = param_update_inds,
+                                               stoich_matrix     = stoich_matrix,
+                                               forcing_inds      = forcing_inds,
+                                               forcing_matrix    = forcing_matrix,
+                                               step_size         = step_size,
+                                               ode_pointer       = ode_pointer,
+                                               set_pars_pointer  = ode_set_pars_pointer
+                        )
+
+                        census_lna(
+                                path                = path$incid_path,
+                                census_path         = censusmat,
+                                census_inds         = census_indices,
+                                lna_event_inds      = ode_event_inds,
+                                flow_matrix_lna     = t(stoich_matrix),
+                                do_prevalence       = do_prevalence,
+                                init_state          = init_state,
+                                forcing_matrix      = forcing_matrix
+                        )
+
+                }, silent = TRUE)
+
+                return(simulate_r_measure(censusmat       = censusmat,
+                                          measproc_indmat = measproc_indmat,
+                                          parameters      = pars_nat,
+                                          constants       = constants,
+                                          tcovar          = tcovar_censmat,
+                                          r_measure_ptr   = stem_object$measurement_process$meas_pointers$v_measure_ptr))
+        }
+
+        sandwich <- function(pars, dat, measproc_indmat) {
+
+                datvec <- c(dat[,-1][measproc_indmat])
+                grads  <- get_grads(pars)
+                means  <- c(get_means(pars)[,-1][measproc_indmat])
+                vars   <- c(get_vars(pars)[,-1][measproc_indmat])
+                precs  <- diag(vars^-1)
+                sighat <- diag((datvec - means)^2)
+
+                # get rid of stupid nuisance parameters in the measurement process
+                not_nuisance <- which(apply(grads, 2, function(x) any(x!=0)))
+                grads <- grads[,not_nuisance]
+
+                bread <- MASS::ginv(t(grads) %*% precs %*% grads)
+                meat  <- t(grads) %*% precs %*% sighat %*% precs %*% grads
+
+                tasty <- bread %*% meat %*% bread
+                colnames(tasty) <- rownames(tasty) <- names(pars)[not_nuisance]
+
+                return(tasty)
+        }
+
+        ### Get MLEs and Hessian -------------------------------------------
+        optim_pars <- transformations$to_estimation_scale(stem_object$dynamics$parameters)
         ests <- optim(optim_pars, ode_loglik)
         hess <- numDeriv::hessian(ode_loglik, ests$par)
 
@@ -282,7 +404,7 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL) {
                 if(is.nan(data_log_lik)) data_log_lik <- -Inf
         }, silent = TRUE)
 
-        # compute the quasilikelihood variance inflation coefficient
+        ### QUASI-LIKELIHOOD -----------------------------------------------
         mean_mat <- simulate_r_measure(censusmat       = censusmat,
                                        measproc_indmat = measproc_indmat,
                                        parameters      = ml_pars,
@@ -300,5 +422,8 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL) {
         alpha <- sum((mean_mat[,-1][measproc_indmat] - data[,-1][measproc_indmat])^2 / var_mat[,-1][measproc_indmat]) /
                 (sum(measproc_indmat) - length(ml_pars) - 1)
 
-        return(list(ests = ests, hessian = hess, path = path, data_log_lik = data_log_lik, alpha = alpha))
+        ### SANDWICH
+        sandwich_cov <- sandwich(ests$par, data, measproc_indmat)
+
+        return(list(ests = ests, hessian = hess, path = path, data_log_lik = data_log_lik, alpha = alpha, sandwich_cov = sandwich_cov))
 }
