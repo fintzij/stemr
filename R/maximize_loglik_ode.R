@@ -10,6 +10,7 @@
 #'   have been compiled.
 #' @param transformations named list of functions for transforming to and from
 #'   the estimation scale, which should be unconstrained (i.e., R^n).
+#' @param limits named list with vectors of upper and lower limits for optimization
 #'
 #' @return list containing the parameter estimates on their estimation scales,
 #'   Hessian of the data log likelihood evaluated at the maximum likelihood
@@ -18,7 +19,7 @@
 #'   factor, and an estimate of the sandwich standard errors for non-nuisance
 #'   parameters.
 #' @export
-maximize_loglik_ode <- function(stem_object, transformations = NULL) {
+maximize_loglik_ode <- function(stem_object, transformations = NULL, limits = NULL) {
 
         # get ode times
         t0        <- stem_object$dynamics$t0
@@ -157,6 +158,10 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL) {
                                      dimnames = list(NULL, c(rownames(flow_matrix)))
                               ))
 
+        # set optimization limits
+        lower = pmin(limits$lower, Inf)
+        upper = pmin(limits$upper, Inf)
+
         ### CREATE AUXILLIARY FUNCTIONS ------------------------------------
         # scale transformation functions
         if(is.null(transformations)) {
@@ -269,17 +274,16 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL) {
         # compute gradients of the means
         get_grads <- function(pars) {
 
-                grads <- matrix(0.0, nrow = sum(measproc_indmat), ncol = length(pars))
+                grads <- matrix(0.0, nrow = nrow(data) * (ncol(data)-1), ncol = length(pars))
                 get_one_mean <- function(pars, j, k) get_means(pars)[j,k+1]
 
                 for(k in seq_len(ncol(measproc_indmat))) {
                         for(j in seq_len(nrow(measproc_indmat))) {
-                                if(measproc_indmat[j,k]) grads[(k-1)+j,] <-
-                                                numDeriv::grad(get_one_mean, pars, j=j,k=k)
+                                grads[(k-1)+j,] <- numDeriv::grad(get_one_mean, pars, j=j,k=k)
                         }
                 }
 
-                return(grads[measproc_indmat,])
+                return(grads)
         }
 
         # Compute expected variances of observd incidence
@@ -348,12 +352,23 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL) {
         }
 
         ### Get MLEs and Hessian -------------------------------------------
-        optim_pars <- transformations$to_estimation_scale(stem_object$dynamics$parameters)
-        ests <- optim(optim_pars, ode_loglik)
-        hess <- numDeriv::hessian(ode_loglik, ests$par)
+        pars_init <- transformations$to_estimation_scale(stem_object$dynamics$parameters)
+        ests <- as.numeric(suppressWarnings(
+                        optimx::optimx(
+                                pars_init,
+                                ode_loglik,
+                                method = "L-BFGS-B",
+                                hessian = TRUE,
+                                itnmax = 1e6,
+                                upper = upper,
+                                lower = lower
+                        )
+                )[seq_len(length(pars_init))])
+        hess <- numDeriv::hessian(ode_loglik, ests)
+        names(ests) <- colnames(hess) <- rownames(hess) <- names(pars_init)
 
         # get the ML ODE path and data log likelihood
-        ml_pars <- transformations$from_estimation_scale(ests$par)
+        ml_pars <- transformations$from_estimation_scale(ests)
 
         pars2lnapars(ode_pars, ml_pars)
         if(!fixed_inits) init_state <- ml_pars[ode_initdist_inds + 1]
@@ -423,7 +438,30 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL) {
                 (sum(measproc_indmat) - length(ml_pars) - 1)
 
         ### SANDWICH
-        sandwich_cov <- sandwich(ests$par, data, measproc_indmat)
+        sandwich_cov <- sandwich(ests, data, measproc_indmat)
 
-        return(list(ests = ests, hessian = hess, path = path, data_log_lik = data_log_lik, alpha = alpha, sandwich_cov = sandwich_cov))
+        ### compile estimates and apply delta method
+        pars_nat = ml_pars
+        pars_est = ests
+
+        vcov_est   = solve(hess)
+        vcov_nat   = mrds::DeltaMethod(par   = pars_est,
+                                       fct   = transformations$from_estimation_scale,
+                                       vcov  = vcov_est,
+                                       delta = 1e-6
+                                       )$variance
+
+        ### Return results
+        return(
+                list(
+                        pars_est      = pars_est,
+                        pars_nat      = pars_nat,
+                        vcov_est      = vcov_est,
+                        vcov_nat      = vcov_nat,
+                        path          = path,
+                        data_log_lik  = data_log_lik,
+                        alpha         = alpha,
+                        sandwich_cov  = sandwich_cov
+                )
+        )
 }

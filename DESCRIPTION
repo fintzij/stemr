@@ -20,7 +20,10 @@ Imports:
     ECctmc,
     Ryacas,
     odeintr,
+    optimx,
+    MASS,
     numDeriv,
+    mrds,
     extraDistr,
     Rcpp (>= 0.12.4)
 LinkingTo: Rcpp,
