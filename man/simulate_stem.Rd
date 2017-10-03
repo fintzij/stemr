@@ -6,8 +6,8 @@
 \usage{
 simulate_stem(stem_object, nsim = 1, simulation_parameters = NULL,
   paths = FALSE, observations = FALSE, subject_paths = FALSE,
-  method = "gillespie", tmax = NULL, timestep = NULL,
-  census_times = NULL, max_attempts = 100, messages = TRUE)
+  method = "gillespie", tmax = NULL, census_times = NULL,
+  max_attempts = 100, lna_method = NULL, lna_df = NULL, messages = TRUE)
 }
 \arguments{
 \item{nsim}{number of realizations to simulate}
@@ -33,10 +33,6 @@ process.}
 
 \item{tmax}{the time at which simulation of the system is terminated. If not
 supplied, defaults to the last observation time if not supplied.}
-
-\item{timestep}{time discretization for smooth time-varying functions,
-specifically seasonal terms, to be used in simulation when
-method="gillespie". If not supplied, \code{timestep} will default to 1.}
 
 \item{census_times}{vector of times at which compartment counts should be
 recorded.}

@@ -25,9 +25,6 @@ should be censused.}
 
 \item{forcing_matrix}{matrix containing the forcings.}
 
-\item{lna_event_inds}{vector of column indices in the LNA path for which
-incidence will be computed.}
-
 \item{forcing_inds}{logical vector of indicating at which times in the
 time-varying covariance matrix a forcing is applied.}
 }

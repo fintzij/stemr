@@ -14,8 +14,6 @@ using namespace Rcpp;
 //' @param flow_matrix_lna matrix containing the flow matrix for the LNA (no incidence)
 //' @param do_prevalence should the prevalence be computed
 //' @param init_state the initial compartment counts
-//' @param lna_event_inds vector of column indices in the LNA path for which
-//'   incidence will be computed.
 //' @param forcing_inds logical vector of indicating at which times in the
 //'   time-varying covariance matrix a forcing is applied.
 //' @param forcing_matrix matrix containing the forcings.

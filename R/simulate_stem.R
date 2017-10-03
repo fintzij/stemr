@@ -20,9 +20,6 @@
 #'   process.
 #' @param tmax the time at which simulation of the system is terminated. If not
 #'   supplied, defaults to the last observation time if not supplied.
-#' @param timestep time discretization for smooth time-varying functions,
-#'   specifically seasonal terms, to be used in simulation when
-#'   method="gillespie". If not supplied, \code{timestep} will default to 1.
 #' @param census_times vector of times at which compartment counts should be
 #'   recorded.
 #' @param max_attempts maximum number of times to attempt simulating an LNA path
@@ -55,9 +52,10 @@ simulate_stem <-
                  subject_paths = FALSE,
                  method = "gillespie",
                  tmax = NULL,
-                 timestep = NULL,
                  census_times = NULL,
                  max_attempts = 100,
+                 lna_method = NULL,
+                 lna_df = NULL,
                  messages = TRUE) {
 
                 # ensure that the method is correctly specified
@@ -97,6 +95,10 @@ simulate_stem <-
                         }
                 }
 
+                if(is.null(lna_method)) {
+                        lna_method <- "mvn"
+                }
+
                 if(paths == observations) {
                         paths <- TRUE
                         observations <- TRUE
@@ -106,9 +108,16 @@ simulate_stem <-
                 t0                     <- stem_object$dynamics$t0
                 if(is.null(tmax)) tmax <- stem_object$dynamics$tmax
 
+                if(is.null(stem_object$dynamics$timestep)) {
+                        timestep <- 1
+                } else {
+                        timestep <- stem_object$dynamics$timestep
+
+                }
+
                 # make sure that there exists a vector of census times
                 if(is.null(census_times)) {
-                        census_times <- as.numeric(unique(c(t0, t0:tmax, tmax)))
+                        census_times <- as.numeric(unique(c(t0, seq(t0,tmax,by=timestep), tmax)))
 
                 } else {
                         # make sure that t0 and tmax are in the vector of census times
@@ -389,6 +398,9 @@ simulate_stem <-
 
                 } else if (method == "lna") {
 
+                        # pull out logical vector for which rates are of order > 1
+                        higher_order_rates <- sapply(stem_object$dynamics$rates, function(x) x$higher_order)
+
                         # set the vectors of times when the LNA is evaluated and censused
                         lna_times <- sort(unique(c(t0, census_times, stem_object$dynamics$tcovar[,1], tmax)))
 
@@ -434,6 +446,7 @@ simulate_stem <-
 
                         # generate some auxilliary objects
                         param_update_inds <- lna_times %in% unique(c(t0, tmax, stem_object$dynamics$tcovar[,1]))
+                        census_interval_inds <- findInterval(lna_times, census_times, left.open = T)
 
                         # simulate the LNA paths
                         census_paths <- vector(mode = "list", length = nsim)
@@ -548,22 +561,57 @@ simulate_stem <-
                                 path    <- NULL
                                 while(is.null(path) && (attempt < max_attempts)) {
                                         try({
-                                                path <- propose_lna(lna_times         = lna_times,
-                                                                    lna_pars          = lna_pars,
-                                                                    init_start        = stem_object$dynamics$lna_initdist_inds[1],
-                                                                    param_update_inds = param_update_inds,
-                                                                    stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
-                                                                    forcing_inds      = forcing_inds,
-                                                                    forcing_matrix    = forcing_matrix,
-                                                                    step_size         = stem_object$dynamics$dynamics_args$step_size,
-                                                                    lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
-                                                                    set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
+                                                if(lna_method == "mvn") {
+
+                                                        path <- propose_lna(lna_times         = lna_times,
+                                                                            lna_pars          = lna_pars,
+                                                                            init_start        = stem_object$dynamics$lna_initdist_inds[1],
+                                                                            param_update_inds = param_update_inds,
+                                                                            stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
+                                                                            forcing_inds      = forcing_inds,
+                                                                            forcing_matrix    = forcing_matrix,
+                                                                            step_size         = stem_object$dynamics$dynamics_args$step_size,
+                                                                            lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
+                                                                            set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
+
+                                                } else if(lna_method == "mvt") {
+
+                                                        path <- propose_lna_t(lna_times         = lna_times,
+                                                                            lna_pars          = lna_pars,
+                                                                            init_start        = stem_object$dynamics$lna_initdist_inds[1],
+                                                                            param_update_inds = param_update_inds,
+                                                                            stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
+                                                                            forcing_inds      = forcing_inds,
+                                                                            forcing_matrix    = forcing_matrix,
+                                                                            step_size         = stem_object$dynamics$dynamics_args$step_size,
+                                                                            df                = lna_df,
+                                                                            lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
+                                                                            set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
+
+                                                } else if(lna_method == "mvst") {
+
+                                                        path <- propose_lna_semi_t(lna_times         = lna_times,
+                                                                                   lna_pars          = lna_pars,
+                                                                                   init_start        = stem_object$dynamics$lna_initdist_inds[1],
+                                                                                   param_update_inds = param_update_inds,
+                                                                                   stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
+                                                                                   forcing_inds      = forcing_inds,
+                                                                                   forcing_matrix    = forcing_matrix,
+                                                                                   step_size         = stem_object$dynamics$dynamics_args$step_size,
+                                                                                   df                = lna_df,
+                                                                                   rate_orders       = higher_order_rates,
+                                                                                   lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
+                                                                                   set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
+
+
+                                                }
                                                 }, silent = TRUE)
 
                                         attempt           <- attempt + 1
+
                                         if(!is.null(path)) {
-                                                census_paths[[k]] <- path$lna_path
-                                                lna_paths[[k]]    <- path$prev_path
+                                                census_paths[[k]] <- census_incidence(path$lna_path, census_times, census_interval_inds)
+                                                lna_paths[[k]]    <- path$prev_path[match(census_times, path$prev_path[,1]),]
                                                 lna_draws[[k]]    <- path$draws
                                         }
                                 }
@@ -623,9 +671,10 @@ simulate_stem <-
 
                         # generate some auxilliary objects
                         param_update_inds <- ode_times %in% unique(c(t0, tmax, stem_object$dynamics$tcovar[,1]))
+                        census_interval_inds <- findInterval(ode_times, census_times, left.open = T)
 
                         # objects for storing the ODE paths
-                        fixed_parameters <- !stem_object$dynamics$fixed_inits | !is.null(simulation_parameters)
+                        fixed_parameters <- stem_object$dynamics$fixed_inits & is.null(simulation_parameters)
 
                         if(!fixed_parameters) {
                                 census_paths <- vector(mode = "list", length = nsim)
@@ -756,8 +805,8 @@ simulate_stem <-
                                         }, silent = TRUE)
 
                                         if(!is.null(path)) {
-                                                census_paths[[k]] <- path$incid_path
-                                                ode_paths[[k]]    <- path$prev_path
+                                                census_paths[[k]] <- census_incidence(path$incid_path, census_times, census_interval_inds)
+                                                ode_paths[[k]]    <- path$prev_path[match(census_times, path$prev_path[,1]),]
                                         }
                                 }
 
@@ -785,9 +834,8 @@ simulate_stem <-
                         do_incidence <- !is.null(stem_object$dynamics$incidence_codes) & !(method %in% c("lna", "ode"))
 
                         # census if computing incidence or if computing prevalence and the obstimes != census_times
-                        do_census <- do_incidence ||
-                                     (!is.null(census_times) &&
-                                      !identical(as.numeric(stem_object$measurement_process$obstimes), as.numeric(census_times)))
+                        do_census <- !is.null(census_times) &&
+                                      !identical(as.numeric(stem_object$measurement_process$obstimes), as.numeric(census_times))
 
                         # get the indices in the censused matrices for the observation times
                         if(do_census) cens_inds <- findInterval(stem_object$measurement_process$obstimes, census_times)
@@ -897,28 +945,53 @@ simulate_stem <-
                                 flow_matrix_ode  <- stem_object$dynamics$flow_matrix_ode
                                 ode_event_inds   <- stem_object$measurement_process$incidence_codes_ode
 
-                                for(k in seq_along(census_paths)) {
+                                if(!fixed_parameters) {
 
+                                        for(k in seq_along(census_paths)) {
+
+                                                # fill out the census matrix
+                                                census_lna(path                = census_paths[[k]],
+                                                           census_path         = pathmat,
+                                                           census_inds         = cens_inds,
+                                                           lna_event_inds      = ode_event_inds,
+                                                           flow_matrix_lna     = flow_matrix_ode,
+                                                           do_prevalence       = do_prevalence,
+                                                           init_state          = init_states[k,],
+                                                           forcing_matrix      = forcing_matrix)
+
+                                                if(!is.null(simulation_parameters)) sim_pars <- simulation_parameters[[k]]
+
+                                                # simulate the dataset
+                                                datasets[[k]] <- simulate_r_measure(pathmat,
+                                                                                    measproc_indmat,
+                                                                                    sim_pars,
+                                                                                    constants,
+                                                                                    tcovar_obstimes,
+                                                                                    r_measure_ptr)
+                                                colnames(datasets[[k]]) <- measvar_names
+                                        }
+                                } else {
                                         # fill out the census matrix
-                                        census_lna(path                = census_paths[[k]],
+                                        census_lna(path                = census_paths[[1]],
                                                    census_path         = pathmat,
                                                    census_inds         = cens_inds,
                                                    lna_event_inds      = ode_event_inds,
                                                    flow_matrix_lna     = flow_matrix_ode,
                                                    do_prevalence       = do_prevalence,
-                                                   init_state          = init_states[k,],
+                                                   init_state          = init_states[1,],
                                                    forcing_matrix      = forcing_matrix)
 
-                                        if(!is.null(simulation_parameters)) sim_pars <- simulation_parameters[[k]]
+                                        for(k in seq_len(nsim)) {
 
-                                        # simulate the dataset
-                                        datasets[[k]] <- simulate_r_measure(pathmat,
-                                                                            measproc_indmat,
-                                                                            sim_pars,
-                                                                            constants,
-                                                                            tcovar_obstimes,
-                                                                            r_measure_ptr)
-                                        colnames(datasets[[k]]) <- measvar_names
+                                                # simulate the dataset
+                                                datasets[[k]] <- simulate_r_measure(pathmat,
+                                                                                    measproc_indmat,
+                                                                                    sim_pars,
+                                                                                    constants,
+                                                                                    tcovar_obstimes,
+                                                                                    r_measure_ptr)
+                                                colnames(datasets[[k]]) <- measvar_names
+                                        }
                                 }
                         }
                 }

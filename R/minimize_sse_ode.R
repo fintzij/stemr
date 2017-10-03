@@ -1,6 +1,6 @@
 #' Obtain estimates of stochastic epidemic model (SEM) parameters on their
-#' estimation scales that maximize the observed data likelihood for a SEM
-#' approximated by its deterministic ODE limit.
+#' estimation scales that minimizes the sum of squared errors between the data
+#' and the expected path for a SEM approximated by its deterministic ODE limit.
 #'
 #' NOTE: This should not be considered a reliable method for inference for SEMs.
 #' Rather, it is, perhaps, useful as a method for obtaining initial values for
@@ -12,15 +12,16 @@
 #'   the estimation scale, which should be unconstrained (i.e., R^n).
 #' @param limits named list with vectors of upper and lower limits for
 #'   parameters ON THEIR ESTIMATION SCALE.
+#' @param scale either "log" (default) or "linear"
 #'
 #' @return list containing the parameter estimates on their estimation scales,
 #'   Hessian of the data log likelihood evaluated at the maximum likelihood
 #'   estimates on their estimation scales, the maximum likelihood ODE path, the
-#'   data log-likelihood under the MLEs, the quasi-likelihood variance inflation
-#'   factor, and an estimate of the sandwich standard errors for non-nuisance
-#'   parameters.
+#'   data log-likelihood under the SSE minimizer, the quasi-likelihood variance
+#'   inflation factor, and an estimate of the sandwich standard errors for
+#'   non-nuisance parameters.
 #' @export
-maximize_loglik_ode <- function(stem_object, transformations = NULL, limits = NULL) {
+minimize_sse_ode <- function(stem_object, transformations = NULL, limits = NULL, scale = "log") {
 
         # get ode times
         t0        <- stem_object$dynamics$t0
@@ -28,6 +29,7 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL, limits = NU
         ode_times <- sort(unique(c(t0, stem_object$dynamics$tcovar[,1], stem_object$measurement_process$data[,1], tmax)))
 
         # extract the model objects from the stem_object
+        popsize                <- stem_object$dynamics$constants["popsize"]
         flow_matrix            <- stem_object$dynamics$flow_matrix_ode
         stoich_matrix          <- stem_object$dynamics$stoich_matrix_ode
         ode_pointer            <- stem_object$dynamics$ode_pointers$ode_ptr
@@ -149,7 +151,7 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL, limits = NU
 
         forcing_matrix <- t(forcing_matrix)
 
-        emitmat <- cbind(stem_object$measurement_process$data[, 1, drop = F],
+        emitmat <- cbind(data[, 1, drop = F],
                          matrix(0.0, nrow = nrow(measproc_indmat), ncol = ncol(measproc_indmat),
                                 dimnames = list(NULL, colnames(measproc_indmat))
                          ))
@@ -164,69 +166,41 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL, limits = NU
         upper = pmin(limits$upper, Inf)
 
         ### CREATE AUXILLIARY FUNCTIONS ------------------------------------
+
+        # function for getting rid of zeros by the following weighted midpoint rule if scale == "log"
+        # let Y_1,...,Y_L be the counts and suppose y_l = 0. Then,
+        # imputed_dat = 0.5 * 1/popsize + 0.5 * predicted value from poisson regression glm fit with two points on either side (where available)
+        inflate_zeros <- function(dat) {
+
+                which_zeros     <- which(dat[, -1, drop = FALSE] == 0, arr.ind = T)
+                which_zeros[,2] <- which_zeros[,2] + 1
+
+                for(r in seq_len(nrow(which_zeros))) {
+
+                        rowinds <- (which_zeros[r,1] - 2):(which_zeros[r,1] + 2)
+                        rowinds <- rowinds[rowinds>=1 & rowinds <= nrow(dat)]
+                        predmat <- dat[rowinds, c(1,which_zeros[r,2])]
+
+                        pred_vals <- suppressWarnings(exp(predict(glm(predmat[,2] ~ predmat[,1], family = poisson()))))
+                        dat[which_zeros[r,1], which_zeros[r,2]] <- 1/popsize +
+                                (1 - 1/popsize) * pred_vals[which(predmat[,1] == which_zeros[r,1])]
+                }
+
+                return(dat)
+        }
+
+        ### inflate zeros if scale == "log"
+        if(scale == "log") {
+                data <- inflate_zeros(dat = data)
+                data[,-1][measproc_indmat] <- log(data[,-1][measproc_indmat])
+        }
+
         # scale transformation functions
         if(is.null(transformations)) {
                 transformations <- list(
                         to_estimation_scale   = function(pars) {pars},
                         from_estimation_scale = function(pars) {pars}
                 )
-        }
-
-        # log-likelihood function
-        ode_loglik <- function(pars) {
-
-                pars_nat <- transformations$from_estimation_scale(pars)
-
-                pars2lnapars(ode_pars, pars_nat)
-                if(!fixed_inits) init_state <- pars[ode_initdist_inds + 1]
-
-                data_log_lik <- -Inf
-                try({
-                        # integrate the ODEs
-                        path <- integrate_odes(ode_times         = ode_times,
-                                               ode_pars          = ode_pars,
-                                               init_start        = ode_initdist_inds[1],
-                                               param_update_inds = param_update_inds,
-                                               stoich_matrix     = stoich_matrix,
-                                               forcing_inds      = forcing_inds,
-                                               forcing_matrix    = forcing_matrix,
-                                               step_size         = step_size,
-                                               ode_pointer       = ode_pointer,
-                                               set_pars_pointer  = ode_set_pars_pointer
-                        )
-
-                        census_lna(
-                                path                = path$incid_path,
-                                census_path         = censusmat,
-                                census_inds         = census_indices,
-                                lna_event_inds      = ode_event_inds,
-                                flow_matrix_lna     = t(stoich_matrix),
-                                do_prevalence       = do_prevalence,
-                                init_state          = init_state,
-                                forcing_matrix      = forcing_matrix
-                        )
-
-                        # evaluate the density of the incidence counts
-                        evaluate_d_measure_LNA(
-                                emitmat           = emitmat,
-                                obsmat            = stem_object$measurement_process$data,
-                                censusmat         = censusmat,
-                                measproc_indmat   = measproc_indmat,
-                                lna_parameters    = ode_pars,
-                                lna_param_inds    = ode_param_inds,
-                                lna_const_inds    = ode_const_inds,
-                                lna_tcovar_inds   = ode_tcovar_inds,
-                                param_update_inds = param_update_inds,
-                                census_indices    = census_indices,
-                                d_meas_ptr        = d_meas_pointer
-                        )
-
-                        # compute the data log likelihood
-                        data_log_lik <- sum(emitmat[,-1][measproc_indmat])
-                        if(is.nan(data_log_lik)) data_log_lik <- -Inf
-                }, silent = TRUE)
-
-                return(-data_log_lik)
         }
 
         # Compute mean observd incidence
@@ -264,12 +238,21 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL, limits = NU
 
                 }, silent = TRUE)
 
-                return(simulate_r_measure(censusmat       = censusmat,
-                                          measproc_indmat = measproc_indmat,
-                                          parameters      = pars_nat,
-                                          constants       = constants,
-                                          tcovar          = tcovar_censmat,
-                                          r_measure_ptr   = stem_object$measurement_process$meas_pointers$m_measure_ptr))
+                meanmat <- simulate_r_measure(censusmat       = censusmat,
+                                              measproc_indmat = measproc_indmat,
+                                              parameters      = pars_nat,
+                                              constants       = constants,
+                                              tcovar          = tcovar_censmat,
+                                              r_measure_ptr   = stem_object$measurement_process$meas_pointers$m_measure_ptr)
+                if(scale == "log") meanmat[,-1][measproc_indmat] <- log(meanmat[,-1][measproc_indmat])
+
+                return(meanmat)
+        }
+
+        # log-likelihood function
+        ode_sse <- function(pars) {
+                meanmat <- get_means(pars)
+                return(sum((meanmat[,-1][measproc_indmat] - data[,-1][measproc_indmat])^2))
         }
 
         # compute gradients of the means
@@ -287,7 +270,7 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL, limits = NU
                 return(grads)
         }
 
-        # Compute expected variances of observd incidence
+        # Compute expected variances of observed incidence
         get_vars <- function(pars) {
 
                 pars_nat <- transformations$from_estimation_scale(pars)
@@ -322,12 +305,18 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL, limits = NU
 
                 }, silent = TRUE)
 
-                return(simulate_r_measure(censusmat       = censusmat,
-                                          measproc_indmat = measproc_indmat,
-                                          parameters      = pars_nat,
-                                          constants       = constants,
-                                          tcovar          = tcovar_censmat,
-                                          r_measure_ptr   = stem_object$measurement_process$meas_pointers$v_measure_ptr))
+                varmat <- simulate_r_measure(censusmat       = censusmat,
+                                             measproc_indmat = measproc_indmat,
+                                             parameters      = pars_nat,
+                                             constants       = constants,
+                                             tcovar          = tcovar_censmat,
+                                             r_measure_ptr   = stem_object$measurement_process$meas_pointers$v_measure_ptr)
+
+                if(scale == "log") {
+                        varmat[,-1] <- 1 / varmat[,-1]
+                }
+
+                return(varmat)
         }
 
         sandwich <- function(pars, dat, measproc_indmat) {
@@ -354,30 +343,29 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL, limits = NU
 
         ### Get MLEs and Hessian -------------------------------------------
         pars_init <- transformations$to_estimation_scale(stem_object$dynamics$parameters)
-        ests <- as.numeric(suppressWarnings(
+        ests <- suppressWarnings(as.numeric(try({
                         optimx::optimx(
                                 pars_init,
-                                ode_loglik,
-                                method = "nlminb",
+                                ode_sse,
+                                method = c("nlminb"),
                                 hessian = FALSE,
                                 itnmax = 1e6,
                                 upper = upper,
                                 lower = lower
-                        )
-                )[seq_len(length(pars_init))])
-        hess <- numDeriv::hessian(ode_loglik, ests)
+                        )}, silent = T)[seq_len(length(pars_init))]))
+        hess <- numDeriv::hessian(ode_sse, ests)
         vcov_est <- solve(hess)
 
         if(any(diag(vcov_est) < 0)) {
                 ests <- suppressWarnings(as.numeric(try({
                         optimx::optimx(
                                 pars_init,
-                                ode_loglik,
-                                method = "hjkb",
+                                ode_sse,
+                                method = c("hjkb"),
                                 hessian = FALSE,
                                 itnmax = 1e6
                         )}, silent = T)[seq_len(length(pars_init))]))
-                hess <- numDeriv::hessian(ode_loglik, ests)
+                hess <- numDeriv::hessian(ode_sse, ests)
                 vcov_est <- solve(hess)
         }
 
@@ -385,12 +373,12 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL, limits = NU
                 ests <- suppressWarnings(as.numeric(try({
                         optimx::optimx(
                                 pars_init,
-                                ode_loglik,
-                                method = "Nelder-Mead",
+                                ode_sse,
+                                method = c("Nelder-Mead"),
                                 hessian = FALSE,
                                 itnmax = 1e6
                         )}, silent = T)[seq_len(length(pars_init))]))
-                hess <- numDeriv::hessian(ode_loglik, ests)
+                hess <- numDeriv::hessian(ode_sse, ests)
                 vcov_est <- solve(hess)
         }
 
@@ -449,19 +437,8 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL, limits = NU
         }, silent = TRUE)
 
         ### QUASI-LIKELIHOOD -----------------------------------------------
-        mean_mat <- simulate_r_measure(censusmat       = censusmat,
-                                       measproc_indmat = measproc_indmat,
-                                       parameters      = ml_pars,
-                                       constants       = constants,
-                                       tcovar          = tcovar_censmat,
-                                       r_measure_ptr   = stem_object$measurement_process$meas_pointers$m_measure_ptr)
-
-        var_mat <- simulate_r_measure(censusmat       = censusmat,
-                                      measproc_indmat = measproc_indmat,
-                                      parameters      = ml_pars,
-                                      constants       = constants,
-                                      tcovar          = tcovar_censmat,
-                                      r_measure_ptr   = stem_object$measurement_process$meas_pointers$v_measure_ptr)
+        mean_mat <- get_means(pars = ests)
+        var_mat  <- get_vars(pars = ests)
 
         alpha <- sum((mean_mat[,-1][measproc_indmat] - data[,-1][measproc_indmat])^2 / var_mat[,-1][measproc_indmat]) /
                 (sum(measproc_indmat) - length(ml_pars) - 1)
@@ -473,10 +450,25 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL, limits = NU
         pars_nat = ml_pars
         pars_est = ests
 
-        vcov_nat = mrds::DeltaMethod(par   = pars_est,
-                                     fct   = transformations$from_estimation_scale,
-                                     vcov  = vcov_est,
-                                     delta = 1e-6)$variance
+        nuisance <- which(diag(hess) == 0)
+
+        if(length(nuisance)!= 0) hess <- hess + diag(1e-6, length(pars_est))
+
+        vcov_nat   = mrds::DeltaMethod(par   = pars_est,
+                                       fct   = transformations$from_estimation_scale,
+                                       vcov  = vcov_est,
+                                       delta = 1e-6
+                                       )$variance
+
+        rownames(vcov_est) <- rownames(vcov_nat) <- names(pars_est)
+        colnames(vcov_est) <- colnames(vcov_nat) <- names(pars_est)
+
+        if(length(nuisance) != 0) {
+                pars_est      = pars_est[-nuisance]
+                pars_nat      = pars_nat[-nuisance]
+                vcov_est      = vcov_est[-nuisance,-nuisance]
+                vcov_nat      = vcov_nat[-nuisance,-nuisance]
+        }
 
         ### Return results
         return(
@@ -485,10 +477,10 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL, limits = NU
                         pars_nat      = pars_nat,
                         vcov_est      = vcov_est,
                         vcov_nat      = vcov_nat,
-                        path          = path,
-                        data_log_lik  = data_log_lik,
                         alpha         = alpha,
-                        sandwich_cov  = sandwich_cov
+                        sandwich_cov  = sandwich_cov,
+                        data_log_lik  = data_log_lik,
+                        path          = path
                 )
         )
 }

@@ -203,8 +203,8 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
 
                         meas_procs[[k]]$rmeasure <- paste0("Rcpp::rpois(1,", meas_procs[[k]]$emission_params, ")")
                         meas_procs[[k]]$dmeasure <- paste0("Rcpp::dpois(obs,", paste(meas_procs[[k]]$emission_params, collapse = ","), ",1)")
-                        meas_procs[[k]]$mmeasure <- meas_procs[[k]]$emission_params[2]
-                        meas_procs[[k]]$vmeasure <- meas_procs[[k]]$emission_params[2]
+                        meas_procs[[k]]$mmeasure <- meas_procs[[k]]$emission_params[1]
+                        meas_procs[[k]]$vmeasure <- meas_procs[[k]]$emission_params[1]
 
                 } else if(meas_procs[[k]]$distribution == "binomial") {
 
