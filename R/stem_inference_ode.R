@@ -190,19 +190,22 @@ stem_inference_ode <- function(stem_object,
                 # empirical mean and covariance of the adaptive kernel
                 kernel_resid <- double(n_model_params); # already initialized to 0
                 kernel_mean  <- double(n_model_params); copy_vec(kernel_mean, model_params_est)
-                kernel_cov   <- double(n_model_params); copy_vec(kernel_cov, diag(mcmc_kernel$sigma))
+                kernel_cov   <- diag(1,n_model_params); copy_mat(kernel_cov, mcmc_kernel$sigma)
 
                 # Adaptation record objects
                 adaptation_scale_record <- matrix(1.0,
                                                   ncol = floor(iterations/thin_params) + 1,
                                                   nrow = n_model_params)
 
-                adaptation_shape_record <- matrix(1.0,
-                                                  ncol = floor(iterations/thin_params) + 1,
-                                                  nrow = n_model_params)
+                adaptation_shape_record <-
+                        array(0.0, dim = c(
+                                n_model_params,
+                                n_model_params,
+                                floor(iterations / thin_params) + 1)
+                        )
 
-                adaptation_scale_record[,1] <- proposal_scaling
-                adaptation_shape_record[,1] <- kernel_cov
+                adaptation_scale_record[,1]  <- proposal_scaling
+                adaptation_shape_record[,,1] <- kernel_cov
 
         } else if(mcmc_kernel$method == "mvn_g_adaptive") {
 
@@ -421,7 +424,7 @@ stem_inference_ode <- function(stem_object,
                                 lna_event_inds      = ode_event_inds,
                                 flow_matrix_lna     = t(stoich_matrix),
                                 do_prevalence       = do_prevalence,
-                                init_state          = init_state,
+                                init_state          = init_volumes_cur,
                                 forcing_matrix      = forcing_matrix
                         )
 
@@ -824,9 +827,13 @@ stem_inference_ode <- function(stem_object,
                                                                                        (min(exp(acceptance_prob),1) - target_c)),
                                                                    max_scaling)
 
-                                        kernel_resid[s] <- model_params_est[s] - kernel_mean[s]
-                                        kernel_cov[s]   <- kernel_cov[s] + adaptations[iter] * (kernel_resid[s]^2 - kernel_cov[s])
-                                        kernel_mean[s]  <- kernel_mean[s] + adaptations[iter] * kernel_resid[s]
+                                        kernel_resid <- model_params_est - kernel_mean
+                                        kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid%*%t(kernel_resid) - kernel_cov)
+                                        kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
+
+                                        #                                         kernel_resid[s] <- model_params_est[s] - kernel_mean[s]
+                                        #                                         kernel_cov[s]   <- kernel_cov[s] + adaptations[iter] * (kernel_resid[s]^2 - kernel_cov[s])
+                                        #                                         kernel_mean[s]  <- kernel_mean[s] + adaptations[iter] * kernel_resid[s]
                                 }
                         }
 
@@ -1303,35 +1310,41 @@ stem_inference_ode <- function(stem_object,
                         if(mcmc_kernel$method == "c_rw_adaptive") {
 
                                 adaptation_scale_record[, param_rec_ind] <- proposal_scaling
-                                adaptation_shape_record[, param_rec_ind] <- kernel_cov
+                                adaptation_shape_record[,,param_rec_ind] <- kernel_cov
 
-                                if(messages) cat(paste0("Componentwise acceptances: ", paste0(acceptances_c, collapse=", ")),
-                                                 paste0("Acceptance rates: ", paste0(acceptances_c / (iter-1), collapse = ",")),
-                                                 paste0("Scaling factors: ",
-                                                        paste0(round(proposal_scaling, digits = 3), collapse = ",")),
-                                                 file = status_file, sep = "\n", append = TRUE)
+                                if(messages && iter<stop_adaptation) cat(
+                                        paste0("Iteration: ", iter),
+                                        paste0("Componentwise acceptances: ", paste0(acceptances_c, collapse=", ")),
+                                        paste0("Acceptance rates: ", paste0(acceptances_c / (iter-1), collapse = ",")),
+                                        paste0("Scaling factors: ",
+                                               paste0(round(proposal_scaling, digits = 3), collapse = ",")),
+                                        file = status_file, sep = "\n", append = TRUE)
 
                         } else if(mcmc_kernel$method == "mvn_c_adaptive") {
 
                                 adaptation_scale_record[, param_rec_ind] <- proposal_scaling
                                 adaptation_shape_record[,,param_rec_ind] <- kernel_cov
 
-                                if(messages) cat(paste0("Global acceptances: ", acceptances_g),
-                                                 paste0("Global acceptance rate: ", acceptances_g/(iter-1)),
-                                                 paste0("Scaling factors: ",
-                                                        paste0(round(proposal_scaling, digits = 3), collapse = ",")),
-                                                 file = status_file, sep = "\n", append = TRUE)
+                                if(messages && iter<stop_adaptation) cat(
+                                        paste0("Iteration: ", iter),
+                                        paste0("Global acceptances: ", acceptances_g),
+                                        paste0("Global acceptance rate: ", acceptances_g/(iter-1)),
+                                        paste0("Scaling factors: ",
+                                               paste0(round(proposal_scaling, digits = 3), collapse = ",")),
+                                        file = status_file, sep = "\n", append = TRUE)
 
                         } else if(mcmc_kernel$method == "mvn_g_adaptive") {
 
                                 adaptation_scale_record[param_rec_ind]   <- proposal_scaling
                                 adaptation_shape_record[,,param_rec_ind] <- kernel_cov
 
-                                if(messages) cat(paste0("Global acceptances: ", acceptances_g),
-                                                 paste0("Global acceptance rate: ", acceptances_g/(iter-1)),
-                                                 paste0("Scaling factor: ",
-                                                        paste0(round(proposal_scaling, digits = 3), collapse = ",")),
-                                                 file = status_file, sep = "\n", append = TRUE)
+                                if(messages && iter<stop_adaptation) cat(
+                                        paste0("Iteration: ", iter),
+                                        paste0("Global acceptances: ", acceptances_g),
+                                        paste0("Global acceptance rate: ", acceptances_g/(iter-1)),
+                                        paste0("Scaling factor: ",
+                                               paste0(round(proposal_scaling, digits = 3), collapse = ",")),
+                                        file = status_file, sep = "\n", append = TRUE)
                         }
 
                         # Increment the parameter record index
@@ -1372,18 +1385,26 @@ stem_inference_ode <- function(stem_object,
 
         } else if(mcmc_kernel$method == "c_rw_adaptive") {
                 stem_object$results$acceptances_c     = acceptances_c
-                stem_object$results$adaptation_record = list(adaptation_scale_record = t(adaptation_scale_record),
-                                                             adaptation_shape_record = adaptation_shape_record)
+                stem_object$results$adaptation_record =
+                        list(adaptation_scale_record  = t(adaptation_scale_record),
+                             adaptation_shape_record  = adaptation_shape_record,
+                             proposal_covariance      =
+                                     diag(sqrt(proposal_scaling)) %*% kernel_cov %*% diag(sqrt(proposal_scaling)))
 
         } else if(mcmc_kernel$method == "mvn_c_adaptive") {
-                stem_object$results$acceptances_g = acceptances_g
-                stem_object$results$adaptation_record = list(adaptation_scale_record = t(adaptation_scale_record),
-                                                             adaptation_shape_record = adaptation_shape_record)
+                stem_object$results$acceptances_g     = acceptances_g
+                stem_object$results$adaptation_record =
+                        list(adaptation_scale_record  = t(adaptation_scale_record),
+                             adaptation_shape_record  = adaptation_shape_record,
+                             proposal_covariance      =
+                                     diag(sqrt(proposal_scaling)) %*% kernel_cov %*% diag(sqrt(proposal_scaling)))
 
         } else if(mcmc_kernel$method == "mvn_g_adaptive") {
-                stem_object$results$acceptances_g = acceptances_g
-                stem_object$results$adaptation_record = list(adaptation_scale_record = adaptation_scale_record,
-                                                             adaptation_shape_record = adaptation_shape_record)
+                stem_object$results$acceptances_g     = acceptances_g
+                stem_object$results$adaptation_record =
+                        list(adaptation_scale_record  = adaptation_scale_record,
+                             adaptation_shape_record  = adaptation_shape_record,
+                             proposal_covariance      = proposal_scaling * kernel_cov)
         }
 
         if(!fixed_inits || !t0_fixed) {
