@@ -143,7 +143,7 @@ update_lna_path <-
                         if(is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
 
                         # continue proposing if not accepted
-                        while((data_log_lik_prop < threshold) && !isTRUE(all.equal(lower, upper))) {
+                        while(!isTRUE(all.equal(lower, upper)) && (data_log_lik_prop < threshold)) {
 
                                 # increment the number of ESS proposals for the current iteration
                                 ess_record[k,j] <- ess_record[k,j] + 1

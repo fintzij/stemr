@@ -221,14 +221,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // c_rw_adaptive
-void c_rw_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, int ind, const arma::vec& kernel_cov, const arma::vec& proposal_scaling, const arma::vec& nugget);
+void c_rw_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, int ind, const arma::mat& kernel_cov, const arma::vec& proposal_scaling, const arma::vec& nugget);
 RcppExport SEXP _stemr_c_rw_adaptive(SEXP params_propSEXP, SEXP params_curSEXP, SEXP indSEXP, SEXP kernel_covSEXP, SEXP proposal_scalingSEXP, SEXP nuggetSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::rowvec& >::type params_prop(params_propSEXP);
     Rcpp::traits::input_parameter< const arma::rowvec& >::type params_cur(params_curSEXP);
     Rcpp::traits::input_parameter< int >::type ind(indSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type kernel_cov(kernel_covSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type kernel_cov(kernel_covSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type proposal_scaling(proposal_scalingSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type nugget(nuggetSEXP);
     c_rw_adaptive(params_prop, params_cur, ind, kernel_cov, proposal_scaling, nugget);

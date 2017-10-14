@@ -353,10 +353,17 @@ minimize_sse_ode <- function(stem_object, transformations = NULL, limits = NULL,
                                 upper = upper,
                                 lower = lower
                         )}, silent = T)[seq_len(length(pars_init))]))
-        hess <- numDeriv::hessian(ode_sse, ests)
-        vcov_est <- solve(hess)
 
-        if(any(diag(vcov_est) < 0)) {
+        if(!any(is.na(ests))) {
+                hess     <- numDeriv::hessian(ode_sse, ests)
+                vcov_est <- MASS::ginv(hess)
+        }
+
+        if(any(is.na(ests)) || any(diag(vcov_est) < 0)) {
+                if(!any(is.na(ests))) {
+                        rm(hess); rm(vcov_est);
+                }
+                rm(ests)
                 ests <- suppressWarnings(as.numeric(try({
                         optimx::optimx(
                                 pars_init,
@@ -365,11 +372,18 @@ minimize_sse_ode <- function(stem_object, transformations = NULL, limits = NULL,
                                 hessian = FALSE,
                                 itnmax = 1e6
                         )}, silent = T)[seq_len(length(pars_init))]))
-                hess <- numDeriv::hessian(ode_sse, ests)
-                vcov_est <- solve(hess)
+
+                if(!any(is.na(ests))) {
+                        hess     <- numDeriv::hessian(ode_sse, ests)
+                        vcov_est <- MASS::ginv(hess)
+                }
         }
 
-        if(any(diag(vcov_est) < 0)) {
+        if(any(is.na(ests)) || any(diag(vcov_est) < 0)) {
+                if(!any(is.na(ests))) {
+                        rm(hess); rm(vcov_est);
+                }
+                rm(ests)
                 ests <- suppressWarnings(as.numeric(try({
                         optimx::optimx(
                                 pars_init,
@@ -378,8 +392,11 @@ minimize_sse_ode <- function(stem_object, transformations = NULL, limits = NULL,
                                 hessian = FALSE,
                                 itnmax = 1e6
                         )}, silent = T)[seq_len(length(pars_init))]))
-                hess <- numDeriv::hessian(ode_sse, ests)
-                vcov_est <- solve(hess)
+
+                if(!any(is.na(ests))) {
+                        hess     <- numDeriv::hessian(ode_sse, ests)
+                        vcov_est <- MASS::ginv(hess)
+                }
         }
 
         names(ests) <- colnames(hess) <- rownames(hess) <- names(pars_init)
@@ -451,7 +468,6 @@ minimize_sse_ode <- function(stem_object, transformations = NULL, limits = NULL,
         pars_est = ests
 
         nuisance <- which(diag(hess) == 0)
-
         if(length(nuisance)!= 0) hess <- hess + diag(1e-6, length(pars_est))
 
         vcov_nat   = mrds::DeltaMethod(par   = pars_est,

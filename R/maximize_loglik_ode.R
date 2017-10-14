@@ -354,7 +354,7 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL, limits = NU
 
         ### Get MLEs and Hessian -------------------------------------------
         pars_init <- transformations$to_estimation_scale(stem_object$dynamics$parameters)
-        ests <- as.numeric(suppressWarnings(
+        ests <- suppressWarnings(as.numeric(try({
                         optimx::optimx(
                                 pars_init,
                                 ode_loglik,
@@ -364,11 +364,14 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL, limits = NU
                                 upper = upper,
                                 lower = lower
                         )
-                )[seq_len(length(pars_init))])
-        hess <- numDeriv::hessian(ode_loglik, ests)
-        vcov_est <- solve(hess)
+                }, silent = T)[seq_len(length(pars_init))]))
 
-        if(any(diag(vcov_est) < 0)) {
+        if(!any(is.na(ests))) {
+                hess <- numDeriv::hessian(ode_loglik, ests)
+                vcov_est <- MASS::ginv(hess)
+        }
+
+        if(any(is.na(ests)) || any(diag(vcov_est) < 0)) {
                 ests <- suppressWarnings(as.numeric(try({
                         optimx::optimx(
                                 pars_init,
@@ -377,11 +380,14 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL, limits = NU
                                 hessian = FALSE,
                                 itnmax = 1e6
                         )}, silent = T)[seq_len(length(pars_init))]))
-                hess <- numDeriv::hessian(ode_loglik, ests)
-                vcov_est <- solve(hess)
+
+                if(!any(is.na(ests))) {
+                        hess <- numDeriv::hessian(ode_loglik, ests)
+                        vcov_est <- MASS::ginv(hess)
+                }
         }
 
-        if(any(diag(vcov_est) < 0)) {
+        if(any(is.na(ests)) || any(diag(vcov_est) < 0)) {
                 ests <- suppressWarnings(as.numeric(try({
                         optimx::optimx(
                                 pars_init,
@@ -390,8 +396,11 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL, limits = NU
                                 hessian = FALSE,
                                 itnmax = 1e6
                         )}, silent = T)[seq_len(length(pars_init))]))
-                hess <- numDeriv::hessian(ode_loglik, ests)
-                vcov_est <- solve(hess)
+
+                if(!any(is.na(ests))) {
+                        hess <- numDeriv::hessian(ode_loglik, ests)
+                        vcov_est <- MASS::ginv(hess)
+                }
         }
 
         names(ests) <- colnames(hess) <- rownames(hess) <- names(pars_init)

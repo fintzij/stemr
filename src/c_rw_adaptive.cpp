@@ -20,11 +20,11 @@ using namespace arma;
 void c_rw_adaptive(arma::rowvec& params_prop,
                    const arma::rowvec& params_cur,
                    int ind,
-                   const arma::vec& kernel_cov,
+                   const arma::mat& kernel_cov,
                    const arma::vec& proposal_scaling,
                    const arma::vec& nugget) {
 
         params_prop[ind] = params_cur[ind] +
                 nugget[ind] * arma::randn(1)[0] +
-                (1 - nugget[ind]) * proposal_scaling[ind] * kernel_cov[ind] * arma::randn(1)[0];
+                (1 - nugget[ind]) * sqrt(proposal_scaling[ind] * kernel_cov.col(ind)[ind]) * arma::randn(1)[0];
 }
