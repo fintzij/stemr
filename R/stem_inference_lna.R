@@ -581,7 +581,7 @@ stem_inference_lna <- function(stem_object,
                 # Print the status if messages are enabled
                 if(messages && iter%%thin_latent_proc == 0) {
                         # print the iteration
-                        cat(paste0("Iteration ", iter-1), file = status_file, sep = "\n \n", append = TRUE)
+                        cat(paste0("Iteration ", iter), file = status_file, sep = "\n \n", append = TRUE)
                 }
 
                 # Update the path via elliptical slice sampling
@@ -1445,8 +1445,6 @@ stem_inference_lna <- function(stem_object,
                                         paste0("Iteration: ", iter),
                                         paste0("Componentwise acceptances: ", paste0(acceptances_c, collapse=", ")),
                                                  paste0("Acceptance rates: ", paste0(acceptances_c / (iter-1), collapse = ",")),
-                                                 paste0("Scaling factors: ",
-                                                        paste0(round(proposal_scaling, digits = 3), collapse = ",")),
                                                  file = status_file, sep = "\n", append = TRUE)
 
                         } else if(mcmc_kernel$method == "mvn_c_adaptive") {
@@ -1458,8 +1456,6 @@ stem_inference_lna <- function(stem_object,
                                         paste0("Iteration: ", iter),
                                         paste0("Global acceptances: ", acceptances_g),
                                                  paste0("Global acceptance rate: ", acceptances_g/(iter-1)),
-                                                 paste0("Scaling factors: ",
-                                                        paste0(round(proposal_scaling, digits = 3), collapse = ",")),
                                                  file = status_file, sep = "\n", append = TRUE)
 
                         } else if(mcmc_kernel$method == "mvn_g_adaptive") {
@@ -1471,8 +1467,6 @@ stem_inference_lna <- function(stem_object,
                                         paste0("Iteration: ", iter),
                                         paste0("Global acceptances: ", acceptances_g),
                                         paste0("Global acceptance rate: ", acceptances_g/(iter-1)),
-                                        paste0("Scaling factor: ",
-                                               paste0(round(proposal_scaling, digits = 3), collapse = ",")),
                                         file = status_file, sep = "\n", append = TRUE)
                         }
 

@@ -49,6 +49,8 @@
 #'  be compiled?
 #'@param step_size initial step size for ODE stepper. Adapted internally, but
 #'  too large of an initial size can lead to failures in stiff systems.
+#'@param stepper string specifying the stepper type (see odeintr package
+#'  documentation)
 #'@param rtol,atol stepper error tolerance (see odeintr package documentation)
 #'
 #'@return list with evaluated rate functions and objects for managing the
@@ -112,7 +114,8 @@ stem_dynamics <-
                  compile_rates = TRUE,
                  compile_lna = FALSE,
                  compile_ode = FALSE,
-                 step_size = 1e-6,
+                 step_size = 1e-3,
+                 stepper = "rk5_a",
                  rtol = 1e-9,
                  atol = 1e-9,
                  ...) {
@@ -185,6 +188,7 @@ stem_dynamics <-
                                compile_lna       = compile_lna,
                                compile_ode       = compile_ode,
                                step_size         = step_size,
+                               stepper           = stepper,
                                rtol              = rtol,
                                atol              = atol)
 
@@ -916,7 +920,8 @@ stem_dynamics <-
                                                     compile_lna = compile_lna,
                                                     messages    = messages,
                                                     atol        = atol,
-                                                    rtol        = rtol)
+                                                    rtol        = rtol,
+                                                    stepper     = stepper)
 
                         # get the C++ indices for the initial distribution parameters in the lna_pars matrix
                         lna_initdist_inds <- sapply(paste0(names(compartment_codes), "_0"),
@@ -949,7 +954,8 @@ stem_dynamics <-
                                                     compile_ode = compile_ode,
                                                     messages    = messages,
                                                     atol        = atol,
-                                                    rtol        = rtol)
+                                                    rtol        = rtol,
+                                                    stepper     = stepper)
 
                         # get the C++ indices for the initial distribution parameters in the lna_pars matrix
                         ode_initdist_inds <- sapply(paste0(names(compartment_codes), "_0"),

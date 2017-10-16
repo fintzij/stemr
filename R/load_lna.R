@@ -11,7 +11,7 @@
 #'
 #' @return list containing the LNA pointers and calling code
 #' @export
-load_lna <- function(lna_rates, compile_lna, messages, atol, rtol) {
+load_lna <- function(lna_rates, compile_lna, messages, atol, rtol, stepper) {
 
         if(is.logical(compile_lna) && compile_lna) {
                 generate_code <- TRUE
@@ -111,8 +111,7 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol) {
                                                  sys = LNA_odes,
                                                  sys_dim = n_rates + n_rates^2,
                                                  pars = n_params,
-                                                 # method = "rk78_a",
-                                                 method = "bs",
+                                                 method = stepper,
                                                  rtol = rtol,
                                                  atol = atol,
                                                  globals = paste(paste(

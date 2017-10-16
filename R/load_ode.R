@@ -12,7 +12,7 @@
 #'
 #' @return list containing the ODE pointers and calling code
 #' @export
-load_ode <- function(ode_rates, compile_ode, messages, atol, rtol) {
+load_ode <- function(ode_rates, compile_ode, messages, atol, rtol, stepper) {
 
         if(is.logical(compile_ode) && compile_ode) {
                 generate_code <- TRUE
@@ -77,7 +77,7 @@ load_ode <- function(ode_rates, compile_ode, messages, atol, rtol) {
                                                  sys = ODE_odes,
                                                  sys_dim = n_rates,
                                                  pars = n_params,
-                                                 method = "bs",
+                                                 method = stepper,
                                                  rtol = rtol,
                                                  atol = atol,
                                                  headers = paste("// [[Rcpp::depends(RcppArmadillo)]]",

@@ -359,6 +359,32 @@ minimize_sse_ode <- function(stem_object, transformations = NULL, limits = NULL,
                 vcov_est <- MASS::ginv(hess)
         }
 
+        ests[ests < lower | ests > upper] <- NA
+
+        if(any(is.na(ests)) || any(diag(vcov_est) < 0)) {
+                if(!any(is.na(ests))) {
+                        rm(hess); rm(vcov_est);
+                }
+                rm(ests)
+                ests <- suppressWarnings(as.numeric(try({
+                        optimx::optimx(
+                                pars_init,
+                                ode_sse,
+                                method = c("L-BFGS-B"),
+                                hessian = FALSE,
+                                itnmax = 1e6,
+                                upper = upper,
+                                lower = lower
+                        )}, silent = T)[seq_len(length(pars_init))]))
+
+                if(!any(is.na(ests))) {
+                        hess     <- numDeriv::hessian(ode_sse, ests)
+                        vcov_est <- MASS::ginv(hess)
+                }
+        }
+
+        ests[ests < lower | ests > upper] <- NA
+
         if(any(is.na(ests)) || any(diag(vcov_est) < 0)) {
                 if(!any(is.na(ests))) {
                         rm(hess); rm(vcov_est);
@@ -379,6 +405,8 @@ minimize_sse_ode <- function(stem_object, transformations = NULL, limits = NULL,
                 }
         }
 
+        ests[ests < lower | ests > upper] <- NA
+
         if(any(is.na(ests)) || any(diag(vcov_est) < 0)) {
                 if(!any(is.na(ests))) {
                         rm(hess); rm(vcov_est);
@@ -389,7 +417,7 @@ minimize_sse_ode <- function(stem_object, transformations = NULL, limits = NULL,
                                 pars_init,
                                 ode_sse,
                                 method = c("Nelder-Mead"),
-                                hessian = FALSE,
+                                hessian = T,
                                 itnmax = 1e6
                         )}, silent = T)[seq_len(length(pars_init))]))
 
@@ -398,6 +426,8 @@ minimize_sse_ode <- function(stem_object, transformations = NULL, limits = NULL,
                         vcov_est <- MASS::ginv(hess)
                 }
         }
+
+        ests[ests < lower | ests > upper] <- NA
 
         names(ests) <- colnames(hess) <- rownames(hess) <- names(pars_init)
 
