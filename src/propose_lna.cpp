@@ -123,7 +123,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                                 throw std::runtime_error("SVD failed.");
                         }
 
-                } catch(std::runtime_error & err) {
+                } catch(std::exception & err) {
 
                         // reinstatiate the SVD objects
                         arma::vec svd_d(n_events, arma::fill::zeros);
@@ -169,7 +169,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                                 throw std::runtime_error("Negative compartment volumes.");
                         }
 
-                } catch(std::runtime_error &err) {
+                } catch(std::exception &err) {
 
                         forward_exception_to_r(err);
 

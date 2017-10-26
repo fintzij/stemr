@@ -124,7 +124,7 @@ void map_draws_2_lna(arma::mat& pathmat,
                                 throw std::runtime_error("SVD failed.");
                         }
 
-                } catch(std::runtime_error & err) {
+                } catch(std::exception & err) {
 
                         // reinstatiate the SVD objects
                         arma::vec svd_d(n_events, arma::fill::zeros);
@@ -135,7 +135,6 @@ void map_draws_2_lna(arma::mat& pathmat,
                         forward_exception_to_r(err);
 
                 } catch(...) {
-
                         ::Rf_error("c++ exception (unknown reason)");
                 }
 
