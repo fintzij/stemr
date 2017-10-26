@@ -49,12 +49,19 @@ stem_inference_lna <- function(stem_object,
         mcmc_restart <- !is.null(stem_object$results)
 
         # extract the model objects from the stem_object
+        if(is.function(stem_object$dynamics$parameters)) {
+                par_init_fcn   <- stem_object$dynamics$parameters
+                parameters     <- par_init_fcn()
+        } else {
+                par_init_fcn   <- NULL
+                parameters     <- stem_object$dynamics$parameters
+        }
+
         flow_matrix            <- stem_object$dynamics$flow_matrix_lna
         stoich_matrix          <- stem_object$dynamics$stoich_matrix_lna
         lna_pointer            <- stem_object$dynamics$lna_pointers$lna_ptr
         lna_set_pars_pointer   <- stem_object$dynamics$lna_pointers$set_lna_params_ptr
         censusmat              <- stem_object$measurement_process$censusmat
-        parameters             <- stem_object$dynamics$parameters
         constants              <- stem_object$dynamics$constants
         n_compartments         <- ncol(flow_matrix)
         n_rates                <- nrow(flow_matrix)
@@ -524,8 +531,15 @@ stem_inference_lna <- function(stem_object,
                         forcing_inds            = forcing_inds,
                         forcing_matrix          = forcing_matrix,
                         initialization_attempts = initialization_attempts,
-                        step_size               = step_size
+                        step_size               = step_size,
+                        par_init_fcn            = par_init_fcn
                 )
+
+                # make sure that the model parameters are updated if new ones were proposed
+                if(!is.null(par_init_fcn)) {
+                        model_params_nat <- lna_params_cur[1, lna_param_inds+1]
+                        model_params_est <- to_estimation_scale(model_params_nat)
+                }
         }
 
         # object for proposing new stochastic perturbations

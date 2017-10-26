@@ -114,8 +114,8 @@ stem_dynamics <-
                  compile_rates = TRUE,
                  compile_lna = FALSE,
                  compile_ode = FALSE,
-                 step_size = 1e-3,
-                 stepper = "rk5_a",
+                 step_size = 1e-6,
+                 stepper = "bs",
                  rtol = 1e-9,
                  atol = 1e-9,
                  ...) {

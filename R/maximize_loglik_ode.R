@@ -360,7 +360,6 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL, limits = NU
                                 ode_loglik,
                                 method = "nlminb",
                                 hessian = FALSE,
-                                itnmax = 1e6,
                                 upper = upper,
                                 lower = lower
                         )
@@ -377,8 +376,7 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL, limits = NU
                                 pars_init,
                                 ode_loglik,
                                 method = "hjkb",
-                                hessian = FALSE,
-                                itnmax = 1e6
+                                hessian = FALSE
                         )}, silent = T)[seq_len(length(pars_init))]))
 
                 if(!any(is.na(ests))) {
@@ -393,8 +391,7 @@ maximize_loglik_ode <- function(stem_object, transformations = NULL, limits = NU
                                 pars_init,
                                 ode_loglik,
                                 method = "Nelder-Mead",
-                                hessian = FALSE,
-                                itnmax = 1e6
+                                hessian = FALSE
                         )}, silent = T)[seq_len(length(pars_init))]))
 
                 if(!any(is.na(ests))) {

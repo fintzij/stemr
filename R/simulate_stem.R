@@ -112,14 +112,15 @@ simulate_stem <-
                         timestep <- 1
                 } else {
                         timestep <- stem_object$dynamics$timestep
-
                 }
 
                 # make sure that there exists a vector of census times
                 if(is.null(census_times)) {
+                        full_paths   <- FALSE
                         census_times <- as.numeric(unique(c(t0, seq(t0,tmax,by=timestep), tmax)))
 
                 } else {
+                        full_paths   <- TRUE
                         # make sure that t0 and tmax are in the vector of census times
                         census_times <- as.numeric(sort(unique(c(t0, census_times, tmax))))
                 }
@@ -305,7 +306,7 @@ simulate_stem <-
                                 }
                         }
 
-                        if(is.null(census_times)) {
+                        if(full_paths) {
 
                                 # initialize the list of paths
                                 paths_full <- vector(mode = "list", length = nsim)
@@ -617,11 +618,18 @@ simulate_stem <-
                                 }
 
                                 if(is.null(census_paths[[k]])) {
-                                        stop("Simulation failed. Increase max attempts per simulation or try different parameter values.")
+                                        warning("Simulation failed. Increase max attempts per simulation or try different parameter values.")
+                                } else {
+                                        colnames(census_paths[[k]]) <- c("time", rownames(stem_object$dynamics$flow_matrix_lna))
+                                        colnames(lna_paths[[k]]) <- c("time",colnames(stem_object$dynamics$flow_matrix_lna))
                                 }
+                        }
 
-                                colnames(census_paths[[k]]) <- c("time", rownames(stem_object$dynamics$flow_matrix_lna))
-                                colnames(lna_paths[[k]]) <- c("time",colnames(stem_object$dynamics$flow_matrix_lna))
+                        failed_runs  <- which(sapply(lna_paths, is.null))
+                        if(length(failed_runs) != 0) {
+                                census_paths <- census_paths[-failed_runs]
+                                lna_paths    <- lna_paths[-failed_runs]
+                                lna_draws    <- lna_draws[-failed_runs]
                         }
 
                 } else if(method == "ode") {
@@ -811,17 +819,23 @@ simulate_stem <-
                                 }
 
                                 if(is.null(census_paths[[k]])) {
-                                        stop("Simulation failed. Try different parameter values.")
+                                        warning("Simulation failed. Try different parameter values.")
                                 }
 
                                 colnames(census_paths[[k]]) <- c("time", rownames(stem_object$dynamics$flow_matrix_ode))
                                 colnames(ode_paths[[k]]) <- c("time",colnames(stem_object$dynamics$flow_matrix_ode))
                         }
+
+                        failed_runs  <- which(sapply(ode_paths, is.null))
+                        if(length(failed_runs) != 0) {
+                                census_paths <- census_paths[-failed_runs]
+                                ode_paths    <- ode_paths[-failed_runs]
+                        }
                 }
 
                 if(observations) {
 
-                        datasets         <- vector(mode = "list", length = nsim) # list for storing the datasets
+                        datasets         <- vector(mode = "list", length = length(census_paths)) # list for storing the datasets
                         measvar_names    <- colnames(stem_object$measurement_process$obsmat)
 
                         # grab the time-varying covariate values at observation times
@@ -905,7 +919,7 @@ simulate_stem <-
                                 flow_matrix_lna  <- stem_object$dynamics$flow_matrix_lna
                                 lna_event_inds   <- stem_object$measurement_process$incidence_codes_lna
 
-                                for(k in seq_len(nsim)) {
+                                for(k in seq_along(census_paths)) {
 
                                         # fill out the census matrix
                                         census_lna(path                = census_paths[[k]],
@@ -981,7 +995,7 @@ simulate_stem <-
                                                    init_state          = init_states[1,],
                                                    forcing_matrix      = forcing_matrix)
 
-                                        for(k in seq_len(nsim)) {
+                                        for(k in seq_along(census_paths)) {
 
                                                 # simulate the dataset
                                                 datasets[[k]] <- simulate_r_measure(pathmat,
@@ -1010,6 +1024,7 @@ simulate_stem <-
                 if(observations)  stem_simulations$datasets      <- datasets
                 if(subject_paths) stem_simulations$subject_paths <- subject_paths
                 if(method == "lna") stem_simulations$lna_draws   <- lna_draws
+                if(method != "gillespie") stem_simulations$failed_runs <- failed_runs
 
                 return(stem_simulations)
         }

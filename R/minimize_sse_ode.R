@@ -349,7 +349,6 @@ minimize_sse_ode <- function(stem_object, transformations = NULL, limits = NULL,
                                 ode_sse,
                                 method = c("nlminb"),
                                 hessian = FALSE,
-                                itnmax = 1e6,
                                 upper = upper,
                                 lower = lower
                         )}, silent = T)[seq_len(length(pars_init))]))
@@ -372,7 +371,6 @@ minimize_sse_ode <- function(stem_object, transformations = NULL, limits = NULL,
                                 ode_sse,
                                 method = c("L-BFGS-B"),
                                 hessian = FALSE,
-                                itnmax = 1e6,
                                 upper = upper,
                                 lower = lower
                         )}, silent = T)[seq_len(length(pars_init))]))
@@ -395,8 +393,7 @@ minimize_sse_ode <- function(stem_object, transformations = NULL, limits = NULL,
                                 pars_init,
                                 ode_sse,
                                 method = c("hjkb"),
-                                hessian = FALSE,
-                                itnmax = 1e6
+                                hessian = FALSE
                         )}, silent = T)[seq_len(length(pars_init))]))
 
                 if(!any(is.na(ests))) {
@@ -417,8 +414,7 @@ minimize_sse_ode <- function(stem_object, transformations = NULL, limits = NULL,
                                 pars_init,
                                 ode_sse,
                                 method = c("Nelder-Mead"),
-                                hessian = T,
-                                itnmax = 1e6
+                                hessian = FALSE
                         )}, silent = T)[seq_len(length(pars_init))]))
 
                 if(!any(is.na(ests))) {
