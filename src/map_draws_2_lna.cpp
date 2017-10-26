@@ -113,6 +113,8 @@ void map_draws_2_lna(arma::mat& pathmat,
                 lna_diffusion = arma::symmatu(lna_diffusion);
 
                 // map the stochastic perturbation to the LNA path on its natural scale
+                good_svd = arma::svd(svd_U, svd_d, svd_V, lna_diffusion); // compute the SVD
+
                 try{
                         good_svd = arma::svd(svd_U, svd_d, svd_V, lna_diffusion); // compute the SVD
 
