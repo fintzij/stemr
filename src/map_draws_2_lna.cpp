@@ -76,6 +76,8 @@ void map_draws_2_lna(arma::mat& pathmat,
         arma::vec init_volumes(current_params.begin() + init_start, n_comps);
 
         // initialize the LNA objects
+        bool good_svd = true;
+
         Rcpp::NumericVector lna_state_vec(n_odes); // the vector for storing the current state of the LNA ODEs
 
         arma::vec lna_drift(n_events, arma::fill::zeros);               // incidence mean vector (log scale)
@@ -111,21 +113,30 @@ void map_draws_2_lna(arma::mat& pathmat,
                 lna_diffusion = arma::symmatu(lna_diffusion);
 
                 // map the stochastic perturbation to the LNA path on its natural scale
+                good_svd = arma::svd(svd_U, svd_d, svd_V, lna_diffusion); // compute the SVD
+
                 try{
-                        arma::svd(svd_U, svd_d, svd_V, lna_diffusion); // compute the SVD
-                        svd_d.elem(arma::find(svd_d < 0)).zeros();     // zero out negative singular values
-                        svd_V.each_row() %= arma::sqrt(svd_d).t();     // multiply rows of V by sqrt of singular vals
+                        if(good_svd) {
+                                svd_d.elem(arma::find(svd_d < 0)).zeros();     // zero out negative singular values
+                                svd_V.each_row() %= arma::sqrt(svd_d).t();     // multiply rows of V by sqrt of singular vals
+                                log_lna = lna_drift + (svd_U * svd_V.t()) * draws.col(j); // map the LNA draws
+                        } else {
+                                throw std::runtime_error("SVD failed.");
+                        }
 
-                        log_lna = lna_drift + (svd_U * svd_V.t()) * draws.col(j); // map the LNA draws
-
-                } catch(std::runtime_error &err) {
+                } catch(std::runtime_error & err) {
 
                         // reinstatiate the SVD objects
                         arma::vec svd_d(n_events, arma::fill::zeros);
                         arma::mat svd_U(n_events, n_events, arma::fill::zeros);
                         arma::mat svd_V(n_events, n_events, arma::fill::zeros);
 
+                        // forward the exception
                         forward_exception_to_r(err);
+
+                } catch(...) {
+
+                        ::Rf_error("c++ exception (unknown reason)");
                 }
 
                 // compute the LNA increment and clamp below by 0
@@ -147,8 +158,13 @@ void map_draws_2_lna(arma::mat& pathmat,
                         if(any(nat_lna < 0) || any(init_volumes < 0)) {
                                 throw std::runtime_error("Negative compartment volumes.");
                         }
+
                 } catch(std::runtime_error &err) {
+
                         forward_exception_to_r(err);
+
+                } catch(...) {
+                        ::Rf_error("c++ exception (unknown reason)");
                 }
 
                 // update the parameters if they need to be updated
