@@ -113,14 +113,19 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
 
                 // map the stochastic perturbation to the LNA path on its natural scale
                 try{
-                        good_svd = arma::svd(svd_U, svd_d, svd_V, lna_diffusion); // compute the SVD
+                        if(lna_diffusion.has_nan()) {
+                                good_svd = false;
+                                throw std::runtime_error("Integration failed.");
+                        } else {
+                                good_svd = arma::svd(svd_U, svd_d, svd_V, lna_diffusion); // compute the SVD
+                        }
 
-                        if(good_svd) {
+                        if(!good_svd) {
+                                throw std::runtime_error("SVD failed.");
+                        } else {
                                 svd_d.elem(arma::find(svd_d < 0)).zeros();     // zero out negative singular values
                                 svd_V.each_row() %= arma::sqrt(svd_d).t();     // multiply rows of V by sqrt of singular vals
                                 log_lna = lna_drift + (svd_U * svd_V.t()) * draws.col(j); // map the LNA draws
-                        } else {
-                                throw std::runtime_error("SVD failed.");
                         }
 
                 } catch(std::exception & err) {
