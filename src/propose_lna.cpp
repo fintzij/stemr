@@ -72,6 +72,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
         arma::vec svd_d(n_events, arma::fill::zeros);
         arma::mat svd_U(n_events, n_events, arma::fill::zeros);
         arma::mat svd_V(n_events, n_events, arma::fill::zeros);
+        bool good_svd = true;
 
         // matrix in which to store the LNA path
         arma::mat lna_path(n_events+1, n_times, arma::fill::zeros); // incidence path
@@ -112,20 +113,28 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
 
                 // map the stochastic perturbation to the LNA path on its natural scale
                 try{
-                        arma::svd(svd_U, svd_d, svd_V, lna_diffusion); // compute the SVD
-                        svd_d.elem(arma::find(svd_d < 0)).zeros();     // zero out negative singular values
-                        svd_V.each_row() %= arma::sqrt(svd_d).t();     // multiply rows of V by sqrt of singular vals
+                        good_svd = arma::svd(svd_U, svd_d, svd_V, lna_diffusion); // compute the SVD
 
-                        log_lna = lna_drift + (svd_U * svd_V.t()) * draws.col(j); // map the LNA draws
+                        if(good_svd) {
+                                svd_d.elem(arma::find(svd_d < 0)).zeros();     // zero out negative singular values
+                                svd_V.each_row() %= arma::sqrt(svd_d).t();     // multiply rows of V by sqrt of singular vals
+                                log_lna = lna_drift + (svd_U * svd_V.t()) * draws.col(j); // map the LNA draws
+                        } else {
+                                throw std::runtime_error("SVD failed.");
+                        }
 
-                } catch(std::runtime_error &err) {
+                } catch(std::runtime_error & err) {
 
                         // reinstatiate the SVD objects
                         arma::vec svd_d(n_events, arma::fill::zeros);
                         arma::mat svd_U(n_events, n_events, arma::fill::zeros);
                         arma::mat svd_V(n_events, n_events, arma::fill::zeros);
 
+                        // forward the exception
                         forward_exception_to_r(err);
+
+                } catch(...) {
+                        ::Rf_error("c++ exception (unknown reason)");
                 }
 
                 // compute the LNA increment
@@ -159,8 +168,13 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                         if(any(init_volumes < 0)) {
                                 throw std::runtime_error("Negative compartment volumes.");
                         }
+
                 } catch(std::runtime_error &err) {
+
                         forward_exception_to_r(err);
+
+                } catch(...) {
+                        ::Rf_error("c++ exception (unknown reason)");
                 }
 
                 // update the parameters if they need to be updated
