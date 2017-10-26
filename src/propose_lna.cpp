@@ -113,7 +113,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
 
                 // map the stochastic perturbation to the LNA path on its natural scale
                 try{
-                        if(lna_diffusion.has_nan()) {
+                        if(lna_drift.has_nan() || lna_diffusion.has_nan()) {
                                 good_svd = false;
                                 throw std::runtime_error("Integration failed.");
                         } else {
