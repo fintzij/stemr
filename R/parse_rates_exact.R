@@ -30,6 +30,13 @@ parse_rates_exact <- function(rates, compile_rates, messages = TRUE) {
         }
 
         if(generate_code) {
+
+                # ensure powers are converted
+                for(r in seq_along(rates)) {
+                        if(!identical(rates[[r]]$unlumped, character(0))) rates[[r]]$unlumped <- sub_powers(rates[[r]]$unlumped)
+                        if(!identical(rates[[r]]$lumped, character(0)))   rates[[r]]$lumped   <- sub_powers(rates[[r]]$lumped)
+                }
+
                 arg_strings <- "Rcpp::NumericVector& rates, const Rcpp::LogicalVector& inds, const arma::rowvec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::rowvec& tcovar"
 
                 fcns_lumped <- vector("list", length = length(rates))

@@ -115,9 +115,9 @@ stem_dynamics <-
                  compile_lna = FALSE,
                  compile_ode = FALSE,
                  step_size = 1e-6,
-                 stepper = "bs",
-                 rtol = 1e-9,
-                 atol = 1e-9,
+                 stepper = "rk54_a",
+                 rtol = 1e-6,
+                 atol = 1e-6,
                  ...) {
 
         # check consistency of specification and throw errors if inconsistent

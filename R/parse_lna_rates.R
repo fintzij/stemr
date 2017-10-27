@@ -107,6 +107,8 @@ parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, l
                         hazards[s]      <- gsub(" ", "", hazards[s])
                         time_derivs[s]  <- gsub(pattern = lookup_table[j,"code"], replacement = lookup_table[j,"varname"], x = time_derivs[s])
                 }
+                hazards[s]     <- sub_powers(hazards[s])
+                time_derivs[s] <- sub_powers(time_derivs[s])
         }
 
         for(s in seq_along(derivatives)) {
