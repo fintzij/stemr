@@ -123,7 +123,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                         if(!good_svd) {
                                 throw std::runtime_error("SVD failed.");
                         } else {
-                                svd_d.elem(arma::find(svd_d < 0)).zeros();     // zero out negative singular values
+                                svd_d.elem(arma::find(svd_d < sqrt(arma::datum::eps))).zeros();     // zero out negative singular values
                                 svd_V.each_row() %= arma::sqrt(svd_d).t();     // multiply rows of V by sqrt of singular vals
                                 log_lna = lna_drift + (svd_U * svd_V.t()) * draws.col(j); // map the LNA draws
                         }
@@ -153,6 +153,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                         draws.col(j) = arma::randn(n_events);                          // draw a new vector of N(0,1)
                         log_lna      = lna_drift + (svd_U * svd_V.t()) * draws.col(j); // map the new draws to
                         nat_lna      = arma::exp(log_lna) - 1;                         // compute the LNA increment
+                        nat_lna.elem(arma::find(nat_lna < 0)).zeros();                 // clamp the increment to avoid numerical erro
                         init_volumes_prop = init_volumes + stoich_matrix * nat_lna;    // compute new initial volumes
                 }
 

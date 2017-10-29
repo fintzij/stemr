@@ -58,6 +58,7 @@ parse_ode_rates <- function(ode_rates, param_codes, const_codes, tcovar_codes, o
                         hazards[s]      <- gsub(pattern = lookup_table[j,"code"], replacement = lookup_table[j,"varname"], x = hazards[s])
                         hazards[s]      <- gsub(" ", "", hazards[s])
                 }
+                hazards[s] <- sub_powers(hazards[s])
         }
 
         for(s in seq_along(ode_rates)) {

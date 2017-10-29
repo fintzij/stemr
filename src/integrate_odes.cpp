@@ -94,6 +94,19 @@ Rcpp::List integrate_odes(const arma::rowvec& ode_times,
                         init_volumes += forcing_matrix.col(j+1);
                 }
 
+                // ensure the initial volumes are non-negative
+                try{
+                        if(any(init_volumes < 0)) {
+                                throw std::runtime_error("Negative compartment volumes.");
+                        }
+
+                } catch(std::runtime_error &err) {
+                        forward_exception_to_r(err);
+
+                } catch(...) {
+                        ::Rf_error("c++ exception (unknown reason)");
+                }
+
                 // update the parameters if they need to be updated
                 if(param_update_inds[j+1]) {
                         current_params = ode_pars.row(j+1);

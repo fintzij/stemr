@@ -121,7 +121,6 @@ simulate_stem <-
 
                 } else {
                         full_paths   <- TRUE
-                        # make sure that t0 and tmax are in the vector of census times
                         census_times <- as.numeric(sort(unique(c(t0, census_times, tmax))))
                 }
 
@@ -798,32 +797,30 @@ simulate_stem <-
 
                                 path    <- NULL
 
-                                while(is.null(path)) {
-                                        try({
-                                                path <- integrate_odes(ode_times         = ode_times,
-                                                                       ode_pars          = ode_pars,
-                                                                       init_start        = stem_object$dynamics$ode_initdist_inds[1],
-                                                                       param_update_inds = param_update_inds,
-                                                                       stoich_matrix     = stem_object$dynamics$stoich_matrix_ode,
-                                                                       forcing_inds      = forcing_inds,
-                                                                       forcing_matrix    = forcing_matrix,
-                                                                       step_size         = stem_object$dynamics$dynamics_args$step_size,
-                                                                       ode_pointer       = stem_object$dynamics$ode_pointers$ode_ptr,
-                                                                       set_pars_pointer  = stem_object$dynamics$ode_pointers$set_ode_params_ptr)
-                                        }, silent = TRUE)
+                                try({
+                                        path <- integrate_odes(ode_times         = ode_times,
+                                                               ode_pars          = ode_pars,
+                                                               init_start        = stem_object$dynamics$ode_initdist_inds[1],
+                                                               param_update_inds = param_update_inds,
+                                                               stoich_matrix     = stem_object$dynamics$stoich_matrix_ode,
+                                                               forcing_inds      = forcing_inds,
+                                                               forcing_matrix    = forcing_matrix,
+                                                               step_size         = stem_object$dynamics$dynamics_args$step_size,
+                                                               ode_pointer       = stem_object$dynamics$ode_pointers$ode_ptr,
+                                                               set_pars_pointer  = stem_object$dynamics$ode_pointers$set_ode_params_ptr)
+                                }, silent = TRUE)
 
-                                        if(!is.null(path)) {
-                                                census_paths[[k]] <- census_incidence(path$incid_path, census_times, census_interval_inds)
-                                                ode_paths[[k]]    <- path$prev_path[match(census_times, path$prev_path[,1]),]
-                                        }
+                                if(!is.null(path)) {
+                                        census_paths[[k]] <- census_incidence(path$incid_path, census_times, census_interval_inds)
+                                        ode_paths[[k]]    <- path$prev_path[match(census_times, path$prev_path[,1]),]
+
+                                        colnames(census_paths[[k]]) <- c("time", rownames(stem_object$dynamics$flow_matrix_ode))
+                                        colnames(ode_paths[[k]]) <- c("time",colnames(stem_object$dynamics$flow_matrix_ode))
                                 }
 
-                                if(is.null(census_paths[[k]])) {
+                                if(is.null(path) & messages) {
                                         warning("Simulation failed. Try different parameter values.")
                                 }
-
-                                colnames(census_paths[[k]]) <- c("time", rownames(stem_object$dynamics$flow_matrix_ode))
-                                colnames(ode_paths[[k]]) <- c("time",colnames(stem_object$dynamics$flow_matrix_ode))
                         }
 
                         failed_runs  <- which(sapply(ode_paths, is.null))

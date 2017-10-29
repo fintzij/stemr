@@ -124,7 +124,7 @@ void map_draws_2_lna(arma::mat& pathmat,
                         if(!good_svd) {
                                 throw std::runtime_error("SVD failed.");
                         } else {
-                                svd_d.elem(arma::find(svd_d < 0)).zeros();     // zero out negative singular values
+                                svd_d.elem(arma::find(svd_d < sqrt(arma::datum::eps))).zeros();     // zero out negative singular values
                                 svd_V.each_row() %= arma::sqrt(svd_d).t();     // multiply rows of V by sqrt of singular vals
                                 log_lna = lna_drift + (svd_U * svd_V.t()) * draws.col(j); // map the LNA draws
                         }
@@ -143,7 +143,7 @@ void map_draws_2_lna(arma::mat& pathmat,
                         ::Rf_error("c++ exception (unknown reason)");
                 }
 
-                // compute the LNA increment and clamp below by 0
+                // compute the LNA increment
                 nat_lna = arma::exp(log_lna) - 1;
 
                 // save the LNA increment
@@ -160,7 +160,7 @@ void map_draws_2_lna(arma::mat& pathmat,
                 // if any increments or volumes are negative, throw an error
                 try{
                         if(any(nat_lna < 0) || any(init_volumes < 0)) {
-                                throw std::runtime_error("Negative compartment volumes.");
+                                throw std::runtime_error("Negative increment or compartment volumes.");
                         }
 
                 } catch(std::runtime_error &err) {
