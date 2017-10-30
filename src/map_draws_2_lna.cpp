@@ -123,10 +123,14 @@ void map_draws_2_lna(arma::mat& pathmat,
 
                         if(!good_svd) {
                                 throw std::runtime_error("SVD failed.");
+
                         } else {
-                                svd_d.elem(arma::find(svd_d <= sqrt(arma::datum::eps))).zeros(); // zero out negative singular values
-                                svd_V.each_row() %= arma::sqrt(svd_d).t();     // multiply rows of V by sqrt of singular vals
-                                log_lna = lna_drift + (svd_U * svd_V.t()) * draws.col(j); // map the LNA draws
+                                svd_d.elem(arma::find(svd_d < 0)).zeros();          // zero out negative sing. vals
+                                svd_V.each_row() %= arma::sqrt(svd_d).t();          // multiply rows of V by sqrt(d)
+                                svd_U *= svd_V.t();                                 // complete svd_sqrt
+                                svd_U.elem(arma::find(lna_diffusion == 0)).zeros(); // zero out numerical errors
+
+                                log_lna = lna_drift + svd_U * draws.col(j);         // map the LNA draws
                         }
 
                 } catch(std::exception & err) {
@@ -151,13 +155,6 @@ void map_draws_2_lna(arma::mat& pathmat,
 
                 // update the initial volumes
                 init_volumes += stoich_matrix * nat_lna;
-
-                // cout << "j = " << j << endl;
-                // cout << "lna_drift: " << lna_drift << endl;
-                // cout << "lna_diffusion: " << lna_diffusion << endl;
-                // cout << "lna_sqrt_diff: " << (svd_U * svd_V.t()) << endl;
-                // cout << "nat_lna: " << nat_lna << endl;
-                // cout << "init_volumes: " << init_volumes << endl;
 
                 // apply forcings if called for - applied after censusing the path
                 if(forcing_inds[j+1]) {

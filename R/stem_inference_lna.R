@@ -46,7 +46,7 @@ stem_inference_lna <- function(stem_object,
                                messages) {
 
         # if the MCMC is being restarted, save the existing results
-        mcmc_restart <- !is.null(stem_object$results)
+        mcmc_restart <- !is.null(stem_object$stem_settings$path_for_restart)
 
         # extract the model objects from the stem_object
         if(is.function(stem_object$dynamics$parameters)) {
@@ -81,12 +81,16 @@ stem_inference_lna <- function(stem_object,
 
         # elliptical slice sampling settings
         if(is.null(ess_args)) {
+
                 n_ess_updates <- 1
                 ess_schedule  <- list(seq_len(nrow(flow_matrix)))
+                ess_warmup    <- 200
                 randomize_schedule <- TRUE
+
         } else {
                 n_ess_updates <- ess_args$n_ess_updates
                 ess_schedule  <- ess_args$ess_schedule
+                ess_warmup    <- ess_args$warmup
                 randomize_schedule <- ess_args$randomize_schedule
 
                 # convert the character strings to indices
@@ -574,6 +578,48 @@ stem_inference_lna <- function(stem_object,
         params_log_prior[1]   <- params_logprior_cur
         if(!fixed_inits) initdist_log_prior[1] <- initdist_prior(initdist_params_cur)
 
+        # warmup the latent path
+        if(!mcmc_restart) {
+                for(warmup in seq_len(ess_warmup)) {
+
+                        # Update the path via elliptical slice sampling
+                        update_lna_path(
+                                path_cur                = path,
+                                data                    = data,
+                                lna_parameters          = lna_params_cur,
+                                pathmat_prop            = pathmat_prop,
+                                censusmat               = censusmat,
+                                draws_prop              = draws_prop,
+                                emitmat                 = emitmat,
+                                flow_matrix             = flow_matrix,
+                                stoich_matrix           = stoich_matrix,
+                                lna_times               = lna_times,
+                                forcing_inds            = forcing_inds,
+                                forcing_matrix          = forcing_matrix,
+                                lna_param_inds          = lna_param_inds,
+                                lna_const_inds          = lna_const_inds,
+                                lna_tcovar_inds         = lna_tcovar_inds,
+                                lna_initdist_inds       = lna_initdist_inds,
+                                param_update_inds       = param_update_inds,
+                                lna_event_inds          = lna_event_inds,
+                                census_indices          = census_indices,
+                                measproc_indmat         = measproc_indmat,
+                                svd_sqrt                = svd_sqrt,
+                                svd_d                   = svd_d,
+                                svd_U                   = svd_U,
+                                svd_V                   = svd_V,
+                                lna_pointer             = lna_pointer,
+                                lna_set_pars_pointer    = lna_set_pars_pointer,
+                                d_meas_pointer          = d_meas_pointer,
+                                do_prevalence           = do_prevalence,
+                                n_ess_updates           = n_ess_updates,
+                                ess_schedule            = ess_schedule,
+                                randomize_schedule      = randomize_schedule,
+                                step_size               = step_size
+                        )
+                }
+        }
+
         # initialize the status file if status updates are required
         if(messages) {
                 status_file <-
@@ -952,10 +998,6 @@ stem_inference_lna <- function(stem_object,
                                         kernel_resid <- model_params_est - kernel_mean
                                         kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid%*%t(kernel_resid) - kernel_cov)
                                         kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
-
-#                                         kernel_resid[s] <- model_params_est[s] - kernel_mean[s]
-#                                         kernel_cov[s]   <- kernel_cov[s] + adaptations[iter] * (kernel_resid[s]^2 - kernel_cov[s])
-#                                         kernel_mean[s]  <- kernel_mean[s] + adaptations[iter] * kernel_resid[s]
                                 }
                         }
 

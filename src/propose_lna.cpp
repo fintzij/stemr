@@ -83,7 +83,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
 
         // apply forcings if called for - applied after censusing at the first time
         if(forcing_inds[0]) {
-                init_volumes += forcing_matrix.col(0);
+                init_volumes      += forcing_matrix.col(0);
                 init_volumes_prop += forcing_matrix.col(0);
         }
 
@@ -122,10 +122,14 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
 
                         if(!good_svd) {
                                 throw std::runtime_error("SVD failed.");
+
                         } else {
-                                svd_d.elem(arma::find(svd_d <= sqrt(arma::datum::eps))).zeros(); // zero out negative singular values
-                                svd_V.each_row() %= arma::sqrt(svd_d).t();     // multiply rows of V by sqrt of singular vals
-                                log_lna = lna_drift + (svd_U * svd_V.t()) * draws.col(j); // map the LNA draws
+                                svd_d.elem(arma::find(svd_d < 0)).zeros();          // zero out negative sing. vals
+                                svd_V.each_row() %= arma::sqrt(svd_d).t();          // multiply rows of V by sqrt(d)
+                                svd_U *= svd_V.t();                                 // complete svd_sqrt
+                                svd_U.elem(arma::find(lna_diffusion == 0)).zeros(); // zero out numerical errors
+
+                                log_lna = lna_drift + svd_U * draws.col(j);         // map the LNA draws
                         }
 
                 } catch(std::exception & err) {
@@ -151,7 +155,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                 // ensure that the LNA increment is positive and that the volumes are positive
                 while(any(nat_lna < 0) | any(init_volumes_prop < 0)) {
                         draws.col(j) = arma::randn(n_events);                          // draw a new vector of N(0,1)
-                        log_lna      = lna_drift + (svd_U * svd_V.t()) * draws.col(j); // map the new draws to
+                        log_lna      = lna_drift + svd_U * draws.col(j); // map the new draws to
                         nat_lna      = arma::exp(log_lna) - 1;                         // compute the LNA increment
                         init_volumes_prop = init_volumes + stoich_matrix * nat_lna;    // compute new initial volumes
                 }

@@ -45,7 +45,6 @@ update_lna_path <-
                  randomize_schedule,
                  step_size) {
 
-
         # vector for storing the number of steps in each ESS update
         ess_record <- matrix(1, nrow = n_ess_updates, ncol = length(ess_schedule[[1]]))
 

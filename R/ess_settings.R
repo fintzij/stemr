@@ -16,13 +16,15 @@
 #'   contains more than one vector, then the LNA paths for the events in the
 #'   vectors are sampled in a random order in each MCMC iteration (e.g., males
 #'   and females are sampled in a random order).
+#' @param warmup warmup ESS updates prior to starting MCMC
 #'
 #' @return list with settings for elliptical slice sampling
 #' @export
-ess_settings <- function(n_ess_updates = 1, ess_schedule = NULL, randomize_schedule = TRUE) {
+ess_settings <- function(n_ess_updates = 1, ess_schedule = NULL, randomize_schedule = TRUE, warmup = 200) {
 
         return(list(n_ess_updates = n_ess_updates,
                     ess_schedule = ess_schedule,
-                    randomize_schedule = randomize_schedule))
+                    randomize_schedule = randomize_schedule,
+                    warmup = warmup))
 
 }
