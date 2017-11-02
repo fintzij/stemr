@@ -116,11 +116,11 @@ simulate_stem <-
 
                 # make sure that there exists a vector of census times
                 if(is.null(census_times)) {
-                        full_paths   <- FALSE
+                        full_paths   <- TRUE
                         census_times <- as.numeric(unique(c(t0, seq(t0,tmax,by=timestep), tmax)))
 
                 } else {
-                        full_paths   <- TRUE
+                        full_paths   <- FALSE
                         census_times <- as.numeric(sort(unique(c(t0, census_times, tmax))))
                 }
 
@@ -317,7 +317,7 @@ simulate_stem <-
                                 for(k in seq_len(nsim)) {
 
                                         attempt <- 0
-                                        if(!is.null(simulation_parameters)) sim_pars <- simulation_parameters[[k]]
+                                        if(!is.null(simulation_parameters)) sim_pars <- as.numeric(simulation_parameters[[k]])
 
                                         while(is.null(paths_full[[k]]) && attempt < max_attempts) {
                                                 try({paths_full[[k]] <- simulate_gillespie(flow             = stem_object$dynamics$flow_matrix,
@@ -361,7 +361,7 @@ simulate_stem <-
 
                                         attempt <- 0
                                         path_full <- NULL
-                                        if(!is.null(simulation_parameters)) sim_pars <- simulation_parameters[[k]]
+                                        if(!is.null(simulation_parameters)) sim_pars <- as.numeric(simulation_parameters[[k]])
 
                                         while(is.null(path_full) & attempt < max_attempts) {
                                                 try({
@@ -547,7 +547,7 @@ simulate_stem <-
                         for(k in seq_len(nsim)) {
 
                                 if(!is.null(simulation_parameters)) {
-                                        sim_pars <- simulation_parameters[[k]]
+                                        sim_pars <- as.numeric(simulation_parameters[[k]])
                                 }
 
                                 if(!stem_object$dynamics$fixed_inits) {
@@ -785,7 +785,7 @@ simulate_stem <-
                         for(k in seq_along(census_paths)) {
 
                                 if(!is.null(simulation_parameters)) {
-                                        sim_pars <- simulation_parameters[[k]]
+                                        sim_pars <- as.numeric(simulation_parameters[[k]])
                                 }
 
                                 if(!stem_object$dynamics$fixed_inits) {
@@ -888,7 +888,7 @@ simulate_stem <-
                                         }
 
                                         # get the new simulation parameters if a list was supplied
-                                        if(!is.null(simulation_parameters)) sim_pars <- simulation_parameters[[k]]
+                                        if(!is.null(simulation_parameters)) sim_pars <- as.numeric(simulation_parameters[[k]])
 
                                         # simulate the data
                                         datasets[[k]] <- simulate_r_measure(censusmat = censusmat,
@@ -928,7 +928,7 @@ simulate_stem <-
                                                    init_state          = init_states[k,],
                                                    forcing_matrix      = forcing_matrix)
 
-                                        if(!is.null(simulation_parameters)) sim_pars <- simulation_parameters[[k]]
+                                        if(!is.null(simulation_parameters)) sim_pars <- as.numeric(simulation_parameters[[k]])
 
                                         # simulate the dataset
                                         datasets[[k]] <- simulate_r_measure(pathmat,
@@ -970,7 +970,7 @@ simulate_stem <-
                                                            init_state          = init_states[k,],
                                                            forcing_matrix      = forcing_matrix)
 
-                                                if(!is.null(simulation_parameters)) sim_pars <- simulation_parameters[[k]]
+                                                if(!is.null(simulation_parameters)) sim_pars <- as.numeric(simulation_parameters[[k]])
 
                                                 # simulate the dataset
                                                 datasets[[k]] <- simulate_r_measure(pathmat,
