@@ -319,7 +319,8 @@ stem_inference_ode <- function(stem_object,
 
         # insert time varying covariates
         if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
-                tcovar_rowinds <- match(ode_times, stem_object$dynamics$tcovar[,1])
+                tcovar_rowinds <- match(round(ode_times, digits = 8),
+                                        round(stem_object$dynamics$tcovar[,1],digits = 8))
                 ode_params_cur[tcovar_rowinds, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
                 ode_params_prop[tcovar_rowinds,tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
         }
@@ -335,8 +336,8 @@ stem_inference_ode <- function(stem_object,
         if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
 
                 # get the forcing indices (supplied in the original tcovar matrix)
-                forcing_inds <- as.logical(match(ode_times,
-                                                 stem_object$dynamics$dynamics_args$tcovar[,1],
+                forcing_inds <- as.logical(match(round(ode_times, digits = 8),
+                                                 round(stem_object$dynamics$dynamics_args$tcovar[,1], digits = 8),
                                                  nomatch = FALSE))
                 zero_inds    <- !forcing_inds
 

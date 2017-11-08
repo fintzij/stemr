@@ -206,7 +206,9 @@ stem_inference_lna <- function(stem_object,
         # generate other derived objects
         lna_times         <- sort(unique(c(obstimes,
                                            stem_object$dynamics$tcovar[,1],
-                                           stem_object$dynamics$t0,
+                                           seq(stem_object$dynamics$t0,
+                                               stem_object$dynamics$tmax,
+                                               by = stem_object$dynamics$timestep),
                                            stem_object$dynamics$tmax)))
         tmax              <- max(lna_times)
         n_times           <- length(lna_times)
@@ -351,6 +353,7 @@ stem_inference_lna <- function(stem_object,
                                     nrow = length(lna_times),
                                     ncol = length(stem_object$dynamics$lna_rates$lna_param_codes),
                                     dimnames = list(NULL, names(stem_object$dynamics$lna_rates$lna_param_codes)))
+
         lna_params_prop   <- matrix(0.0,
                                     nrow = length(lna_times),
                                     ncol = length(stem_object$dynamics$lna_rates$lna_param_codes),
@@ -375,7 +378,7 @@ stem_inference_lna <- function(stem_object,
 
         # insert time varying covariates
         if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
-                tcovar_rowinds <- match(lna_times, stem_object$dynamics$tcovar[,1])
+                tcovar_rowinds <- findInterval(lna_times, stem_object$dynamics$tcovar[,1], all.inside = T)
                 lna_params_cur[tcovar_rowinds, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
                 lna_params_prop[tcovar_rowinds,tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
         }
@@ -391,8 +394,8 @@ stem_inference_lna <- function(stem_object,
         if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
 
                 # get the forcing indices (supplied in the original tcovar matrix)
-                forcing_inds <- as.logical(match(lna_times,
-                                                 stem_object$dynamics$dynamics_args$tcovar[,1],
+                forcing_inds <- as.logical(match(round(lna_times, digits = 8),
+                                                 round(stem_object$dynamics$dynamics_args$tcovar[,1], digits = 8),
                                                  nomatch = FALSE))
                 zero_inds    <- !forcing_inds
 

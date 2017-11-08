@@ -7,7 +7,9 @@
 #' @param simulation_parameters optional list of vectors of simulation
 #'   parameters. If NULL, paths are simulated using the parameters specified in
 #'   the stem object.
-#' @param paths Should population-level paths be returned?
+#' @param paths Should population-level paths at census times be returned?
+#' @param full_paths Should complete population level paths be returned (only
+#'   for Gillespie), defaults to FALSE
 #' @param observations Should simulated observations be returned? Requires that
 #'   a measurement process be defined in the stem object.
 #' @param subject_paths Should population-level paths be mapped to subject-level
@@ -48,6 +50,7 @@ simulate_stem <-
                  nsim = 1,
                  simulation_parameters = NULL,
                  paths = FALSE,
+                 full_paths = FALSE,
                  observations = FALSE,
                  subject_paths = FALSE,
                  method = "gillespie",
@@ -116,11 +119,15 @@ simulate_stem <-
 
                 # make sure that there exists a vector of census times
                 if(is.null(census_times)) {
-                        full_paths   <- TRUE
-                        census_times <- as.numeric(unique(c(t0, seq(t0,tmax,by=timestep), tmax)))
+
+                        if(is.null(stem_object$measurement_process$obstimes)) {
+                                census_times <- as.numeric(unique(c(t0, seq(t0,tmax,by=timestep), tmax)))
+
+                        } else {
+                                census_times <- as.numeric(unique(c(t0, stem_object$measurement_process$obstimes, tmax)))
+                        }
 
                 } else {
-                        full_paths   <- FALSE
                         census_times <- as.numeric(sort(unique(c(t0, census_times, tmax))))
                 }
 
@@ -158,8 +165,8 @@ simulate_stem <-
                                 if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
 
                                         # get the forcing indices (supplied in the original tcovar matrix)
-                                        forcing_inds <- as.logical(match(stem_object$dynamics$tcovar[,1],
-                                                                         stem_object$dynamics$dynamics_args$tcovar[,1],
+                                        forcing_inds <- as.logical(match(round(stem_object$dynamics$tcovar[,1], digits = 8),
+                                                                         round(stem_object$dynamics$dynamics_args$tcovar[,1], digits = 8),
                                                                          nomatch = FALSE))
                                         zero_inds    <- !forcing_inds
 
@@ -175,8 +182,8 @@ simulate_stem <-
                                 if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
 
                                         # get the forcing indices (supplied in the original tcovar matrix)
-                                        forcing_inds <- as.logical(match(stem_object$dynamics$tcovar[,1],
-                                                                         stem_object$dynamics$dynamics_args$tcovar[,1],
+                                        forcing_inds <- as.logical(match(round(stem_object$dynamics$tcovar[,1], digits = 8),
+                                                                         round(stem_object$dynamics$dynamics_args$tcovar[,1], digits = 8),
                                                                          nomatch = FALSE))
                                 } else {
                                         forcing_inds   <- rep(FALSE, nrow(stem_object$dynamics$tcovar))
@@ -294,9 +301,9 @@ simulate_stem <-
 
                                         for(n in seq_along(stem_object$dynamics$rates)) {
                                                 affected_rates[n] = grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$from,
-                                                         stem_object$dynamics$rates[[n]]$unparsed) |
+                                                                          stem_object$dynamics$rates[[n]]$unparsed) |
                                                         grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$to,
-                                                         stem_object$dynamics$rates[[n]]$unparsed)
+                                                              stem_object$dynamics$rates[[n]]$unparsed)
                                         }
 
                                         stem_object$dynamics$tcovar_adjmat[,stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] <-
@@ -305,95 +312,65 @@ simulate_stem <-
                                 }
                         }
 
-                        if(full_paths) {
+                        # initialize the list of paths
+                        if(full_paths) paths_full <- vector(mode = "list", length = nsim)
 
-                                # initialize the list of paths
-                                paths_full <- vector(mode = "list", length = nsim)
+                        census_paths    <- vector(mode = "list", length = nsim)
+                        census_colnames <- c("time", c(names(stem_object$dynamics$comp_codes),
+                                                       names(stem_object$dynamics$incidence_codes)))
 
-                                # vector of model parameters
-                                sim_pars <- stem_object$dynamics$parameters
+                        # add 2 to the codes b/c 'time' and 'event' are in the full path
+                        census_codes  <- c(stem_object$dynamics$comp_codes, stem_object$dynamics$incidence_codes) + 2
+                        get_incidence <- !is.null(stem_object$dynamics$incidence_codes)
 
-                                # simulate the paths
-                                for(k in seq_len(nsim)) {
+                        if(get_incidence) {
+                                incidence_codes       <- stem_object$dynamics$incidence_codes + 1
+                                census_incidence_rows <- rep(list(seq_along(census_times) - 1),
+                                                             length(stem_object$dynamics$incidence_codes))
+                        }
 
-                                        attempt <- 0
-                                        if(!is.null(simulation_parameters)) sim_pars <- as.numeric(simulation_parameters[[k]])
+                        # vector of model parameters
+                        sim_pars <- stem_object$dynamics$parameters
 
-                                        while(is.null(paths_full[[k]]) && attempt < max_attempts) {
-                                                try({paths_full[[k]] <- simulate_gillespie(flow             = stem_object$dynamics$flow_matrix,
-                                                                                           parameters       = sim_pars,
-                                                                                           constants        = stem_object$dynamics$constants,
-                                                                                           tcovar           = stem_object$dynamics$tcovar,
-                                                                                           init_states      = init_states[k,],
-                                                                                           rate_adjmat      = stem_object$dynamics$rate_adjmat,
-                                                                                           tcovar_adjmat    = stem_object$dynamics$tcovar_adjmat,
-                                                                                           tcovar_changemat = stem_object$dynamics$tcovar_changemat,
-                                                                                           init_dims        = init_dims,
-                                                                                           forcing_inds     = forcing_inds,
-                                                                                           forcing_matrix   = forcing_matrix,
-                                                                                           rate_ptr         = stem_object$dynamics$rate_ptrs[[1]])
-                                                }, silent = TRUE)
-                                        }
+                        for(k in seq_len(nsim)) {
 
+                                attempt <- 0
+                                path_full <- NULL
+                                if(!is.null(simulation_parameters)) sim_pars <- as.numeric(simulation_parameters[[k]])
+
+                                while(is.null(path_full) & attempt < max_attempts) {
+                                        try({
+                                                path_full <- simulate_gillespie(flow             = stem_object$dynamics$flow_matrix,
+                                                                                parameters       = sim_pars,
+                                                                                constants        = stem_object$dynamics$constants,
+                                                                                tcovar           = stem_object$dynamics$tcovar,
+                                                                                init_states      = init_states[k,],
+                                                                                rate_adjmat      = stem_object$dynamics$rate_adjmat,
+                                                                                tcovar_adjmat    = stem_object$dynamics$tcovar_adjmat,
+                                                                                tcovar_changemat = stem_object$dynamics$tcovar_changemat,
+                                                                                init_dims        = init_dims,
+                                                                                forcing_inds     = forcing_inds,
+                                                                                forcing_matrix   = forcing_matrix,
+                                                                                rate_ptr         = stem_object$dynamics$rate_ptrs[[1]])
+                                        }, silent = TRUE)
                                         attempt <- attempt + 1
-                                        colnames(paths_full[[k]]) <- path_colnames
                                 }
 
-                        } else {
-                                census_paths    <- vector(mode = "list", length = nsim)
-                                census_colnames <- c("time", c(names(stem_object$dynamics$comp_codes),
-                                                               names(stem_object$dynamics$incidence_codes)))
+                                # get the census path
+                                census_paths[[k]] <- build_census_path(path = path_full,
+                                                                       census_times = census_times,
+                                                                       census_columns = census_codes)
 
-                                # add 2 to the codes b/c 'time' and 'event' are in the full path
-                                census_codes  <- c(stem_object$dynamics$comp_codes, stem_object$dynamics$incidence_codes) + 2
-                                get_incidence <- !is.null(stem_object$dynamics$incidence_codes)
+                                # compute incidence if required. n.b. add 1 to the incidence codes b/c 'time' is in the census path
+                                if(get_incidence) compute_incidence(censusmat = census_paths[[k]],
+                                                                    col_inds  = incidence_codes,
+                                                                    row_inds  = census_incidence_rows)
 
-                                if(get_incidence) {
-                                        incidence_codes       <- stem_object$dynamics$incidence_codes + 1
-                                        census_incidence_rows <- rep(list(seq_along(census_times) - 1),
-                                                                     length(stem_object$dynamics$incidence_codes))
-                                }
+                                # assign column names
+                                colnames(census_paths[[k]]) <- census_colnames
 
-                                # vector of model parameters
-                                sim_pars <- stem_object$dynamics$parameters
-
-                                for(k in seq_len(nsim)) {
-
-                                        attempt <- 0
-                                        path_full <- NULL
-                                        if(!is.null(simulation_parameters)) sim_pars <- as.numeric(simulation_parameters[[k]])
-
-                                        while(is.null(path_full) & attempt < max_attempts) {
-                                                try({
-                                                        path_full <- simulate_gillespie(flow             = stem_object$dynamics$flow_matrix,
-                                                                                        parameters       = sim_pars,
-                                                                                        constants        = stem_object$dynamics$constants,
-                                                                                        tcovar           = stem_object$dynamics$tcovar,
-                                                                                        init_states      = init_states[k,],
-                                                                                        rate_adjmat      = stem_object$dynamics$rate_adjmat,
-                                                                                        tcovar_adjmat    = stem_object$dynamics$tcovar_adjmat,
-                                                                                        tcovar_changemat = stem_object$dynamics$tcovar_changemat,
-                                                                                        init_dims        = init_dims,
-                                                                                        forcing_inds     = forcing_inds,
-                                                                                        forcing_matrix   = forcing_matrix,
-                                                                                        rate_ptr         = stem_object$dynamics$rate_ptrs[[1]])
-                                                }, silent = TRUE)
-                                                attempt <- attempt + 1
-                                        }
-
-                                        # get the census path
-                                        census_paths[[k]] <- build_census_path(path = path_full,
-                                                                               census_times = census_times,
-                                                                               census_columns = census_codes)
-
-                                        # compute incidence if required. n.b. add 1 to the incidence codes b/c 'time' is in the census path
-                                        if(get_incidence) compute_incidence(censusmat = census_paths[[k]],
-                                                                            col_inds  = incidence_codes,
-                                                                            row_inds  = census_incidence_rows)
-
-                                        # assign column names
-                                        colnames(census_paths[[k]]) <- census_colnames
-                                }
+                                # save the full path if desired
+                                if(full_paths) paths_full[[k]] <- path_full
                         }
 
                 } else if (method == "lna") {
@@ -402,7 +379,12 @@ simulate_stem <-
                         higher_order_rates <- sapply(stem_object$dynamics$rates, function(x) x$higher_order)
 
                         # set the vectors of times when the LNA is evaluated and censused
-                        lna_times <- sort(unique(c(t0, census_times, stem_object$dynamics$tcovar[,1], tmax)))
+                        lna_times <- sort(unique(
+                                        c(t0,
+                                          census_times,
+                                          seq(t0, tmax, by = stem_object$dynamics$timestep),
+                                          stem_object$dynamics$tcovar[, 1],
+                                          tmax)))
 
                         # generate the matrix of parameters, constants, and time-varying covariates
                         lna_pars  <- matrix(0.0,
@@ -425,15 +407,16 @@ simulate_stem <-
                         forcing_inds <- rep(FALSE, length(lna_times))
 
                         if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
-                                tcovar_rowinds <- match(lna_times, stem_object$dynamics$tcovar[,1])
+                                tcovar_rowinds <- match(round(lna_times, digits = 8),
+                                                        round(stem_object$dynamics$tcovar[,1], digits = 8))
                                 lna_pars[tcovar_rowinds, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
 
                                 # zero out forcings if necessary
                                 if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
 
                                         # get the forcing indices (supplied in the original tcovar matrix)
-                                        forcing_inds <- as.logical(match(lna_times,
-                                                                         stem_object$dynamics$dynamics_args$tcovar[,1],
+                                        forcing_inds <- as.logical(match(round(lna_times, digits = 8),
+                                                                         round(stem_object$dynamics$dynamics_args$tcovar[,1], digits = 8),
                                                                          nomatch = FALSE))
                                         zero_inds    <- !forcing_inds
 
@@ -452,6 +435,8 @@ simulate_stem <-
                         census_paths <- vector(mode = "list", length = nsim)
                         lna_draws    <- vector(mode = "list", length = nsim)
                         lna_paths    <- vector(mode = "list", length = nsim)
+                        # drift_vecs   <- vector(mode = "list", length = nsim)
+                        # diff_mats    <- vector(mode = "list", length = nsim)
 
                         # retrieve the initial state
                         init_state <- lna_pars[1, stem_object$dynamics$lna_initdist_inds + 1]
@@ -577,16 +562,16 @@ simulate_stem <-
                                                 } else if(lna_method == "mvt") {
 
                                                         path <- propose_lna_t(lna_times         = lna_times,
-                                                                            lna_pars          = lna_pars,
-                                                                            init_start        = stem_object$dynamics$lna_initdist_inds[1],
-                                                                            param_update_inds = param_update_inds,
-                                                                            stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
-                                                                            forcing_inds      = forcing_inds,
-                                                                            forcing_matrix    = forcing_matrix,
-                                                                            step_size         = stem_object$dynamics$dynamics_args$step_size,
-                                                                            df                = lna_df,
-                                                                            lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
-                                                                            set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
+                                                                              lna_pars          = lna_pars,
+                                                                              init_start        = stem_object$dynamics$lna_initdist_inds[1],
+                                                                              param_update_inds = param_update_inds,
+                                                                              stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
+                                                                              forcing_inds      = forcing_inds,
+                                                                              forcing_matrix    = forcing_matrix,
+                                                                              step_size         = stem_object$dynamics$dynamics_args$step_size,
+                                                                              df                = lna_df,
+                                                                              lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
+                                                                              set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
 
                                                 } else if(lna_method == "mvst") {
 
@@ -605,14 +590,19 @@ simulate_stem <-
 
 
                                                 }
-                                                }, silent = TRUE)
+                                        }, silent = TRUE)
 
                                         attempt           <- attempt + 1
 
                                         if(!is.null(path)) {
                                                 census_paths[[k]] <- census_incidence(path$lna_path, census_times, census_interval_inds)
-                                                lna_paths[[k]]    <- path$prev_path[match(census_times, path$prev_path[,1]),]
+                                                lna_paths[[k]]    <- path$prev_path[match(round(census_times, digits = 8),
+                                                                                          round(path$prev_path[,1], digits = 8)),]
                                                 lna_draws[[k]]    <- path$draws
+
+                                                # lna_moments, used in testing
+                                                # drift_vecs[[k]]   <- path$drift_vecs
+                                                # diff_mats[[k]]    <- path$diff_mats
                                         }
                                 }
 
@@ -657,15 +647,16 @@ simulate_stem <-
                         forcing_inds <- rep(FALSE, length(ode_times))
 
                         if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
-                                tcovar_rowinds <- match(ode_times, stem_object$dynamics$tcovar[,1])
+                                tcovar_rowinds <- match(round(ode_times, digits = 8),
+                                                        round(stem_object$dynamics$tcovar[,1], digits = 8))
                                 ode_pars[tcovar_rowinds, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
 
                                 # zero out forcings if necessary
                                 if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
 
                                         # get the forcing indices (supplied in the original tcovar matrix)
-                                        forcing_inds <- as.logical(match(ode_times,
-                                                                         stem_object$dynamics$dynamics_args$tcovar[,1],
+                                        forcing_inds <- as.logical(match(round(ode_times, digits = 8),
+                                                                         round(stem_object$dynamics$dynamics_args$tcovar[,1], digits = 8),
                                                                          nomatch = FALSE))
                                         zero_inds    <- !forcing_inds
 
@@ -812,7 +803,8 @@ simulate_stem <-
 
                                 if(!is.null(path)) {
                                         census_paths[[k]] <- census_incidence(path$incid_path, census_times, census_interval_inds)
-                                        ode_paths[[k]]    <- path$prev_path[match(census_times, path$prev_path[,1]),]
+                                        ode_paths[[k]]    <- path$prev_path[match(round(census_times, digits = 8),
+                                                                                  round(path$prev_path[,1], digits = 8)),]
 
                                         colnames(census_paths[[k]]) <- c("time", rownames(stem_object$dynamics$flow_matrix_ode))
                                         colnames(ode_paths[[k]]) <- c("time",colnames(stem_object$dynamics$flow_matrix_ode))
@@ -846,7 +838,7 @@ simulate_stem <-
 
                         # census if computing incidence or if computing prevalence and the obstimes != census_times
                         do_census <- !is.null(census_times) &&
-                                      !identical(as.numeric(stem_object$measurement_process$obstimes), as.numeric(census_times))
+                                !identical(as.numeric(stem_object$measurement_process$obstimes), as.numeric(census_times))
 
                         # get the indices in the censused matrices for the observation times
                         if(do_census) cens_inds <- findInterval(stem_object$measurement_process$obstimes, census_times)
@@ -908,7 +900,8 @@ simulate_stem <-
                                 constants        <- stem_object$dynamics$constants
                                 tcovar           <- tcovar_obstimes
                                 r_measure_ptr    <- stem_object$measurement_process$meas_pointers$r_measure_ptr
-                                cens_inds        <- c(0,match(stem_object$measurement_process$obstimes, census_times) - 1)
+                                cens_inds        <- c(0,match(round(stem_object$measurement_process$obstimes, digits = 8),
+                                                              round(census_times, digits = 8)) - 1)
                                 do_prevalence    <- stem_object$measurement_process$lna_prevalence
                                 do_incidence     <- stem_object$measurement_process$lna_incidence
                                 obstime_inds     <- stem_object$measurement_process$obstime_inds
@@ -948,7 +941,8 @@ simulate_stem <-
                                 constants        <- stem_object$dynamics$constants
                                 tcovar           <- tcovar_obstimes
                                 r_measure_ptr    <- stem_object$measurement_process$meas_pointers$r_measure_ptr
-                                cens_inds        <- c(0,match(stem_object$measurement_process$obstimes, census_times) - 1)
+                                cens_inds        <- c(0,match(round(stem_object$measurement_process$obstimes, digits = 8),
+                                                              round(census_times, digits = 8)) - 1)
                                 do_prevalence    <- stem_object$measurement_process$ode_prevalence
                                 do_incidence     <- stem_object$measurement_process$ode_incidence
                                 obstime_inds     <- stem_object$measurement_process$obstime_inds
@@ -992,7 +986,7 @@ simulate_stem <-
                                                    init_state          = init_states[1,],
                                                    forcing_matrix      = forcing_matrix)
 
-                                        for(k in seq_along(census_paths)) {
+                                        for(k in seq_len(nsim)) {
 
                                                 # simulate the dataset
                                                 datasets[[k]] <- simulate_r_measure(pathmat,
@@ -1022,6 +1016,10 @@ simulate_stem <-
                 if(subject_paths) stem_simulations$subject_paths <- subject_paths
                 if(method == "lna") stem_simulations$lna_draws   <- lna_draws
                 if(method != "gillespie") stem_simulations$failed_runs <- failed_runs
+
+                # lna_moments used in testing
+                #                 if(method == "lna") stem_simulations$lna_moments <- list(drift_vecs = drift_vecs,
+                #                                                                          diff_mats = diff_mats)
 
                 return(stem_simulations)
         }

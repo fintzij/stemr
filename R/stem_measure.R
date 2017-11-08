@@ -110,6 +110,13 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
 
         if(strata_specified) meas_procs <- unlist(meas_procs, recursive = FALSE)
 
+        # substitute powers in the emission parameters
+        for(k in seq_along(meas_procs)) {
+                for(j in seq_along(meas_procs[[k]]$emission_params)) {
+                        meas_procs[[k]]$emission_params[j] <- sub_powers(paste0("(",meas_procs[[k]]$emission_params[j],")"))
+                }
+        }
+
         # if a dataset or list of datasets is supplied, extract the observation times, combine them and generate the indicator matrix
         if(!is.null(data)) {
                 if(!is.list(data)) {
@@ -240,7 +247,8 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
         censusmat[,"time"] <- obstimes
 
         # get the list of vectors of observation times for each measurement process
-        obstime_inds <- lapply(meas_procs, FUN = function(proc) match(proc$obstimes, obstimes) - 1)
+        obstime_inds <- lapply(meas_procs, FUN = function(proc) match(round(proc$obstimes, digits = 8),
+                                                                      round(obstimesdigits = 8)) - 1)
 
         # census the time-varying covariates at observation times
         tcovar_censmat <- build_census_path(dynamics$tcovar, obstimes, seq_len(ncol(dynamics$tcovar) - 1))

@@ -32,7 +32,7 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol, stepper) {
 
         if(generate_code) {
                 # get the number of rates and the number of compartments
-                n_rates         <- length(lna_rates$hazards)
+                n_rates         <- length(lna_rates$lna_rates)
                 n_params        <- length(lna_rates$lna_param_codes)
                 n_odes          <- n_rates + n_rates^2
                 init_state_ind  <- grep(pattern = "_0", names(lna_rates$lna_param_codes))[1] - 1 # num. params before initial comp counts
@@ -53,32 +53,35 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol, stepper) {
                                          "odeintr::exp_neg_Z = arma::exp(-odeintr::Z);",
                                          "odeintr::exp_neg_2Z = arma::square(odeintr::exp_neg_Z);", sep = "\n")
 
-                diffusion_terms <- paste0("odeintr::diffusion = arma::reshape(arma::vec(x).subvec(",
-                                          n_rates, ",", n_odes-1, "),", n_rates,",", n_rates,");")
-
-                # strings to compute the hazards and jacobian
+                # strings to compute the ito terms, hazards, drift, and jacobian
                 haz_terms      <- paste(paste("odeintr::hazards[",0:(n_rates-1),"]", " = ",
-                                              lna_rates$hazards,";", sep = ""), collapse = "\n")
+                                              lna_rates$lna_rates,";", sep = ""), collapse = "\n")
 
                 non_zero_inds  <- which(lna_rates$derivatives != "0")
                 jacobian_terms <- paste(paste("odeintr::jacobian(",
                                               jacobian_inds[non_zero_inds,1], ", ", jacobian_inds[non_zero_inds,2], ") = ",
                                               lna_rates$derivatives[non_zero_inds],";", sep = ""), collapse = "\n")
 
-                diffusion_ode  <- paste0("odeintr::diffusion_ode = arma::vectorise(odeintr::diffusion * odeintr::jacobian.t() + ",
-                                         "arma::diagmat(odeintr::exp_neg_2Z % odeintr::hazards) + ",
-                                         "odeintr::jacobian * odeintr::diffusion, 0);")
+                # diffusion_ode  <- paste0("odeintr::diffusion_ode = arma::vectorise(odeintr::diffusion * odeintr::jacobian.t() + ",
+                #                          "arma::diagmat(odeintr::exp_neg_2Z % odeintr::hazards) + ",
+                #                          "odeintr::jacobian * odeintr::diffusion, 0);")
+
+                diffusion_terms <- paste(paste0("odeintr::diffusion = arma::reshape(arma::vec(x).subvec(",
+                                                n_rates, ",", n_odes-1, "),", n_rates,",", n_rates,");"),
+                                         paste0("odeintr::diffusion = odeintr::diffusion * odeintr::jacobian.t() + ",
+                                              "odeintr::jacobian * odeintr::diffusion;"),
+                                         "odeintr::diffusion.diag() += odeintr::exp_neg_2Z % odeintr::hazards;",sep = "\n")
 
                 # dxdt strings
-                dxdt_drift     <- paste("dxdt[", drift_inds, "] = odeintr::hazards[", seq_along(drift_inds) - 1, "];",
+                dxdt_drift     <- paste("dxdt[", drift_inds, "] = ",
+                                        paste0(lna_rates$ito_coefs,"*odeintr::hazards[", seq_along(drift_inds) - 1, "];"),
                                         collapse = "\n", sep = "")
-                dxdt_diffusion <- paste("dxdt[", diffusion_inds, "] = odeintr::diffusion_ode[", seq_along(diffusion_inds)-1, "];",
+                dxdt_diffusion <- paste("dxdt[", diffusion_inds, "] = odeintr::diffusion[", seq_along(diffusion_inds)-1, "];",
                                         collapse = "\n", sep = "")
 
                 # concatenate everything
-                LNA_odes <- paste(exp_Z_terms, diffusion_terms,
-                                  haz_terms, jacobian_terms, diffusion_ode,
-                                  dxdt_drift, dxdt_diffusion, sep = "\n")
+                LNA_odes <- paste(exp_Z_terms, haz_terms, jacobian_terms,
+                                  diffusion_terms, dxdt_drift, dxdt_diffusion, sep = "\n\n")
 
                 # generate the stemr_lna functions that will actually be called
                 LNA_integrator <- paste("void INTEGRATE_STEM_LNA(Rcpp::NumericVector& init, double start, double end, double step_size = 0.001) {",
@@ -123,7 +126,6 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol, stepper) {
                                                          paste0("static arma::vec hazards(",n_rates,",arma::fill::zeros);"),
                                                          paste0("static arma::mat jacobian(", n_rates,",",n_rates, ",arma::fill::zeros);"), sep = "\n"),
                                                          paste0("static arma::mat diffusion(", n_rates,",",n_rates,",arma::fill::zeros);"),
-                                                         paste0("static arma::vec diffusion_ode(", n_rates^2 ,",arma::fill::zeros);"),
                                                          sep = "\n"),
                                                  headers = paste("// [[Rcpp::depends(RcppArmadillo)]]",
                                                                  "#include <RcppArmadillo.h>",

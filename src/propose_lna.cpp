@@ -93,6 +93,10 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
         // sample the stochastic perturbations
         arma::mat draws(n_events, n_times-1, arma::fill::randn);
 
+        // array for lna moments
+        // arma::mat drift_vecs(n_events, n_times-1, arma::fill::zeros);
+        // arma::cube diff_mats(n_events, n_events, n_times - 1, arma::fill::zeros);
+
         // iterate over the time sequence, solving the LNA over each interval
         for(int j=0; j < (n_times-1); ++j) {
 
@@ -109,7 +113,11 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                 std::copy(lna_state_vec.begin() + n_events, lna_state_vec.end(), lna_diffusion.begin());
 
                 // ensure symmetry of the diffusion matrix
-                lna_diffusion = arma::symmatu(lna_diffusion);
+                // lna_diffusion = arma::symmatu(lna_diffusion);
+
+                // cache the moments
+                // drift_vecs.col(j) = lna_drift;
+                // diff_mats.slice(j) = lna_diffusion;
 
                 // map the stochastic perturbation to the LNA path on its natural scale
                 try{
@@ -152,10 +160,10 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                 // update the compartment volumes
                 init_volumes_prop = init_volumes + stoich_matrix * nat_lna;
 
-                // ensure that the LNA increment is positive and that the volumes are positive
+                // // ensure that the LNA increment is positive and that the volumes are positive
                 while(any(nat_lna < 0) | any(init_volumes_prop < 0)) {
                         draws.col(j) = arma::randn(n_events);                          // draw a new vector of N(0,1)
-                        log_lna      = lna_drift + svd_U * draws.col(j); // map the new draws to
+                        log_lna      = lna_drift + svd_U * draws.col(j);               // map the new draws to
                         nat_lna      = arma::exp(log_lna) - 1;                         // compute the LNA increment
                         init_volumes_prop = init_volumes + stoich_matrix * nat_lna;    // compute new initial volumes
                 }
@@ -202,4 +210,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
         return Rcpp::List::create(Rcpp::Named("draws")     = draws,
                                   Rcpp::Named("lna_path")  = lna_path.t(),
                                   Rcpp::Named("prev_path") = prev_path.t());
+
+                                  // Rcpp::Named("drift_vecs") = drift_vecs,
+                                  // Rcpp::Named("diff_mats") = diff_mats);
 }
