@@ -248,7 +248,7 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
 
         # get the list of vectors of observation times for each measurement process
         obstime_inds <- lapply(meas_procs, FUN = function(proc) match(round(proc$obstimes, digits = 8),
-                                                                      round(obstimesdigits = 8)) - 1)
+                                                                      round(obstimes, digits = 8)) - 1)
 
         # census the time-varying covariates at observation times
         tcovar_censmat <- build_census_path(dynamics$tcovar, obstimes, seq_len(ncol(dynamics$tcovar) - 1))

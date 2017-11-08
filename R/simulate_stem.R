@@ -528,6 +528,7 @@ simulate_stem <-
 
                         sim_pars  <- stem_object$dynamics$parameters
                         init_vols <- init_states[1,]
+                        prev_inds <- match(round(census_times, digits = 8), round(lna_times, digits = 8))
 
                         for(k in seq_len(nsim)) {
 
@@ -596,8 +597,7 @@ simulate_stem <-
 
                                         if(!is.null(path)) {
                                                 census_paths[[k]] <- census_incidence(path$lna_path, census_times, census_interval_inds)
-                                                lna_paths[[k]]    <- path$prev_path[match(round(census_times, digits = 8),
-                                                                                          round(path$prev_path[,1], digits = 8)),]
+                                                lna_paths[[k]]    <- path$prev_path[prev_inds,]
                                                 lna_draws[[k]]    <- path$draws
 
                                                 # lna_moments, used in testing
