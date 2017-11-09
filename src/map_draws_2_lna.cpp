@@ -156,11 +156,6 @@ void map_draws_2_lna(arma::mat& pathmat,
                 // update the initial volumes
                 init_volumes += stoich_matrix * nat_lna;
 
-                // apply forcings if called for - applied after censusing the path
-                if(forcing_inds[j+1]) {
-                        init_volumes += forcing_matrix.col(j+1);
-                }
-
                 // if any increments or volumes are negative, throw an error
                 try{
                         if(any(nat_lna < 0)) {
@@ -177,6 +172,26 @@ void map_draws_2_lna(arma::mat& pathmat,
 
                 } catch(...) {
                         ::Rf_error("c++ exception (unknown reason)");
+                }
+                
+                // apply forcings if called for - applied after censusing the path
+                if(forcing_inds[j+1]) {
+                      
+                      init_volumes += forcing_matrix.col(j+1);
+                      
+                      // Check for positivity
+                      try{
+                            if(any(init_volumes < 0)) {
+                                  throw std::runtime_error("Negative compartment volumes.");
+                            }
+                            
+                      } catch(std::runtime_error &err) {
+                            
+                            forward_exception_to_r(err);
+                            
+                      } catch(...) {
+                            ::Rf_error("c++ exception (unknown reason)");
+                      }
                 }
 
                 // update the parameters if they need to be updated

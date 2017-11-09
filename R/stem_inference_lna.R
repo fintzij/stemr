@@ -214,7 +214,7 @@ stem_inference_lna <- function(stem_object,
         n_times           <- length(lna_times)
         n_census_times    <- length(obstimes)
         param_update_inds <- round(lna_times, digits = 8) %in% 
-              round(unique(c(t0, tmax, stem_object$dynamics$dynamics_args$tcovar[,1])), digits = 8)
+              round(sort(unique(c(t0, tmax, stem_object$dynamics$dynamics_args$tcovar[,1]))), digits = 8)
         census_indices    <- unique(c(0, findInterval(obstimes, lna_times) - 1))
 
         # objects for computing the SVD of the LNA diffusion matrix

@@ -56,7 +56,7 @@ simulate_stem <-
                  method = "gillespie",
                  tmax = NULL,
                  census_times = NULL,
-                 max_attempts = 100,
+                 max_attempts = 500,
                  lna_method = NULL,
                  lna_df = NULL,
                  messages = TRUE) {

@@ -522,10 +522,6 @@ mvn_rw <- function(params_prop, params_cur, sigma_chol) {
 #' @param forcing_matrix matrix containing the forcings.
 #' @param step_size initial step size for the ODE solver (adapted internally,
 #' but too large of an initial step can lead to failure in stiff systems).
-#' @param lna_pointer external pointer to LNA integration function.
-#' @param set_pars_pointer external pointer to the function for setting the LNA
-#'   parameters.
-#'
 #' @return list containing the stochastic perturbations (i.i.d. N(0,1) draws) and
 #' the LNA path on its natural scale which is determined by the perturbations.
 #'

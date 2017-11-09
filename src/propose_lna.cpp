@@ -22,10 +22,6 @@ using namespace arma;
 //' @param forcing_matrix matrix containing the forcings.
 //' @param step_size initial step size for the ODE solver (adapted internally,
 //' but too large of an initial step can lead to failure in stiff systems).
-//' @param lna_pointer external pointer to LNA integration function.
-//' @param set_pars_pointer external pointer to the function for setting the LNA
-//'   parameters.
-//'
 //' @return list containing the stochastic perturbations (i.i.d. N(0,1) draws) and
 //' the LNA path on its natural scale which is determined by the perturbations.
 //'
@@ -153,45 +149,52 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                 } catch(...) {
                         ::Rf_error("c++ exception (unknown reason)");
                 }
-
+                
                 // compute the LNA increment
                 nat_lna = arma::exp(log_lna) - 1;
-
+                
                 // update the compartment volumes
-                init_volumes_prop = init_volumes + stoich_matrix * nat_lna;
-
-                // // ensure that the LNA increment is positive and that the volumes are positive
-                while(any(nat_lna < 0) | any(init_volumes_prop < 0)) {
-                        draws.col(j) = arma::randn(n_events);                          // draw a new vector of N(0,1)
-                        log_lna      = lna_drift + svd_U * draws.col(j);               // map the new draws to
-                        nat_lna      = arma::exp(log_lna) - 1;                         // compute the LNA increment
-                        init_volumes_prop = init_volumes + stoich_matrix * nat_lna;    // compute new initial volumes
+                init_volumes = init_volumes + stoich_matrix * nat_lna;
+                
+                // throw errors for negative increments or negative volumes
+                try{
+                      if(any(nat_lna < 0)) {
+                            throw std::runtime_error("Negative increment.");
+                      }
+                      
+                      if(any(init_volumes < 0)) {
+                            throw std::runtime_error("Negative compartment volumes.");
+                      }
+                      
+                } catch(std::exception &err) {
+                      
+                      forward_exception_to_r(err);
+                      
+                } catch(...) {
+                      ::Rf_error("c++ exception (unknown reason)");
                 }
-
-                // set the initial volumes to the proposed initial volumes
-                init_volumes = init_volumes_prop;
-
+                
                 // save the increment and the prevalence
                 lna_path(arma::span(1,n_events), j+1) = nat_lna;
                 prev_path(arma::span(1,n_comps), j+1) = init_volumes;
-
+                
                 // apply forcings if called for - applied after censusing the path
                 if(forcing_inds[j+1]) {
-                        init_volumes += forcing_matrix.col(j+1);
-                }
-
-                // if any volumes are negative, throw an error so simulation is restarted
-                try{
-                        if(any(init_volumes < 0)) {
-                                throw std::runtime_error("Negative compartment volumes.");
-                        }
-
-                } catch(std::exception &err) {
-
-                        forward_exception_to_r(err);
-
-                } catch(...) {
-                        ::Rf_error("c++ exception (unknown reason)");
+                      init_volumes += forcing_matrix.col(j+1);
+                      
+                      // throw errors for negative increments or negative volumes
+                      try{
+                            if(any(init_volumes < 0)) {
+                                  throw std::runtime_error("Negative compartment volumes.");
+                            }
+                            
+                      } catch(std::exception &err) {
+                            
+                            forward_exception_to_r(err);
+                            
+                      } catch(...) {
+                            ::Rf_error("c++ exception (unknown reason)");
+                      }
                 }
 
                 // update the parameters if they need to be updated

@@ -161,7 +161,8 @@ stem_inference_ode <- function(stem_object,
         tmax              <- max(obstimes)
         n_times           <- length(ode_times)
         n_census_times    <- length(obstimes)
-        param_update_inds <- ode_times %in% unique(c(t0, tmax, stem_object$dynamics$tcovar[,1]))
+        param_update_inds <- round(ode_times, digits = 8) %in% 
+              round(sort(unique(c(t0, tmax, stem_object$dynamics$tcovar[,1]))), digits = 8)
         census_indices    <- unique(c(0, findInterval(obstimes, ode_times) - 1))
 
         # set up the MCMC kernel

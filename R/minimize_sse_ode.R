@@ -88,15 +88,16 @@ minimize_sse_ode <- function(stem_object, transformations = NULL, limits = NULL,
         forcing_inds <- rep(FALSE, length(ode_times))
 
         if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
-                tcovar_rowinds <- match(ode_times, stem_object$dynamics$tcovar[,1])
+                tcovar_rowinds <- match(round(ode_times, digits = 8),
+                                        round(stem_object$dynamics$tcovar[,1], digits = 8))
                 ode_pars[tcovar_rowinds, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
 
                 # zero out forcings if necessary
                 if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
 
                         # get the forcing indices (supplied in the original tcovar matrix)
-                        forcing_inds <- as.logical(match(ode_times,
-                                                         stem_object$dynamics$dynamics_args$tcovar[,1],
+                        forcing_inds <- as.logical(match(round(ode_times, digits = 8),
+                                                         round(stem_object$dynamics$dynamics_args$tcovar[,1], digits = 8),
                                                          nomatch = FALSE))
                         zero_inds    <- !forcing_inds
 
@@ -108,7 +109,7 @@ minimize_sse_ode <- function(stem_object, transformations = NULL, limits = NULL,
         }
 
         # generate some auxilliary objects
-        param_update_inds <- ode_times %in% unique(c(t0, tmax, stem_object$dynamics$tcovar[,1]))
+        param_update_inds <- round(ode_times, digits = 8) %in% round(sort(unique(c(t0, stem_object$dynamics$tcovar[,1], tmax))), digits = 8)
 
         # retrieve the initial state
         ode_initdist_inds <- stem_object$dynamics$ode_initdist_inds
@@ -189,7 +190,7 @@ minimize_sse_ode <- function(stem_object, transformations = NULL, limits = NULL,
                 return(dat)
         }
 
-        ### inflate zeros if scale == "log"
+        ### inflate zeros then log transform if scale == "log"
         if(scale == "log") {
                 data <- inflate_zeros(dat = data)
                 data[,-1][measproc_indmat] <- log(data[,-1][measproc_indmat])
@@ -304,17 +305,13 @@ minimize_sse_ode <- function(stem_object, transformations = NULL, limits = NULL,
                         )
 
                 }, silent = TRUE)
-
+                
                 varmat <- simulate_r_measure(censusmat       = censusmat,
                                              measproc_indmat = measproc_indmat,
                                              parameters      = pars_nat,
                                              constants       = constants,
                                              tcovar          = tcovar_censmat,
                                              r_measure_ptr   = stem_object$measurement_process$meas_pointers$v_measure_ptr)
-
-                if(scale == "log") {
-                        varmat[,-1] <- 1 / varmat[,-1]
-                }
 
                 return(varmat)
         }
@@ -458,11 +455,15 @@ minimize_sse_ode <- function(stem_object, transformations = NULL, limits = NULL,
                         init_state          = init_state,
                         forcing_matrix      = forcing_matrix
                 )
+                
+                if(scale == "log") {
+                      suppressWarnings(censusmat[,-1][measproc_indmat] <- log(censusmat[,-1][measproc_indmat]))
+                }
 
                 # evaluate the density of the incidence counts
                 evaluate_d_measure_LNA(
                         emitmat           = emitmat,
-                        obsmat            = stem_object$measurement_process$data,
+                        obsmat            = data,
                         censusmat         = censusmat,
                         measproc_indmat   = measproc_indmat,
                         lna_parameters    = ode_pars,
