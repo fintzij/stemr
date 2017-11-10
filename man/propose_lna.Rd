@@ -30,11 +30,6 @@ time-varying covariance matrix a forcing is applied.}
 
 \item{step_size}{initial step size for the ODE solver (adapted internally,
 but too large of an initial step can lead to failure in stiff systems).}
-
-\item{lna_pointer}{external pointer to LNA integration function.}
-
-\item{set_pars_pointer}{external pointer to the function for setting the LNA
-parameters.}
 }
 \value{
 list containing the stochastic perturbations (i.i.d. N(0,1) draws) and

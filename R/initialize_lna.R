@@ -77,6 +77,7 @@ initialize_lna <-
                                         forcing_inds      = forcing_inds,
                                         forcing_matrix    = forcing_matrix,
                                         step_size         = step_size,
+                                        reject_negatives  = FALSE,
                                         lna_pointer       = lna_pointer,
                                         set_pars_pointer  = lna_set_pars_pointer
                                 )

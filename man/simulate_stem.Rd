@@ -5,9 +5,10 @@
 \title{Simulations from a stochastic epidemic model.}
 \usage{
 simulate_stem(stem_object, nsim = 1, simulation_parameters = NULL,
-  paths = FALSE, observations = FALSE, subject_paths = FALSE,
-  method = "gillespie", tmax = NULL, census_times = NULL,
-  max_attempts = 100, lna_method = NULL, lna_df = NULL, messages = TRUE)
+  paths = FALSE, full_paths = FALSE, observations = FALSE,
+  subject_paths = FALSE, method = "gillespie", tmax = NULL,
+  census_times = NULL, max_attempts = 500, lna_method = NULL,
+  lna_df = NULL, messages = TRUE)
 }
 \arguments{
 \item{nsim}{number of realizations to simulate}
@@ -16,7 +17,10 @@ simulate_stem(stem_object, nsim = 1, simulation_parameters = NULL,
 parameters. If NULL, paths are simulated using the parameters specified in
 the stem object.}
 
-\item{paths}{Should population-level paths be returned?}
+\item{paths}{Should population-level paths at census times be returned?}
+
+\item{full_paths}{Should complete population level paths be returned (only
+for Gillespie), defaults to FALSE}
 
 \item{observations}{Should simulated observations be returned? Requires that
 a measurement process be defined in the stem object.}

@@ -75,26 +75,25 @@ funciton.
   "I", "ALL"): each susceptible contacts the infecteds within her own stratum
   at rate \eqn{\beta * I}, but does not contract an infection from outside
   her stratum. This rate applies to subjects in all strata. \item rate("beta
-  * pow(I_SELF, alpha)", "S", "I", "ALL"): each susceptible contacts the
-  infecteds within her own stratum at rate \eqn{\beta * I^\alpha}, but does
-  not contract an infection from outside her stratum. Note that the rate must
-  be specified as valid C++, so exponentiation is done using the \code{pow()}
-  function. \item rate("beta * comp_fcn(I_ALL, sum)", "S", "I", "ALL"): each
-  susceptible contacts all infecteds in the population at rate \eqn{\beta *
-  \sum_s I_s}, regardless of stratum. Note that 'I_ALL' will be replaced by a
-  vector of I_strata, therefore using 'I_all' outside of a function, e.g.
-  beta * I_ALL, will result in an error. However, beta * comp_fcn(I_ALL, sum)
-  is well defined. \item rate("beta * comp_fcn(I_REL), sum,", "S", "I",
-  c("young", "old")): each suscpetible contacts infecteds in the young and
-  old strata with rate beta. N.B. when the "REL" keyword is used in a
-  \code{comp_fcn} call, the relevant strata will be pulled from the strata
-  supplied in the rate. \item rate("beta1
-  * I_SELF + beta2 * comp_fcn(I_ADJ, sum)", "S", "I", "ALL"): each
-  susceptible contacts infecteds in her own stratum at rate \eqn{\beta1 *
-  I_SELF}, and contacts infecteds in adjacent strata (specified in the
-  adjacency matrix) at rate \eqn{\beta * \sum_{s: stratum 's' is adjacent}
-  I_s}. Note that in this case, the diagonal entries in the adjacency matrix
-  should be set to zero.}
+  * I_SELF^alpha", "S", "I", "ALL"): each susceptible contacts the infecteds
+  within her own stratum at rate \eqn{\beta * I^\alpha}, but does not
+  contract an infection from outside her stratum. Note that the rate will be
+  parsed to produce valid C++, so exponentiation is done using the
+  \code{pow()} function. \item rate("beta * comp_fcn(I_ALL, sum)", "S", "I",
+  "ALL"): each susceptible contacts all infecteds in the population at rate
+  \eqn{\beta * \sum_s I_s}, regardless of stratum. Note that 'I_ALL' will be
+  replaced by a vector of I_strata, therefore using 'I_all' outside of a
+  function, e.g. beta * I_ALL, will result in an error. However, beta *
+  comp_fcn(I_ALL, sum) is well defined. \item rate("beta * comp_fcn(I_REL),
+  sum,", "S", "I", c("young", "old")): each suscpetible contacts infecteds in
+  the young and old strata with rate beta. N.B. when the "REL" keyword is
+  used in a \code{comp_fcn} call, the relevant strata will be pulled from the
+  strata supplied in the rate. \item rate("beta1 * I_SELF + beta2 *
+  comp_fcn(I_ADJ, sum)", "S", "I", "ALL"): each susceptible contacts
+  infecteds in her own stratum at rate \eqn{\beta1 * I_SELF}, and contacts
+  infecteds in adjacent strata (specified in the adjacency matrix) at rate
+  \eqn{\beta * \sum_{s: stratum 's' is adjacent} I_s}. Note that in this
+  case, the diagonal entries in the adjacency matrix should be set to zero.}
 
   The \code{from} and \code{to} arguments will automatically be updated when
   the rate is parsed within the \code{stem_dynamics} function to reflect the

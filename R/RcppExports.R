@@ -522,12 +522,20 @@ mvn_rw <- function(params_prop, params_cur, sigma_chol) {
 #' @param forcing_matrix matrix containing the forcings.
 #' @param step_size initial step size for the ODE solver (adapted internally,
 #' but too large of an initial step can lead to failure in stiff systems).
+#' @param reject_negatives logical for whether negative increments or compartment 
+#' volumes should lead to rejection of the sampled path. If false, draws that lead 
+#' to either are re-sampled in place instead of throwing an error. N.B. Resampling 
+#' targets the WRONG distribution and should only be used when initializing an LNA 
+#' path with the understanding that further warm-up under the correct distribution 
+#' is required.
+#' @param lna_pointer external pointer to the compiled LNA integration function.
+#' @param set_pars_pointer external pointer to the function for setting LNA pars.
 #' @return list containing the stochastic perturbations (i.i.d. N(0,1) draws) and
 #' the LNA path on its natural scale which is determined by the perturbations.
 #'
 #' @export
-propose_lna <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, lna_pointer, set_pars_pointer) {
-    .Call('_stemr_propose_lna', PACKAGE = 'stemr', lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, lna_pointer, set_pars_pointer)
+propose_lna <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, reject_negatives, step_size, lna_pointer, set_pars_pointer) {
+    .Call('_stemr_propose_lna', PACKAGE = 'stemr', lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, reject_negatives, step_size, lna_pointer, set_pars_pointer)
 }
 
 #' Simulate an LNA path using a non-centered parameterization for the

@@ -6,7 +6,7 @@
 integration of the deterministic mean ODEs accomplished using the Boost
 odeint library.}
 \usage{
-load_ode(ode_rates, compile_ode, messages, atol, rtol)
+load_ode(ode_rates, compile_ode, messages, atol, rtol, stepper)
 }
 \arguments{
 \item{ode_rates}{list containing the ODE rate functions, derivatives, and

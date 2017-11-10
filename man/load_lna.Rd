@@ -5,7 +5,7 @@
 \title{Construct and compile the functions for proposing an LNA path, with
 integration of the LNA ODEs accomplished using the Boost odeint library.}
 \usage{
-load_lna(lna_rates, compile_lna, messages, atol, rtol)
+load_lna(lna_rates, compile_lna, messages, atol, rtol, stepper)
 }
 \arguments{
 \item{lna_rates}{list containing the LNA rate functions, derivatives, and

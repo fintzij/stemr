@@ -8,7 +8,7 @@ initialize_lna(data, lna_parameters, censusmat, emitmat, stoich_matrix,
   lna_pointer, lna_set_pars_pointer, lna_times, lna_param_inds, lna_const_inds,
   lna_tcovar_inds, lna_initdist_inds, param_update_inds, census_indices,
   lna_event_inds, measproc_indmat, d_meas_pointer, do_prevalence, forcing_inds,
-  forcing_matrix, initialization_attempts, step_size)
+  forcing_matrix, initialization_attempts, step_size, par_init_fcn = NULL)
 }
 \arguments{
 \item{data}{matrix containing the dataset}
