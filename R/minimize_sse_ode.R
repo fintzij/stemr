@@ -486,6 +486,9 @@ minimize_sse_ode <- function(stem_object, transformations = NULL, limits = NULL,
 
         alpha <- sum((mean_mat[,-1][measproc_indmat] - data[,-1][measproc_indmat])^2 / var_mat[,-1][measproc_indmat]) /
                 (sum(measproc_indmat) - length(ml_pars) - 1)
+        
+        sigma <- sum((mean_mat[,-1][measproc_indmat] - data[,-1][measproc_indmat])^2 / var_mat[,-1][measproc_indmat]) /
+              (sum(measproc_indmat) - length(ml_pars) - 1)
 
         ### SANDWICH
         sandwich_cov <- sandwich(ests, data, measproc_indmat)

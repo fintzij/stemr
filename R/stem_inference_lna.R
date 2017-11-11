@@ -464,6 +464,10 @@ stem_inference_lna <- function(stem_object,
                 )
 
         lna_paths <- array(0.0, dim = c(n_times, 1 + n_rates, 1 + floor(iterations / thin_latent_proc)))
+        lna_draws <- array(0.0, dim = c(n_rates, n_times, 1 + floor(iterations / thin_latent_proc)))
+        
+        colnames(lna_paths) <- c("time", rownames(flow_matrix))
+        rownames(lna_draws) <- rownames(flow_matrix)
 
         data_log_lik      <- double(1 + floor(iterations / thin_params))
         lna_log_lik       <- double(1 + floor(iterations / thin_params))
@@ -577,6 +581,7 @@ stem_inference_lna <- function(stem_object,
         parameter_samples_nat[1,] <- c(model_params_nat, t0, initdist_params_cur)
         parameter_samples_est[1,] <- c(model_params_est, t0, init_volumes_cur)
         lna_paths[,,1]        <- path$lna_path
+        lna_draws[,,1]        <- path$draws
         data_log_lik[1]       <- path$data_log_lik
         lna_log_lik[1]        <- sum(dnorm(path$draws, log = T))
         params_log_prior[1]   <- params_logprior_cur
@@ -1477,6 +1482,7 @@ stem_inference_lna <- function(stem_object,
                 if(iter %% thin_latent_proc == 0) {
                         ess_record[,,param_rec_ind-1] <- path$ess_record  # save the ESS record
                         lna_paths[,,path_rec_ind]     <- path$lna_path    # save the path
+                        lna_draws[,,path_rec_ind]     <- path$draws       # save the N(0,1) draws
                         path_rec_ind                  <- path_rec_ind + 1 # increment the path record index
                 }
 

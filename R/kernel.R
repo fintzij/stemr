@@ -43,7 +43,7 @@ kernel <-
         function(method = "c_rw",
                  sigma,
                  scale_constant = 0.5,
-                 scale_cooling = 0.5,
+                 scale_cooling = 0.5+1e-5,
                  max_scaling = Inf,
                  target_g = 0.234,
                  target_c = 0.44,
