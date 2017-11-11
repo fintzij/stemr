@@ -43,12 +43,19 @@ stem_inference_ode <- function(stem_object,
         mcmc_restart <- !is.null(stem_object$results)
 
         # extract the model objects from the stem_object
+        if(is.function(stem_object$dynamics$parameters)) {
+              par_init_fcn   <- stem_object$dynamics$parameters
+              parameters     <- par_init_fcn()
+        } else {
+              par_init_fcn   <- NULL
+              parameters     <- stem_object$dynamics$parameters
+        }
+        
         flow_matrix            <- stem_object$dynamics$flow_matrix_ode
         stoich_matrix          <- stem_object$dynamics$stoich_matrix_ode
         ode_pointer            <- stem_object$dynamics$ode_pointers$ode_ptr
         ode_set_pars_pointer   <- stem_object$dynamics$ode_pointers$set_ode_params_ptr
         censusmat              <- stem_object$measurement_process$censusmat
-        parameters             <- stem_object$dynamics$parameters
         constants              <- stem_object$dynamics$constants
         n_compartments         <- ncol(flow_matrix)
         n_rates                <- nrow(flow_matrix)

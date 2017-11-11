@@ -480,15 +480,14 @@ minimize_sse_ode <- function(stem_object, transformations = NULL, limits = NULL,
                 if(is.nan(data_log_lik)) data_log_lik <- -Inf
         }, silent = TRUE)
 
-        ### QUASI-LIKELIHOOD -----------------------------------------------
+        ### variance about the mean -----------------------------------------------
         mean_mat <- get_means(pars = ests)
         var_mat  <- get_vars(pars = ests)
 
-        alpha <- sum((mean_mat[,-1][measproc_indmat] - data[,-1][measproc_indmat])^2 / var_mat[,-1][measproc_indmat]) /
-                (sum(measproc_indmat) - length(ml_pars) - 1)
+        alpha <- sum((mean_mat[,-1][measproc_indmat] - data[,-1][measproc_indmat])^2 / var_mat[,-1][measproc_indmat]) / (sum(measproc_indmat) - length(ml_pars) - 1)
+        vcov_est <- vcov_est * alpha
         
-        sigma <- sum((mean_mat[,-1][measproc_indmat] - data[,-1][measproc_indmat])^2 / var_mat[,-1][measproc_indmat]) /
-              (sum(measproc_indmat) - length(ml_pars) - 1)
+        sampling_var_est <- sum((mean_mat[,-1][measproc_indmat] - data[,-1][measproc_indmat])^2) /(sum(measproc_indmat) - length(ml_pars) - 1)
 
         ### SANDWICH
         sandwich_cov <- sandwich(ests, data, measproc_indmat)
@@ -519,14 +518,15 @@ minimize_sse_ode <- function(stem_object, transformations = NULL, limits = NULL,
         ### Return results
         return(
                 list(
-                        pars_est      = pars_est,
-                        pars_nat      = pars_nat,
-                        vcov_est      = vcov_est,
-                        vcov_nat      = vcov_nat,
-                        alpha         = alpha,
-                        sandwich_cov  = sandwich_cov,
-                        data_log_lik  = data_log_lik,
-                        path          = path
+                        pars_est         = pars_est,
+                        pars_nat         = pars_nat,
+                        vcov_est         = vcov_est,
+                        vcov_nat         = vcov_nat,
+                        alpha            = alpha,
+                        sampling_var_est = sampling_var_est,
+                        sandwich_cov     = sandwich_cov,
+                        data_log_lik     = data_log_lik,
+                        path             = path
                 )
         )
 }
