@@ -464,7 +464,7 @@ stem_inference_lna <- function(stem_object,
                 )
 
         lna_paths <- array(0.0, dim = c(n_times, 1 + n_rates, 1 + floor(iterations / thin_latent_proc)))
-        lna_draws <- array(0.0, dim = c(n_rates, n_times, 1 + floor(iterations / thin_latent_proc)))
+        lna_draws <- array(0.0, dim = c(n_rates, n_times-1, 1 + floor(iterations / thin_latent_proc)))
         
         colnames(lna_paths) <- c("time", rownames(flow_matrix))
         rownames(lna_draws) <- rownames(flow_matrix)
