@@ -127,7 +127,22 @@ arma::mat simulate_gillespie(const arma::mat& flow,
 
                                 // apply forcings if necessary
                                 if(forcing_inds[tcov_ind]) {
-                                        state += forcing_matrix.row(tcov_ind);
+                                      
+                                      state += forcing_matrix.row(tcov_ind);
+                                      
+                                      // throw errors for negative volumes
+                                      try{
+                                            if(any(state < 0)) {
+                                                  throw std::runtime_error("Negative compartment volumes.");
+                                            }
+                                            
+                                      } catch(std::exception &err) {
+                                            
+                                            forward_exception_to_r(err);
+                                            
+                                      } catch(...) {
+                                            ::Rf_error("c++ exception (unknown reason)");
+                                      }
                                 }
 
                                 // update the rate functions

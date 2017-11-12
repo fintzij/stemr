@@ -357,20 +357,22 @@ simulate_stem <-
                                 }
 
                                 # get the census path
-                                census_paths[[k]] <- build_census_path(path = path_full,
-                                                                       census_times = census_times,
-                                                                       census_columns = census_codes)
-
-                                # compute incidence if required. n.b. add 1 to the incidence codes b/c 'time' is in the census path
-                                if(get_incidence) compute_incidence(censusmat = census_paths[[k]],
-                                                                    col_inds  = incidence_codes,
-                                                                    row_inds  = census_incidence_rows)
-
-                                # assign column names
-                                colnames(census_paths[[k]]) <- census_colnames
-
-                                # save the full path if desired
-                                if(full_paths) paths_full[[k]] <- path_full
+                                if(!is.null(path_full)) {
+                                      census_paths[[k]] <- build_census_path(path = path_full,
+                                                                             census_times = census_times,
+                                                                             census_columns = census_codes)
+                                      
+                                      # compute incidence if required. n.b. add 1 to the incidence codes b/c 'time' is in the census path
+                                      if(get_incidence) compute_incidence(censusmat = census_paths[[k]],
+                                                                          col_inds  = incidence_codes,
+                                                                          row_inds  = census_incidence_rows)
+                                      
+                                      # assign column names
+                                      colnames(census_paths[[k]]) <- census_colnames
+                                      
+                                      # save the full path if desired
+                                      if(full_paths) paths_full[[k]] <- path_full
+                                }
                         }
 
                 } else if (method == "lna") {

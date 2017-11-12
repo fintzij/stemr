@@ -205,7 +205,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                       if(forcing_inds[j+1]) {
                             init_volumes += forcing_matrix.col(j+1);
                             
-                            // throw errors for negative increments or negative volumes
+                            // throw errors for negative negative volumes
                             try{
                                   if(any(init_volumes < 0)) {
                                         throw std::runtime_error("Negative compartment volumes.");
