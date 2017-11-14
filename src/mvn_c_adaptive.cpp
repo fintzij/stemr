@@ -26,6 +26,6 @@ void mvn_c_adaptive(arma::rowvec& params_prop,
         sqrt_scalemat.diag() = arma::sqrt(proposal_scaling);
 
         params_prop = params_cur + nugget * arma::randn(1, par_dim) +
-                (1 - nugget) * arma::randn(1, par_dim) * sqrt_scalemat * arma::chol(kernel_cov, "upper");
+                (1 - nugget) * arma::randn(1, par_dim) * arma::chol((sqrt_scalemat * kernel_cov * sqrt_scalemat), "upper");
 
 }

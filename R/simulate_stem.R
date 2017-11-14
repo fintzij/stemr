@@ -374,12 +374,6 @@ simulate_stem <-
                                       if(full_paths) paths_full[[k]] <- path_full
                                 }
                         }
-                        
-                        failed_runs  <- which(sapply(census_paths, is.null))
-                        if(length(failed_runs) != 0) {
-                              census_paths <- census_paths[-failed_runs]
-                              if(full_paths) paths_full <- paths_full[-failed_runs]
-                        }
 
                 } else if (method == "lna") {
 
@@ -866,28 +860,39 @@ simulate_stem <-
                                 sim_pars <- stem_object$dynamics$parameters
 
                                 for(k in seq_len(nsim)) {
-                                      
-                                      if(!is.null(census_paths[[k]])) {
-                                            
-                                            # get the state at observation times
-                                            if(do_census) {
-                                                  censusmat[,-1] <- census_paths[[k]][cens_inds, -1]
-                                            } else {
-                                                  censusmat <- census_paths[[k]]
-                                            }
-                                            
-                                            # get the new simulation parameters if a list was supplied
-                                            if(!is.null(simulation_parameters)) sim_pars <- as.numeric(simulation_parameters[[k]])
-                                            
-                                            # simulate the data
-                                            datasets[[k]] <- simulate_r_measure(censusmat = censusmat,
-                                                                                measproc_indmat = stem_object$measurement_process$measproc_indmat,
-                                                                                parameters = sim_pars,
-                                                                                constants = stem_object$dynamics$constants,
-                                                                                tcovar = tcovar_obstimes,
-                                                                                r_measure_ptr = stem_object$measurement_process$meas_pointers$r_measure_ptr)
-                                            colnames(datasets[[k]]) <- measvar_names
-                                      }
+
+                                        if(is.null(census_times)) {
+                                                # get the state at the observation times
+                                                cens_inds <- findInterval(stem_object$measurement_process$obstimes,
+                                                                          paths_full[[k]][,1])
+
+                                                # fill out the census matrix
+                                                censusmat[,-1] <- paths_full[[k]][cens_inds, census_codes + 1]
+
+                                                # compute the incidence if appropriate
+                                                if(get_incidence) compute_incidence(censusmat = censusmat,
+                                                                                    col_inds  = incidence_codes,
+                                                                                    row_inds  = stem_object$measurement_process$obstime_inds)
+                                        } else {
+                                                # get the state at observation times
+                                                if(do_census) {
+                                                        censusmat[,-1] <- census_paths[[k]][cens_inds, -1]
+                                                } else {
+                                                        censusmat <- census_paths[[k]]
+                                                }
+                                        }
+
+                                        # get the new simulation parameters if a list was supplied
+                                        if(!is.null(simulation_parameters)) sim_pars <- as.numeric(simulation_parameters[[k]])
+
+                                        # simulate the data
+                                        datasets[[k]] <- simulate_r_measure(censusmat = censusmat,
+                                                                            measproc_indmat = stem_object$measurement_process$measproc_indmat,
+                                                                            parameters = sim_pars,
+                                                                            constants = stem_object$dynamics$constants,
+                                                                            tcovar = tcovar_obstimes,
+                                                                            r_measure_ptr = stem_object$measurement_process$meas_pointers$r_measure_ptr)
+                                        colnames(datasets[[k]]) <- measvar_names
                                 }
 
                         } else if(method == "lna") {
@@ -1013,7 +1018,7 @@ simulate_stem <-
                 if(observations)  stem_simulations$datasets      <- datasets
                 if(subject_paths) stem_simulations$subject_paths <- subject_paths
                 if(method == "lna") stem_simulations$lna_draws   <- lna_draws
-                stem_simulations$failed_runs <- failed_runs
+                if(method != "gillespie") stem_simulations$failed_runs <- failed_runs
 
                 # lna_moments used in testing
                 #                 if(method == "lna") stem_simulations$lna_moments <- list(drift_vecs = drift_vecs,
