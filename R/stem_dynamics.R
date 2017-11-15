@@ -505,7 +505,7 @@ stem_dynamics <-
                                 for(s in seq_along(param_codes)) {
                                         code_name <- param_names[s]
                                         code      <- param_codes[s]
-                                        rate_fcns[[k]]$unlumped <- gsub(code_name,
+                                        rate_fcns[[k]]$unlumped <- gsub(paste0('\\<',code_name,'\\>'),
                                                                         paste0("parameters[",code,"]"), rate_fcns[[k]]$unlumped)
                                 }
 
@@ -513,7 +513,7 @@ stem_dynamics <-
                                 for(s in seq_along(tcovar_codes)) {
                                         code_name <- names(tcovar_codes)[s]
                                         code      <- tcovar_codes[s]
-                                        rate_fcns[[k]]$unlumped <- gsub(code_name, paste0("tcovar[",code,"]"), rate_fcns[[k]]$unlumped)
+                                        rate_fcns[[k]]$unlumped <- gsub(paste0('\\<',code_name,'\\>'), paste0("tcovar[",code,"]"), rate_fcns[[k]]$unlumped)
                                 }
 
                                 # make the substitutions for the constant codes
@@ -521,7 +521,7 @@ stem_dynamics <-
                                         for(s in seq_along(const_codes)) {
                                                 code_name <- names(const_codes)[s]
                                                 code      <- const_codes[s]
-                                                rate_fcns[[k]]$unlumped <- gsub(code_name, paste0("constants[",code,"]"), rate_fcns[[k]]$unlumped)
+                                                rate_fcns[[k]]$unlumped <- gsub(paste0('\\<',code_name,'\\>'), paste0("constants[",code,"]"), rate_fcns[[k]]$unlumped)
                                         }
                                 }
 
@@ -536,7 +536,7 @@ stem_dynamics <-
                                 for(s in seq_along(param_codes)) {
                                         code_name <- param_names[s]
                                         code      <- param_codes[s]
-                                        rate_fcns[[k]]$lumped <- gsub(code_name,
+                                        rate_fcns[[k]]$lumped <- gsub(paste0('\\<',code_name,'\\>'),
                                                                       paste0("parameters[",code,"]"), rate_fcns[[k]]$lumped)
                                 }
 
@@ -544,7 +544,7 @@ stem_dynamics <-
                                 for(s in seq_along(tcovar_codes)) {
                                         code_name <- names(tcovar_codes)[s]
                                         code      <- tcovar_codes[s]
-                                        rate_fcns[[k]]$lumped <- gsub(code_name,
+                                        rate_fcns[[k]]$lumped <- gsub(paste0('\\<',code_name,'\\>'),
                                                                         paste0("tcovar[",code,"]"), rate_fcns[[k]]$lumped)
                                 }
 
@@ -553,7 +553,7 @@ stem_dynamics <-
                                         for(s in seq_along(const_codes)) {
                                                 code_name <- names(const_codes)[s]
                                                 code      <- const_codes[s]
-                                                rate_fcns[[k]]$lumped <- gsub(code_name, paste0("constants[",code,"]"),
+                                                rate_fcns[[k]]$lumped <- gsub(paste0('\\<',code_name,'\\>'), paste0("constants[",code,"]"),
                                                                               rate_fcns[[k]]$lumped)
                                         }
                                 }
@@ -563,8 +563,8 @@ stem_dynamics <-
                         for(t in seq_along(compartment_codes)) {
                                 code_name <- names(compartment_codes)[t]
                                 code      <- compartment_codes[t]
-                                rate_fcns[[k]]$lumped <- gsub(code_name, paste0("state[",code,"]"), rate_fcns[[k]]$lumped)
-                                rate_fcns[[k]]$unlumped <- gsub(code_name, paste0("state[",code,"]"), rate_fcns[[k]]$unlumped)
+                                rate_fcns[[k]]$lumped <- gsub(paste0('\\<',code_name,'\\>'), paste0("state[",code,"]"), rate_fcns[[k]]$lumped)
+                                rate_fcns[[k]]$unlumped <- gsub(paste0('\\<',code_name,'\\>'), paste0("state[",code,"]"), rate_fcns[[k]]$unlumped)
                         }
                 }
 
@@ -679,14 +679,14 @@ stem_dynamics <-
                                 for(s in seq_along(param_codes)) {
                                         code_name <- names(param_codes)[s]
                                         code      <- param_codes[s]
-                                        rate_fcns[[k]]$lumped <- gsub(code_name, paste0("parameters[",code,"]"), rate_fcns[[k]]$lumped)
+                                        rate_fcns[[k]]$lumped <- gsub(paste0('\\<',code_name,'\\>'), paste0("parameters[",code,"]"), rate_fcns[[k]]$lumped)
                                 }
 
                                 # make the substitutions for the covariate codes
                                 for(s in seq_along(tcovar_codes)) {
                                         code_name <- names(tcovar_codes)[s]
                                         code      <- tcovar_codes[s]
-                                        rate_fcns[[k]]$lumped <- gsub(code_name, paste0("tcovar[",code,"]"), rate_fcns[[k]]$lumped)
+                                        rate_fcns[[k]]$lumped <- gsub(paste0('\\<',code_name,'\\>'), paste0("tcovar[",code,"]"), rate_fcns[[k]]$lumped)
                                 }
 
                                 # make the substitutions for the constant codes
@@ -694,7 +694,7 @@ stem_dynamics <-
                                         for(s in seq_along(const_codes)) {
                                                 code_name <- names(const_codes)[s]
                                                 code      <- const_codes[s]
-                                                rate_fcns[[k]]$lumped <- gsub(code_name, paste0("constants[",code,"]"), rate_fcns[[k]]$lumped)
+                                                rate_fcns[[k]]$lumped <- gsub(paste0('\\<',code_name,'\\>'), paste0("constants[",code,"]"), rate_fcns[[k]]$lumped)
                                         }
                                 }
 
@@ -702,7 +702,7 @@ stem_dynamics <-
                                 for(s in seq_along(compartment_codes)) {
                                         code_name <- names(compartment_codes)[s]
                                         code      <- compartment_codes[s]
-                                        rate_fcns[[k]]$lumped <- gsub(code_name, paste0("state[",code,"]"), rate_fcns[[k]]$lumped)
+                                        rate_fcns[[k]]$lumped <- gsub(paste0('\\<',code_name,'\\>'), paste0("state[",code,"]"), rate_fcns[[k]]$lumped)
                                 }
 
                         } else if(rates[[k]]$lumped == FALSE) {
@@ -714,14 +714,14 @@ stem_dynamics <-
                                 for(s in seq_along(param_codes)) {
                                         code_name <- names(param_codes)[s]
                                         code      <- param_codes[s]
-                                        rate_fcns[[k]]$unlumped <- gsub(code_name, paste0("parameters[",code,"]"), rate_fcns[[k]]$unlumped)
+                                        rate_fcns[[k]]$unlumped <- gsub(paste0('\\<',code_name,'\\>'), paste0("parameters[",code,"]"), rate_fcns[[k]]$unlumped)
                                 }
 
                                 # make the substitutions for the covariate codes
                                 for(s in seq_along(tcovar_codes)) {
                                         code_name <- names(tcovar_codes)[s]
                                         code      <- tcovar_codes[s]
-                                        rate_fcns[[k]]$unlumped <- gsub(code_name, paste0("tcovar[",code,"]"), rate_fcns[[k]]$unlumped)
+                                        rate_fcns[[k]]$unlumped <- gsub(paste0('\\<',code_name,'\\>'), paste0("tcovar[",code,"]"), rate_fcns[[k]]$unlumped)
                                 }
 
                                 # make the substitutions for the constant codes
@@ -729,7 +729,7 @@ stem_dynamics <-
                                         for(s in seq_along(const_codes)) {
                                                 code_name <- names(const_codes)[s]
                                                 code      <- const_codes[s]
-                                                rate_fcns[[k]]$unlumped <- gsub(code_name, paste0("constants[",code,"]"), rate_fcns[[k]]$unlumped)
+                                                rate_fcns[[k]]$unlumped <- gsub(paste0('\\<',code_name,'\\>'), paste0("constants[",code,"]"), rate_fcns[[k]]$unlumped)
                                         }
                                 }
 
@@ -737,7 +737,7 @@ stem_dynamics <-
                                 for(s in seq_along(compartment_codes)) {
                                         code_name <- names(compartment_codes)[s]
                                         code      <- compartment_codes[s]
-                                        rate_fcns[[k]]$unlumped <- gsub(code_name, paste0("state[",code,"]"), rate_fcns[[k]]$unlumped)
+                                        rate_fcns[[k]]$unlumped <- gsub(paste0('\\<',code_name,'\\>'), paste0("state[",code,"]"), rate_fcns[[k]]$unlumped)
                                 }
 
                                 # instatiate the lumped rate function

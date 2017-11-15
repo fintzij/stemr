@@ -75,13 +75,13 @@ rate_fcns_4_ode <- function(rate_fcns, compartment_codes, flow_matrix) {
         # make the substitutions
         for(s in seq_len(n_rates)) {
                 for(t in seq_len(n_comps)) {
-                        rate_strings[s] <- gsub(lookup_table$varname[t], lookup_table$code[t], rate_strings[s])
+                        rate_strings[s] <- gsub(paste0('\\<',lookup_table$varname[t],'\\>'), lookup_table$code[t], rate_strings[s])
                 }
         }
 
         for(s in seq_len(n_rates)) {
                 for(t in seq_len(n_comps)) {
-                        rate_strings[s] <- gsub(lookup_table$code[t], lookup_table$replacement[t], rate_strings[s])
+                        rate_strings[s] <- gsub(paste0('\\<',lookup_table$code[t],'\\>'), lookup_table$replacement[t], rate_strings[s])
                 }
         }
 

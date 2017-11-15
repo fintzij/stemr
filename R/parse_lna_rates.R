@@ -47,12 +47,12 @@ parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, l
         # make the substitutions in the rate strings
         for(s in seq_along(lna_rates)) {
                 for(j in seq_len(nrow(lookup_table))) {
-                        lna_rates[s] <- gsub(pattern = lookup_table[j,"search_name"],
+                        lna_rates[s] <- gsub(pattern = paste0('\\<', lookup_table[j,"search_name"], '\\>'),
                                              replacement = lookup_table[j,"code"], x = lna_rates[s])
                 }
 
                 for(j in seq_along(comp_inds)) {
-                        lna_rates[s] <- gsub(pattern = lookup_table[comp_inds[j], "code"],
+                        lna_rates[s] <- gsub(pattern = paste0('\\<', lookup_table[comp_inds[j], "code"], '\\>'),
                                              replacement = lookup_table[comp_inds[j], "log_code"], x = lna_rates[s])
                 }
         }
@@ -106,7 +106,7 @@ parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, l
         # replace the hash codes with the names of the vector elements
         for(s in seq_along(lna_rates)) {
                 for(j in seq_len(nrow(lookup_table))) {
-                        lna_rates[s]      <- gsub(pattern = lookup_table[j,"code"],
+                        lna_rates[s]      <- gsub(pattern = paste0('\\<', lookup_table[j,"code"], '\\>'),
                                                   replacement = lookup_table[j,"varname"], x = lna_rates[s])
                         lna_rates[s]      <- gsub(" ", "", lna_rates[s])
                 }
@@ -115,7 +115,7 @@ parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, l
 
         for(s in seq_along(ito_coefs)) {
                 for(j in seq_len(nrow(lookup_table))) {
-                        ito_coefs[s]      <- gsub(pattern = lookup_table[j,"code"],
+                        ito_coefs[s]      <- gsub(pattern = paste0('\\<', lookup_table[j,"code"], '\\>'),
                                                   replacement = lookup_table[j,"varname"], x = ito_coefs[s])
                         ito_coefs[s]      <- gsub(" ", "", ito_coefs[s])
                 }
@@ -124,9 +124,9 @@ parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, l
 
         for(s in seq_along(hazards)) {
                 for(j in seq_len(nrow(lookup_table))) {
-                        hazards[s]      <- gsub(pattern = lookup_table[j,"code"], replacement = lookup_table[j,"varname"], x = hazards[s])
+                        hazards[s]      <- gsub(pattern = paste0('\\<', lookup_table[j,"code"], '\\>'), replacement = lookup_table[j,"varname"], x = hazards[s])
                         hazards[s]      <- gsub(" ", "", hazards[s])
-                        time_derivs[s]  <- gsub(pattern = lookup_table[j,"code"], replacement = lookup_table[j,"varname"], x = time_derivs[s])
+                        time_derivs[s]  <- gsub(pattern = paste0('\\<', lookup_table[j,"code"], '\\>'), replacement = lookup_table[j,"varname"], x = time_derivs[s])
                 }
                 hazards[s]     <- sub_powers(hazards[s])
                 time_derivs[s] <- sub_powers(time_derivs[s])
@@ -134,7 +134,7 @@ parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, l
 
         for(s in seq_along(derivatives)) {
                 for(j in seq_len(nrow(lookup_table))) {
-                        derivatives[s] <- gsub(pattern = lookup_table[j,"code"], replacement = lookup_table[j,"varname"], x = derivatives[s])
+                        derivatives[s] <- gsub(pattern = paste0('\\<', lookup_table[j,"code"], '\\>'), replacement = lookup_table[j,"varname"], x = derivatives[s])
                         derivatives[s] <- gsub(" ", "", derivatives[s])
                 }
                 derivatives[s] <- sub_powers(derivatives[s])

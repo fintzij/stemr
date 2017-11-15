@@ -44,7 +44,7 @@ parse_ode_rates <- function(ode_rates, param_codes, const_codes, tcovar_codes, o
         # make the substitutions in the rate strings
         for(s in seq_along(ode_rates)) {
                 for(j in seq_len(nrow(lookup_table))) {
-                        ode_rates[s] <- gsub(pattern = lookup_table[j,"search_name"],
+                        ode_rates[s] <- gsub(pattern = paste0('\\<', lookup_table[j,"search_name"], '\\>'),
                                              replacement = lookup_table[j,"code"], x = ode_rates[s])
                 }
         }
@@ -55,7 +55,7 @@ parse_ode_rates <- function(ode_rates, param_codes, const_codes, tcovar_codes, o
         # replace the hash codes with the names of the vector elements
         for(s in seq_along(hazards)) {
                 for(j in seq_len(nrow(lookup_table))) {
-                        hazards[s]      <- gsub(pattern = lookup_table[j,"code"], replacement = lookup_table[j,"varname"], x = hazards[s])
+                        hazards[s]      <- gsub(pattern = paste0('\\<',lookup_table[j,"code"],'\\>'), replacement = lookup_table[j,"varname"], x = hazards[s])
                         hazards[s]      <- gsub(" ", "", hazards[s])
                 }
                 hazards[s] <- sub_powers(hazards[s])
@@ -63,7 +63,7 @@ parse_ode_rates <- function(ode_rates, param_codes, const_codes, tcovar_codes, o
 
         for(s in seq_along(ode_rates)) {
                 for(j in seq_len(nrow(lookup_table))) {
-                        ode_rates[s]      <- gsub(pattern = lookup_table[j,"code"],
+                        ode_rates[s]      <- gsub(pattern = paste0('\\<',lookup_table[j,"code"],'\\>'),
                                                   replacement = lookup_table[j,"varname"], x = ode_rates[s])
                         ode_rates[s]      <- gsub(" ", "", ode_rates[s])
                 }
