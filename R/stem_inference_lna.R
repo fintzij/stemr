@@ -1575,6 +1575,7 @@ stem_inference_lna <- function(stem_object,
 
         stem_object$results <- list(time         = difftime(end.time, start.time, units = "hours"),
                                     lna_paths    = lna_paths,
+                                    lna_draws    = lna_draws,
                                     MCMC_results = MCMC_results,
                                     ess_record   = ess_record)
 
