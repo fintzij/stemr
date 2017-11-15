@@ -997,24 +997,24 @@ stem_inference_lna <- function(stem_object,
                                         copy_elem(params_prop_est, model_params_est, s-1)
                                 }
 
-                                # Adapt the proposal kernel
+                                # Adapt the proposal scaling
                                 if(iter < stop_adaptation) {
-                                        proposal_scaling[s] <- min(proposal_scaling[s] *
-                                                                           exp(adaptations[iter] *
-                                                                                       (min(exp(acceptance_prob),1) - target_c)),
+                                        proposal_scaling[s] <- min(exp(log(proposal_scaling[s]) +
+                                                                           adaptations[iter] * (min(exp(acceptance_prob),1) - target_c)),
                                                                    max_scaling)
-
-                                        kernel_resid <- model_params_est - kernel_mean
-                                        kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid%*%t(kernel_resid) - kernel_cov)
-                                        kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
                                 }
                         }
+                        
+                        # Adapt the proposal kernel
+                        kernel_resid <- model_params_est - kernel_mean
+                        kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid%*%t(kernel_resid) - kernel_cov)
+                        kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
 
                 } else if(mcmc_kernel$method == "mvn_c_adaptive") {
 
                         if(iter == stop_adaptation) {
-                                sigma_chol = chol(diag(sqrt(proposal_scaling)) %*% kernel_cov%*% diag(sqrt(proposal_scaling)))
-                                mcmc_kernel$sigma = diag(sqrt(proposal_scaling)) %*% kernel_cov%*% diag(sqrt(proposal_scaling))
+                              mcmc_kernel$sigma = diag(sqrt(proposal_scaling)) %*% kernel_cov%*% diag(sqrt(proposal_scaling))
+                              sigma_chol        = chol(mcmc_kernel$sigma)
                         }
 
                         # propose new parameters
@@ -1030,6 +1030,7 @@ stem_inference_lna <- function(stem_object,
                                 g_prop2c_prop(g2c_mat_est, model_params_est, params_prop_est)
                                 g2c_mat_nat     <- t(apply(g2c_mat_est, 1, from_estimation_scale))
                                 logpost_g2c_cur <- logpost_cur
+                                
                         } else {
                                 mvn_rw(params_prop = params_prop_est,
                                        params_cur = model_params_est,
@@ -1193,13 +1194,12 @@ stem_inference_lna <- function(stem_object,
                                         logpost_g2c_prop <- data_log_lik_g2c + params_logprior_g2c
 
                                         ## Compute the acceptance probability
-                                        acceptance_prob_g2c <- logpost_g2c_prop - logpost_g2c_cur
+                                        acceptance_prob_g2c <- min(exp(logpost_g2c_prop - logpost_g2c_cur), 1)
 
                                         # Adapt the proposal scalings
                                         proposal_scaling[s] <-
-                                                min(proposal_scaling[s] *
-                                                            exp(adaptations[iter] *
-                                                                        (min(exp(acceptance_prob_g2c),1) - target_c)),
+                                                min(exp(log(proposal_scaling[s]) +
+                                                            adaptations[iter] * (acceptance_prob_g2c - target_c)),
                                                     max_scaling)
                                 }
 
@@ -1212,8 +1212,8 @@ stem_inference_lna <- function(stem_object,
                 } else if(mcmc_kernel$method == "mvn_g_adaptive") {
 
                         if(iter == stop_adaptation) {
-                                sigma_chol = chol(sqrt(proposal_scaling) * kernel_cov)
-                                mcmc_kernel$sigma = proposal_scaling * kernel_cov
+                              mcmc_kernel$sigma = proposal_scaling * kernel_cov
+                              sigma_chol        = chol(mcmc_kernel$sigma)
                         }
 
                         # propose new parameters
@@ -1319,9 +1319,8 @@ stem_inference_lna <- function(stem_object,
 
                         if(iter < stop_adaptation) {
                                 # Adapt the proposal kernel
-                                proposal_scaling <- min(proposal_scaling *
-                                                                exp(adaptations[iter] *
-                                                                            (min(exp(acceptance_prob), 1) - target_g)),
+                                proposal_scaling <- min(exp(log(proposal_scaling) + 
+                                                                adaptations[iter] * (min(exp(acceptance_prob), 1) - target_g)),
                                                         max_scaling)
 
                                 kernel_resid <- model_params_est - kernel_mean
