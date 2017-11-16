@@ -30,6 +30,14 @@ parse_rates_exact <- function(rates, compile_rates, messages = TRUE) {
         }
 
         if(generate_code) {
+                if(messages) {
+                      exp_warning <- FALSE
+                      for(r in seq_along(rates)) {
+                            exp_warning <- exp_warning || grepl("\\^", rates[[r]]$lumped) || grepl("\\^", rates[[r]]$unlumped)
+                            if(exp_warning) warning("If there is an exponentiated term in a rate, check that the base and exponent are both enclosed in parentheses, e.g., (base)^(exponent). Ignore this warning if rates are correctly specified.")
+                            if(exp_warning) break
+                      }
+                }
 
                 # ensure powers are converted
                 for(r in seq_along(rates)) {
