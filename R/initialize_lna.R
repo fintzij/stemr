@@ -76,8 +76,9 @@ initialize_lna <-
                                         stoich_matrix     = stoich_matrix,
                                         forcing_inds      = forcing_inds,
                                         forcing_matrix    = forcing_matrix,
-                                        step_size         = step_size,
                                         reject_negatives  = FALSE,
+                                        max_attempts      = initialization_attempts,
+                                        step_size         = step_size,
                                         lna_pointer       = lna_pointer,
                                         set_pars_pointer  = lna_set_pars_pointer
                                 )

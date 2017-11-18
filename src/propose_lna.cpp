@@ -20,14 +20,16 @@ using namespace arma;
 //' @param forcing_inds logical vector of indicating at which times in the
 //'   time-varying covariance matrix a forcing is applied.
 //' @param forcing_matrix matrix containing the forcings.
-//' @param step_size initial step size for the ODE solver (adapted internally,
-//' but too large of an initial step can lead to failure in stiff systems).
 //' @param reject_negatives logical for whether negative increments or compartment 
 //' volumes should lead to rejection of the sampled path. If false, draws that lead 
 //' to either are re-sampled in place instead of throwing an error. N.B. Resampling 
 //' targets the WRONG distribution and should only be used when initializing an LNA 
 //' path with the understanding that further warm-up under the correct distribution 
 //' is required.
+//' @param max_attempts maximum number of tries to restart negative increments if 
+//' reject_negatives is false.
+//' @param step_size initial step size for the ODE solver (adapted internally,
+//' but too large of an initial step can lead to failure in stiff systems).
 //' @param lna_pointer external pointer to the compiled LNA integration function.
 //' @param set_pars_pointer external pointer to the function for setting LNA pars.
 //' @return list containing the stochastic perturbations (i.i.d. N(0,1) draws) and
@@ -43,6 +45,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                        const Rcpp::LogicalVector& forcing_inds,
                        const arma::mat& forcing_matrix,
                        bool reject_negatives,
+                       int max_attempts,
                        double step_size,
                        SEXP lna_pointer,
                        SEXP set_pars_pointer) {
@@ -97,6 +100,9 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
 
         // sample the stochastic perturbations
         arma::mat draws(n_events, n_times-1, arma::fill::randn);
+        
+        // integer for the attempt number
+        int attempt = 0;
 
         // array for lna moments
         // arma::mat drift_vecs(n_events, n_times-1, arma::fill::zeros);
@@ -188,11 +194,31 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                                   ::Rf_error("c++ exception (unknown reason)");
                             }
                       } else {
-                            while(any(nat_lna < 0) || any(init_volumes_prop < 0)) {
+                            while((any(nat_lna < 0) || any(init_volumes_prop < 0)) && (attempt <= max_attempts)) {
+                                  attempt     += 1;
                                   draws.col(0) = arma::randn(n_events);                          // draw a new vector of N(0,1)
                                   log_lna      = lna_drift + svd_U * draws.col(j);               // map the new draws to
                                   nat_lna      = arma::exp(log_lna) - 1;                         // compute the LNA increment
                                   init_volumes_prop = init_volumes + stoich_matrix * nat_lna;    // compute new initial volumes
+                            }
+                            
+                            try{
+                                  if(attempt > max_attempts) {
+                                        if(any(nat_lna < 0)) {
+                                              throw std::runtime_error("Negative increment.");
+                                        }
+                                        
+                                        if(any(init_volumes < 0)) {
+                                              throw std::runtime_error("Negative compartment volumes.");
+                                        }
+                                  }
+                                  
+                            } catch(std::exception &err) {
+                                  
+                                  forward_exception_to_r(err);
+                                  
+                            } catch(...) {
+                                  ::Rf_error("c++ exception (unknown reason)");
                             }
                       }
                       
@@ -231,11 +257,32 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                       
                       // ensure monotonicity of the increment, compartment volumes, 
                       // and compartment volumes with forcings
-                      while(any(nat_lna < 0) || any(init_volumes_prop < 0)) {
+                      attempt = 0;
+                      while((any(nat_lna < 0) || any(init_volumes_prop < 0)) && (attempt <= max_attempts)) {
+                            attempt     += 1;
                             draws.col(j) = arma::randn(n_events);                          // draw a new vector of N(0,1)
                             log_lna      = lna_drift + svd_U * draws.col(j);               // map the new draws to
                             nat_lna      = arma::exp(log_lna) - 1;                         // compute the LNA increment
                             init_volumes_prop = init_volumes + stoich_matrix * nat_lna;    // compute new initial volumes
+                      }
+                      
+                      try{
+                            if(attempt > max_attempts) {
+                                  if(any(nat_lna < 0)) {
+                                        throw std::runtime_error("Negative increment.");
+                                  }
+                                  
+                                  if(any(init_volumes < 0)) {
+                                        throw std::runtime_error("Negative compartment volumes.");
+                                  }
+                            }
+                            
+                      } catch(std::exception &err) {
+                            
+                            forward_exception_to_r(err);
+                            
+                      } catch(...) {
+                            ::Rf_error("c++ exception (unknown reason)");
                       }
                       
                       // set the initial volumes to the proposed values

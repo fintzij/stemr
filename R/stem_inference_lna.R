@@ -646,7 +646,7 @@ stem_inference_lna <- function(stem_object,
         # begin the MCMC
         start.time <- Sys.time()
         for(iter in (seq_len(iterations) + 1)) {
-
+              
                 # Print the status if messages are enabled
                 if(messages && iter%%thin_latent_proc == 0) {
                         # print the iteration
