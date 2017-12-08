@@ -174,52 +174,22 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                       // update the compartment volumes
                       init_volumes_prop = init_volumes + stoich_matrix * nat_lna;
                       
-                      // resample the draws if it is the first increment or 
                       // throw errors for negative increments or negative volumes
-                      if(j != 0) {
-                            try{
-                                  if(any(nat_lna < 0)) {
-                                        throw std::runtime_error("Negative increment.");
-                                  }
-                                  
-                                  if(any(init_volumes < 0)) {
-                                        throw std::runtime_error("Negative compartment volumes.");
-                                  }
-                                  
-                            } catch(std::exception &err) {
-                                  
-                                  forward_exception_to_r(err);
-                                  
-                            } catch(...) {
-                                  ::Rf_error("c++ exception (unknown reason)");
-                            }
-                      } else {
-                            while((any(nat_lna < 0) || any(init_volumes_prop < 0)) && (attempt <= max_attempts)) {
-                                  attempt     += 1;
-                                  draws.col(0) = arma::randn(n_events);                          // draw a new vector of N(0,1)
-                                  log_lna      = lna_drift + svd_U * draws.col(j);               // map the new draws to
-                                  nat_lna      = arma::exp(log_lna) - 1;                         // compute the LNA increment
-                                  init_volumes_prop = init_volumes + stoich_matrix * nat_lna;    // compute new initial volumes
+                      try{
+                            if(any(nat_lna < 0)) {
+                                  throw std::runtime_error("Negative increment.");
                             }
                             
-                            try{
-                                  if(attempt > max_attempts) {
-                                        if(any(nat_lna < 0)) {
-                                              throw std::runtime_error("Negative increment.");
-                                        }
-                                        
-                                        if(any(init_volumes < 0)) {
-                                              throw std::runtime_error("Negative compartment volumes.");
-                                        }
-                                  }
-                                  
-                            } catch(std::exception &err) {
-                                  
-                                  forward_exception_to_r(err);
-                                  
-                            } catch(...) {
-                                  ::Rf_error("c++ exception (unknown reason)");
+                            if(any(init_volumes < 0)) {
+                                  throw std::runtime_error("Negative compartment volumes.");
                             }
+                            
+                      } catch(std::exception &err) {
+                            
+                            forward_exception_to_r(err);
+                            
+                      } catch(...) {
+                            ::Rf_error("c++ exception (unknown reason)");
                       }
                       
                       // save the increment and the prevalence
@@ -247,8 +217,8 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                       }
                       
                 } else { 
-                      // If Initializing, draws leading to negative compartments or volumes are resampled.
                       
+                      // If Initializing, draws leading to negative compartments or volumes are resampled.
                       // compute the LNA increment
                       nat_lna = arma::exp(log_lna) - 1;
                       

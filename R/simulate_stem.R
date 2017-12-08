@@ -140,51 +140,55 @@ simulate_stem <-
                         # if they differ, reconstruct the tcovar matrix and associated objects
                         rebuild_tcovar <- (t0 != stem_object$dynamics$t0) ||
                                 (tmax != stem_object$dynamics$tcovar[nrow(stem_object$dynamics$tcovar), 1]) ||
-                                !is.null(timestep)
+                                timestep != stem_object$dynamics$timestep ||
+                                !identical(stem_object$dynamics$tcovar[,1], census_times)
 
                         if(rebuild_tcovar) {
 
-                                # replace t0 and tmax in the time-varying covariate matrix
-                                if(is.null(timestep) && stem_object$dynamics$timevarying) {
-                                        timestep <- (tmax - t0)/50
-
-                                } else if(is.null(timestep) && !stem_object$dynamics$timevarying){
-                                        timestep <- tmax - t0
-                                }
-
                                 # rebuild the time-varying covariate matrix so that it contains the census intervals
-                                stem_object$dynamics$tcovar <- build_tcovar_matrix(tcovar = stem_object$dynamics$dynamics_args$tcovar,
-                                                                                   timestep = timestep, t0 = t0, tmax = tmax, messages = messages)
+                                stem_object$dynamics$tcovar <- build_tcovar_matrix(tcovar       = stem_object$dynamics$dynamics_args$tcovar, 
+                                                                                   tparam       = stem_object$dynamics$tparam,
+                                                                                   forcings     = stem_object$dynamics$forcings,
+                                                                                   parameters   = stem_object$dynamics$parameters,
+                                                                                   timestep     = timestep, 
+                                                                                   census_times = census_times,
+                                                                                   t0           = t0, 
+                                                                                   tmax         = tmax, 
+                                                                                   messages     = messages)
+                                
                                 stem_object$dynamics$tcovar_codes        <- seq_len(ncol(stem_object$dynamics$tcovar) - 1)
                                 names(stem_object$dynamics$tcovar_codes) <- colnames(stem_object$dynamics$tcovar)[2:ncol(stem_object$dynamics$tcovar)]
                                 stem_object$dynamics$n_tcovar            <- ncol(stem_object$dynamics$tcovar) - 1
-                                stem_object$dynamics$tcovar_changemat    <- build_tcovar_changemat(stem_object$dynamics$tcovar)
-                                stem_object$dynamics$tcovar_adjmat       <- build_tcovar_adjmat(stem_object$dynamics$rates, stem_object$dynamics$tcovar_codes)
+                                stem_object$dynamics$tcovar_changemat    <- build_tcovar_changemat(tcovar = stem_object$dynamics$tcovar,
+                                                                                                   tparam = stem_object$dynamics$tparam,
+                                                                                                   forcings = stem_object$dynamics$forcings)
+                                stem_object$dynamics$tcovar_adjmat       <- build_tcovar_adjmat(rates        = stem_object$dynamics$rates, 
+                                                                                                tcovar_codes = stem_object$dynamics$tcovar_codes,
+                                                                                                forcings     = stem_object$dynamics$forcings)
 
                                 # zero out forcings if necessary
                                 if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
 
                                         # get the forcing indices (supplied in the original tcovar matrix)
-                                        forcing_inds <- as.logical(match(round(stem_object$dynamics$tcovar[,1], digits = 8),
-                                                                         round(stem_object$dynamics$dynamics_args$tcovar[,1], digits = 8),
-                                                                         nomatch = FALSE))
-                                        zero_inds    <- !forcing_inds
-
-                                        # zero out the tcovar elements corresponding to times with no forcings
-                                        for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
-                                                stem_object$dynamics$tcovar[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] = 0
+                                        forcing_inds <- vector("logical", nrow(stem_object$dynamics$tcovar))
+                                        for(f in seq_along(stem_object$dynamics$forcings)) {
+                                              forcing_inds <- forcing_inds | stem_object$dynamics$tcovar[,stem_object$dynamics$forcings[[f]]$tcovar_name] != 0
                                         }
+                                        
                                 } else {
                                         forcing_inds   <- rep(FALSE, nrow(stem_object$dynamics$tcovar))
                                 }
+                                
                         } else {
                                 # Get the forcing indices if there are forcings
                                 if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
 
                                         # get the forcing indices (supplied in the original tcovar matrix)
-                                        forcing_inds <- as.logical(match(round(stem_object$dynamics$tcovar[,1], digits = 8),
-                                                                         round(stem_object$dynamics$dynamics_args$tcovar[,1], digits = 8),
-                                                                         nomatch = FALSE))
+                                        forcing_inds <- vector("logical", nrow(stem_object$dynamics$tcovar))
+                                        for(f in seq_along(stem_object$dynamics$forcings)) {
+                                              forcing_inds <- forcing_inds | stem_object$dynamics$tcovar[,stem_object$dynamics$forcings[[f]]$tcovar_name] != 0
+                                        }
+                                        
                                 } else {
                                         forcing_inds   <- rep(FALSE, nrow(stem_object$dynamics$tcovar))
                                 }
@@ -288,28 +292,23 @@ simulate_stem <-
                                 for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
 
                                         # insert the flow into the forcing matrix
-                                        forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$from] <-
-                                                forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$from] -
-                                                stem_object$dynamics$dynamics_args$tcovar[, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]
+                                        forcing_matrix[forcing_inds, stem_object$dynamics$forcings[[l]]$from] <-
+                                                forcing_matrix[forcing_inds, stem_object$dynamics$forcings[[l]]$from] -
+                                                stem_object$dynamics$tcovar[forcing_inds, stem_object$dynamics$forcings[[l]]$tcovar_name]
 
-                                        forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$to] <-
-                                                forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$to] +
-                                                stem_object$dynamics$dynamics_args$tcovar[, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]
-
-                                        # update the adjacency matrix to indicate which rates need to be updated
-                                        affected_rates <- rep(FALSE, nrow(stem_object$dynamics$tcovar_adjmat))
-
-                                        for(n in seq_along(stem_object$dynamics$rates)) {
-                                                affected_rates[n] = grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$from,
-                                                                          stem_object$dynamics$rates[[n]]$unparsed) |
-                                                        grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$to,
-                                                              stem_object$dynamics$rates[[n]]$unparsed)
-                                        }
-
-                                        stem_object$dynamics$tcovar_adjmat[,stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] <-
-                                                xor(stem_object$dynamics$tcovar_adjmat[,stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name],
-                                                    affected_rates)
+                                        forcing_matrix[forcing_inds, stem_object$dynamics$forcings[[l]]$to] <-
+                                              forcing_matrix[forcing_inds, stem_object$dynamics$forcings[[l]]$to] +
+                                              stem_object$dynamics$tcovar[forcing_inds, stem_object$dynamics$forcings[[l]]$tcovar_name]
                                 }
+                        }
+                        
+                        # generate indices for time-varying parameters
+                        # RESUME HERE --- FUNCTIONS TO INSERT TPARAMS INTO TCOVAR mtx
+                        if(!is.null(stem_object$dynamics$tparam)) {
+                              for(s in seq_along(stem_object$dynamics$tparam)) {
+                                    stem_object$dynamics$tparam[[s]]$colind  <- stem_object$dynamics$tcovar_codes[stem_object$dynamics$tparam[[s]]$tparam_name]
+                                    stem_object$dynamics$tparam[[s]]$rowinds <- findInterval(stem_object$dynamics$tcovar[,1], tparam[[s]]$times, left.open = F)
+                              }
                         }
 
                         # initialize the list of paths
@@ -336,7 +335,9 @@ simulate_stem <-
 
                                 attempt <- 0
                                 path_full <- NULL
-                                if(!is.null(simulation_parameters)) sim_pars <- as.numeric(simulation_parameters[[k]])
+                                if(!is.null(simulation_parameters)) {
+                                      sim_pars <- as.numeric(simulation_parameters[[k]])
+                                } 
 
                                 while(is.null(path_full) & attempt < max_attempts) {
                                         try({

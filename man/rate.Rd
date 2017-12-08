@@ -2,126 +2,121 @@
 % Please edit documentation in R/rate.R
 \name{rate}
 \alias{rate}
-\title{Generates a rate list to be supplied to the \code{\link{stem_dynamics}}
+\title{Generates a rate list to be supplied to the \code{\link{stem_dynamics}} 
 funciton.}
 \usage{
-rate(rate, from, to, strata = NULL, seasonality = NULL, incidence = FALSE,
-  lumped = FALSE)
+rate(rate, from, to, strata = NULL, incidence = FALSE, lumped = FALSE)
 }
 \arguments{
-\item{rate}{string for computing the rate (unlumped by default unless
+\item{rate}{string for computing the rate (unlumped by default unless 
 \code{lumped=TRUE})}
 
 \item{from}{compartment from which an individual exits, a string}
 
 \item{to}{compartment into which an individual enters, a string}
 
-\item{strata}{character vector of strata to which the rate applies, may be
+\item{strata}{character vector of strata to which the rate applies, may be 
 supplied as "ALL"}
 
-\item{seasonality}{string returned by the \code{\link{seasonality}} function}
-
-\item{incidence}{should an artificial compartment be created for th purpose
-of simulating or making inference based on incidence data for this
+\item{incidence}{should an artificial compartment be created for th purpose 
+of simulating or making inference based on incidence data for this 
 transition or set of transitions? Defaults to FALSE.}
 
-\item{lumped}{is the rate string provided on the lumped state space of
+\item{lumped}{is the rate string provided on the lumped state space of 
 compartment counts.}
 }
 \value{
 rate list
 }
 \description{
-Generates a rate list to be supplied to the \code{\link{stem_dynamics}}
+Generates a rate list to be supplied to the \code{\link{stem_dynamics}} 
 funciton.
 }
 \section{Specifying the rate functions}{
 
-
-  Each rate list specifies, at a minimum, the rate function, the compartment
-  from which an individual exits, the compartment that she enters.
-  Optionally, the strata to which the rate function applies can be supplied,
-  along with seasonal terms or a linear trend in time that can be added (most
-  easily) through the \code{\link{seasonality}} function. The optional
-  \code{strata} argument can either be a character vector of strata for which
-  the rate applies, or may be specified as "ALL" if the rate function applies
-  to common compartments in all strata. If there are multiple strata, the
-  strata argument for each rate is required. If a rate is time dependent, the
-  reserved word "TIME" should be used for the time variable. For example,
-  "beta * I + eta *TIME" would indicate a linear trend in the infectivity
-  rate.
-
-  \emph{VERY IMPORTANT:} The rate functions are assumed to be specified at
-  the subject level and they are parsed internally and converted to lumped
-  rates. For example, in a standard SIR model, the subject-level infectivity
-  and recovery rates are \eqn{\beta * I} and \eqn{\mu}, whereas the lumped
-  rates which will be generated automatically are \eqn{\beta * I * S} and
-  \eqn{\mu * I}. When a lumped string is provided, no internal conversion
+  
+  Each rate list specifies, at a minimum, the rate function, the compartment 
+  from which an individual exits, the compartment that she enters. 
+  Optionally, the strata to which the rate function applies can be supplied.
+  The optional \code{strata} argument can either be a character vector of
+  strata for which the rate applies, or may be specified as "ALL" if the rate
+  function applies to common compartments in all strata. If there are
+  multiple strata, the strata argument for each rate is required. If a rate
+  is time dependent, the reserved word "TIME" should be used for the time
+  variable. For example, "beta * I + eta *TIME" would indicate a linear trend
+  in the infectivity rate.
+  
+  \emph{VERY IMPORTANT:} The rate functions are assumed to be specified at 
+  the subject level and they are parsed internally and converted to lumped 
+  rates. For example, in a standard SIR model, the subject-level infectivity 
+  and recovery rates are \eqn{\beta * I} and \eqn{\mu}, whereas the lumped 
+  rates which will be generated automatically are \eqn{\beta * I * S} and 
+  \eqn{\mu * I}. When a lumped string is provided, no internal conversion 
   will occur.
-
-  The rate functions should be provided as string snippets of valid C++ code
-  (though if the snippet is a single line, no semicolon needs to be added).
-  Each function is parsed internally for references to parameters,
-  compartments, strata, constants, and the time variable. There are a few
-  case-sensitive reserved words that are provided to facilitate the
-  specification of rate functions when there are multiple strata that factor
-  into a rate: "ALL", "REL", "ADJ", "SELF". "ALL", "REL", and "ADJ" will be
+  
+  The rate functions should be provided as string snippets of valid C++ code 
+  (though if the snippet is a single line, no semicolon needs to be added). 
+  Each function is parsed internally for references to parameters, 
+  compartments, strata, constants, and the time variable. There are a few 
+  case-sensitive reserved words that are provided to facilitate the 
+  specification of rate functions when there are multiple strata that factor 
+  into a rate: "ALL", "REL", "ADJ", "SELF". "ALL", "REL", and "ADJ" will be 
   parsed as a vector of compartments, and therefore must be wrapped using the
-  \code{\link{comp_fcn}} function, which specifies how the compartments in
+  \code{\link{comp_fcn}} function, which specifies how the compartments in 
   that vector should be aggregated.
-
-  In an SIR model with multiple strata, for example, we could specify
-  infectivity rates as follows: \enumerate{ \item rate("beta * I_SELF", "S",
+  
+  In an SIR model with multiple strata, for example, we could specify 
+  infectivity rates as follows: \enumerate{ \item rate("beta * I_SELF", "S", 
   "I", "ALL"): each susceptible contacts the infecteds within her own stratum
-  at rate \eqn{\beta * I}, but does not contract an infection from outside
-  her stratum. This rate applies to subjects in all strata. \item rate("beta
-  * I_SELF^alpha", "S", "I", "ALL"): each susceptible contacts the infecteds
-  within her own stratum at rate \eqn{\beta * I^\alpha}, but does not
-  contract an infection from outside her stratum. Note that the rate will be
-  parsed to produce valid C++, so exponentiation is done using the
-  \code{pow()} function. \item rate("beta * comp_fcn(I_ALL, sum)", "S", "I",
-  "ALL"): each susceptible contacts all infecteds in the population at rate
-  \eqn{\beta * \sum_s I_s}, regardless of stratum. Note that 'I_ALL' will be
-  replaced by a vector of I_strata, therefore using 'I_all' outside of a
-  function, e.g. beta * I_ALL, will result in an error. However, beta *
-  comp_fcn(I_ALL, sum) is well defined. \item rate("beta * comp_fcn(I_REL),
+  at rate \eqn{\beta * I}, but does not contract an infection from outside 
+  her stratum. This rate applies to subjects in all strata. \item rate("beta 
+  * I_SELF^alpha", "S", "I", "ALL"): each susceptible contacts the infecteds 
+  within her own stratum at rate \eqn{\beta * I^\alpha}, but does not 
+  contract an infection from outside her stratum. Note that the rate will be 
+  parsed to produce valid C++, so exponentiation is done using the 
+  \code{pow()} function. \item rate("beta * comp_fcn(I_ALL, sum)", "S", "I", 
+  "ALL"): each susceptible contacts all infecteds in the population at rate 
+  \eqn{\beta * \sum_s I_s}, regardless of stratum. Note that 'I_ALL' will be 
+  replaced by a vector of I_strata, therefore using 'I_all' outside of a 
+  function, e.g. beta * I_ALL, will result in an error. However, beta * 
+  comp_fcn(I_ALL, sum) is well defined. \item rate("beta * comp_fcn(I_REL), 
   sum,", "S", "I", c("young", "old")): each suscpetible contacts infecteds in
-  the young and old strata with rate beta. N.B. when the "REL" keyword is
+  the young and old strata with rate beta. N.B. when the "REL" keyword is 
   used in a \code{comp_fcn} call, the relevant strata will be pulled from the
-  strata supplied in the rate. \item rate("beta1 * I_SELF + beta2 *
-  comp_fcn(I_ADJ, sum)", "S", "I", "ALL"): each susceptible contacts
-  infecteds in her own stratum at rate \eqn{\beta1 * I_SELF}, and contacts
-  infecteds in adjacent strata (specified in the adjacency matrix) at rate
-  \eqn{\beta * \sum_{s: stratum 's' is adjacent} I_s}. Note that in this
+  strata supplied in the rate. \item rate("beta1 * I_SELF + beta2 * 
+  comp_fcn(I_ADJ, sum)", "S", "I", "ALL"): each susceptible contacts 
+  infecteds in her own stratum at rate \eqn{\beta1 * I_SELF}, and contacts 
+  infecteds in adjacent strata (specified in the adjacency matrix) at rate 
+  \eqn{\beta * \sum_{s: stratum 's' is adjacent} I_s}. Note that in this 
   case, the diagonal entries in the adjacency matrix should be set to zero.}
-
-  The \code{from} and \code{to} arguments will automatically be updated when
-  the rate is parsed within the \code{stem_dynamics} function to reflect the
-  strata if there are multiple strata in the event that no strata are
-  specified in those arguments. Suppose, for example, that we define strata
-  to be two adjacent regions, east and west. The first rate given above will
-  be understood as governing transitions from S_east to I_east, and from
-  S_west to I_west. If we we want to define rates for transitions where a
-  subject crosses strata, we can do so by including the strata in the
-  \code{from} and \code{to} arguments. \enumerate{\item rate("beta * I",
-  "S_east","I_west", "east"): each susceptible in the east contacts infected
-  individuals in the east at rate \eqn{\beta * I_east}, and then transitions
-  to the infected compartment in the west stratum. \item rate("beta *
+  
+  The \code{from} and \code{to} arguments will automatically be updated when 
+  the rate is parsed within the \code{stem_dynamics} function to reflect the 
+  strata if there are multiple strata in the event that no strata are 
+  specified in those arguments. Suppose, for example, that we define strata 
+  to be two adjacent regions, east and west. The first rate given above will 
+  be understood as governing transitions from S_east to I_east, and from 
+  S_west to I_west. If we we want to define rates for transitions where a 
+  subject crosses strata, we can do so by including the strata in the 
+  \code{from} and \code{to} arguments. \enumerate{\item rate("beta * I", 
+  "S_east","I_west", "east"): each susceptible in the east contacts infected 
+  individuals in the east at rate \eqn{\beta * I_east}, and then transitions 
+  to the infected compartment in the west stratum. \item rate("beta * 
   I_SELF", "S", "I_west", "ALL"): all susceptibles contact infecteds in their
-  own region at rate \eqn{\beta * I}, but upon becoming infected end up in
+  own region at rate \eqn{\beta * I}, but upon becoming infected end up in 
   the infected compartment in the west stratum.}
-
+  
   Important note: care should be taken to make sure that there are no partial
-  string matches between the building blocks of a model. For example, if the
-  population size is given by the string constant "N", then "N" should not
-  appear in any of parameter names, compartment names, etc. In particular,
-  suppose there is a parameter named "BETA_N". When the rate functions are
-  parsed internally, the rate strings will be parsed incorrectly due to the
-  partial match. Thus, it is highly recommended that the names of all model
+  string matches between the building blocks of a model. For example, if the 
+  population size is given by the string constant "N", then "N" should not 
+  appear in any of parameter names, compartment names, etc. In particular, 
+  suppose there is a parameter named "BETA_N". When the rate functions are 
+  parsed internally, the rate strings will be parsed incorrectly due to the 
+  partial match. Thus, it is highly recommended that the names of all model 
   compartment, parameters, time-varying covariates, and constants be at least
   four characters long.
 }
 
 \examples{
-rate("beta*I", "S", "I", "ALL", seasonality(period = c(12,52), timevar = "t", common_seasonality = FALSE))
+rate("beta*I", "S", "I", "ALL", lumped = FALSE))
 }
