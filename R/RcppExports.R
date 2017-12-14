@@ -14,6 +14,35 @@ build_census_path <- function(path, census_times, census_columns) {
     .Call('_stemr_build_census_path', PACKAGE = 'stemr', path, census_times, census_columns)
 }
 
+#' Componentwise Metropolis random walk transition kernel
+#'
+#' @param params_prop vector in which the proposed parameters should be stored
+#' @param params_cur vector containing the current parameter vector
+#' @param ind C++ style index for the component index
+#' @param kernel_cov vector of component proposal standard deviations
+#'
+#' @return propose new parameter values in place
+#' @export
+c_rw <- function(params_prop, params_cur, ind, kernel_cov) {
+    invisible(.Call('_stemr_c_rw', PACKAGE = 'stemr', params_prop, params_cur, ind, kernel_cov))
+}
+
+#' Componentwise Metropolis random walk transition kernel with componentwise
+#'   adaptive scaling
+#'
+#' @param params_prop vector in which the proposed parameters should be stored
+#' @param params_cur vector containing the current parameter vector
+#' @param ind C++ style index for the component index
+#' @param kernel_cov vector of component proposal standard deviations
+#' @param proposal_scaling vector of scaling factors
+#' @param nugget vector of fixed variance nugget contributions
+#'
+#' @return propose new parameter values in place
+#' @export
+c_rw_adaptive <- function(params_prop, params_cur, ind, kernel_cov, proposal_scaling, nugget) {
+    invisible(.Call('_stemr_c_rw_adaptive', PACKAGE = 'stemr', params_prop, params_cur, ind, kernel_cov, proposal_scaling, nugget))
+}
+
 #' Evaluate the log-density of the measurement process by calling measurement
 #' process density functions via external Xptr.
 #'
@@ -45,21 +74,6 @@ CALL_INTEGRATE_STEM_ODE <- function(init, start, end, step_size, stem_ode_ptr) {
     invisible(.Call('_stemr_CALL_INTEGRATE_STEM_ODE', PACKAGE = 'stemr', init, start, end, step_size, stem_ode_ptr))
 }
 
-#' Update rates by calling rate functions via Xptr.
-#'
-#' @param rates vector of rates to be modified
-#' @param inds logical vector of indices of rates to be modified
-#' @param state numeric vector of comaprtment counts
-#' @param parameters numeric vector of parameter values
-#' @param constants numeric vector of constants
-#' @param tcovar numeric vector of time-varying covariate values
-#' @param rate_ptr external pointer to rate function
-#'
-#' @export
-CALL_RATE_FCN <- function(rates, inds, state, parameters, constants, tcovar, rate_ptr) {
-    invisible(.Call('_stemr_CALL_RATE_FCN', PACKAGE = 'stemr', rates, inds, state, parameters, constants, tcovar, rate_ptr))
-}
-
 #' Simulate from the measurement process by calling measurement process
 #' functions via external Xptr.
 #'
@@ -75,6 +89,21 @@ CALL_RATE_FCN <- function(rates, inds, state, parameters, constants, tcovar, rat
 #' @export
 CALL_R_MEASURE <- function(obsmat, emit_inds, record_ind, state, parameters, constants, tcovar, r_meas_ptr) {
     invisible(.Call('_stemr_CALL_R_MEASURE', PACKAGE = 'stemr', obsmat, emit_inds, record_ind, state, parameters, constants, tcovar, r_meas_ptr))
+}
+
+#' Update rates by calling rate functions via Xptr.
+#'
+#' @param rates vector of rates to be modified
+#' @param inds logical vector of indices of rates to be modified
+#' @param state numeric vector of comaprtment counts
+#' @param parameters numeric vector of parameter values
+#' @param constants numeric vector of constants
+#' @param tcovar numeric vector of time-varying covariate values
+#' @param rate_ptr external pointer to rate function
+#'
+#' @export
+CALL_RATE_FCN <- function(rates, inds, state, parameters, constants, tcovar, rate_ptr) {
+    invisible(.Call('_stemr_CALL_RATE_FCN', PACKAGE = 'stemr', rates, inds, state, parameters, constants, tcovar, rate_ptr))
 }
 
 #' Set the parameters for a system of ODEs via XPtr.
@@ -217,35 +246,6 @@ copy_col <- function(dest, orig, ind) {
 #' @export
 copy_2_rows <- function(dest, orig, inds) {
     invisible(.Call('_stemr_copy_2_rows', PACKAGE = 'stemr', dest, orig, inds))
-}
-
-#' Componentwise Metropolis random walk transition kernel with componentwise
-#'   adaptive scaling
-#'
-#' @param params_prop vector in which the proposed parameters should be stored
-#' @param params_cur vector containing the current parameter vector
-#' @param ind C++ style index for the component index
-#' @param kernel_cov vector of component proposal standard deviations
-#' @param proposal_scaling vector of scaling factors
-#' @param nugget vector of fixed variance nugget contributions
-#'
-#' @return propose new parameter values in place
-#' @export
-c_rw_adaptive <- function(params_prop, params_cur, ind, kernel_cov, proposal_scaling, nugget) {
-    invisible(.Call('_stemr_c_rw_adaptive', PACKAGE = 'stemr', params_prop, params_cur, ind, kernel_cov, proposal_scaling, nugget))
-}
-
-#' Componentwise Metropolis random walk transition kernel
-#'
-#' @param params_prop vector in which the proposed parameters should be stored
-#' @param params_cur vector containing the current parameter vector
-#' @param ind C++ style index for the component index
-#' @param kernel_cov vector of component proposal standard deviations
-#'
-#' @return propose new parameter values in place
-#' @export
-c_rw <- function(params_prop, params_cur, ind, kernel_cov) {
-    invisible(.Call('_stemr_c_rw', PACKAGE = 'stemr', params_prop, params_cur, ind, kernel_cov))
 }
 
 #' Evaluate the log-density of the measurement process by calling measurement
