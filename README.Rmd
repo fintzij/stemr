@@ -14,9 +14,8 @@ knitr::opts_chunk$set(
 )
 ```
 
-# stemr - Stochastic Epidemic Models in R via Bayesian Data Augmentation
-
+# stemr - Approximate Baysian Inference for Stochastic Epidemic Models via the Linear Noise Approximation
 [![Build Status](https://travis-ci.org/fintzij/stemr.svg?branch=master)](https://travis-ci.org/fintzij/stemr)
 
-Fit stochastic epidemic models using Bayesian data augmentation.
+Approximate Baysian Inference for Stochastic Epidemic Models via the Linear Noise Approximation.
     Currently implements approximate inference via the linear noise approximation with a suite of adaptive and fixed kernel MCMC algorithms for parameter proposals. Planned development includes an implementation of an agent-based data-driven data augmentation algorithm for efficient subject-level path proposals based on noisy aggregate counts at discrete observation times.

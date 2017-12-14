@@ -1,5 +1,5 @@
 <!-- README.md is generated from README.Rmd. Please edit that file -->
-stemr - Stochastic Epidemic Models in R via Bayesian Data Augmentation
+stemr - Approximate Baysian Inference for Stochastic Epidemic Models via the Linear Noise Approximation
 ==========================================================================
 
 [![Build Status](https://travis-ci.org/fintzij/stemr.svg?branch=master)](https://travis-ci.org/fintzij/stemr)
