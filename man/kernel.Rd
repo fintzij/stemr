@@ -22,7 +22,7 @@ of parameters on their estimation scales.}
 \item{scale_cooling}{rate at which to cool the adaptation, defaults to 0.5.
 Adaptation contributions are governed by a harmonic sequence:
 scale_constant/(iteration+1)^scale_cooling. The
-\link{\code{plot_adaptations}} function may be used to plot the adaptation
+\code{plot_adaptations} function may be used to plot the adaptation
 factors.}
 
 \item{max_scaling}{maximum scale factor, defaults to Inf.}

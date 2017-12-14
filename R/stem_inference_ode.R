@@ -7,7 +7,7 @@
 #' @param mcmc_kernel list containing the mcmc_kernel method, proposal
 #'   covariance matrix, and an external pointer for the compiled mcmc_kernel
 #'   function
-#' @param t0_kernel output of \link{\code{t0_kernel}}, specifying the RWMH
+#' @param t0_kernel output of \code{t0_kernel}, specifying the RWMH
 #'   transition mcmc_kernel for t0 and the truncated normal distribution prior.
 #' @param thin_params thinning interval for posterior parameter samples,
 #'   defaults to 1

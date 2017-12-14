@@ -2,28 +2,36 @@
 % Please edit documentation in R/build_tcovar_matrix.R
 \name{build_tcovar_matrix}
 \alias{build_tcovar_matrix}
-\title{Construct a time-varying covariance matrix that includes time and
-seasonality, based on a user-supplied time-varying covariate matrix. Used
+\title{Construct a time-varying covariance matrix that includes time and 
+seasonality, based on a user-supplied time-varying covariate matrix. Used 
 internally.}
 \usage{
-build_tcovar_matrix(tcovar = NULL, timestep = NULL, t0, tmax, messages)
+build_tcovar_matrix(tcovar = NULL, tparam = NULL, forcings = NULL,
+  timestep = NULL, census_times = NULL, parameters = NULL, t0, tmax,
+  messages)
 }
 \arguments{
 \item{tcovar}{user-supplied time-varying covariance matrix}
 
+\item{tparam}{list for instatiating time-varying parameters}
+
+\item{forcings}{list of forcings}
+
 \item{timestep}{time discretization interval}
 
-\item{t0, tmax}{left and right endpoints of the time-period over which the
+\item{parameters}{vector of model parameters}
+
+\item{t0, tmax}{left and right endpoints of the time-period over which the 
 process evolves}
 }
 \value{
-time-varying covariate matrix that includes discretized intervals for
-  smoothly time-varying functions. If neither a time-varying covariance
-  matrix or a timestep is supplied, TCOVAR will just be a matrix with the
-  left and right endpoints of the time-period.
+matrix for time-varying covariates and parameters. If neither a
+  time-varying covariate matrix or parameters, or a timestep is supplied,
+  TCOVAR will just be a matrix with the left and right endpoints of the
+  time-period.
 }
 \description{
-Construct a time-varying covariance matrix that includes time and
-seasonality, based on a user-supplied time-varying covariate matrix. Used
+Construct a time-varying covariance matrix that includes time and 
+seasonality, based on a user-supplied time-varying covariate matrix. Used 
 internally.
 }

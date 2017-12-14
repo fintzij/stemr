@@ -5,12 +5,14 @@
 \title{Construct an adjacency matrix for which rates need to be update when there is
 a change in the time-varying covariates.}
 \usage{
-build_tcovar_adjmat(rates, tcovar_codes = NULL)
+build_tcovar_adjmat(rates, tcovar_codes = NULL, forcings = NULL)
 }
 \arguments{
 \item{rates}{list of rates in ste_dynamics}
 
 \item{tcovar_codes}{character vector of time-varying covariate names}
+
+\item{forcings}{list of forcings}
 }
 \value{
 adjacency matrix for which rates need to be updated when a

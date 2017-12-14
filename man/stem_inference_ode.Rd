@@ -29,7 +29,7 @@ a transformed vector (the function call has the form:
 covariance matrix, and an external pointer for the compiled mcmc_kernel
 function}
 
-\item{t0_kernel}{output of \link{\code{t0_kernel}}, specifying the RWMH
+\item{t0_kernel}{output of \code{t0_kernel}, specifying the RWMH
 transition mcmc_kernel for t0 and the truncated normal distribution prior.}
 
 \item{thin_params}{thinning interval for posterior parameter samples,

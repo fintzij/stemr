@@ -5,14 +5,18 @@
 \title{Indicator matrix for determining which time-varying covariates change at each
 row of a time-varying covariate matrix.}
 \usage{
-build_tcovar_changemat(tcovar)
+build_tcovar_changemat(tcovar, tparam = NULL, forcings = NULL)
 }
 \arguments{
 \item{tcovar}{time-varying covariate matrix}
+
+\item{tparam}{list for generating time-varying parameters}
+
+\item{forcings}{list of forcings}
 }
 \value{
-indicator matrix for which time-varying covariates change at teach
-  time in a time-varying covariate matrix.
+indicator matrix for which time-varying covariates or parameters
+  change at each time in a time-varying covariate matrix.
 }
 \description{
 Indicator matrix for determining which time-varying covariates change at each

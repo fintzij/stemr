@@ -5,7 +5,7 @@
 \title{Generate a list to be used in specifying a time-varying parameter that has a 
 latent Gaussian distribution and is updated via elliptical slice sampling.}
 \usage{
-tpar(tparam_name, times, draws2par)
+tpar(tparam_name, times, draws2par, values = NULL)
 }
 \arguments{
 \item{tparam_name}{name of the time--varying parameter}
@@ -16,8 +16,12 @@ tpar(tparam_name, times, draws2par)
 equal to the length of the \code{times} argument. The function should take 
 two arguments, the vector of model hyperparameters (i.e. the parameters 
 argument) and a vector of N(0,1) draws, and return a vector of time-varying
-parameter values. Note that the function should define a deterministic
+parameter values. Note that the function should define a deterministic 
 transformation.}
+
+\item{values}{vector of values of N(0,1) draws for the time-varying 
+parameter, defaults to a vector of zeros. The values are computed by
+applying the \code{draws2par} function to the supplied vector.}
 }
 \value{
 list to be used in specifying a time-varying parameter. \describe{A 
