@@ -14,35 +14,6 @@ build_census_path <- function(path, census_times, census_columns) {
     .Call('_stemr_build_census_path', PACKAGE = 'stemr', path, census_times, census_columns)
 }
 
-#' Componentwise Metropolis random walk transition kernel
-#'
-#' @param params_prop vector in which the proposed parameters should be stored
-#' @param params_cur vector containing the current parameter vector
-#' @param ind C++ style index for the component index
-#' @param kernel_cov vector of component proposal standard deviations
-#'
-#' @return propose new parameter values in place
-#' @export
-c_rw <- function(params_prop, params_cur, ind, kernel_cov) {
-    invisible(.Call('_stemr_c_rw', PACKAGE = 'stemr', params_prop, params_cur, ind, kernel_cov))
-}
-
-#' Componentwise Metropolis random walk transition kernel with componentwise
-#'   adaptive scaling
-#'
-#' @param params_prop vector in which the proposed parameters should be stored
-#' @param params_cur vector containing the current parameter vector
-#' @param ind C++ style index for the component index
-#' @param kernel_cov vector of component proposal standard deviations
-#' @param proposal_scaling vector of scaling factors
-#' @param nugget vector of fixed variance nugget contributions
-#'
-#' @return propose new parameter values in place
-#' @export
-c_rw_adaptive <- function(params_prop, params_cur, ind, kernel_cov, proposal_scaling, nugget) {
-    invisible(.Call('_stemr_c_rw_adaptive', PACKAGE = 'stemr', params_prop, params_cur, ind, kernel_cov, proposal_scaling, nugget))
-}
-
 #' Evaluate the log-density of the measurement process by calling measurement
 #' process density functions via external Xptr.
 #'
@@ -74,6 +45,21 @@ CALL_INTEGRATE_STEM_ODE <- function(init, start, end, step_size, stem_ode_ptr) {
     invisible(.Call('_stemr_CALL_INTEGRATE_STEM_ODE', PACKAGE = 'stemr', init, start, end, step_size, stem_ode_ptr))
 }
 
+#' Update rates by calling rate functions via Xptr.
+#'
+#' @param rates vector of rates to be modified
+#' @param inds logical vector of indices of rates to be modified
+#' @param state numeric vector of comaprtment counts
+#' @param parameters numeric vector of parameter values
+#' @param constants numeric vector of constants
+#' @param tcovar numeric vector of time-varying covariate values
+#' @param rate_ptr external pointer to rate function
+#'
+#' @export
+CALL_RATE_FCN <- function(rates, inds, state, parameters, constants, tcovar, rate_ptr) {
+    invisible(.Call('_stemr_CALL_RATE_FCN', PACKAGE = 'stemr', rates, inds, state, parameters, constants, tcovar, rate_ptr))
+}
+
 #' Simulate from the measurement process by calling measurement process
 #' functions via external Xptr.
 #'
@@ -89,21 +75,6 @@ CALL_INTEGRATE_STEM_ODE <- function(init, start, end, step_size, stem_ode_ptr) {
 #' @export
 CALL_R_MEASURE <- function(obsmat, emit_inds, record_ind, state, parameters, constants, tcovar, r_meas_ptr) {
     invisible(.Call('_stemr_CALL_R_MEASURE', PACKAGE = 'stemr', obsmat, emit_inds, record_ind, state, parameters, constants, tcovar, r_meas_ptr))
-}
-
-#' Update rates by calling rate functions via Xptr.
-#'
-#' @param rates vector of rates to be modified
-#' @param inds logical vector of indices of rates to be modified
-#' @param state numeric vector of comaprtment counts
-#' @param parameters numeric vector of parameter values
-#' @param constants numeric vector of constants
-#' @param tcovar numeric vector of time-varying covariate values
-#' @param rate_ptr external pointer to rate function
-#'
-#' @export
-CALL_RATE_FCN <- function(rates, inds, state, parameters, constants, tcovar, rate_ptr) {
-    invisible(.Call('_stemr_CALL_RATE_FCN', PACKAGE = 'stemr', rates, inds, state, parameters, constants, tcovar, rate_ptr))
 }
 
 #' Set the parameters for a system of ODEs via XPtr.
@@ -248,6 +219,45 @@ copy_2_rows <- function(dest, orig, inds) {
     invisible(.Call('_stemr_copy_2_rows', PACKAGE = 'stemr', dest, orig, inds))
 }
 
+#' Componentwise Metropolis random walk transition kernel with componentwise
+#'   adaptive scaling
+#'
+#' @param params_prop vector in which the proposed parameters should be stored
+#' @param params_cur vector containing the current parameter vector
+#' @param ind C++ style index for the component index
+#' @param kernel_cov vector of component proposal standard deviations
+#' @param proposal_scaling vector of scaling factors
+#' @param nugget vector of fixed variance nugget contributions
+#'
+#' @return propose new parameter values in place
+#' @export
+c_rw_adaptive <- function(params_prop, params_cur, ind, kernel_cov, proposal_scaling, nugget) {
+    invisible(.Call('_stemr_c_rw_adaptive', PACKAGE = 'stemr', params_prop, params_cur, ind, kernel_cov, proposal_scaling, nugget))
+}
+
+#' Componentwise Metropolis random walk transition kernel
+#'
+#' @param params_prop vector in which the proposed parameters should be stored
+#' @param params_cur vector containing the current parameter vector
+#' @param ind C++ style index for the component index
+#' @param kernel_cov vector of component proposal standard deviations
+#'
+#' @return propose new parameter values in place
+#' @export
+c_rw <- function(params_prop, params_cur, ind, kernel_cov) {
+    invisible(.Call('_stemr_c_rw', PACKAGE = 'stemr', params_prop, params_cur, ind, kernel_cov))
+}
+
+#' Draw new N(0,1) values and fill a vector.
+#'
+#' @param v vector to fill with new N(0,1) draws
+#'
+#' @return draw new values in place
+#' @export
+draw_normals <- function(v) {
+    invisible(.Call('_stemr_draw_normals', PACKAGE = 'stemr', v))
+}
+
 #' Evaluate the log-density of the measurement process by calling measurement
 #' process density functions via external Xptr.
 #'
@@ -323,6 +333,19 @@ find_interval <- function(x, breaks, rightmost_closed, all_inside) {
 #' @export
 g_prop2c_prop <- function(g2c_mat, params_cur, params_prop) {
     invisible(.Call('_stemr_g_prop2c_prop', PACKAGE = 'stemr', g2c_mat, params_cur, params_prop))
+}
+
+#' Insert time-varying parameters into a tcovar matrix.
+#'
+#' @param tcovar matrix into which the parameter values should be copied
+#' @param values vector of values that should be copied in
+#' @param col_ind C++ index for the column where the values should go
+#' @param tpar_inds C++ indices for the vector elements that go in each row
+#'
+#' @return copy the values in place
+#' @export
+insert_tparam <- function(tcovar, values, col_ind, tpar_inds) {
+    invisible(.Call('_stemr_insert_tparam', PACKAGE = 'stemr', tcovar, values, col_ind, tpar_inds))
 }
 
 #' Obtain the path of the deterministic mean of a stochastic epidemic model by
@@ -503,6 +526,40 @@ mvn_g_adaptive <- function(params_prop, params_cur, kernel_cov, proposal_scaling
 #' @export
 mvn_rw <- function(params_prop, params_cur, sigma_chol) {
     invisible(.Call('_stemr_mvn_rw', PACKAGE = 'stemr', params_prop, params_cur, sigma_chol))
+}
+
+#' Simulate an approximate LNA path using a non-centered parameterization for the
+#' log-transformed counting process LNA. Resample the initial path in place, then
+#' update with elliptical slice sampling.
+#'
+#' @param lna_times vector of interval endpoint times
+#' @param lna_pars numeric matrix of parameters, constants, and time-varying
+#'   covariates at each of the lna_times
+#' @param init_start index in the parameter vector where the initial compartment
+#'   volumes start
+#' @param param_update_inds logical vector indicating at which of the times the
+#'   LNA parameters need to be updated.
+#' @param stoich_matrix stoichiometry matrix giving the changes to compartments
+#'   from each reaction
+#' @param forcing_inds logical vector of indicating at which times in the
+#'   time-varying covariance matrix a forcing is applied.
+#' @param forcing_matrix matrix containing the forcings.
+#' @param max_attempts maximum number of tries to restart negative increments if 
+#' reject_negatives is false.
+#' @param nsim number of paths to simulate
+#' @param ess_updates number of elliptical slice sampling updates between samples.
+#' @param ess_warmup number of elliptical slice sampling updates before the first
+#' sample.
+#' @param step_size initial step size for the ODE solver (adapted internally,
+#' but too large of an initial step can lead to failure in stiff systems).
+#' @param lna_pointer external pointer to the compiled LNA integration function.
+#' @param set_pars_pointer external pointer to the function for setting LNA pars.
+#' @return list containing the stochastic perturbations (i.i.d. N(0,1) draws) and
+#' the LNA path on its natural scale which is determined by the perturbations.
+#'
+#' @export
+propose_lna_approx <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, nsim, ess_updates, ess_warmup, step_size, lna_pointer, set_pars_pointer) {
+    .Call('_stemr_propose_lna_approx', PACKAGE = 'stemr', lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, nsim, ess_updates, ess_warmup, step_size, lna_pointer, set_pars_pointer)
 }
 
 #' Simulate an LNA path using a non-centered parameterization for the

@@ -27,6 +27,11 @@
 #' @param max_attempts maximum number of times to attempt simulating an LNA path
 #'   before aborting due to the moments of the path being degenerate at some
 #'   point
+#' @param lna_method defaults to "exact". If "approx", an initial path is
+#'   proposed by resampling perturbations that lead to negative increments or
+#'   volumes. The initial path is then updated via elliptical slice sampling
+#' @param ess_warmup number of elliptical slice sampling updates before the
+#'   lna sample is saved
 #' @param messages should a message be printed when parsing the rates?
 #'
 #' @return Returns a list with the simulated paths, subject-level paths, and/or
@@ -57,8 +62,9 @@ simulate_stem <-
                  tmax = NULL,
                  census_times = NULL,
                  max_attempts = 500,
-                 lna_method = NULL,
-                 lna_df = NULL,
+                 lna_method = "exact",
+                 ess_updates = 10,
+                 ess_warmup = 100,
                  messages = TRUE) {
 
                 # ensure that the method is correctly specified
@@ -96,10 +102,6 @@ simulate_stem <-
                         if(!all(sapply(simulation_parameters, function(x) all(names(x) == names(stem_object$dynamics$parameters))))) {
                                 stop("The simulation parameters list must consist of named vectors with elements given in the same order as the parameters in the stem object.")
                         }
-                }
-
-                if(is.null(lna_method)) {
-                        lna_method <- "mvn"
                 }
 
                 if(paths == observations) {
@@ -302,13 +304,24 @@ simulate_stem <-
                                 }
                         }
                         
-                        # generate indices for time-varying parameters
-                        # RESUME HERE --- FUNCTIONS TO INSERT TPARAMS INTO TCOVAR mtx
+                        # tparam indices and initial values
                         if(!is.null(stem_object$dynamics$tparam)) {
+                              
+                              # generate indices for time-varying parameters
                               for(s in seq_along(stem_object$dynamics$tparam)) {
-                                    stem_object$dynamics$tparam[[s]]$colind  <- stem_object$dynamics$tcovar_codes[stem_object$dynamics$tparam[[s]]$tparam_name]
-                                    stem_object$dynamics$tparam[[s]]$rowinds <- findInterval(stem_object$dynamics$tcovar[,1], tparam[[s]]$times, left.open = F)
+                                    stem_object$dynamics$tparam[[s]]$col_ind  <- 
+                                          stem_object$dynamics$tcovar_codes[stem_object$dynamics$tparam[[s]]$tparam_name]
+                                    stem_object$dynamics$tparam[[s]]$tpar_inds <- 
+                                          findInterval(stem_object$dynamics$tcovar[,1], tparam[[s]]$times, left.open = F) - 1
                               }
+                              
+                              # list for saving the time varying parameters for reuse in simulating a dataset in necessary
+                              tparam_draws <- vector("list", length = nsim)
+                              tparam_times <- sort(unique(unlist(lapply(tparam, function(x) x$times))))
+                              tparam_times <- tparam_times[tparam_times >= t0 & tparam_times <= tmax]
+                        } else {
+                              tparam_draws <- NULL
+                              tparam_times <- NULL
                         }
 
                         # initialize the list of paths
@@ -338,6 +351,26 @@ simulate_stem <-
                                 if(!is.null(simulation_parameters)) {
                                       sim_pars <- as.numeric(simulation_parameters[[k]])
                                 } 
+                                
+                                # draw new time-varying parameters if necessary
+                                if(!is.null(stem_object$dynamics$tparam)) {
+                                      for(s in seq_along(stem_object$dynamics$tparam)) {
+                                            
+                                            #draw new values
+                                            draw_normals(stem_object$dynamics$tparam[[s]]$values)
+                                            
+                                            # insert the new values into the tcovar matrix
+                                            insert_tparam(tcovar = stem_object$dynamics$tcovar, 
+                                                          values = stem_object$dynamics$tparam[[s]]$draws2par(
+                                                                sim_pars, 
+                                                                stem_object$dynamics$tparam[[s]]$values),
+                                                          col_ind   = stem_object$dynamics$tparam[[s]]$col_ind,
+                                                          tpar_inds = stem_object$dynamics$tparam[[s]]$tpar_inds)
+                                            
+                                      }
+                                      
+                                      tparam_draws[[k]] <- lapply(stem_object$dynamics$tparam, function(x) x$values)
+                                }
 
                                 while(is.null(path_full) & attempt < max_attempts) {
                                         try({
@@ -435,9 +468,30 @@ simulate_stem <-
                                         }
                                 }
                         }
+                        
+                        # tparam indices and initial values
+                        if(!is.null(stem_object$dynamics$tparam)) {
+                              
+                              # generate indices for time-varying parameters
+                              for(s in seq_along(stem_object$dynamics$tparam)) {
+                                    stem_object$dynamics$tparam[[s]]$col_ind  <- 
+                                          stem_object$dynamics$lna_rates$lna_param_codes[stem_object$dynamics$tparam[[s]]$tparam_name]
+                                    stem_object$dynamics$tparam[[s]]$tpar_inds <- 
+                                          findInterval(lna_times, tparam[[s]]$times, left.open = F) - 1
+                              }
+                              
+                              # list for saving the time varying parameters for reuse in simulating a dataset in necessary
+                              tparam_draws <- vector("list", length = nsim)
+                              tparam_times <- sort(unique(unlist(lapply(tparam, function(x) x$times))))
+                              tparam_times <- tparam_times[tparam_times >= t0 & tparam_times <= tmax]
+                        } else {
+                              tparam_draws <- NULL
+                              tparam_times <- NULL
+                        }
 
                         # generate some auxilliary objects
-                        param_update_inds <- lna_times %in% unique(c(t0, tmax, stem_object$dynamics$tcovar[,1]))
+                        param_update_inds <- lna_times %in% 
+                              sort(unique(c(t0, tmax, stem_object$dynamics$tcovar[,1], tparam_times))) 
                         census_interval_inds <- findInterval(lna_times, census_times, left.open = T)
 
                         # simulate the LNA paths
@@ -538,103 +592,122 @@ simulate_stem <-
                         sim_pars  <- stem_object$dynamics$parameters
                         init_vols <- init_states[1,]
                         prev_inds <- match(round(census_times, digits = 8), round(lna_times, digits = 8))
-
+                        
                         for(k in seq_len(nsim)) {
-
-                                if(!is.null(simulation_parameters)) {
-                                        sim_pars <- as.numeric(simulation_parameters[[k]])
-                                }
-
-                                if(!stem_object$dynamics$fixed_inits) {
-                                        init_vols <- init_states[k,]
-                                }
-
-                                # set the parameters and initial volumes
-                                pars2lnapars(lna_pars, c(sim_pars, init_vols))
-
-                                attempt <- 0
-                                path    <- NULL
-                                while(is.null(path) && (attempt < max_attempts)) {
-                                        try({
-                                                if(lna_method == "mvn") {
-
-                                                        path <- propose_lna(lna_times         = lna_times,
-                                                                            lna_pars          = lna_pars,
-                                                                            init_start        = stem_object$dynamics$lna_initdist_inds[1],
-                                                                            param_update_inds = param_update_inds,
-                                                                            stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
-                                                                            forcing_inds      = forcing_inds,
-                                                                            forcing_matrix    = forcing_matrix,
-                                                                            step_size         = stem_object$dynamics$dynamics_args$step_size,
-                                                                            max_attempts      = max_attempts,
-                                                                            reject_negatives  = TRUE,
-                                                                            lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
-                                                                            set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
-
-                                                } else if(lna_method == "mvt") {
-
-                                                        path <- propose_lna_t(lna_times         = lna_times,
-                                                                              lna_pars          = lna_pars,
-                                                                              init_start        = stem_object$dynamics$lna_initdist_inds[1],
-                                                                              param_update_inds = param_update_inds,
-                                                                              stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
-                                                                              forcing_inds      = forcing_inds,
-                                                                              forcing_matrix    = forcing_matrix,
-                                                                              step_size         = stem_object$dynamics$dynamics_args$step_size,
-                                                                              df                = lna_df,
-                                                                              lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
-                                                                              set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
-
-                                                } else if(lna_method == "mvst") {
-
-                                                        path <- propose_lna_semi_t(lna_times         = lna_times,
-                                                                                   lna_pars          = lna_pars,
-                                                                                   init_start        = stem_object$dynamics$lna_initdist_inds[1],
-                                                                                   param_update_inds = param_update_inds,
-                                                                                   stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
-                                                                                   forcing_inds      = forcing_inds,
-                                                                                   forcing_matrix    = forcing_matrix,
-                                                                                   step_size         = stem_object$dynamics$dynamics_args$step_size,
-                                                                                   df                = lna_df,
-                                                                                   rate_orders       = higher_order_rates,
-                                                                                   lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
-                                                                                   set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
-
-
-                                                }
-                                        }, silent = TRUE)
-
-                                        attempt           <- attempt + 1
-
-                                        if(!is.null(path)) {
+                              
+                              if(!is.null(simulation_parameters)) {
+                                    sim_pars <- as.numeric(simulation_parameters[[k]])
+                              }
+                              
+                              if(!stem_object$dynamics$fixed_inits) {
+                                    init_vols <- init_states[k,]
+                              }
+                              
+                              # set the parameters and initial volumes
+                              pars2lnapars(lna_pars, c(sim_pars, init_vols))
+                              
+                              # draw values for the time-varying parameters
+                              if(!is.null(stem_object$dynamics$tparam)) {
+                                    for(s in seq_along(stem_object$dynamics$tparam)) {
+                                          
+                                          #draw new values
+                                          draw_normals(stem_object$dynamics$tparam[[s]]$values)
+                                          
+                                          # insert the new values into the tcovar matrix
+                                          insert_tparam(tcovar    = lna_pars, 
+                                                        values    = stem_object$dynamics$tparam[[s]]$draws2par(stem_object$dynamics$parameters,
+                                                                                                               stem_object$dynamics$tparam[[s]]$values),
+                                                        col_ind   = stem_object$dynamics$tparam[[s]]$col_ind,
+                                                        tpar_inds = stem_object$dynamics$tparam[[s]]$tpar_inds)
+                                    }
+                                    
+                                    tparam_draws[[k]] <- lapply(stem_object$dynamics$tparam, function(x) x$values)
+                              }
+                              
+                              attempt <- 0
+                              path    <- NULL
+                              while(is.null(path) && (attempt < max_attempts)) {
+                                    
+                                    if(lna_method == "exact") {
+                                          try({
+                                                path <- propose_lna(lna_times         = lna_times,
+                                                                    lna_pars          = lna_pars,
+                                                                    init_start        = stem_object$dynamics$lna_initdist_inds[1],
+                                                                    param_update_inds = param_update_inds,
+                                                                    stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
+                                                                    forcing_inds      = forcing_inds,
+                                                                    forcing_matrix    = forcing_matrix,
+                                                                    step_size         = stem_object$dynamics$dynamics_args$step_size,
+                                                                    max_attempts      = max_attempts,
+                                                                    reject_negatives  = TRUE,
+                                                                    lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
+                                                                    set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
+                                                
+                                                
+                                          }, silent = TRUE)
+                                          
+                                          attempt           <- attempt + 1
+                                          
+                                          if(!is.null(path)) {
                                                 census_paths[[k]] <- census_incidence(path$lna_path, census_times, census_interval_inds)
                                                 lna_paths[[k]]    <- path$prev_path[prev_inds,]
                                                 lna_draws[[k]]    <- path$draws
-
+                                                
                                                 # lna_moments, used in testing
                                                 # drift_vecs[[k]]   <- path$drift_vecs
                                                 # diff_mats[[k]]    <- path$diff_mats
-                                        }
-                                }
-
-                                if(is.null(census_paths[[k]])) {
-                                        warning("Simulation failed. Increase max attempts per simulation or try different parameter values.")
-                                } else {
-                                        colnames(census_paths[[k]]) <- c("time", rownames(stem_object$dynamics$flow_matrix_lna))
-                                        colnames(lna_paths[[k]]) <- c("time",colnames(stem_object$dynamics$flow_matrix_lna))
-                                }
+                                          }
+                                          
+                                    } else if(lna_method == "approx") {
+                                          try({
+                                                path <- propose_lna_approx(lna_times         = lna_times,
+                                                                           lna_pars          = lna_pars,
+                                                                           init_start        = stem_object$dynamics$lna_initdist_inds[1],
+                                                                           param_update_inds = param_update_inds,
+                                                                           stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
+                                                                           forcing_inds      = forcing_inds,
+                                                                           forcing_matrix    = forcing_matrix,
+                                                                           step_size         = stem_object$dynamics$dynamics_args$step_size,
+                                                                           max_attempts      = max_attempts,
+                                                                           nsim              = 1,
+                                                                           ess_updates       = 1, 
+                                                                           ess_warmup        = ess_warmup,
+                                                                           lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
+                                                                           set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
+                                          }, silent = TRUE)
+                                          
+                                          attempt           <- attempt + 1
+                                          
+                                          if(!is.null(path)) {
+                                                census_paths[[k]] <- census_incidence(path$incid_paths[,,1], census_times, census_interval_inds)
+                                                lna_paths[[k]]    <- path$prev_paths[prev_inds,,1]
+                                                lna_draws[[k]]    <- path$lna_draws[,,1]
+                                                
+                                                # lna_moments, used in testing
+                                                # drift_vecs[[k]]   <- path$drift_vecs
+                                                # diff_mats[[k]]    <- path$diff_mats
+                                          }
+                                    }
+                              }
+                              
+                              if(is.null(census_paths[[k]])) {
+                                    warning("Simulation failed. Increase max attempts per simulation or try different parameter values.")
+                              } else {
+                                    colnames(census_paths[[k]]) <- c("time", rownames(stem_object$dynamics$flow_matrix_lna))
+                                    colnames(lna_paths[[k]]) <- c("time",colnames(stem_object$dynamics$flow_matrix_lna))
+                              }
                         }
-
+                        
                         failed_runs  <- which(sapply(lna_paths, is.null))
                         if(length(failed_runs) != 0) {
-                                census_paths <- census_paths[-failed_runs]
-                                lna_paths    <- lna_paths[-failed_runs]
-                                lna_draws    <- lna_draws[-failed_runs]
-                        }
+                              census_paths <- census_paths[-failed_runs]
+                              lna_paths    <- lna_paths[-failed_runs]
+                              lna_draws    <- lna_draws[-failed_runs]
+                        }   
 
                 } else if(method == "ode") {
 
-                        # set the vectors of times when the LNA is evaluated and censused
+                        # set the vectors of times when the ODE is evaluated and censused
                         ode_times <- sort(unique(c(t0, census_times, stem_object$dynamics$tcovar[,1], tmax)))
 
                         # generate the matrix of parameters, constants, and time-varying covariates
@@ -676,6 +749,26 @@ simulate_stem <-
                                                 ode_pars[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] = 0
                                         }
                                 }
+                        }
+                        
+                        # tparam indices and initial values
+                        if(!is.null(stem_object$dynamics$tparam)) {
+                              
+                              # generate indices for time-varying parameters
+                              for(s in seq_along(stem_object$dynamics$tparam)) {
+                                    stem_object$dynamics$tparam[[s]]$col_ind  <- 
+                                          stem_object$dynamics$ode_rates$ode_param_codes[stem_object$dynamics$tparam[[s]]$tparam_name]
+                                    stem_object$dynamics$tparam[[s]]$tpar_inds <- 
+                                          findInterval(ode_times, tparam[[s]]$times, left.open = F) - 1
+                              }
+                              
+                              # list for saving the time varying parameters for reuse in simulating a dataset in necessary
+                              tparam_draws <- vector("list", length = nsim)
+                              tparam_times <- sort(unique(unlist(lapply(tparam, function(x) x$times))))
+                              tparam_times <- tparam_times[tparam_times >= t0 & tparam_times <= tmax]
+                        } else {
+                              tparam_draws <- NULL
+                              tparam_times <- NULL
                         }
 
                         # generate some auxilliary objects
@@ -796,8 +889,26 @@ simulate_stem <-
 
                                 # set the parameters and initial volumes
                                 pars2lnapars(ode_pars, c(sim_pars, init_vols))
+                                
+                                # draw values for the time-varying parameters
+                                if(!is.null(stem_object$dynamics$tparam)) {
+                                      for(s in seq_along(stem_object$dynamics$tparam)) {
+                                            
+                                            #draw new values
+                                            draw_normals(stem_object$dynamics$tparam[[s]]$values)
+                                            
+                                            # insert the new values into the tcovar matrix
+                                            insert_tparam(tcovar    = ode_pars, 
+                                                          values    = stem_object$dynamics$tparam[[s]]$draws2par(stem_object$dynamics$parameters,
+                                                                                                                 stem_object$dynamics$tparam[[s]]$values),
+                                                          col_ind   = stem_object$dynamics$tparam[[s]]$col_ind,
+                                                          tpar_inds = stem_object$dynamics$tparam[[s]]$tpar_inds)
+                                      }
+                                      
+                                      tparam_draws[[k]] <- lapply(stem_object$dynamics$tparam, function(x) x$values)
+                                }
 
-                                path    <- NULL
+                                path <- NULL
 
                                 try({
                                         path <- integrate_odes(ode_times         = ode_times,
@@ -869,8 +980,9 @@ simulate_stem <-
 
                                 for(k in seq_len(nsim)) {
 
-                                          # get the state at observation times
+                                      # get the state at observation times
                                       if(!is.null(census_paths[[k]])) {
+                                            
                                             if(do_census) {
                                                   censusmat[,-1] <- census_paths[[k]][cens_inds, -1]
                                             } else {
@@ -879,6 +991,27 @@ simulate_stem <-
                                             
                                             # get the new simulation parameters if a list was supplied
                                             if(!is.null(simulation_parameters)) sim_pars <- as.numeric(simulation_parameters[[k]])
+                                            
+                                            # insert the time-varying parameters into the tcovar matrix
+                                            if(!is.null(tparam_draws)) {
+                                                  
+                                                  for(s in seq_along(stem_object$dynamics$tparam)) {
+                                                        
+                                                        # insert the tparam values into the tcovar matrix
+                                                        insert_tparam(tcovar = stem_object$dynamics$tcovar, 
+                                                                      values = stem_object$dynamics$tparam[[s]]$draws2par(
+                                                                            sim_pars, 
+                                                                            tparam_draws[[k]][[s]]),
+                                                                      col_ind   = stem_object$dynamics$tparam[[s]]$col_ind,
+                                                                      tpar_inds = stem_object$dynamics$tparam[[s]]$tpar_inds)
+                                                        
+                                                        # grab the time-varying covariate values at observation times
+                                                        tcovar_obstimes <- build_census_path(path           = stem_object$dynamics$tcovar,
+                                                                                             census_times   = stem_object$measurement_process$obstimes,
+                                                                                             census_columns = 1:(ncol(stem_object$dynamics$tcovar)-1))
+                                                        colnames(tcovar_obstimes) <- colnames(stem_object$dynamics$tcovar)
+                                                  }
+                                            }
                                             
                                             # simulate the data
                                             datasets[[k]] <- simulate_r_measure(censusmat = censusmat,
@@ -907,6 +1040,17 @@ simulate_stem <-
                                 pathmat          <- stem_object$measurement_process$censusmat
                                 flow_matrix_lna  <- stem_object$dynamics$flow_matrix_lna
                                 lna_event_inds   <- stem_object$measurement_process$incidence_codes_lna
+                                
+                                # reinitialize the tparam indices if necessary
+                                if(!is.null(stem_object$dynamics$tparam)) {
+                                      # reinitialize the tparam indices if necessary
+                                      for(s in seq_along(stem_object$dynamics$tparam)) {
+                                            stem_object$dynamics$tparam[[s]]$col_ind  <- 
+                                                  stem_object$dynamics$tcovar_codes[stem_object$dynamics$tparam[[s]]$tparam_name]
+                                            stem_object$dynamics$tparam[[s]]$tpar_inds <- 
+                                                  findInterval(stem_object$dynamics$tcovar[,1], tparam[[s]]$times, left.open = F) - 1
+                                      }
+                                }
 
                                 for(k in seq_along(census_paths)) {
 
@@ -921,6 +1065,27 @@ simulate_stem <-
                                                    forcing_matrix      = forcing_matrix)
 
                                         if(!is.null(simulation_parameters)) sim_pars <- as.numeric(simulation_parameters[[k]])
+                                        
+                                        # insert the time-varying parameters into the tcovar matrix
+                                        if(!is.null(tparam_draws)) {
+                                              
+                                              for(s in seq_along(stem_object$dynamics$tparam)) {
+                                                    
+                                                    # insert the tparam values into the tcovar matrix
+                                                    insert_tparam(tcovar = stem_object$dynamics$tcovar, 
+                                                                  values = stem_object$dynamics$tparam[[s]]$draws2par(
+                                                                        sim_pars, 
+                                                                        tparam_draws[[k]][[s]]),
+                                                                  col_ind   = stem_object$dynamics$tparam[[s]]$col_ind,
+                                                                  tpar_inds = stem_object$dynamics$tparam[[s]]$tpar_inds)
+                                                    
+                                                    # grab the time-varying covariate values at observation times
+                                                    tcovar_obstimes <- build_census_path(path           = stem_object$dynamics$tcovar,
+                                                                                         census_times   = stem_object$measurement_process$obstimes,
+                                                                                         census_columns = 1:(ncol(stem_object$dynamics$tcovar)-1))
+                                                    colnames(tcovar_obstimes) <- colnames(stem_object$dynamics$tcovar)
+                                              }
+                                        }
 
                                         # simulate the dataset
                                         datasets[[k]] <- simulate_r_measure(pathmat,
@@ -949,6 +1114,16 @@ simulate_stem <-
                                 flow_matrix_ode  <- stem_object$dynamics$flow_matrix_ode
                                 ode_event_inds   <- stem_object$measurement_process$incidence_codes_ode
 
+                                if(!is.null(stem_object$dynamics$tparam)) {
+                                      # reinitialize the tparam indices if necessary
+                                      for(s in seq_along(stem_object$dynamics$tparam)) {
+                                            stem_object$dynamics$tparam[[s]]$col_ind  <- 
+                                                  stem_object$dynamics$tcovar_codes[stem_object$dynamics$tparam[[s]]$tparam_name]
+                                            stem_object$dynamics$tparam[[s]]$tpar_inds <- 
+                                                  findInterval(stem_object$dynamics$tcovar[,1], tparam[[s]]$times, left.open = F) - 1
+                                      }
+                                }
+                                
                                 if(!fixed_parameters) {
 
                                         for(k in seq_along(census_paths)) {
@@ -965,6 +1140,27 @@ simulate_stem <-
 
                                                 if(!is.null(simulation_parameters)) sim_pars <- as.numeric(simulation_parameters[[k]])
 
+                                                # insert the time-varying parameters into the tcovar matrix
+                                                if(!is.null(tparam_draws)) {
+                                                      
+                                                      for(s in seq_along(stem_object$dynamics$tparam)) {
+                                                            
+                                                            # insert the tparam values into the tcovar matrix
+                                                            insert_tparam(tcovar = stem_object$dynamics$tcovar, 
+                                                                          values = stem_object$dynamics$tparam[[s]]$draws2par(
+                                                                                sim_pars, 
+                                                                                tparam_draws[[k]][[s]]),
+                                                                          col_ind   = stem_object$dynamics$tparam[[s]]$col_ind,
+                                                                          tpar_inds = stem_object$dynamics$tparam[[s]]$tpar_inds)
+                                                            
+                                                            # grab the time-varying covariate values at observation times
+                                                            tcovar_obstimes <- build_census_path(path           = stem_object$dynamics$tcovar,
+                                                                                                 census_times   = stem_object$measurement_process$obstimes,
+                                                                                                 census_columns = 1:(ncol(stem_object$dynamics$tcovar)-1))
+                                                            colnames(tcovar_obstimes) <- colnames(stem_object$dynamics$tcovar)
+                                                      }
+                                                }
+                                                
                                                 # simulate the dataset
                                                 datasets[[k]] <- simulate_r_measure(pathmat,
                                                                                     measproc_indmat,
@@ -987,6 +1183,27 @@ simulate_stem <-
 
                                         for(k in seq_len(nsim)) {
 
+                                              # insert the time-varying parameters into the tcovar matrix
+                                              if(!is.null(tparam_draws)) {
+                                                    
+                                                    for(s in seq_along(stem_object$dynamics$tparam)) {
+                                                          
+                                                          # insert the tparam values into the tcovar matrix
+                                                          insert_tparam(tcovar = stem_object$dynamics$tcovar, 
+                                                                        values = stem_object$dynamics$tparam[[s]]$draws2par(
+                                                                              sim_pars, 
+                                                                              tparam_draws[[k]][[s]]),
+                                                                        col_ind   = stem_object$dynamics$tparam[[s]]$col_ind,
+                                                                        tpar_inds = stem_object$dynamics$tparam[[s]]$tpar_inds)
+                                                          
+                                                          # grab the time-varying covariate values at observation times
+                                                          tcovar_obstimes <- build_census_path(path           = stem_object$dynamics$tcovar,
+                                                                                               census_times   = stem_object$measurement_process$obstimes,
+                                                                                               census_columns = 1:(ncol(stem_object$dynamics$tcovar)-1))
+                                                          colnames(tcovar_obstimes) <- colnames(stem_object$dynamics$tcovar)
+                                                    }
+                                              }
+                                              
                                                 # simulate the dataset
                                                 datasets[[k]] <- simulate_r_measure(pathmat,
                                                                                     measproc_indmat,

@@ -29,9 +29,13 @@ build_tcovar_matrix <- function(tcovar = NULL, tparam = NULL, forcings = NULL, t
                 timeseq <- unique(sort(c(seq(t0, tmax, timestep), tmax, census_times)))
                   
                 # get times of time-varying parameters and restrict to those between t0 and tmax
-                tparam_times <- sort(unique(unlist(lapply(tparam, function(x) x$times))))
-                tparam_times <- tparam_times[tparam_times >= t0 & tparam_times <= tmax]
-
+                if(!is.null(tparam)) {
+                      tparam_times <- sort(unique(unlist(lapply(tparam, function(x) x$times))))
+                      tparam_times <- tparam_times[tparam_times >= t0 & tparam_times <= tmax]
+                } else {
+                      tparam_times <- NULL
+                } 
+                
                 # get tcovar times and parameters
                 TCOVAR_TIMES <- sort(unique(c(tcovar[,1, drop = FALSE], tparam_times, timeseq)))
 
