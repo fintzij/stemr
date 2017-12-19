@@ -52,8 +52,8 @@ void copy_vec(arma::rowvec& dest, const arma::rowvec& orig) {
 //' @export
 // [[Rcpp::export]]
 void copy_mat(arma::mat& dest, const arma::mat& orig) {
-
-        dest = orig;
+      
+      dest = orig;
 }
 
 //' Copy the contents of one matrix into another
@@ -66,8 +66,8 @@ void copy_mat(arma::mat& dest, const arma::mat& orig) {
 //' @export
 // [[Rcpp::export]]
 void copy_col(arma::mat& dest, const arma::mat& orig, int ind) {
-
-        dest.col(ind) = orig.col(ind);
+      
+      dest.col(ind) = orig.col(ind);
 }
 
 //' Copy some of the rows of one matrix into another
@@ -80,6 +80,20 @@ void copy_col(arma::mat& dest, const arma::mat& orig, int ind) {
 //' @export
 // [[Rcpp::export]]
 void copy_2_rows(arma::mat& dest, const arma::mat& orig, const arma::uvec& inds) {
+      
+      dest.rows(inds) = orig;
+}
 
-        dest.rows(inds) = orig;
+//' Copy a matrix into a slice of an array
+//'
+//' @param dest array into which to copy
+//' @param orig matrix to copy
+//' @param ind slice index (C++)
+//'
+//' @return copy a matrix into an array.
+//' @export
+// [[Rcpp::export]]
+void mat_2_arr(arma::cube& dest, const arma::mat& orig, int ind) {
+      
+      dest.slice(ind) = orig;
 }
