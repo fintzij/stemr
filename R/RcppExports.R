@@ -219,6 +219,18 @@ copy_2_rows <- function(dest, orig, inds) {
     invisible(.Call('_stemr_copy_2_rows', PACKAGE = 'stemr', dest, orig, inds))
 }
 
+#' Copy a matrix into a slice of an array
+#'
+#' @param dest array into which to copy
+#' @param orig matrix to copy
+#' @param ind slice index (C++)
+#'
+#' @return copy a matrix into an array.
+#' @export
+mat_2_arr <- function(dest, orig, ind) {
+    invisible(.Call('_stemr_mat_2_arr', PACKAGE = 'stemr', dest, orig, ind))
+}
+
 #' Componentwise Metropolis random walk transition kernel with componentwise
 #'   adaptive scaling
 #'
@@ -256,6 +268,16 @@ c_rw <- function(params_prop, params_cur, ind, kernel_cov) {
 #' @export
 draw_normals <- function(v) {
     invisible(.Call('_stemr_draw_normals', PACKAGE = 'stemr', v))
+}
+
+#' Draw new N(0,1) values and fill a matrix.
+#'
+#' @param M matrix to fill with new N(0,1) draws
+#'
+#' @return draw new values in place
+#' @export
+draw_normals2 <- function(M) {
+    invisible(.Call('_stemr_draw_normals2', PACKAGE = 'stemr', M))
 }
 
 #' Evaluate the log-density of the measurement process by calling measurement

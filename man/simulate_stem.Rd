@@ -7,8 +7,8 @@
 simulate_stem(stem_object, nsim = 1, simulation_parameters = NULL,
   paths = FALSE, full_paths = FALSE, observations = FALSE,
   subject_paths = FALSE, method = "gillespie", tmax = NULL,
-  census_times = NULL, max_attempts = 500, lna_method = NULL,
-  lna_df = NULL, messages = TRUE)
+  census_times = NULL, max_attempts = 500, lna_method = "exact",
+  ess_updates = 10, ess_warmup = 100, messages = TRUE)
 }
 \arguments{
 \item{nsim}{number of realizations to simulate}
@@ -44,6 +44,13 @@ recorded.}
 \item{max_attempts}{maximum number of times to attempt simulating an LNA path
 before aborting due to the moments of the path being degenerate at some
 point}
+
+\item{lna_method}{defaults to "exact". If "approx", an initial path is
+proposed by resampling perturbations that lead to negative increments or
+volumes. The initial path is then updated via elliptical slice sampling}
+
+\item{ess_warmup}{number of elliptical slice sampling updates before the
+lna sample is saved}
 
 \item{messages}{should a message be printed when parsing the rates?}
 

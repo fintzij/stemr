@@ -4,17 +4,20 @@
 \alias{initialize_lna}
 \title{Initialize the LNA path}
 \usage{
-initialize_lna(data, lna_parameters, censusmat, emitmat, stoich_matrix,
+initialize_lna(data, lna_parameters, tparam, censusmat, emitmat, stoich_matrix,
   lna_pointer, lna_set_pars_pointer, lna_times, lna_param_inds, lna_const_inds,
   lna_tcovar_inds, lna_initdist_inds, param_update_inds, census_indices,
   lna_event_inds, measproc_indmat, d_meas_pointer, do_prevalence, forcing_inds,
-  forcing_matrix, initialization_attempts, step_size, par_init_fcn = NULL)
+  forcing_matrix, initialization_attempts, step_size, par_init_fcn = NULL,
+  ess_warmup)
 }
 \arguments{
 \item{data}{matrix containing the dataset}
 
 \item{lna_parameters}{parameters, contants, time-varying covariates at LNA
 times}
+
+\item{tparam}{list of time-varying parameters}
 
 \item{censusmat}{template matrix for the LNA path and incidence at the
 observation times}
@@ -62,6 +65,12 @@ time-varying covariance matrix a forcing is applied.}
 
 \item{step_size}{initial step size for the ODE solver (adapted internally,
 but too large of an initial step can lead to failure in stiff systems).}
+
+\item{par_init_fcn}{function for initializing the parameter values}
+
+\item{ess_warmup}{number of elliptical slice sampling updates where
+likelihood is over indicators for monotonicity and non-negativity of LNA
+increments}
 }
 \value{
 LNA path along with its stochastic perturbations

@@ -220,6 +220,18 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// mat_2_arr
+void mat_2_arr(arma::cube& dest, const arma::mat& orig, int ind);
+RcppExport SEXP _stemr_mat_2_arr(SEXP destSEXP, SEXP origSEXP, SEXP indSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::cube& >::type dest(destSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type orig(origSEXP);
+    Rcpp::traits::input_parameter< int >::type ind(indSEXP);
+    mat_2_arr(dest, orig, ind);
+    return R_NilValue;
+END_RCPP
+}
 // c_rw_adaptive
 void c_rw_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, int ind, const arma::mat& kernel_cov, const arma::vec& proposal_scaling, const arma::vec& nugget);
 RcppExport SEXP _stemr_c_rw_adaptive(SEXP params_propSEXP, SEXP params_curSEXP, SEXP indSEXP, SEXP kernel_covSEXP, SEXP proposal_scalingSEXP, SEXP nuggetSEXP) {
@@ -255,6 +267,16 @@ BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::vec& >::type v(vSEXP);
     draw_normals(v);
+    return R_NilValue;
+END_RCPP
+}
+// draw_normals2
+void draw_normals2(arma::mat& M);
+RcppExport SEXP _stemr_draw_normals2(SEXP MSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat& >::type M(MSEXP);
+    draw_normals2(M);
     return R_NilValue;
 END_RCPP
 }
@@ -664,9 +686,11 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_copy_mat", (DL_FUNC) &_stemr_copy_mat, 2},
     {"_stemr_copy_col", (DL_FUNC) &_stemr_copy_col, 3},
     {"_stemr_copy_2_rows", (DL_FUNC) &_stemr_copy_2_rows, 3},
+    {"_stemr_mat_2_arr", (DL_FUNC) &_stemr_mat_2_arr, 3},
     {"_stemr_c_rw_adaptive", (DL_FUNC) &_stemr_c_rw_adaptive, 6},
     {"_stemr_c_rw", (DL_FUNC) &_stemr_c_rw, 4},
     {"_stemr_draw_normals", (DL_FUNC) &_stemr_draw_normals, 1},
+    {"_stemr_draw_normals2", (DL_FUNC) &_stemr_draw_normals2, 1},
     {"_stemr_evaluate_d_measure", (DL_FUNC) &_stemr_evaluate_d_measure, 8},
     {"_stemr_evaluate_d_measure_LNA", (DL_FUNC) &_stemr_evaluate_d_measure_LNA, 11},
     {"_stemr_find_interval", (DL_FUNC) &_stemr_find_interval, 4},
