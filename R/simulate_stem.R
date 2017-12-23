@@ -59,7 +59,7 @@ simulate_stem <-
                  observations = FALSE,
                  subject_paths = FALSE,
                  method = "gillespie",
-                 tmax = NULL,
+                 tmax = NULL, 
                  census_times = NULL,
                  max_attempts = 500,
                  lna_method = "exact",
@@ -121,7 +121,6 @@ simulate_stem <-
 
                 # make sure that there exists a vector of census times
                 if(is.null(census_times)) {
-
                         if(is.null(stem_object$measurement_process$obstimes)) {
                                 census_times <- as.numeric(unique(c(t0, seq(t0,tmax,by=timestep), tmax)))
 
