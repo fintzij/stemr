@@ -13,12 +13,14 @@
 #'   \code{scale_cooling}.
 #' @param scale_cooling rate at which to cool the adaptation, defaults to 0.5.
 #'   Adaptation contributions are governed by a harmonic sequence:
-#'   scale_constant/(iteration+1)^scale_cooling. The
+#'   scale_constant/(iteration/step_size+1)^scale_cooling. The
 #'   \code{plot_adaptations} function may be used to plot the adaptation
 #'   factors.
+#' @param step_size adaptation increment for each iteration, defaults to 1.
 #' @param max_scaling maximum scale factor, defaults to Inf.
 #' @param target_g target acceptance rate for global Metropolis proposals.
 #' @param target_c target acceptance rate for componentwise Metropolis proposals
+#'   or for principal components Metropolis proposals.
 #' @param nugget fixed nugget contribution, defaults to 0.01.
 #' @param stop_adaptation iteration at which to stop adapting the proposal
 #'   distribution.
@@ -32,7 +34,8 @@
 #'   5 in Andrieu and Thoms). 4) mvn_rw_c_adaptive: global adaptive Metropolis
 #'   with componentwise adaptive scaling (Alg. 6 in Andrieu and Thoms). 5)
 #'   mvn_rw_g_adaptive: global adaptive Metropolis with global adaptive scaling
-#'   (Alg. 4 in Andrieu and Thoms).
+#'   (Alg. 4 in Andrieu and Thoms). 6) pca_adaptive: adaptive principal
+#'   components Metropolis (Alg. 8 in Andrieu and Thoms).
 #'
 #'   References: Andrieu, Christophe, and Johannes Thoms. "A tutorial on
 #'   adaptive MCMC." Statistics and computing 18.4 (2008): 343-373.
@@ -44,6 +47,7 @@ kernel <-
                  sigma,
                  scale_constant = 0.5,
                  scale_cooling = 0.5+1e-5,
+                 step_size = 1,
                  max_scaling = Inf,
                  target_g = 0.234,
                  target_c = 0.44,
@@ -51,20 +55,24 @@ kernel <-
                  stop_adaptation = Inf,
                  messages = TRUE) {
 
-        if(!method %in% c("c_rw", "mvn_rw", "c_rw_adaptive", "mvn_c_adaptive", "mvn_g_adaptive")) {
+        if(!method %in% c("c_rw", "mvn_rw", "c_rw_adaptive", "mvn_c_adaptive", "mvn_g_adaptive", "pca_adaptive")) {
                 stop("The method for the MCMC kernel is not correctly specified.")
         }
+          
+        if(scale_cooling <=0.5 | scale_cooling > 1) {
+                stop("The cooling rate must be between 0.5 and 1.")
+        }
 
-        if(target_g <= 0 || target_g >=1) {
+        if(target_g < 0 || target_g >1) {
                 stop("The target acceptance rate must be between 0 and 1.")
         }
 
-        if(target_c <= 0 || target_c >=1) {
+        if(target_c < 0 || target_c >1) {
                 stop("The target acceptance rate must be between 0 and 1.")
         }
 
         if(is.null(nugget)) {
-                nugget <- 0.01 * min(diag(sigma))
+                nugget <- 0.001 * min(diag(sigma))
         }
 
         if(method == "c_rw_adaptive" && length(nugget) != nrow(sigma)) {
@@ -75,6 +83,7 @@ kernel <-
 
         kernel_settings <- list(scale_constant = scale_constant,
                                 scale_cooling = scale_cooling,
+                                step_size     = step_size,
                                 max_scaling   = as.numeric(max_scaling),
                                 target_g      = target_g,
                                 target_c      = target_c,
