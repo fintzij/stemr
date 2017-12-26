@@ -332,15 +332,16 @@ stem_inference_lna <- function(stem_object,
               
           # MCMC objects
           acceptances_c    <- rep(0, n_model_params)
+          proposals_c      <- rep(0, n_model_params)
           proposal_scaling <- rep(1.0, n_model_params)
           stop_adaptation  <- mcmc_kernel$kernel_settings$stop_adaptation + 2
           nugget           <- mcmc_kernel$kernel_settings$nugget
           max_scaling      <- mcmc_kernel$kernel_settings$max_scaling
           target_c         <- mcmc_kernel$kernel_settings$target_c
-          logpost_g2c_cur  <- 0.0
           adaptations      <- 
             mcmc_kernel$kernel_settings$scale_constant *
             (seq(0,iterations) * mcmc_kernel$kernel_settings$step_size + 1)^-mcmc_kernel$kernel_settings$scale_cooling
+          weight_update_interval <- mcmc_kernel$kernel_settings$weight_update_interval
           
           # empirical mean and covariance of the adaptive kernel
           kernel_resid <- double(n_model_params); # already initialized to 0
@@ -351,22 +352,34 @@ stem_inference_lna <- function(stem_object,
           e            <- eigen(kernel_cov)
           eigenvalues  <- e$values
           eigenvectors <- e$vectors 
-          comp_weights <- eigenvalues / sum(eigenvalues)
-          vec_prod_l   <- diag(1.0, n_model_params) # matrix for computing the inverse of the inner product of eigenvecs
-          
+          comp_weights <- eigenvalues^(1/n_model_params) / sum(eigenvalues^(1/n_model_params))
+
           # Adaptation record objects
           adaptation_scale_record <- matrix(1.0,
                                             ncol = floor(iterations/thin_params) + 1,
                                             nrow = n_model_params)
           
-          adaptation_shape_record <-
+          eigenvalue_record <- matrix(1.0,
+                                      ncol = floor(iterations/thin_params) + 1,
+                                      nrow = n_model_params)
+          
+          eigenvector_record <-
             array(0.0, dim = c(
               n_model_params,
               n_model_params,
               floor(iterations / thin_params) + 1)
             )
           
+          adaptation_shape_record <-
+                array(0.0, dim = c(
+                      n_model_params,
+                      n_model_params,
+                      floor(iterations / thin_params) + 1)
+                )
+          
           adaptation_scale_record[,1]  <- proposal_scaling
+          eigenvalue_record[,1]        <- eigenvalues
+          eigenvector_record[,,1]      <- eigenvectors
           adaptation_shape_record[,,1] <- kernel_cov
         }
         
@@ -1378,140 +1391,6 @@ stem_inference_lna <- function(stem_object,
                                 kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
                         }
 
-                } else if(mcmc_kernel$method == "pca_adaptive") {
-
-                        if(iter == stop_adaptation) {
-                              mcmc_kernel$sigma = eigenvectors %*% diag(proposal_scaling * eigenvalues) %*% t(eigenvectors)
-                              sigma_chol        = chol(mcmc_kernel$sigma)
-                        }
-
-                        # propose new parameters
-                        if(iter < stop_adaptation) {
-                          
-                                # sample a direction
-                                direction <- sample.int(n_model_params, 1, replace = FALSE, prob = comp_weights, useHash = FALSE) - 1
-                          
-                                # propose new parameters
-                                pca_adaptive(params_prop      = params_prop_est,
-                                             params_cur       = model_params_est,
-                                             eigenvalues      = eigenvalues,
-                                             eigenvectors     = eigenvectors,
-                                             proposal_scaling = proposal_scaling,
-                                             direction        = direction)
-
-                        } else {
-                                mvn_rw(params_prop = params_prop_est,
-                                       params_cur  = model_params_est,
-                                       sigma_chol  = sigma_chol)
-                        }
-
-                        # Convert the proposed parameters to their natural scale
-                        params_prop_nat <- from_estimation_scale(params_prop_est)
-                        
-                        # update time-varying parameters if necessary
-                        if(!is.null(tparam)) {
-                              for(p in seq_along(tparam)) {
-                                    insert_tparam(tcovar    = lna_params_prop,
-                                                  values    = tparam[[p]]$draws2par(parameters = params_prop_nat, draws = tparam[[p]]$draws_cur),
-                                                  col_ind   = tparam[[p]]$col_ind,
-                                                  tpar_inds = tparam[[p]]$tpar_inds)
-                              }
-                        }
-
-                        # Compute the log prior for the proposed parameters
-                        params_logprior_prop <- prior_density(params_prop_nat, params_prop_est)
-
-                        # Insert the proposed parameters into the parameter proposal matrix
-                        pars2lnapars(lna_params_prop, c(params_prop_nat, t0, init_volumes_cur))
-
-                        # set the data log likelihood for the proposal to NULL
-                        data_log_lik_prop <- NULL
-
-                        try({
-                                map_draws_2_lna(
-                                        pathmat           = pathmat_prop,
-                                        draws             = path$draws,
-                                        lna_times         = lna_times,
-                                        lna_pars          = lna_params_prop,
-                                        init_start        = lna_initdist_inds[1],
-                                        param_update_inds = param_update_inds,
-                                        stoich_matrix     = stoich_matrix,
-                                        forcing_inds      = forcing_inds,
-                                        forcing_matrix    = forcing_matrix,
-                                        svd_sqrt          = svd_sqrt,
-                                        svd_d             = svd_d,
-                                        svd_U             = svd_U,
-                                        svd_V             = svd_V,
-                                        lna_pointer       = lna_pointer,
-                                        set_pars_pointer  = lna_set_pars_pointer,
-                                        step_size         = step_size
-                                )
-
-                                census_lna(
-                                        path                = pathmat_prop,
-                                        census_path         = censusmat,
-                                        census_inds         = census_indices,
-                                        lna_event_inds      = lna_event_inds,
-                                        flow_matrix_lna     = flow_matrix,
-                                        do_prevalence       = do_prevalence,
-                                        init_state          = init_volumes_cur,
-                                        forcing_matrix      = forcing_matrix
-                                )
-
-                                # evaluate the density of the incidence counts
-                                evaluate_d_measure_LNA(
-                                        emitmat           = emitmat,
-                                        obsmat            = data,
-                                        censusmat         = censusmat,
-                                        measproc_indmat   = measproc_indmat,
-                                        lna_parameters    = lna_params_prop,
-                                        lna_param_inds    = lna_param_inds,
-                                        lna_const_inds    = lna_const_inds,
-                                        lna_tcovar_inds   = lna_tcovar_inds,
-                                        param_update_inds = param_update_inds,
-                                        census_indices    = census_indices,
-                                        d_meas_ptr        = d_meas_pointer
-                                )
-
-                                # compute the data log likelihood
-                                data_log_lik_prop <- sum(emitmat[,-1][measproc_indmat])
-                                if(is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
-                        }, silent = TRUE)
-
-                        if(is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
-
-                        # compute the log posterior for the proposed parameters
-                        logpost_prop <- data_log_lik_prop + params_logprior_prop
-
-                        ## Compute the acceptance probability
-                        acceptance_prob <- logpost_prop - logpost_cur
-
-                        # Accept/Reject via metropolis-hastings
-                        if(acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
-
-                                ### ACCEPTANCE
-                                acceptances_g       <- acceptances_g + 1    # increment acceptances
-
-                                copy_vec(path$data_log_lik, data_log_lik_prop)      # update the data log likelihood
-                                copy_vec(params_logprior_cur, params_logprior_prop) # update the prior density
-                                copy_vec(logpost_cur, logpost_prop)                 # update the log posterior
-
-                                copy_mat(lna_params_cur, lna_params_prop)   # update the model parameter
-                                copy_vec(model_params_nat, params_prop_nat) # update LNA parameters on their natural scales
-                                copy_vec(model_params_est, params_prop_est) # update LNA parameters on their estimation scales
-                        }
-
-                        if(iter < stop_adaptation) {
-                                # Adapt the proposal kernel
-                                proposal_scaling <- min(exp(log(proposal_scaling) + 
-                                                                adaptations[iter] * (min(exp(acceptance_prob), 1) - target_g)),
-                                                        max_scaling)
-
-                                kernel_resid <- model_params_est - kernel_mean
-                                kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid%*%t(kernel_resid) - kernel_cov)
-                                kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
-                        }
-                        
                 } else if(mcmc_kernel$method == "mvn_g_adaptive") {
                   
                         if(iter == stop_adaptation) {
@@ -1640,6 +1519,150 @@ stem_inference_lna <- function(stem_object,
                           kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid%*%t(kernel_resid) - kernel_cov)
                           kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
                         }
+                } else if(mcmc_kernel$method == "pca_adaptive") {
+                      
+                      if(iter == stop_adaptation) {
+                            mcmc_kernel$sigma = eigenvectors %*% diag(proposal_scaling * eigenvalues) %*% t(eigenvectors)
+                            sigma_chol        = chol(mcmc_kernel$sigma)
+                      }
+                      
+                      # propose new parameters
+                      if(iter < stop_adaptation) {
+                            
+                            # sample a direction
+                            direction <- sample.int(n_model_params, 1, replace = FALSE, prob = comp_weights, useHash = FALSE)
+                            proposals_c[direction] <- proposals_c[direction] + 1
+                            
+                            # propose new parameters
+                            pca_adaptive(params_prop      = params_prop_est,
+                                         params_cur       = model_params_est,
+                                         eigenvalues      = eigenvalues,
+                                         eigenvectors     = eigenvectors,
+                                         proposal_scaling = proposal_scaling,
+                                         direction        = direction-1,
+                                         nugget           = nugget)
+                            
+                      } else {
+                            mvn_rw(params_prop = params_prop_est,
+                                   params_cur  = model_params_est,
+                                   sigma_chol  = sigma_chol)
+                      }
+                      
+                      # Convert the proposed parameters to their natural scale
+                      params_prop_nat <- from_estimation_scale(params_prop_est)
+                      
+                      # update time-varying parameters if necessary
+                      if(!is.null(tparam)) {
+                            for(p in seq_along(tparam)) {
+                                  insert_tparam(tcovar    = lna_params_prop,
+                                                values    = tparam[[p]]$draws2par(parameters = params_prop_nat, draws = tparam[[p]]$draws_cur),
+                                                col_ind   = tparam[[p]]$col_ind,
+                                                tpar_inds = tparam[[p]]$tpar_inds)
+                            }
+                      }
+                      
+                      # Compute the log prior for the proposed parameters
+                      params_logprior_prop <- prior_density(params_prop_nat, params_prop_est)
+                      
+                      # Insert the proposed parameters into the parameter proposal matrix
+                      pars2lnapars(lna_params_prop, c(params_prop_nat, t0, init_volumes_cur))
+                      
+                      # set the data log likelihood for the proposal to NULL
+                      data_log_lik_prop <- NULL
+                      
+                      try({
+                            map_draws_2_lna(
+                                  pathmat           = pathmat_prop,
+                                  draws             = path$draws,
+                                  lna_times         = lna_times,
+                                  lna_pars          = lna_params_prop,
+                                  init_start        = lna_initdist_inds[1],
+                                  param_update_inds = param_update_inds,
+                                  stoich_matrix     = stoich_matrix,
+                                  forcing_inds      = forcing_inds,
+                                  forcing_matrix    = forcing_matrix,
+                                  svd_sqrt          = svd_sqrt,
+                                  svd_d             = svd_d,
+                                  svd_U             = svd_U,
+                                  svd_V             = svd_V,
+                                  lna_pointer       = lna_pointer,
+                                  set_pars_pointer  = lna_set_pars_pointer,
+                                  step_size         = step_size
+                            )
+                            
+                            census_lna(
+                                  path                = pathmat_prop,
+                                  census_path         = censusmat,
+                                  census_inds         = census_indices,
+                                  lna_event_inds      = lna_event_inds,
+                                  flow_matrix_lna     = flow_matrix,
+                                  do_prevalence       = do_prevalence,
+                                  init_state          = init_volumes_cur,
+                                  forcing_matrix      = forcing_matrix
+                            )
+                            
+                            # evaluate the density of the incidence counts
+                            evaluate_d_measure_LNA(
+                                  emitmat           = emitmat,
+                                  obsmat            = data,
+                                  censusmat         = censusmat,
+                                  measproc_indmat   = measproc_indmat,
+                                  lna_parameters    = lna_params_prop,
+                                  lna_param_inds    = lna_param_inds,
+                                  lna_const_inds    = lna_const_inds,
+                                  lna_tcovar_inds   = lna_tcovar_inds,
+                                  param_update_inds = param_update_inds,
+                                  census_indices    = census_indices,
+                                  d_meas_ptr        = d_meas_pointer
+                            )
+                            
+                            # compute the data log likelihood
+                            data_log_lik_prop <- sum(emitmat[,-1][measproc_indmat])
+                            if(is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
+                      }, silent = TRUE)
+                      
+                      if(is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
+                      
+                      # compute the log posterior for the proposed parameters
+                      logpost_prop <- data_log_lik_prop + params_logprior_prop
+                      
+                      ## Compute the acceptance probability
+                      acceptance_prob <- logpost_prop - logpost_cur
+                      
+                      # Accept/Reject via metropolis-hastings
+                      if(acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
+                            
+                            ### ACCEPTANCE
+                            acceptances_c[direction] <- acceptances_c[direction] + 1    # increment acceptances
+                            
+                            copy_vec(path$data_log_lik, data_log_lik_prop)      # update the data log likelihood
+                            copy_vec(params_logprior_cur, params_logprior_prop) # update the prior density
+                            copy_vec(logpost_cur, logpost_prop)                 # update the log posterior
+                            
+                            copy_mat(lna_params_cur, lna_params_prop)   # update the model parameter
+                            copy_vec(model_params_nat, params_prop_nat) # update LNA parameters on their natural scales
+                            copy_vec(model_params_est, params_prop_est) # update LNA parameters on their estimation scales
+                      }
+                      
+                      if(iter < stop_adaptation) {
+                            
+                            # Adapt the proposal kernel
+                            proposal_scaling[direction] <- min(
+                                  exp(log(proposal_scaling[direction]) + 
+                                            adaptations[iter] * (min(exp(acceptance_prob), 1) - acceptances_c[direction] / proposals_c[direction]) +
+                                            adaptations[iter] * (acceptances_c[direction] / proposals_c[direction] - target_c)),
+                                  max_scaling) 
+                            
+                            kernel_resid <- model_params_est - kernel_mean
+                            kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid%*%t(kernel_resid) - kernel_cov)
+                            kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
+                            
+                            update_princomps(eigenvalues    = eigenvalues,
+                                             eigenvectors   = eigenvectors,
+                                             comp_weights   = comp_weights,
+                                             kernel_cov     = kernel_cov,
+                                             update_weights = (iter-1) %% weight_update_interval == 0)
+                      }
                 }
 
                 # Propose and Accept-reject initial state/time
@@ -1889,6 +1912,19 @@ stem_inference_lna <- function(stem_object,
                                         paste0("Global acceptances: ", acceptances_g),
                                         paste0("Global acceptance rate: ", acceptances_g/(iter-1)),
                                         file = status_file, sep = "\n", append = TRUE)
+                                
+                        } else if(mcmc_kernel$method == "pca_adaptive") {
+                              
+                              adaptation_scale_record[, param_rec_ind] <- proposal_scaling
+                              adaptation_shape_record[,,param_rec_ind] <- kernel_cov
+                              eigenvalue_record[,param_rec_ind]        <- eigenvalues
+                              eigenvector_record[,,param_rec_ind]      <- eigenvectors
+                              
+                              if(messages && iter<stop_adaptation) cat(
+                                    paste0("Iteration: ", iter),
+                                    paste0("Directional acceptances: ", acceptances_c),
+                                    paste0("Directional acceptance rates: ", acceptances_c/(iter-1)),
+                                    file = status_file, sep = "\n", append = TRUE)
                         }
 
                         # Increment the parameter record index
@@ -1973,6 +2009,17 @@ stem_inference_lna <- function(stem_object,
                         list(adaptation_scale_record  = adaptation_scale_record,
                              adaptation_shape_record  = adaptation_shape_record,
                              proposal_covariance      = proposal_scaling * kernel_cov)
+                
+        } else if(mcmc_kernel$method == "pca_adaptive") {
+              stem_object$results$acceptances_c     = acceptances_c
+              stem_object$results$proposals_c       = proposals_c
+              stem_object$results$adaptation_record =
+                    list(adaptation_scale_record  = t(adaptation_scale_record),
+                         adaptation_shape_record  = adaptation_shape_record,
+                         eigenvalue_record        = t(eigenvalue_record),
+                         eigenvector_record       = eigenvector_record,
+                         proposal_covariance      = eigenvectors %*% diag(proposal_scaling * eigenvalues) %*% t(eigenvectors))
+              
         }
 
         if(!fixed_inits || !t0_fixed) {

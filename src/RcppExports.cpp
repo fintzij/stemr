@@ -504,6 +504,22 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// pca_adaptive
+void pca_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::vec& eigenvalues, const arma::mat& eigenvectors, const arma::vec& proposal_scaling, int direction, double nugget);
+RcppExport SEXP _stemr_pca_adaptive(SEXP params_propSEXP, SEXP params_curSEXP, SEXP eigenvaluesSEXP, SEXP eigenvectorsSEXP, SEXP proposal_scalingSEXP, SEXP directionSEXP, SEXP nuggetSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::rowvec& >::type params_prop(params_propSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type params_cur(params_curSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type eigenvalues(eigenvaluesSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type eigenvectors(eigenvectorsSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type proposal_scaling(proposal_scalingSEXP);
+    Rcpp::traits::input_parameter< int >::type direction(directionSEXP);
+    Rcpp::traits::input_parameter< double >::type nugget(nuggetSEXP);
+    pca_adaptive(params_prop, params_cur, eigenvalues, eigenvectors, proposal_scaling, direction, nugget);
+    return R_NilValue;
+END_RCPP
+}
 // propose_lna_approx
 Rcpp::List propose_lna_approx(const arma::rowvec& lna_times, const Rcpp::NumericMatrix& lna_pars, const int init_start, const Rcpp::LogicalVector& param_update_inds, const arma::mat& stoich_matrix, const Rcpp::LogicalVector& forcing_inds, const arma::mat& forcing_matrix, int max_attempts, int nsim, int ess_updates, int ess_warmup, double step_size, SEXP lna_pointer, SEXP set_pars_pointer);
 RcppExport SEXP _stemr_propose_lna_approx(SEXP lna_timesSEXP, SEXP lna_parsSEXP, SEXP init_startSEXP, SEXP param_update_indsSEXP, SEXP stoich_matrixSEXP, SEXP forcing_indsSEXP, SEXP forcing_matrixSEXP, SEXP max_attemptsSEXP, SEXP nsimSEXP, SEXP ess_updatesSEXP, SEXP ess_warmupSEXP, SEXP step_sizeSEXP, SEXP lna_pointerSEXP, SEXP set_pars_pointerSEXP) {
@@ -668,6 +684,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// update_princomps
+void update_princomps(arma::vec& eigenvalues, arma::mat& eigenvectors, arma::vec& comp_weights, const arma::mat& kernel_cov, bool update_weights);
+RcppExport SEXP _stemr_update_princomps(SEXP eigenvaluesSEXP, SEXP eigenvectorsSEXP, SEXP comp_weightsSEXP, SEXP kernel_covSEXP, SEXP update_weightsSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec& >::type eigenvalues(eigenvaluesSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type eigenvectors(eigenvectorsSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type comp_weights(comp_weightsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type kernel_cov(kernel_covSEXP);
+    Rcpp::traits::input_parameter< bool >::type update_weights(update_weightsSEXP);
+    update_princomps(eigenvalues, eigenvectors, comp_weights, kernel_cov, update_weights);
+    return R_NilValue;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_stemr_build_census_path", (DL_FUNC) &_stemr_build_census_path, 3},
@@ -705,6 +735,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_mvn_c_adaptive", (DL_FUNC) &_stemr_mvn_c_adaptive, 6},
     {"_stemr_mvn_g_adaptive", (DL_FUNC) &_stemr_mvn_g_adaptive, 5},
     {"_stemr_mvn_rw", (DL_FUNC) &_stemr_mvn_rw, 3},
+    {"_stemr_pca_adaptive", (DL_FUNC) &_stemr_pca_adaptive, 7},
     {"_stemr_propose_lna_approx", (DL_FUNC) &_stemr_propose_lna_approx, 14},
     {"_stemr_propose_lna", (DL_FUNC) &_stemr_propose_lna, 12},
     {"_stemr_propose_lna_semi_t", (DL_FUNC) &_stemr_propose_lna_semi_t, 12},
@@ -714,6 +745,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_retrieve_census_path", (DL_FUNC) &_stemr_retrieve_census_path, 4},
     {"_stemr_simulate_gillespie", (DL_FUNC) &_stemr_simulate_gillespie, 12},
     {"_stemr_simulate_r_measure", (DL_FUNC) &_stemr_simulate_r_measure, 6},
+    {"_stemr_update_princomps", (DL_FUNC) &_stemr_update_princomps, 5},
     {NULL, NULL, 0}
 };
 

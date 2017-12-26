@@ -24,6 +24,11 @@
 #' @param nugget fixed nugget contribution, defaults to 0.01.
 #' @param stop_adaptation iteration at which to stop adapting the proposal
 #'   distribution.
+#' @param weight_update_interval number of iterations between updates to the
+#'   direction sampling distribution if using adaptive principal components
+#'   Metropolis. Defaults to 100 times the number of parameters if not
+#'   specified. The weights are the n^th root of the eigenvalues, where n is the
+#'   number of model parameters, normalized to sum to 1.
 #' @param messages should messages be printed?
 #'
 #' @details Specifies a Metropolis transition kernel wtih symmetric Gaussian
@@ -53,6 +58,7 @@ kernel <-
                  target_c = 0.44,
                  nugget = NULL,
                  stop_adaptation = Inf,
+                 weight_update_interval = NULL,
                  messages = TRUE) {
 
         if(!method %in% c("c_rw", "mvn_rw", "c_rw_adaptive", "mvn_c_adaptive", "mvn_g_adaptive", "pca_adaptive")) {
@@ -81,6 +87,10 @@ kernel <-
                 nugget <- rep(nugget, nrow(sigma))
         }
 
+        if(method == "pca_adaptive" && is.null(weight_update_interval)) {
+              weight_update_interval <- 100 * nrow(sigma)
+        }              
+
         kernel_settings <- list(scale_constant = scale_constant,
                                 scale_cooling = scale_cooling,
                                 step_size     = step_size,
@@ -88,7 +98,8 @@ kernel <-
                                 target_g      = target_g,
                                 target_c      = target_c,
                                 nugget        = nugget,
-                                stop_adaptation = stop_adaptation)
+                                stop_adaptation = stop_adaptation,
+                                weight_update_interval = weight_update_interval)
 
         return(list(method = method, sigma = sigma, kernel_settings = kernel_settings))
 }

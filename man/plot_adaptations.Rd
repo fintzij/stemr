@@ -3,19 +3,26 @@
 \name{plot_adaptations}
 \alias{plot_adaptations}
 \title{Plot the adaptation schedule for an adaptive MCMC algorithm for a given
-number of iterations, given as scale_constant/iteration^scale_cooling.}
+number of iterations, given as \code{scale_constant/(1 + iteration *
+step_size)^scale_cooling}}
 \usage{
-plot_adaptations(scale_constant, scale_cooling, iterations)
+plot_adaptations(scale_constant, scale_cooling, iterations, step_size)
 }
 \arguments{
-\item{scale_cooling}{rate at which to cool the adaptation, must be between 0 and 1.}
+\item{scale_constant}{maximum scaling, must be less than 1.}
+
+\item{scale_cooling}{rate at which to cool the adaptation, must be between
+0.5 and 1.}
 
 \item{iterations}{number of MCMC iterations}
+
+\item{step_size}{increment per iteration}
 }
 \value{
 produce a plot of the cooling schedule
 }
 \description{
 Plot the adaptation schedule for an adaptive MCMC algorithm for a given
-number of iterations, given as scale_constant/iteration^scale_cooling.
+number of iterations, given as \code{scale_constant/(1 + iteration *
+step_size)^scale_cooling}
 }

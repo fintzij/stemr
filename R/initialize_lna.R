@@ -142,7 +142,7 @@ initialize_lna <-
                                     
                                     # get values
                                     insert_tparam(tcovar    = lna_parameters,
-                                                  values    = tparam[[s]]$draws2par(parameters = model_params_nat, draws = tparam[[s]]$draws_cur),
+                                                  values    = tparam[[s]]$draws2par(parameters = lna_parameters[1,], draws = tparam[[s]]$draws_cur),
                                                   col_ind   = tparam[[s]]$col_ind,
                                                   tpar_inds = tparam[[s]]$tpar_inds)
                               }

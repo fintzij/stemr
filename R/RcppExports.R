@@ -550,6 +550,22 @@ mvn_rw <- function(params_prop, params_cur, sigma_chol) {
     invisible(.Call('_stemr_mvn_rw', PACKAGE = 'stemr', params_prop, params_cur, sigma_chol))
 }
 
+#' Adaptive principal component metropolis proposal.
+#'
+#' @param params_prop vector in which the proposed parameters should be stored
+#' @param params_cur vector containing the current parameter vector
+#' @param eigenvalues vector of eigenvalues of the proposal covariance matrix
+#' @param eigenvectors matrix of eigenvectors for the proposal covariance
+#' @param proposal_scaling vector of component scaling parameters
+#' @param direction component to be used in the proposal
+#' @param nugget
+#'
+#' @return propose new parameter values in place
+#' @export
+pca_adaptive <- function(params_prop, params_cur, eigenvalues, eigenvectors, proposal_scaling, direction, nugget) {
+    invisible(.Call('_stemr_pca_adaptive', PACKAGE = 'stemr', params_prop, params_cur, eigenvalues, eigenvectors, proposal_scaling, direction, nugget))
+}
+
 #' Simulate an approximate LNA path using a non-centered parameterization for the
 #' log-transformed counting process LNA. Resample the initial path in place, then
 #' update with elliptical slice sampling.
@@ -761,5 +777,20 @@ simulate_gillespie <- function(flow, parameters, constants, tcovar, init_states,
 #' @export
 simulate_r_measure <- function(censusmat, measproc_indmat, parameters, constants, tcovar, r_measure_ptr) {
     .Call('_stemr_simulate_r_measure', PACKAGE = 'stemr', censusmat, measproc_indmat, parameters, constants, tcovar, r_measure_ptr)
+}
+
+#' Update principal component Metropolis eigenvectors and eigenvalues
+#'
+#' @param eigenvalues vector of eigenvalues of the proposal covariance matrix
+#' @param eigenvectors matrix of eigenvectors for the proposal covariance
+#' @param comp_weights vector of component weights
+#' @param kernel_cov proposal covariance matrix
+#' @param update_weights should the weights for the direction sampling 
+#'  distribution be recomputed. 
+#'
+#' @return update eigenvalues and eigenvectors in place
+#' @export
+update_princomps <- function(eigenvalues, eigenvectors, comp_weights, kernel_cov, update_weights) {
+    invisible(.Call('_stemr_update_princomps', PACKAGE = 'stemr', eigenvalues, eigenvectors, comp_weights, kernel_cov, update_weights))
 }
 
