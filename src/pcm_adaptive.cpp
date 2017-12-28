@@ -17,7 +17,7 @@ using namespace arma;
 //' @return propose new parameter values in place
 //' @export
 // [[Rcpp::export]]
-void pca_adaptive(arma::rowvec& params_prop,
+void pcm_adaptive(arma::rowvec& params_prop,
                     const arma::rowvec& params_cur,
                     const arma::vec& eigenvalues,
                     const arma::mat& eigenvectors,

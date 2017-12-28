@@ -504,9 +504,9 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// pca_adaptive
-void pca_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::vec& eigenvalues, const arma::mat& eigenvectors, const arma::vec& proposal_scaling, int direction, double nugget);
-RcppExport SEXP _stemr_pca_adaptive(SEXP params_propSEXP, SEXP params_curSEXP, SEXP eigenvaluesSEXP, SEXP eigenvectorsSEXP, SEXP proposal_scalingSEXP, SEXP directionSEXP, SEXP nuggetSEXP) {
+// pcm_adaptive
+void pcm_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::vec& eigenvalues, const arma::mat& eigenvectors, const arma::vec& proposal_scaling, int direction, double nugget);
+RcppExport SEXP _stemr_pcm_adaptive(SEXP params_propSEXP, SEXP params_curSEXP, SEXP eigenvaluesSEXP, SEXP eigenvectorsSEXP, SEXP proposal_scalingSEXP, SEXP directionSEXP, SEXP nuggetSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::rowvec& >::type params_prop(params_propSEXP);
@@ -516,7 +516,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::vec& >::type proposal_scaling(proposal_scalingSEXP);
     Rcpp::traits::input_parameter< int >::type direction(directionSEXP);
     Rcpp::traits::input_parameter< double >::type nugget(nuggetSEXP);
-    pca_adaptive(params_prop, params_cur, eigenvalues, eigenvectors, proposal_scaling, direction, nugget);
+    pcm_adaptive(params_prop, params_cur, eigenvalues, eigenvectors, proposal_scaling, direction, nugget);
     return R_NilValue;
 END_RCPP
 }
@@ -735,7 +735,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_mvn_c_adaptive", (DL_FUNC) &_stemr_mvn_c_adaptive, 6},
     {"_stemr_mvn_g_adaptive", (DL_FUNC) &_stemr_mvn_g_adaptive, 5},
     {"_stemr_mvn_rw", (DL_FUNC) &_stemr_mvn_rw, 3},
-    {"_stemr_pca_adaptive", (DL_FUNC) &_stemr_pca_adaptive, 7},
+    {"_stemr_pcm_adaptive", (DL_FUNC) &_stemr_pcm_adaptive, 7},
     {"_stemr_propose_lna_approx", (DL_FUNC) &_stemr_propose_lna_approx, 14},
     {"_stemr_propose_lna", (DL_FUNC) &_stemr_propose_lna, 12},
     {"_stemr_propose_lna_semi_t", (DL_FUNC) &_stemr_propose_lna_semi_t, 12},

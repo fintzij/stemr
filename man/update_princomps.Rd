@@ -4,20 +4,20 @@
 \alias{update_princomps}
 \title{Update principal component Metropolis eigenvectors and eigenvalues}
 \usage{
-update_princomps(eigenvalues, eigenvectors, vec_prod_lower, comp_weights,
-  kernel_cov)
+update_princomps(eigenvalues, eigenvectors, comp_weights, kernel_cov,
+  update_weights)
 }
 \arguments{
 \item{eigenvalues}{vector of eigenvalues of the proposal covariance matrix}
 
 \item{eigenvectors}{matrix of eigenvectors for the proposal covariance}
 
-\item{vec_prod_lower}{matrix for caching the inverse of the lower triangular
-matrix of the eigenvector inner product}
-
 \item{comp_weights}{vector of component weights}
 
 \item{kernel_cov}{proposal covariance matrix}
+
+\item{update_weights}{should the weights for the direction sampling 
+distribution be recomputed.}
 }
 \value{
 update eigenvalues and eigenvectors in place

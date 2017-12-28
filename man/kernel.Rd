@@ -6,16 +6,17 @@
 \usage{
 kernel(method = "c_rw", sigma, scale_constant = 0.5, scale_cooling = 0.5 +
   1e-05, step_size = 1, max_scaling = Inf, target_g = 0.234,
-  target_c = 0.44, nugget = NULL, stop_adaptation = Inf,
-  messages = TRUE)
+  target_c = 0.44, nugget = NULL, stop_adaptation = NULL,
+  weight_update_interval = NULL, pcm_adaptive_schedule = "random",
+  pcm_updates = 1, messages = TRUE)
 }
 \arguments{
 \item{method}{algorithm to be used in generating parameter updates, see
 details below.}
 
-\item{sigma}{vector of variances or variance-covariance matrix for random
-walk proposals, with names or rows and columns corresponding to the names
-of parameters on their estimation scales.}
+\item{sigma}{vector of variances or variance-covariance matrix for random walk
+proposals, with names or rows and columns corresponding to the names of
+parameters on their estimation scales.}
 
 \item{scale_constant}{constant multiple of the adaptations determined by
 \code{scale_cooling}.}
@@ -23,8 +24,7 @@ of parameters on their estimation scales.}
 \item{scale_cooling}{rate at which to cool the adaptation, defaults to 0.5.
 Adaptation contributions are governed by a harmonic sequence:
 scale_constant/(iteration/step_size+1)^scale_cooling. The
-\code{plot_adaptations} function may be used to plot the adaptation
-factors.}
+\code{plot_adaptations} function may be used to plot the adaptation factors.}
 
 \item{step_size}{adaptation increment for each iteration, defaults to 1.}
 
@@ -40,28 +40,50 @@ or for principal components Metropolis proposals.}
 \item{stop_adaptation}{iteration at which to stop adapting the proposal
 distribution.}
 
+\item{weight_update_interval}{number of iterations between updates to the
+direction sampling distribution if using adaptive principal components
+Metropolis. Defaults to 100 times the number of parameters if not specified.
+The weights are the n^th root of the eigenvalues, where n is the number of
+model parameters, normalized to sum to 1.}
+
+\item{pcm_adaptive_schedule}{either "random" (default) or "sequential". If
+"random", each iteration consists of one parameter update in a direction
+chosen at random according to the weight distribution. If "sequential", each
+MCMC iteration consists of an update in each direction.}
+
+\item{pcm_updates}{If the principal component metropolis schedule is random,
+the number of directions, chosen at random, that should be updated per
+iteration.}
+
 \item{messages}{should messages be printed?}
 }
 \value{
 list containing the method and covariance matrix for the MCMC kernel.
 }
 \description{
-Model parameters can be updated either using either
-  componentwise or global Metropolis, with options for global or
-  componentwise adaptive scaling.
+Model parameters can be updated either using either componentwise
+ or global Metropolis, with options for global or componentwise adaptive
+ scaling.
 }
 \details{
 Specifies a Metropolis transition kernel wtih symmetric Gaussian
-  proposals. The options for the method are as follows: 1) c_rw:
-  componentwise random walk, updating each parameter in turn. 2) mvn_rw:
-  global random walk, updating all parameters jointly. 3) c_rw_adaptive:
-  componentwise adaptive Metropolis with componentwise adaptive scaling (Alg.
-  5 in Andrieu and Thoms). 4) mvn_rw_c_adaptive: global adaptive Metropolis
-  with componentwise adaptive scaling (Alg. 6 in Andrieu and Thoms). 5)
-  mvn_rw_g_adaptive: global adaptive Metropolis with global adaptive scaling
-  (Alg. 4 in Andrieu and Thoms). 6) pca_adaptive: adaptive principal
-  components Metropolis (Alg. 8 in Andrieu and Thoms).
-
-  References: Andrieu, Christophe, and Johannes Thoms. "A tutorial on
-  adaptive MCMC." Statistics and computing 18.4 (2008): 343-373.
+ proposals. The options for the method are as follows: 1) c_rw: componentwise
+ random walk, updating each parameter in turn. 2) mvn_rw: global random walk,
+ updating all parameters jointly. 3) c_rw_adaptive: componentwise adaptive 
+ Metropolis with componentwise adaptive scaling (Alg. 5 in Andrieu and Thoms). 
+ 4) mvn_rw_c_adaptive: global adaptive Metropolis with componentwise adaptive
+ scaling (Alg. 6 in Andrieu and Thoms). 5) mvn_rw_g_adaptive: global adaptive
+ Metropolis with global adaptive scaling (Alg. 4 in Andrieu and Thoms). 6)
+ pcm_adaptive: adaptive principal components Metropolis (Alg. 8 in Andrieu
+ and Thoms). 7) Automated factor slice sampler (modified adaptive version of
+ the adaptation scheme in Ti) bbits, et al. 2014).
+ 
+ References: 
+ 
+ Andrieu, Christophe, and Johannes Thoms. "A tutorial on adaptive MCMC." 
+ Statistics and Computing 18.4 (2008): 343-373.
+ 
+ Matthew M. Tibbits, Chris Groendyke, Murali Haran & John C. Liechty
+ "Automated Factor Slice Sampling." Journal of Computational and Graphical 
+ Statistics 23:2 (2014): 543-563.
 }

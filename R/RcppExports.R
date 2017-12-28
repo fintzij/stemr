@@ -562,8 +562,8 @@ mvn_rw <- function(params_prop, params_cur, sigma_chol) {
 #'
 #' @return propose new parameter values in place
 #' @export
-pca_adaptive <- function(params_prop, params_cur, eigenvalues, eigenvectors, proposal_scaling, direction, nugget) {
-    invisible(.Call('_stemr_pca_adaptive', PACKAGE = 'stemr', params_prop, params_cur, eigenvalues, eigenvectors, proposal_scaling, direction, nugget))
+pcm_adaptive <- function(params_prop, params_cur, eigenvalues, eigenvectors, proposal_scaling, direction, nugget) {
+    invisible(.Call('_stemr_pcm_adaptive', PACKAGE = 'stemr', params_prop, params_cur, eigenvalues, eigenvectors, proposal_scaling, direction, nugget))
 }
 
 #' Simulate an approximate LNA path using a non-centered parameterization for the

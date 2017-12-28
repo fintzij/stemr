@@ -4,6 +4,8 @@
 #' @param n_ess_updates number of elliptical slice sampling updates
 #' @param svd_sqrt,svd_d,svd_U,svd_V objects for computing the SVD of LNA
 #'   diffusion matrics
+#' @param tparam_update if "joint" then time-varying parameters are updated jointly
+#'   along with the LNA path
 #' @inheritParams initialize_lna
 #'
 #' @return list with an updated LNA path along with its stochastic
@@ -15,6 +17,7 @@ update_lna_path <-
         function(path_cur,
                  data,
                  lna_parameters,
+                 tparam,
                  pathmat_prop,
                  censusmat,
                  draws_prop,
@@ -43,6 +46,7 @@ update_lna_path <-
                  n_ess_updates,
                  ess_schedule,
                  randomize_schedule,
+                 tparam_update,
                  step_size) {
 
         # vector for storing the number of steps in each ESS update
@@ -82,6 +86,26 @@ update_lna_path <-
                                             cos(theta)*path_cur$draws[ess_schedule[[1]][[j]],] + sin(theta)*perturbations,
                                             ess_schedule[[1]][[j]]-1)
                                 copy_2_rows(draws_prop, path_cur$draws[ess_schedule[[2]][[j]],], ess_schedule[[2]][[j]]-1)
+                        }
+                        
+                        # propose time-varying parameter values if called for
+                        if(!is.null(tparam) && tparam_update == "joint") {
+                              
+                              # sample a new set of perturbations and construct the first proposal
+                              for(p in seq_along(tparam)) {
+                                    
+                                    # sample perturbations
+                                    copy_vec(dest = tparam[[p]]$draws_prop, orig = rnorm(length(tparam[[p]]$times)))
+                                    
+                                    # compute proposal
+                                    copy_vec(dest = tparam[[p]]$draws_ess, orig = cos(theta) * tparam[[p]]$draws_cur + sin(theta) * tparam[[p]]$draws_prop)
+                                    
+                                    # map to parameter
+                                    insert_tparam(tcovar    = lna_parameters,
+                                                  values    = tparam[[p]]$draws2par(parameters = lna_parameters[1,], draws = tparam[[p]]$draws_ess),
+                                                  col_ind   = tparam[[p]]$col_ind,
+                                                  tpar_inds = tparam[[p]]$tpar_inds)
+                              }
                         }
 
                         # initialize the data log likelihood for the proposed path
@@ -157,7 +181,7 @@ update_lna_path <-
                                 # sample a new point
                                 theta <- runif(1, lower, upper)
 
-                                # construct the next proposal
+                                # construct the next LNA path proposal
                                 if(length(ess_schedule[[1]]) == 1) {
                                         copy_mat(draws_prop, cos(theta)*path_cur$draws + sin(theta)*perturbations)
                                 } else {
@@ -165,6 +189,21 @@ update_lna_path <-
                                                     cos(theta)*path_cur$draws[ess_schedule[[1]][[j]],] +
                                                             sin(theta)*perturbations,
                                                     ess_schedule[[1]][[j]]-1)
+                                }
+                                
+                                # construct the next proposal for time-varying parameters
+                                if(!is.null(tparam) && tparam_update == "joint") {
+                                      
+                                      for(p in seq_along(tparam)) {
+                                            # compute proposal
+                                            copy_vec(dest = tparam[[p]]$draws_ess, orig = cos(theta) * tparam[[p]]$draws_cur + sin(theta) * tparam[[p]]$draws_prop)
+                                            
+                                            # map to parameter
+                                            insert_tparam(tcovar    = lna_parameters,
+                                                          values    = tparam[[p]]$draws2par(parameters = lna_parameters[1,], draws = tparam[[p]]$draws_ess),
+                                                          col_ind   = tparam[[p]]$col_ind,
+                                                          tpar_inds = tparam[[p]]$tpar_inds)
+                                      }
                                 }
 
                                 # initialize the data log likelihood for the proposed path
@@ -237,10 +276,29 @@ update_lna_path <-
                                                     draws_prop[ess_schedule[[1]][[j]],],
                                                     ess_schedule[[1]][[j]] - 1)
                                 }
+                            
+                                if(!is.null(tparam) && tparam_update == "joint") {
+                                      # Copy the tparam draws
+                                      for(p in seq_along(tparam)) {
+                                            copy_vec(tparam[[p]]$draws_cur, tparam[[p]]$draws_ess)
+                                      }
+                                }
 
                                 # copy the LNA path and the data log likelihood
                                 copy_mat(path_cur$lna_path, pathmat_prop)
                                 copy_vec(path_cur$data_log_lik, data_log_lik_prop)
+                                
+                        } else {
+                              # if updating the time-varying parameters jointly with the LNA path
+                              # recover the original time-varying parameter values
+                              if(!is.null(tparam) && tparam_update == "joint") {
+                                    for(p in seq_along(tparam)) {
+                                          insert_tparam(tcovar    = lna_parameters,
+                                                        values    = tparam[[p]]$draws2par(parameters = lna_parameters[1,], draws = tparam[[p]]$draws_cur),
+                                                        col_ind   = tparam[[p]]$col_ind,
+                                                        tpar_inds = tparam[[p]]$tpar_inds)
+                                    }
+                              }
                         }
                 }
         }

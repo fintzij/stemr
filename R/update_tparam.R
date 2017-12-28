@@ -225,6 +225,17 @@ update_tparam <-
               # copy the LNA path and the data log likelihood
               copy_mat(path_cur$lna_path, pathmat_prop)
               copy_vec(path_cur$data_log_lik, data_log_lik_prop)
+              
+      } else {
+            # recover the original time-varying parameter values
+            if(!is.null(tparam) && tparam_update == "joint") {
+                  for(p in seq_along(tparam)) {
+                        insert_tparam(tcovar    = lna_parameters,
+                                      values    = tparam[[p]]$draws2par(parameters = lna_parameters[1,], draws = tparam[[p]]$draws_cur),
+                                      col_ind   = tparam[[p]]$col_ind,
+                                      tpar_inds = tparam[[p]]$tpar_inds)
+                  }
+            }
       }
       
       copy_vec(tparam_ess, ess_count)
