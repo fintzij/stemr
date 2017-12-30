@@ -30,6 +30,7 @@
 #'   begin
 #' @param param_update_inds indices for when LNA parameters should be updated
 #' @param lna_event_inds codes for elementary events
+#' @param census_indices indices for when the LNA path should be censused
 #' @param measproc_indmat matrix giving the indices for data likelihood
 #'   contributions
 #' @param svd_sqrt matrix for computing the matrix square root for the LNA
@@ -75,6 +76,7 @@ factor_slice_sampler <- function(model_params_est,
                                  lna_initdist_inds,
                                  param_update_inds,
                                  lna_event_inds,
+                                 census_indices,
                                  measproc_indmat,
                                  svd_sqrt,
                                  svd_d,
