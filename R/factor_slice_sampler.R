@@ -134,7 +134,7 @@ factor_slice_sampler <- function(model_params_est,
                   try({
                         map_draws_2_lna(
                               pathmat           = path$lna_path,
-                              draws             = draws_prop,
+                              draws             = path$draws,
                               lna_times         = lna_times,
                               lna_pars          = lna_params_cur,
                               init_start        = lna_initdist_inds[1],
@@ -233,7 +233,7 @@ factor_slice_sampler <- function(model_params_est,
                   try({
                         map_draws_2_lna(
                               pathmat           = path$lna_path,
-                              draws             = draws_prop,
+                              draws             = path$draws,
                               lna_times         = lna_times,
                               lna_pars          = lna_params_cur,
                               init_start        = lna_initdist_inds[1],
@@ -335,7 +335,7 @@ factor_slice_sampler <- function(model_params_est,
                   try({
                         map_draws_2_lna(
                               pathmat           = path$lna_path,
-                              draws             = draws_prop,
+                              draws             = path$draws,
                               lna_times         = lna_times,
                               lna_pars          = lna_params_cur,
                               init_start        = lna_initdist_inds[1],

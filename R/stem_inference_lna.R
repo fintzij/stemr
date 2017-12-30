@@ -1190,8 +1190,7 @@ stem_inference_lna <- function(stem_object,
                               data_log_lik_prop + params_logprior_prop
                         
                         ## Compute the acceptance probability
-                        acceptance_prob <-
-                              logpost_prop - logpost_cur
+                        acceptance_prob <-logpost_prop - logpost_cur
                         
                         # Accept/Reject via metropolis-hastings
                         if (acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
@@ -1313,12 +1312,10 @@ stem_inference_lna <- function(stem_object,
                         data_log_lik_prop <- -Inf
                   
                   # compute the log posterior for the proposed parameters
-                  logpost_prop <-
-                        data_log_lik_prop + params_logprior_prop
+                  logpost_prop <- data_log_lik_prop + params_logprior_prop
                   
                   ## Compute the acceptance probability
-                  acceptance_prob <-
-                        logpost_prop - logpost_cur
+                  acceptance_prob <- logpost_prop - logpost_cur
                   
                   # Accept/Reject via metropolis-hastings
                   if (acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
@@ -1459,12 +1456,10 @@ stem_inference_lna <- function(stem_object,
                               data_log_lik_prop <- -Inf
                         
                         # compute the log posterior for the proposed parameters
-                        logpost_prop <-
-                              data_log_lik_prop + params_logprior_prop
+                        logpost_prop <- data_log_lik_prop + params_logprior_prop
                         
                         ## Compute the acceptance probability
-                        acceptance_prob <-
-                              logpost_prop - logpost_cur
+                        acceptance_prob <- logpost_prop - logpost_cur
                         
                         # Accept/Reject via metropolis-hastings
                         if (acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
@@ -1641,8 +1636,7 @@ stem_inference_lna <- function(stem_object,
                         data_log_lik_prop + params_logprior_prop
                   
                   ## Compute the acceptance probability
-                  acceptance_prob <-
-                        logpost_prop - logpost_cur
+                  acceptance_prob <- logpost_prop - logpost_cur
                   
                   # Accept/Reject via metropolis-hastings
                   if (acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
@@ -1757,11 +1751,8 @@ stem_inference_lna <- function(stem_object,
                                     data_log_lik_g2c + params_logprior_g2c
                               
                               ## Compute the acceptance probability
-                              acceptance_prob_g2c <-
-                                    min(exp(
-                                          logpost_g2c_prop - logpost_g2c_cur
-                                    ),
-                                    1)
+                              acceptance_prob_g2c <- 
+                                    min(exp(logpost_g2c_prop - logpost_g2c_cur), 1)
                               
                               # Adapt the proposal scalings
                               proposal_scaling[s] <-
@@ -1883,10 +1874,8 @@ stem_inference_lna <- function(stem_object,
                         )
                         
                         # compute the data log likelihood
-                        data_log_lik_prop <-
-                              sum(emitmat[, -1][measproc_indmat])
-                        if (is.nan(data_log_lik_prop))
-                              data_log_lik_prop <- -Inf
+                        data_log_lik_prop <- sum(emitmat[, -1][measproc_indmat])
+                        if (is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
                   }, silent = TRUE)
                   
                   if (is.null(data_log_lik_prop))
@@ -1897,8 +1886,7 @@ stem_inference_lna <- function(stem_object,
                         data_log_lik_prop + params_logprior_prop
                   
                   ## Compute the acceptance probability
-                  acceptance_prob <-
-                        logpost_prop - logpost_cur
+                  acceptance_prob <- logpost_prop - logpost_cur
                   
                   # Accept/Reject via metropolis-hastings
                   if (acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
@@ -2176,8 +2164,8 @@ stem_inference_lna <- function(stem_object,
                   
                   # save the expansion and contrction record if called for (they are reset in the adaptation)
                   if((iter-1) %% thin_params == 0) {
-                        expansion_record[,param_rec_ind]   <- n_expansions
-                        contraction_record[,param_rec_ind] <- n_contractions
+                        expansion_record[,param_rec_ind-1]   <- n_expansions
+                        contraction_record[,param_rec_ind-1] <- n_contractions
                   }
                   
                   # update the covariance matrix for the proposal kernel
@@ -2328,7 +2316,7 @@ stem_inference_lna <- function(stem_object,
                   # N.B. no need to include the initial distribution log likelihoods
                   # since those are updated via an independence sampler so they cancel out
                   acceptance_prob <- data_log_lik_prop - path$data_log_lik
-                  
+   
                   # if t0 is not fixed, need to include the proposal probabilities in the MH ratio
                   if (!t0_fixed) acceptance_prob <- acceptance_prob + t0_logprior_prop - t0_logprior_cur + t0_new2cur - t0_cur2new
                   
