@@ -30,6 +30,19 @@ void copy_elem(arma::rowvec& dest, const arma::rowvec& orig, int ind) {
         dest[ind] = orig[ind];
 }
 
+//' Increment an element of a vector by 1
+//'
+//' @param vec destination row vector
+//' @param ind C++ style index for the element to be copied
+//'
+//' @return Add 1 to an element of a vector
+//' @export
+// [[Rcpp::export]]
+void increment_elem(arma::vec& vec, int ind) {
+      
+      vec[ind] += 1;
+}
+
 //' Copy the contents of one vector into another
 //'
 //' @param dest destination row vector

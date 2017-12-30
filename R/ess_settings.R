@@ -16,15 +16,24 @@
 #'   contains more than one vector, then the LNA paths for the events in the
 #'   vectors are sampled in a random order in each MCMC iteration (e.g., males
 #'   and females are sampled in a random order).
+#' @param tparam_update either "joint" (default) if time-varying parameter
+#'   values should be updated jointly with the LNA path, or "block" if
+#'   time-varying parameters should be updated in their own block.
 #' @param warmup warmup ESS updates prior to starting MCMC
 #'
 #' @return list with settings for elliptical slice sampling
 #' @export
-ess_settings <- function(n_ess_updates = 1, ess_schedule = NULL, randomize_schedule = TRUE, warmup = 200) {
-
+ess_settings <-
+      function(n_ess_updates = 1,
+               ess_schedule = NULL,
+               randomize_schedule = TRUE,
+               tparam_update = "joint",
+               warmup = 10) {
+            
         return(list(n_ess_updates = n_ess_updates,
                     ess_schedule = ess_schedule,
                     randomize_schedule = randomize_schedule,
+                    tparam_update = tparam_update,
                     warmup = warmup))
 
 }

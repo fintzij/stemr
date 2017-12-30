@@ -35,7 +35,6 @@ void census_lna(const arma::mat& path,
         int n_census_events = lna_event_inds.n_elem;
         int n_comps         = flow_matrix_lna.n_cols;
         int n_rates         = flow_matrix_lna.n_rows;
-        int n_incidence     = census_path.n_cols - n_comps - 1;
 
         // get indices in the census_path matrix to keep incidence
         int incid_start = flow_matrix_lna.n_cols + 1;

@@ -60,7 +60,6 @@ void map_draws_2_lna(arma::mat& pathmat,
         int n_comps  = stoich_matrix.n_rows;         // number of model compartments (all strata)
         int n_odes   = n_events + n_events*n_events; // number of ODEs
         int n_times  = lna_times.n_elem;             // number of times at which the LNA must be evaluated
-        int init_end = init_start + n_comps;         // index in the parameter vector to stop copying
 
         // initialize the objects used in each time interval
         double t_L = 0;
@@ -85,9 +84,6 @@ void map_draws_2_lna(arma::mat& pathmat,
 
         arma::vec log_lna(n_events, arma::fill::zeros);  // LNA increment, log scale
         arma::vec nat_lna(n_events, arma::fill::zeros);  // LNA increment, natural scale
-
-        // indices at which the diffusion elements of lna_state vec start
-        int diff_start = n_events;
 
         // apply forcings if called for - applied after censusing at the first time
         if(forcing_inds[0]) {

@@ -173,6 +173,17 @@ copy_elem <- function(dest, orig, ind) {
     invisible(.Call('_stemr_copy_elem', PACKAGE = 'stemr', dest, orig, ind))
 }
 
+#' Increment an element of a vector by 1
+#'
+#' @param vec destination row vector
+#' @param ind C++ style index for the element to be copied
+#'
+#' @return Add 1 to an element of a vector
+#' @export
+increment_elem <- function(vec, ind) {
+    invisible(.Call('_stemr_increment_elem', PACKAGE = 'stemr', vec, ind))
+}
+
 #' Copy the contents of one vector into another
 #'
 #' @param dest destination row vector
@@ -777,6 +788,16 @@ simulate_gillespie <- function(flow, parameters, constants, tcovar, init_states,
 #' @export
 simulate_r_measure <- function(censusmat, measproc_indmat, parameters, constants, tcovar, r_measure_ptr) {
     .Call('_stemr_simulate_r_measure', PACKAGE = 'stemr', censusmat, measproc_indmat, parameters, constants, tcovar, r_measure_ptr)
+}
+
+#' Update factors and interval widths for automated factor slice sampling
+#'
+#' @param 
+#'
+#' @return update eigenvalues and eigenvectors in place
+#' @export
+update_factors <- function(interval_widths, slice_eigenvals, slice_factors, kernel_cov, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor) {
+    invisible(.Call('_stemr_update_factors', PACKAGE = 'stemr', interval_widths, slice_eigenvals, slice_factors, kernel_cov, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor))
 }
 
 #' Update principal component Metropolis eigenvectors and eigenvalues

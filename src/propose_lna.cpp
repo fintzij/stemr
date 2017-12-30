@@ -95,9 +95,6 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                 init_volumes_prop += forcing_matrix.col(0);
         }
 
-        // indices at which the diffusion elements of lna_state vec start
-        int diff_start = n_events;
-
         // sample the stochastic perturbations
         arma::mat draws(n_events, n_times-1, arma::fill::randn);
         

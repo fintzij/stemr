@@ -25,9 +25,9 @@
 #'   defaults to 1
 #' @param thin_latent_proc thinning interval for latent paths, defaults to
 #'   ceiling(iterations/100) so that every 100th path will be saved
-#' @param n_ess_updates number of elliptical slice sampling updates per
-#'   iteration (LNA)
 #' @param messages should status messages be printed? defaults to TRUE.
+#' @param initialization_attempts 
+#' @param ess_args 
 #'
 #' @return list with posterior samples for the parameters and the latent
 #'   process, along with MCMC diagnostics.

@@ -174,6 +174,17 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// increment_elem
+void increment_elem(arma::vec& vec, int ind);
+RcppExport SEXP _stemr_increment_elem(SEXP vecSEXP, SEXP indSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec& >::type vec(vecSEXP);
+    Rcpp::traits::input_parameter< int >::type ind(indSEXP);
+    increment_elem(vec, ind);
+    return R_NilValue;
+END_RCPP
+}
 // copy_vec
 void copy_vec(arma::rowvec& dest, const arma::rowvec& orig);
 RcppExport SEXP _stemr_copy_vec(SEXP destSEXP, SEXP origSEXP) {
@@ -684,6 +695,25 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// update_factors
+void update_factors(arma::vec& interval_widths, arma::vec& slice_eigenvals, arma::mat& slice_factors, const arma::mat& kernel_cov, arma::vec& n_expansions, arma::vec& n_contractions, const arma::vec& n_expansions_c, const arma::vec& n_contractions_c, arma::vec& slice_ratios, double adaptation_factor);
+RcppExport SEXP _stemr_update_factors(SEXP interval_widthsSEXP, SEXP slice_eigenvalsSEXP, SEXP slice_factorsSEXP, SEXP kernel_covSEXP, SEXP n_expansionsSEXP, SEXP n_contractionsSEXP, SEXP n_expansions_cSEXP, SEXP n_contractions_cSEXP, SEXP slice_ratiosSEXP, SEXP adaptation_factorSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec& >::type interval_widths(interval_widthsSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type slice_eigenvals(slice_eigenvalsSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type slice_factors(slice_factorsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type kernel_cov(kernel_covSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type n_expansions(n_expansionsSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type n_contractions(n_contractionsSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type n_expansions_c(n_expansions_cSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type n_contractions_c(n_contractions_cSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type slice_ratios(slice_ratiosSEXP);
+    Rcpp::traits::input_parameter< double >::type adaptation_factor(adaptation_factorSEXP);
+    update_factors(interval_widths, slice_eigenvals, slice_factors, kernel_cov, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor);
+    return R_NilValue;
+END_RCPP
+}
 // update_princomps
 void update_princomps(arma::vec& eigenvalues, arma::mat& eigenvectors, arma::vec& comp_weights, const arma::mat& kernel_cov, bool update_weights);
 RcppExport SEXP _stemr_update_princomps(SEXP eigenvaluesSEXP, SEXP eigenvectorsSEXP, SEXP comp_weightsSEXP, SEXP kernel_covSEXP, SEXP update_weightsSEXP) {
@@ -712,6 +742,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_convert_lna2", (DL_FUNC) &_stemr_convert_lna2, 4},
     {"_stemr_pars2lnapars", (DL_FUNC) &_stemr_pars2lnapars, 2},
     {"_stemr_copy_elem", (DL_FUNC) &_stemr_copy_elem, 3},
+    {"_stemr_increment_elem", (DL_FUNC) &_stemr_increment_elem, 2},
     {"_stemr_copy_vec", (DL_FUNC) &_stemr_copy_vec, 2},
     {"_stemr_copy_mat", (DL_FUNC) &_stemr_copy_mat, 2},
     {"_stemr_copy_col", (DL_FUNC) &_stemr_copy_col, 3},
@@ -745,6 +776,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_retrieve_census_path", (DL_FUNC) &_stemr_retrieve_census_path, 4},
     {"_stemr_simulate_gillespie", (DL_FUNC) &_stemr_simulate_gillespie, 12},
     {"_stemr_simulate_r_measure", (DL_FUNC) &_stemr_simulate_r_measure, 6},
+    {"_stemr_update_factors", (DL_FUNC) &_stemr_update_factors, 10},
     {"_stemr_update_princomps", (DL_FUNC) &_stemr_update_princomps, 5},
     {NULL, NULL, 0}
 };
