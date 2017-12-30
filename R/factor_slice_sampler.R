@@ -26,6 +26,7 @@
 #' @param forcing_matrix matrix containing forcings
 #' @param lna_param_inds indices for LNA parameters for computing emission probs
 #' @param lna_const_inds indices for constants used in computing emission probs
+#' @param lna_tcovar_inds indices for time-varying covariates
 #' @param lna_initdist_inds index for where the initial compartment volumes
 #'   begin
 #' @param param_update_inds indices for when LNA parameters should be updated
@@ -73,6 +74,7 @@ factor_slice_sampler <- function(model_params_est,
                                  forcing_matrix,
                                  lna_param_inds,
                                  lna_const_inds,
+                                 lna_tcovar_inds,
                                  lna_initdist_inds,
                                  param_update_inds,
                                  lna_event_inds,
