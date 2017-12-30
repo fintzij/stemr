@@ -2178,7 +2178,7 @@ stem_inference_lna <- function(stem_object,
                         kernel_mean  <-
                               kernel_mean + adaptations[iter] * kernel_resid
                         
-                        if(factor_update_interval %% (iter-1) == 0) {
+                        if ((iter-1) %% factor_update_interval == 0) {
                               update_factors(
                                     interval_widths   = interval_widths,
                                     slice_eigenvals   = slice_eigenvals,
