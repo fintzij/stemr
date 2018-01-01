@@ -84,7 +84,11 @@ kernel <-
         }
 
         if(is.null(nugget)) {
-                nugget <- 0.001 * min(diag(sigma))
+                if(method == "afss") {
+                      nugget <- 1e-6
+                } else {
+                      nugget <- 0.001 * min(diag(sigma))
+                }
         }
 
         if(method == "c_rw_adaptive" && length(nugget) != nrow(sigma)) {

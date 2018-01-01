@@ -58,6 +58,8 @@ factor_slice_sampler <- function(model_params_est,
                                  n_contractions,
                                  n_expansions_c,
                                  n_contractions_c,
+                                 n_fss_updates,
+                                 slice_weights,
                                  path,
                                  data,
                                  priors,
@@ -90,7 +92,12 @@ factor_slice_sampler <- function(model_params_est,
                                  do_prevalence,
                                  step_size) {
       
-      for(f in sample.int(length(model_params_est), length(model_params_est))) {
+      # for(f in sample.int(length(model_params_est), length(model_params_est))) {
+      for (f in sample.int(
+            n = length(model_params_est),
+            size = n_fss_updates,
+            replace = FALSE,
+            prob = slice_weights)) {
             
             # sample the likelihood threshold
             threshold <- logpost_cur - rexp(1)
@@ -304,7 +311,7 @@ factor_slice_sampler <- function(model_params_est,
             
             # sample from the bracket
             while((logpost_prop < threshold) && !isTRUE(all.equal(lower, upper))) {
-                  
+            
                   # sample uniformly in the bracket
                   prop <- runif(1, lower, upper)
                   

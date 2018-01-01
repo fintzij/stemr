@@ -17,3 +17,8 @@ expit <- function(x) {
 logit <- function(y) {
         -log(1/y - 1)
 }
+
+# Clean up when package is unloaded.
+.onUnload <- function (libpath) {
+      library.dynam.unload("stemr", libpath)
+}

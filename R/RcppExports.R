@@ -796,8 +796,8 @@ simulate_r_measure <- function(censusmat, measproc_indmat, parameters, constants
 #'
 #' @return update eigenvalues and eigenvectors in place
 #' @export
-update_factors <- function(interval_widths, slice_eigenvals, slice_factors, kernel_cov, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor) {
-    invisible(.Call('_stemr_update_factors', PACKAGE = 'stemr', interval_widths, slice_eigenvals, slice_factors, kernel_cov, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor))
+update_factors <- function(interval_widths, slice_singvals, slice_factors, slice_factors_t, kernel_cov, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor) {
+    invisible(.Call('_stemr_update_factors', PACKAGE = 'stemr', interval_widths, slice_singvals, slice_factors, slice_factors_t, kernel_cov, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor))
 }
 
 #' Update principal component Metropolis eigenvectors and eigenvalues

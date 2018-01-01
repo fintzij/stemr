@@ -313,7 +313,7 @@ stem_inference_lna <- function(stem_object,
             if (is.null(mcmc_kernel$kernel_settings$stop_adaptation)) {
                   stop_adaptation <- iterations + 1
             } else {
-                  stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 2
+                  stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 1
             }
             
             # empirical mean and covariance of the adaptive kernel
@@ -370,7 +370,7 @@ stem_inference_lna <- function(stem_object,
             if (is.null(mcmc_kernel$kernel_settings$stop_adaptation)) {
                   stop_adaptation <- iterations + 1
             } else {
-                  stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 2
+                  stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 1
             }
             
             # empirical mean and covariance of the adaptive kernel
@@ -414,7 +414,7 @@ stem_inference_lna <- function(stem_object,
             if (is.null(mcmc_kernel$kernel_settings$stop_adaptation)) {
                   stop_adaptation <- iterations + 1
             } else {
-                  stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 2
+                  stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 1
             }
             
             weight_update_interval <- mcmc_kernel$kernel_settings$pcm_setting_list$weight_update_interval
@@ -430,7 +430,7 @@ stem_inference_lna <- function(stem_object,
             copy_mat(kernel_cov, mcmc_kernel$sigma)
             
             # eigenvalues, eigenvectors, and component weights
-            e            <- eigen(kernel_cov)
+            e            <- eigen(kernel_cov, symmetric = T)
             eigenvalues  <- e$values[n_model_params:1]
             eigenvectors <- e$vectors[, n_model_params:1]
             comp_weights <- eigenvalues ^ (1 / n_model_params) / sum(eigenvalues ^ (1 / n_model_params))
@@ -457,11 +457,12 @@ stem_inference_lna <- function(stem_object,
             eigenvector_record[, , 1]     <- eigenvectors
 
       } else if (mcmc_kernel$method == "afss") {
+            
             # adaptation schedule
             if (is.null(mcmc_kernel$kernel_settings$stop_adaptation)) {
                   stop_adaptation <- iterations + 1
             } else {
-                  stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 2
+                  stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 1
             }
             
             adaptations      <-
@@ -471,24 +472,60 @@ stem_inference_lna <- function(stem_object,
             
             # empirical mean and covariance of the target
             kernel_resid <- double(n_model_params) # already initialized to 0
+            
             kernel_mean  <- double(n_model_params)
             copy_vec(kernel_mean, model_params_est)
-            kernel_cov <- diag(1, n_model_params)
+            
+            kernel_cov   <- diag(1, n_model_params)
             copy_mat(kernel_cov, mcmc_kernel$sigma)
+            
+            # eigen decomposition of the initial covariance matrix
+            e <- svd(kernel_cov)
             
             # interval widths, expansions, and contractions
             if(is.null(mcmc_kernel$kernel_settings$afss_setting_list)) {
-                  e                <- eigen(kernel_cov)
-                  interval_widths  <- rep(1.0, n_model_params)
-                  slice_eigenvals  <- rep(1.0, n_model_params)
-                  slice_factors    <- e$vectors
+                  
                   factor_update_interval <- 1
+                  weight_update_interval <- 1
+                  n_fss_updates          <- n_model_params 
+                  interval_widths        <- rep(1.0, n_model_params)
+                  slice_singvals         <- e$d
+                  slice_factors          <- e$u
+                  slice_weights          <- slice_singvals^(1/(sqrt(n_model_params))) 
+                  
             } else {
-                  slice_eigenvals  <- rep(1.0, n_model_params)
-                  interval_widths <- mcmc_kernel$kernel_settings$afss_setting_list$initial_widths
-                  slice_factors   <- mcmc_kernel$kernel_settings$afss_setting_list$slice_factors 
+                  
+                  # intervals at which the factors and weights should be updated
                   factor_update_interval <- mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval
+                  weight_update_interval <- mcmc_kernel$kernel_settings$afss_setting_list$weight_update_interval
+                  
+                  # either get the initial widths and factors or generate the defaults
+                  if(!is.null(mcmc_kernel$kernel_settings$afss_setting_list$initial_widths)) {
+                        
+                        interval_widths <- mcmc_kernel$kernel_settings$afss_setting_list$initial_widths
+                        slice_factors   <- mcmc_kernel$kernel_settings$afss_setting_list$slice_factors
+                        slice_singvals  <- svd(slice_factors, only.values = T)$d
+                        
+                  } else {
+                        interval_widths <- rep(1.0, n_model_params)
+                        slice_singvals  <- e$d
+                        slice_factors   <- e$u
+                  }
+                  
+                  slice_factors_t <- t(slice_factors)
+                  
+                  # number of AFSS updates per iteration
+                  if(is.null(mcmc_kernel$kernel_settings$afss_setting_list$n_fss_updates)) {
+                        n_fss_updates <- n_model_params
+                  } else {
+                        n_fss_updates <- mcmc_kernel$kernel_settings$afss_setting_list$n_fss_updates
+                  }
+                  
+                  # slice weights
+                  slice_weights          <- 
+                        slice_singvals^(1/(sqrt(n_model_params))) / sum(slice_singvals^(1/(sqrt(n_model_params))))
             }
+            
             n_expansions     <- rep(0, n_model_params)
             n_contractions   <- rep(0, n_model_params)
             n_expansions_c   <- rep(1, n_model_params)
@@ -509,6 +546,11 @@ stem_inference_lna <- function(stem_object,
                               floor(iterations / thin_params) + 1
                         ))
             
+            slice_singval_record <- 
+                  matrix(1.0,
+                         ncol = floor(iterations / thin_params) + 1,
+                         nrow = n_model_params)
+            
             expansion_record <-
                   matrix(0,
                          ncol = floor(iterations / thin_params),
@@ -519,9 +561,10 @@ stem_inference_lna <- function(stem_object,
                          ncol = floor(iterations / thin_params),
                          nrow = n_model_params)
             
-            # save initial values
-            interval_width_record[, 1]     <- interval_widths
-            slice_factor_record[, , 1]     <- slice_factors
+            # save initial values for factors, weight
+            interval_width_record[, 1] <- interval_widths
+            slice_singval_record[, 1] <- slice_singvals
+            slice_factor_record[, , 1] <- slice_factors
       }
       
       # set up objects for sampling t0 if it is not fixed
@@ -2114,10 +2157,13 @@ stem_inference_lna <- function(stem_object,
                   
                   if (iter == stop_adaptation) {
                         mcmc_kernel$sigma = kernel_cov
-                        mcmc_kernel$kernel_settings$afss_setting_list = list(
-                              initial_widths = interval_widths,
-                              initial_factors = slice_factors
-                        )
+                        mcmc_kernel$kernel_settings$afss_setting_list = 
+                              afss_settings(
+                                    factor_update_interval = factor_update_interval,
+                                    n_fss_updates = n_fss_updates,
+                                    initial_widths = interval_widths,
+                                    initial_factors = slice_factors
+                              )
                   }
                   
                   factor_slice_sampler(
@@ -2131,6 +2177,8 @@ stem_inference_lna <- function(stem_object,
                         n_contractions = n_contractions,
                         n_expansions_c = n_expansions_c,
                         n_contractions_c = n_contractions_c,
+                        n_fss_updates = n_fss_updates,
+                        slice_weights = slice_weights,
                         path = path,
                         data = data,
                         priors = priors,
@@ -2172,17 +2220,17 @@ stem_inference_lna <- function(stem_object,
                   
                   # update the covariance matrix for the proposal kernel
                   if (iter < stop_adaptation) {
+                        
                         kernel_resid <- model_params_est - kernel_mean
-                        kernel_cov   <-
-                              kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
-                        kernel_mean  <-
-                              kernel_mean + adaptations[iter] * kernel_resid
+                        kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
+                        kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
                         
                         if ((iter-1) %% factor_update_interval == 0) {
                               update_factors(
                                     interval_widths   = interval_widths,
-                                    slice_eigenvals   = slice_eigenvals,
+                                    slice_singvals    = slice_singvals,
                                     slice_factors     = slice_factors,
+                                    slice_factors_t   = slice_factors_t,
                                     kernel_cov        = kernel_cov,
                                     n_expansions      = n_expansions,
                                     n_contractions    = n_contractions,
@@ -2191,6 +2239,12 @@ stem_inference_lna <- function(stem_object,
                                     slice_ratios      = slice_ratios,
                                     adaptation_factor = adaptations[iter]
                               )
+                        }
+                        
+                        if((iter-1) %% weight_update_interval == 0) {
+                              copy_vec(dest = slice_weights,
+                                       orig = (mcmc_kernel$kernel_settings$nugget +
+                                                slice_singvals)^(1/sqrt(n_model_params)))
                         }
                   }
             }
@@ -2513,6 +2567,7 @@ stem_inference_lna <- function(stem_object,
                   } else if(mcmc_kernel$method == "afss") {
                         interval_width_record[, param_rec_ind] <- interval_widths
                         slice_factor_record[, , param_rec_ind] <- slice_factors
+                        slice_singval_record[, param_rec_ind]  <- slice_singvals
                   }
                   
                   # Increment the parameter record index
@@ -2526,8 +2581,7 @@ stem_inference_lna <- function(stem_object,
             data_log_lik       = data_log_lik,
             lna_log_lik        = lna_log_lik,
             params_log_prior   = params_log_prior,
-            row.names          = seq(1, iterations + 1, by = thin_params) -
-                  1
+            row.names          = seq(1, iterations + 1, by = thin_params) - 1
       )
       
       if (!fixed_inits)
@@ -2636,6 +2690,7 @@ stem_inference_lna <- function(stem_object,
                   list(
                         interval_width_record = t(interval_width_record),
                         slice_factor_record   = slice_factor_record,
+                        slice_singval_record = t(slice_singval_record),
                         expansion_record      = t(expansion_record),
                         contraction_record    = t(contraction_record),
                         proposal_covariance   = kernel_cov

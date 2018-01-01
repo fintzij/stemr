@@ -12,8 +12,9 @@ using namespace arma;
 //' @export
 // [[Rcpp::export]]
 void update_factors(arma::vec& interval_widths,
-                    arma::vec& slice_eigenvals,
+                    arma::vec& slice_singvals,
                     arma::mat& slice_factors,
+                    arma::mat& slice_factors_t,
                     const arma::mat& kernel_cov,
                     arma::vec& n_expansions,
                     arma::vec& n_contractions,
@@ -23,7 +24,7 @@ void update_factors(arma::vec& interval_widths,
                     double adaptation_factor) {
       
       // update the factors
-      arma::eig_sym(slice_eigenvals, slice_factors, kernel_cov); 
+      arma::svd_econ(slice_factors, slice_singvals, slice_factors_t, kernel_cov, "left"); 
       
       // update the expansion-contraction ratios
       slice_ratios = n_expansions_c / (n_expansions_c + n_contractions_c);
