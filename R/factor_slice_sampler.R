@@ -421,7 +421,7 @@ factor_slice_sampler <- function(model_params_est,
             
             # update the likelihood terms
             copy_vec(dest = params_logprior_cur, orig = logprior_prop)
-            copy_vec(dest = path$data_log_lik, orig = loglik_prop)
-            copy_vec(dest = logpost_cur, orig = logpost_prop)
+            copy_vec(dest = path$data_log_lik,   orig = loglik_prop)
+            copy_vec(dest = logpost_cur,         orig = logpost_prop)
       }
 }

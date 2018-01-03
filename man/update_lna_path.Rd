@@ -5,12 +5,12 @@
 \title{Sample a new LNA path via elliptical slice sampling.}
 \usage{
 update_lna_path(path_cur, data, lna_parameters, tparam, pathmat_prop, censusmat,
-  draws_prop, emitmat, flow_matrix, stoich_matrix, lna_times, forcing_inds,
-  forcing_matrix, lna_param_inds, lna_const_inds, lna_tcovar_inds,
+  draws_prop, ess_draws_prop, emitmat, flow_matrix, stoich_matrix, lna_times,
+  forcing_inds, forcing_matrix, lna_param_inds, lna_const_inds, lna_tcovar_inds,
   lna_initdist_inds, param_update_inds, census_indices, lna_event_inds,
   measproc_indmat, svd_sqrt, svd_d, svd_U, svd_V, lna_pointer,
   lna_set_pars_pointer, d_meas_pointer, do_prevalence, n_ess_updates,
-  ess_schedule, randomize_schedule, tparam_update, step_size)
+  randomize_schedule, tparam_update, step_size)
 }
 \arguments{
 \item{path_cur}{list with the current LNA path along with its ODE paths}
@@ -20,7 +20,7 @@ update_lna_path(path_cur, data, lna_parameters, tparam, pathmat_prop, censusmat,
 \item{lna_parameters}{parameters, contants, time-varying covariates at LNA
 times}
 
-\item{tparam}{list of time-varying parameters, possibly NULL.}
+\item{tparam}{list of time-varying parameters}
 
 \item{censusmat}{template matrix for the LNA path and incidence at the
 observation times}
@@ -68,6 +68,9 @@ diffusion matrics}
 \item{do_prevalence}{should prevalence be computed?}
 
 \item{n_ess_updates}{number of elliptical slice sampling updates}
+
+\item{tparam_update}{if "joint" then time-varying parameters are updated jointly
+along with the LNA path}
 
 \item{step_size}{initial step size for the ODE solver (adapted internally,
 but too large of an initial step can lead to failure in stiff systems).}

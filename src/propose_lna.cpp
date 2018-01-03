@@ -55,7 +55,6 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
         int n_comps  = stoich_matrix.n_rows;         // number of model compartments (all strata)
         int n_odes   = n_events + n_events*n_events; // number of ODEs
         int n_times  = lna_times.n_elem;             // number of times at which the LNA must be evaluated
-        int init_end = init_start + n_comps;         // index in the parameter vector to stop copying
 
         // initialize the objects used in each time interval
         double t_L = 0;

@@ -43,10 +43,11 @@ defaults to 1}
 \item{thin_latent_proc}{thinning interval for latent paths, defaults to
 ceiling(iterations/100) so that every 100th path will be saved}
 
-\item{messages}{should status messages be printed? defaults to TRUE.}
+\item{initialization_attempts}{}
 
-\item{n_ess_updates}{number of elliptical slice sampling updates per
-iteration (LNA)}
+\item{ess_args}{}
+
+\item{messages}{should status messages be printed? defaults to TRUE.}
 }
 \value{
 list with posterior samples for the parameters and the latent

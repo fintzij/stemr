@@ -792,12 +792,24 @@ simulate_r_measure <- function(censusmat, measproc_indmat, parameters, constants
 
 #' Update factors and interval widths for automated factor slice sampling
 #'
-#' @param 
+#' @param interval_widths vector of interval widths
+#' @param slice_singvals vector of singular values
+#' @param slice_factors vector of singular vectors
+#' @param slice_factors_t transpost matrix for singular vectors
+#' @param kernel_cov empirical covariance matrix of model params
+#' @param n_expansions vector with number of expansion
+#' @param n_contractions vector with number of contractions
+#' @param n_expansions_c cumulative numbers of expansions
+#' @param n_contractions_c cumulative numbers of contractions
+#' @param slice_ratios vector for storing ratio of cumulative number of 
+#'   expansions over number of interval width changes
+#' @param adaptation_factor 
+#' @param adapt_factors should the factors and singular values be updated?
 #'
 #' @return update eigenvalues and eigenvectors in place
 #' @export
-update_factors <- function(interval_widths, slice_singvals, slice_factors, slice_factors_t, kernel_cov, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor) {
-    invisible(.Call('_stemr_update_factors', PACKAGE = 'stemr', interval_widths, slice_singvals, slice_factors, slice_factors_t, kernel_cov, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor))
+update_factors <- function(interval_widths, slice_singvals, slice_factors, slice_factors_t, kernel_cov, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor, adapt_factors) {
+    invisible(.Call('_stemr_update_factors', PACKAGE = 'stemr', interval_widths, slice_singvals, slice_factors, slice_factors_t, kernel_cov, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor, adapt_factors))
 }
 
 #' Update principal component Metropolis eigenvectors and eigenvalues

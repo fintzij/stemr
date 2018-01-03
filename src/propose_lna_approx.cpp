@@ -56,7 +56,6 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
         int n_comps  = stoich_matrix.n_rows;         // number of model compartments (all strata)
         int n_odes   = n_events + n_events*n_events; // number of ODEs
         int n_times  = lna_times.n_elem;             // number of times at which the LNA must be evaluated
-        int init_end = init_start + n_comps;         // index in the parameter vector to stop copying
 
         // initialize the LNA objects - the vector for storing the current state
         Rcpp::NumericVector lna_state_vec(n_odes);   // vector to store the results of the ODEs
@@ -102,9 +101,6 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
                 init_volumes      += forcing_matrix.col(0);
                 init_volumes_prop += forcing_matrix.col(0);
         }
-
-        // indices at which the diffusion elements of lna_state vec start
-        int diff_start = n_events;
 
         // sample the stochastic perturbations
         arma::mat draws_cur(n_events, n_times-1, arma::fill::randn);

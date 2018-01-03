@@ -27,6 +27,6 @@ void update_princomps(arma::vec& eigenvalues,
       
       // compute the new direction weights
       if(update_weights) {
-            comp_weights = arma::normalise(arma::pow(eigenvalues, 1/sqrt(eigenvalues.n_elem)), 1);
+            comp_weights = arma::normalise(arma::pow(eigenvalues, 0.5), 1);
       }
 }
