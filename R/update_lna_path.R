@@ -17,6 +17,7 @@ update_lna_path <-
         function(path_cur,
                  data,
                  lna_parameters,
+                 lna_param_vec,
                  tparam,
                  pathmat_prop,
                  censusmat,
@@ -97,6 +98,9 @@ update_lna_path <-
                             draws             = draws_prop,
                             lna_times         = lna_times,
                             lna_pars          = lna_parameters,
+                            lna_param_vec     = lna_param_vec,
+                            lna_param_inds    = lna_param_inds,
+                            lna_tcovar_inds   = lna_tcovar_inds,
                             init_start        = lna_initdist_inds[1],
                             param_update_inds = param_update_inds,
                             stoich_matrix     = stoich_matrix,
@@ -134,6 +138,7 @@ update_lna_path <-
                             lna_tcovar_inds   = lna_tcovar_inds,
                             param_update_inds = param_update_inds,
                             census_indices    = census_indices,
+                            lna_param_vec     = lna_param_vec,
                             d_meas_ptr        = d_meas_pointer
                     )
             
@@ -183,24 +188,27 @@ update_lna_path <-
             
                     # map the perturbations to an LNA path
                     try({
-                            map_draws_2_lna(
-                                    pathmat           = pathmat_prop,
-                                    draws             = draws_prop,
-                                    lna_times         = lna_times,
-                                    lna_pars          = lna_parameters,
-                                    init_start        = lna_initdist_inds[1],
-                                    param_update_inds = param_update_inds,
-                                    stoich_matrix     = stoich_matrix,
-                                    forcing_inds      = forcing_inds,
-                                    forcing_matrix    = forcing_matrix,
-                                    svd_sqrt          = svd_sqrt,
-                                    svd_d             = svd_d,
-                                    svd_U             = svd_U,
-                                    svd_V             = svd_V,
-                                    lna_pointer       = lna_pointer,
-                                    set_pars_pointer  = lna_set_pars_pointer,
-                                    step_size         = step_size
-                            )
+                          map_draws_2_lna(
+                                pathmat           = pathmat_prop,
+                                draws             = draws_prop,
+                                lna_times         = lna_times,
+                                lna_pars          = lna_parameters,
+                                lna_param_vec     = lna_param_vec,
+                                lna_param_inds    = lna_param_inds,
+                                lna_tcovar_inds   = lna_tcovar_inds,
+                                init_start        = lna_initdist_inds[1],
+                                param_update_inds = param_update_inds,
+                                stoich_matrix     = stoich_matrix,
+                                forcing_inds      = forcing_inds,
+                                forcing_matrix    = forcing_matrix,
+                                svd_sqrt          = svd_sqrt,
+                                svd_d             = svd_d,
+                                svd_U             = svd_U,
+                                svd_V             = svd_V,
+                                lna_pointer       = lna_pointer,
+                                set_pars_pointer  = lna_set_pars_pointer,
+                                step_size         = step_size
+                          )
             
                             census_lna(
                                     path                = pathmat_prop,
@@ -225,6 +233,7 @@ update_lna_path <-
                                     lna_tcovar_inds   = lna_tcovar_inds,
                                     param_update_inds = param_update_inds,
                                     census_indices    = census_indices,
+                                    lna_param_vec     = lna_param_vec,
                                     d_meas_ptr        = d_meas_pointer
                             )
             

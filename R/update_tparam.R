@@ -14,6 +14,7 @@ update_tparam <-
                  path_cur,
                  data,
                  lna_parameters,
+                 lna_param_vec,
                  pathmat_prop,
                  censusmat,
                  emitmat,
@@ -80,6 +81,9 @@ update_tparam <-
                       draws             = path_cur$draws,
                       lna_times         = lna_times,
                       lna_pars          = lna_parameters,
+                      lna_param_vec     = lna_param_vec,
+                      lna_param_inds    = lna_param_inds,
+                      lna_tcovar_inds   = lna_tcovar_inds,
                       init_start        = lna_initdist_inds[1],
                       param_update_inds = param_update_inds,
                       stoich_matrix     = stoich_matrix,
@@ -117,6 +121,7 @@ update_tparam <-
                       lna_tcovar_inds   = lna_tcovar_inds,
                       param_update_inds = param_update_inds,
                       census_indices    = census_indices,
+                      lna_param_vec     = lna_param_vec,
                       d_meas_ptr        = d_meas_pointer
               )
       
@@ -166,6 +171,9 @@ update_tparam <-
                           draws             = path_cur$draws,
                           lna_times         = lna_times,
                           lna_pars          = lna_parameters,
+                          lna_param_vec     = lna_param_vec,
+                          lna_param_inds    = lna_param_inds,
+                          lna_tcovar_inds   = lna_tcovar_inds,
                           init_start        = lna_initdist_inds[1],
                           param_update_inds = param_update_inds,
                           stoich_matrix     = stoich_matrix,
@@ -203,6 +211,7 @@ update_tparam <-
                           lna_tcovar_inds   = lna_tcovar_inds,
                           param_update_inds = param_update_inds,
                           census_indices    = census_indices,
+                          lna_param_vec     = lna_param_vec,
                           d_meas_ptr        = d_meas_pointer
                     )
                     

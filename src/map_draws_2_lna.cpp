@@ -42,6 +42,9 @@ void map_draws_2_lna(arma::mat& pathmat,
                      const arma::mat& draws,
                      const arma::rowvec& lna_times,
                      const Rcpp::NumericMatrix& lna_pars,
+                     Rcpp::NumericVector& lna_param_vec,
+                     const Rcpp::IntegerVector& lna_param_inds,
+                     const Rcpp::IntegerVector& lna_tcovar_inds,
                      const int init_start,
                      const Rcpp::LogicalVector& param_update_inds,
                      const arma::mat& stoich_matrix,
@@ -60,19 +63,33 @@ void map_draws_2_lna(arma::mat& pathmat,
         int n_comps  = stoich_matrix.n_rows;         // number of model compartments (all strata)
         int n_odes   = n_events + n_events*n_events; // number of ODEs
         int n_times  = lna_times.n_elem;             // number of times at which the LNA must be evaluated
+        int n_lna_params = lna_param_inds.size();    // number of LNA parameters
+        int n_tcovar     = lna_tcovar_inds.size();   // number of time-varying covariates or parameters
 
         // initialize the objects used in each time interval
         double t_L = 0;
         double t_R = 0;
 
         // vector of parameters, initial compartment columes, constants, and time-varying covariates
-        Rcpp::NumericVector current_params(lna_pars.ncol());
-        std::copy(lna_pars.row(0).begin(), lna_pars.row(0).end(), current_params.begin());
+        std::copy(lna_pars.row(0).begin(), 
+                  lna_pars.row(0).begin() + n_lna_params, 
+                  lna_param_vec.begin());
+        
+        std::copy(lna_pars.row(0).begin() + init_start, 
+                  lna_pars.row(0).begin() + init_start + n_comps,
+                  lna_param_vec.begin() + init_start);
+        
+        std::copy(lna_pars.row(0).end() - n_tcovar,
+                  lna_pars.row(0).end(),
+                  lna_param_vec.end() - n_tcovar);
+        
+        // Rcpp::NumericVector current_params(lna_pars.ncol());
+        // std::copy(lna_pars.row(0).begin(), lna_pars.row(0).end(), current_params.begin());
 
-        CALL_SET_ODE_PARAMS(current_params, set_pars_pointer); // set the parameters in the odeintr namespace
+        CALL_SET_ODE_PARAMS(lna_param_vec, set_pars_pointer); // set the parameters in the odeintr namespace
 
         // initial state vector - copy elements from the current parameter vector
-        arma::vec init_volumes(current_params.begin() + init_start, n_comps);
+        arma::vec init_volumes(lna_param_vec.begin() + init_start, n_comps);
 
         // initialize the LNA objects
         bool good_svd = true;
@@ -192,13 +209,24 @@ void map_draws_2_lna(arma::mat& pathmat,
 
                 // update the parameters if they need to be updated
                 if(param_update_inds[j+1]) {
-                        std::copy(lna_pars.row(j+1).begin(), lna_pars.row(j+1).end(), current_params.begin());
+                      
+                      // update parameters
+                      std::copy(lna_pars.row(j+1).begin(), 
+                                lna_pars.row(j+1).begin() + n_lna_params, 
+                                lna_param_vec.begin());
+                      
+                      // time-varying covariates and parameters
+                      std::copy(lna_pars.row(j+1).end() - n_tcovar,
+                                lna_pars.row(j+1).end(),
+                                lna_param_vec.end() - n_tcovar);
+                      
+                        // std::copy(lna_pars.row(j+1).begin(), lna_pars.row(j+1).end(), current_params.begin());
                 }
 
                 // copy the new initial volumes into the vector of parameters
-                std::copy(init_volumes.begin(), init_volumes.end(), current_params.begin() + init_start);
+                std::copy(init_volumes.begin(), init_volumes.end(), lna_param_vec.begin() + init_start);
 
                 // set the lna parameters and reset the LNA state vector
-                CALL_SET_ODE_PARAMS(current_params, set_pars_pointer);
+                CALL_SET_ODE_PARAMS(lna_param_vec, set_pars_pointer);
         }
 }

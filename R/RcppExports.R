@@ -321,7 +321,7 @@ evaluate_d_measure <- function(emitmat, obsmat, statemat, measproc_indmat, param
 #'   observed at every observation time
 #' @param lna_parameters matrix containing the LNA parameters, constants and
 #'   time-varying coariates.
-#' @param current_params container for storing the LNA parameters at each
+#' @param lna_param_vec container for storing the LNA parameters at each
 #'   observation time.
 #' @param lna_param_inds indices for the model parameters.
 #' @param lna_const_inds indices for the constants.
@@ -329,11 +329,12 @@ evaluate_d_measure <- function(emitmat, obsmat, statemat, measproc_indmat, param
 #' @param param_update_inds logical vector indicating when model parameters
 #'   should be updated.
 #' @param census_indices vector of indices when the LNA path has been censused.
+#' @param lna_param_vec vector for keeping the current lna parameters
 #' @param d_meas_ptr external pointer to measurement process density function
 #'
 #' @export
-evaluate_d_measure_LNA <- function(emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, d_meas_ptr) {
-    invisible(.Call('_stemr_evaluate_d_measure_LNA', PACKAGE = 'stemr', emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, d_meas_ptr))
+evaluate_d_measure_LNA <- function(emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, lna_param_vec, d_meas_ptr) {
+    invisible(.Call('_stemr_evaluate_d_measure_LNA', PACKAGE = 'stemr', emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, lna_param_vec, d_meas_ptr))
 }
 
 #' Given a vector of interval endpoints \code{breaks}, determine in which
@@ -459,8 +460,8 @@ lna_incid2prev <- function(path, flow_matrix, init_state, forcing_inds, forcing_
 #'   perturbations.
 #'
 #' @export
-map_draws_2_lna <- function(pathmat, draws, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, svd_sqrt, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer) {
-    invisible(.Call('_stemr_map_draws_2_lna', PACKAGE = 'stemr', pathmat, draws, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, svd_sqrt, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer))
+map_draws_2_lna <- function(pathmat, draws, lna_times, lna_pars, lna_param_vec, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, svd_sqrt, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer) {
+    invisible(.Call('_stemr_map_draws_2_lna', PACKAGE = 'stemr', pathmat, draws, lna_times, lna_pars, lna_param_vec, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, svd_sqrt, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer))
 }
 
 #' Map parameters to the deterministic mean incidence increments for a stochastic

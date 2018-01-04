@@ -44,17 +44,32 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                         stop("If no dataset is provided, the observation times for each measurement process must be supplied in an emission list.")
                 }
         }
+      
+        # determine whether the measurement process should be compiled for the LNA/ODE and/or for gillespie
+        do_exact  <- !is.null(dynamics$rate_ptrs$lumped_ptr)
+        do_approx <- !is.null(dynamics$lna_pointers$lna_ptr) | !is.null(dynamics$ode_pointers$ode_ptr)
 
         # expand the emission lists if there are any strata specified
         # First, if no strata are specified
         if(all(sapply(sapply(emissions, "[[", "strata"), is.null))) {
+              
                 strata_specified <- FALSE
-                meas_procs <- vector(mode = "list", length = length(emissions))
+                meas_procs       <- vector(mode = "list", length = length(emissions))
+                meas_procs_lna   <- vector(mode = "list", length = length(emissions))
 
                 for(k in seq_along(meas_procs)) {
                         meas_procs[[k]] <- vector(mode = "list", length = 7L)
-                        names(meas_procs[[k]]) <- c("dmeasure", "rmeasure", "distribution", "meas_var", "emission_params", "incidence", "obstimes")
-
+                        names(meas_procs[[k]]) <-
+                              c(
+                                    "dmeasure",
+                                    "rmeasure",
+                                    "distribution",
+                                    "meas_var",
+                                    "emission_params",
+                                    "incidence",
+                                    "obstimes"
+                              )
+                        
                         # assign meas_var and incidence
                         meas_procs[[k]]$distribution <- emissions[[k]]$distribution
                         meas_procs[[k]]$meas_var     <- emissions[[k]]$meas_var
@@ -64,7 +79,8 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                         if(is.null(data)) meas_procs[[k]]$obstimes <- emissions[[k]]$obstimes
 
                         # get the emission distribution params
-                        meas_procs[[k]]$emission_params <- emissions[[k]]$emission_params
+                        meas_procs[[k]]$emission_params <- 
+                                    emissions[[k]]$emission_params
                 }
 
         } else {# If strata are specified
@@ -86,8 +102,17 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                         for(j in seq_along(meas_procs[[k]])) {
 
                                 meas_procs[[k]][[j]] <- vector(mode = "list", length = 7L)
-                                names(meas_procs[[k]][[j]]) <- c("dmeasure", "rmeasure", "distribution", "meas_var", "emission_params", "incidence", "obstimes")
-
+                                names(meas_procs[[k]][[j]]) <-
+                                      c(
+                                            "dmeasure",
+                                            "rmeasure",
+                                            "distribution",
+                                            "meas_var",
+                                            "emission_params",
+                                            "incidence",
+                                            "obstimes"
+                                      )
+                                
                                 # assign meas_var and incidence
                                 meas_procs[[k]][[j]]$distribution <- emissions[[k]]$distribution
                                 meas_procs[[k]][[j]]$meas_var     <- emissions[[k]]$meas_var
@@ -100,10 +125,11 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                                 meas_procs[[k]][[j]]$meas_var <- gsub("SELF", rel_strata[[j]], meas_procs[[k]][[j]]$meas_var)
 
                                 # get the emission distribution params
-                                meas_procs[[k]][[j]]$emission_params <- sapply(emissions[[k]]$emission_params,
-                                                                               gsub,
-                                                                               pattern = "SELF",
-                                                                               replacement = rel_strata[[j]])
+                                meas_procs[[k]][[j]]$emission_params <- 
+                                      sapply(emissions[[k]]$emission_params,
+                                             gsub,
+                                             pattern = "SELF",
+                                             replacement = rel_strata[[j]])
                         }
                 }
         }
@@ -113,7 +139,9 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
         # substitute powers in the emission parameters
         for(k in seq_along(meas_procs)) {
                 for(j in seq_along(meas_procs[[k]]$emission_params)) {
-                        meas_procs[[k]]$emission_params[j] <- sub_powers(paste0("(",meas_procs[[k]]$emission_params[j],")"))
+                        meas_procs[[k]]$emission_params[j] <- 
+                              meas_procs[[k]]$emission_params[j] <- 
+                                    sub_powers(paste0("(",meas_procs[[k]]$emission_params[j],")"))
                 }
         }
 
@@ -151,35 +179,71 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
         # proceed to make subsitutions for argument vector indices
         obscomp_codes <- seq_len(ncol(measproc_indmat)); names(obscomp_codes) <- colnames(measproc_indmat)
         obscomp_names <- colnames(measproc_indmat)
+        
+        # generate a copy of the list for the LNA meas procs
+        meas_procs_lna <- meas_procs
 
         for(s in seq_along(meas_procs)) {
 
                 # make the substitution for meas_var so it is the location in a rowvector of observations
-                meas_procs[[s]]$meas_var <- paste0("record[", obscomp_codes[meas_procs[[s]]$meas_var], "]")
+                meas_procs[[s]]$meas_var     <- paste0("record[", obscomp_codes[meas_procs[[s]]$meas_var], "]")
+                meas_procs_lna[[s]]$meas_var <- paste0("record[", obscomp_codes[meas_procs_lna[[s]]$meas_var], "]")
 
-                # make substitutions for the emission parameters - substitute compartments, time varying covariates, constants, and parameters
+                # make substitutions for the emission parameters 
+                # substitute compartments, time varying covariates, constants, and parameters
+                
                 # make the substitutions for the parameter codes
                 for(t in seq_along(dynamics$param_codes)) {
                         code_name <- names(dynamics$param_codes)[t]
                         code      <- dynamics$param_codes[t]
-                        meas_procs[[s]]$emission_params <- sapply(meas_procs[[s]]$emission_params, gsub,
-                                                                  pattern = code_name, replacement = paste0("parameters[",code,"]"))
+                        meas_procs[[s]]$emission_params <- 
+                              sapply(meas_procs[[s]]$emission_params, 
+                                     FUN = gsub,
+                                     pattern = paste0('\\<',code_name,'\\>'), 
+                                     replacement = paste0("parameters[",code,"]"))
+                        
+                        meas_procs_lna[[s]]$emission_params <- 
+                              sapply(meas_procs_lna[[s]]$emission_params, 
+                                     FUN = gsub,
+                                     pattern = paste0('\\<',code_name,'\\>'), 
+                                     replacement = paste0("parameters[",code,"]"))
                 }
 
                 # make the substitutions for the time-varying covariate codes
                 for(t in seq_along(dynamics$tcovar_codes)) {
                         code_name <- names(dynamics$tcovar_codes)[t]
                         code      <- dynamics$tcovar_codes[t]
-                        meas_procs[[s]]$emission_params <- sapply(meas_procs[[s]]$emission_params, gsub,
-                                                                  pattern = code_name, replacement = paste0("tcovar[",code,"]"))
+                        code_lna  <- dynamics$tcovar_codes[t]-1
+                        
+                        meas_procs[[s]]$emission_params <- 
+                              sapply(meas_procs[[s]]$emission_params, 
+                                     FUN = gsub,
+                                     pattern = paste0('\\<',code_name,'\\>'), 
+                                     replacement = paste0("tcovar[",code,"]"))
+                        
+                        meas_procs_lna[[s]]$emission_params <- 
+                              sapply(meas_procs_lna[[s]]$emission_params, 
+                                     FUN = gsub,
+                                     pattern = paste0('\\<',code_name,'\\>'), 
+                                     replacement = paste0("tcovar[",code_lna,"]"))
                 }
 
                 # make the substitutions for the constant codes
                 for(t in seq_along(dynamics$const_codes)) {
                         code_name <- names(dynamics$const_codes)[t]
                         code      <- dynamics$const_codes[t]
-                        meas_procs[[s]]$emission_params <- sapply(meas_procs[[s]]$emission_params, gsub,
-                                                                  pattern = code_name, replacement = paste0("constants[",code,"]"))
+                        
+                        meas_procs[[s]]$emission_params <-        
+                              sapply(meas_procs[[s]]$emission_params, 
+                                     FUN = gsub,
+                                     pattern = paste0('\\<',code_name,'\\>'), 
+                                     replacement = paste0("constants[",code,"]"))
+                        
+                        meas_procs_lna[[s]]$emission_params <- 
+                              sapply(meas_procs_lna[[s]]$emission_params, 
+                                     FUN = gsub,
+                                     pattern = paste0('\\<',code_name,'\\>'), 
+                                     replacement = paste0("constants[",code,"]"))
                 }
 
                 # make the substitutions for the compartment codes
@@ -188,37 +252,65 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                         for(t in seq_along(dynamics$incidence_codes)) {
                                 code_name <- names(dynamics$incidence_codes)[t]
                                 code      <- dynamics$incidence_codes[t] + 1
-                                meas_procs[[s]]$emission_params <- sapply(meas_procs[[s]]$emission_params, gsub,
-                                                                          pattern = code_name, replacement = paste0("state[",code,"]"))
+                                meas_procs[[s]]$emission_params <- 
+                                      sapply(meas_procs[[s]]$emission_params, 
+                                             FUN = gsub,
+                                             pattern = paste0('\\<',code_name,'\\>'), 
+                                             replacement = paste0("state[",code,"]"))
+                                
+                                meas_procs_lna[[s]]$emission_params <- 
+                                      sapply(meas_procs_lna[[s]]$emission_params, 
+                                             FUN = gsub,
+                                             pattern = paste0('\\<',code_name,'\\>'), 
+                                             replacement = paste0("state[",code,"]"))
                         }
 
                 } else {
                         for(t in seq_along(dynamics$comp_codes)) {
                                 code_name <- names(dynamics$comp_codes)[t]
                                 code      <- dynamics$comp_codes[t] + 1
-                                meas_procs[[s]]$emission_params <- sapply(meas_procs[[s]]$emission_params, gsub,
-                                                                          pattern = code_name, replacement = paste0("state[",code,"]"))
+                                meas_procs[[s]]$emission_params <- 
+                                      sapply(meas_procs[[s]]$emission_params, 
+                                             FUN = gsub,
+                                             pattern = paste0('\\<',code_name,'\\>'), 
+                                             replacement = paste0("state[",code,"]"))
+                                
+                                meas_procs_lna[[s]]$emission_params <- 
+                                      sapply(meas_procs_lna[[s]]$emission_params, 
+                                             FUN = gsub,
+                                             pattern = paste0('\\<',code_name,'\\>'), 
+                                             replacement = paste0("state[",code,"]"))
                         }
-
                 }
         }
 
         # generate the rmeasure and dmeasure functions
         for(k in seq_along(meas_procs)) {
-                # generate the dmeasure and rmeasure strings (rmeasure only for now)
+              
+                # generate the dmeasure and rmeasure strings 
                 if(meas_procs[[k]]$distribution == "poisson") {
 
                         meas_procs[[k]]$rmeasure <- paste0("Rcpp::rpois(1,", meas_procs[[k]]$emission_params, ")")
                         meas_procs[[k]]$dmeasure <- paste0("Rcpp::dpois(obs,", paste(meas_procs[[k]]$emission_params, collapse = ","), ",1)")
                         meas_procs[[k]]$mmeasure <- meas_procs[[k]]$emission_params[1]
                         meas_procs[[k]]$vmeasure <- meas_procs[[k]]$emission_params[1]
+                        
+                        meas_procs_lna[[k]]$rmeasure <- paste0("Rcpp::rpois(1,", meas_procs_lna[[k]]$emission_params, ")")
+                        meas_procs_lna[[k]]$dmeasure <- paste0("Rcpp::dpois(obs,", paste(meas_procs_lna[[k]]$emission_params, collapse = ","), ",1)")
+                        meas_procs_lna[[k]]$mmeasure <- meas_procs_lna[[k]]$emission_params[1]
+                        meas_procs_lna[[k]]$vmeasure <- meas_procs_lna[[k]]$emission_params[1]
 
                 } else if(meas_procs[[k]]$distribution == "binomial") {
 
                         meas_procs[[k]]$rmeasure <- paste0("Rcpp::rbinom(1,", paste(meas_procs[[k]]$emission_params, collapse = ","), ")")
                         meas_procs[[k]]$dmeasure <- paste0("Rcpp::dbinom(obs,", paste(meas_procs[[k]]$emission_params, collapse = ","), ",1)")
                         meas_procs[[k]]$mmeasure <- paste0(meas_procs[[k]]$emission_params[1:2], collapse = "*")
-                        meas_procs[[k]]$vmeasure <- paste0(meas_procs[[k]]$mmeasure,"*(1-",meas_procs[[k]]$emission_params[2],")")
+                        meas_procs[[k]]$vmeasure <- paste0(meas_procs[[k]]$mmeasure_lna,"*(1-",meas_procs[[k]]$emission_params[2],")")
+                        
+                        meas_procs_lna[[k]]$rmeasure <- paste0("Rcpp::rbinom(1,", paste(meas_procs_lna[[k]]$emission_params, collapse = ","), ")")
+                        meas_procs_lna[[k]]$dmeasure <- paste0("Rcpp::dbinom(obs,", paste(meas_procs_lna[[k]]$emission_params, collapse = ","), ",1)")
+                        meas_procs_lna[[k]]$mmeasure <- paste0(meas_procs_lna[[k]]$emission_params[1:2], collapse = "*")
+                        meas_procs_lna[[k]]$vmeasure <- paste0(meas_procs_lna[[k]]$mmeasure_lna,"*(1-",meas_procs_lna[[k]]$emission_params[2],")")
 
                 } else if(meas_procs[[k]]$distribution == "negbinomial") {
 
@@ -226,19 +318,41 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                         meas_procs[[k]]$dmeasure <- paste0("Rcpp::dnbinom_mu(obs,", paste( meas_procs[[k]]$emission_params, collapse = ","), ",1)")
                         meas_procs[[k]]$mmeasure <- meas_procs[[k]]$emission_params[2]
                         meas_procs[[k]]$vmeasure <- paste0(meas_procs[[k]]$emission_params[2], "*(1 + ", meas_procs[[k]]$emission_params[2]," / ",meas_procs[[k]]$emission_params[1],")")
-
+                        
+                        meas_procs_lna[[k]]$rmeasure <- paste0("Rcpp::rnbinom_mu(1,", paste(meas_procs_lna[[k]]$emission_params, collapse = ","), ")")
+                        meas_procs_lna[[k]]$dmeasure <- paste0("Rcpp::dnbinom_mu(obs,", paste( meas_procs_lna[[k]]$emission_params, collapse = ","), ",1)")
+                        meas_procs_lna[[k]]$mmeasure <- meas_procs_lna[[k]]$emission_params[2]
+                        meas_procs_lna[[k]]$vmeasure <- paste0(meas_procs_lna[[k]]$emission_params[2], "*(1 + ", meas_procs_lna[[k]]$emission_params[2]," / ",meas_procs_lna[[k]]$emission_params[1],")")
+                        
                 } else if(meas_procs[[k]]$distribution == "gaussian") {
 
                         meas_procs[[k]]$rmeasure <- paste0("Rcpp::rnorm(1,", paste(meas_procs[[k]]$emission_params, collapse = ","), ")")
                         meas_procs[[k]]$dmeasure <- paste0("Rcpp::dnorm(obs,", paste(meas_procs[[k]]$emission_params, collapse = ","), ",1)")
                         meas_procs[[k]]$mmeasure <- meas_procs[[k]]$emission_params[1]
                         meas_procs[[k]]$vmeasure <- meas_procs[[k]]$emission_params[2]
+                        
+                        meas_procs_lna[[k]]$rmeasure <- paste0("Rcpp::rnorm(1,", paste(meas_procs_lna[[k]]$emission_params, collapse = ","), ")")
+                        meas_procs_lna[[k]]$dmeasure <- paste0("Rcpp::dnorm(obs,", paste(meas_procs_lna[[k]]$emission_params, collapse = ","), ",1)")
+                        meas_procs_lna[[k]]$mmeasure <- meas_procs_lna[[k]]$emission_params[1]
+                        meas_procs_lna[[k]]$vmeasure <- meas_procs_lna[[k]]$emission_params[2]
                 }
         }
 
         # get the pointers for the rmeasure and dmeasure functions
         compile_moments <- !is.null(dynamics$ode_pointers)
-        meas_pointers <- parse_meas_procs(meas_procs, compile_moments = compile_moments, messages = messages)
+        meas_pointers <- 
+              if(do_exact) {
+                    parse_meas_procs(meas_procs, compile_moments = compile_moments, messages = messages)
+              } else {
+                    NULL
+              }
+        
+        meas_pointers_lna <- 
+              if(do_approx) {
+                    parse_meas_procs(meas_procs_lna, compile_moments = compile_moments, messages = messages)
+              } else {
+                    NULL
+              }
 
         # initialize a matrix for storing the compartment counts at observation times
         censusmat <- matrix(0.0, nrow = length(obstimes),
@@ -290,6 +404,7 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
         meas_process <- list(data                = data,
                              meas_procs          = meas_procs,
                              meas_pointers       = meas_pointers,
+                             meas_pointers_lna   = meas_pointers_lna,
                              obstimes            = obstimes,
                              obstime_inds        = obstime_inds,
                              obsmat              = obsmat,

@@ -4,12 +4,12 @@
 \alias{update_tparam}
 \title{Update time-varying parameters via elliptical slice sampling.}
 \usage{
-update_tparam(tparam, path_cur, data, lna_parameters, pathmat_prop, censusmat,
-  emitmat, flow_matrix, stoich_matrix, lna_times, forcing_inds, forcing_matrix,
-  lna_param_inds, lna_const_inds, lna_tcovar_inds, lna_initdist_inds,
-  param_update_inds, census_indices, lna_event_inds, measproc_indmat, svd_sqrt,
-  svd_d, svd_U, svd_V, lna_pointer, lna_set_pars_pointer, d_meas_pointer,
-  do_prevalence, step_size, tparam_ess)
+update_tparam(tparam, path_cur, data, lna_parameters, lna_param_vec,
+  pathmat_prop, censusmat, emitmat, flow_matrix, stoich_matrix, lna_times,
+  forcing_inds, forcing_matrix, lna_param_inds, lna_const_inds, lna_tcovar_inds,
+  lna_initdist_inds, param_update_inds, census_indices, lna_event_inds,
+  measproc_indmat, svd_sqrt, svd_d, svd_U, svd_V, lna_pointer,
+  lna_set_pars_pointer, d_meas_pointer, do_prevalence, step_size, tparam_ess)
 }
 \arguments{
 \item{tparam}{list containing the time-varying parameters}
@@ -20,6 +20,9 @@ update_tparam(tparam, path_cur, data, lna_parameters, pathmat_prop, censusmat,
 
 \item{lna_parameters}{parameters, contants, time-varying covariates at LNA
 times}
+
+\item{lna_param_vec}{vector for storing lna parameters when evaluating the
+measurement process}
 
 \item{censusmat}{template matrix for the LNA path and incidence at the
 observation times}

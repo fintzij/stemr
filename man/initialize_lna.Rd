@@ -5,11 +5,11 @@
 \title{Initialize the LNA path}
 \usage{
 initialize_lna(data, lna_parameters, tparam, censusmat, emitmat, stoich_matrix,
-  lna_pointer, lna_set_pars_pointer, lna_times, lna_param_inds, lna_const_inds,
-  lna_tcovar_inds, lna_initdist_inds, param_update_inds, census_indices,
-  lna_event_inds, measproc_indmat, d_meas_pointer, do_prevalence, forcing_inds,
-  forcing_matrix, initialization_attempts, step_size, par_init_fcn = NULL,
-  ess_warmup)
+  lna_pointer, lna_set_pars_pointer, lna_times, lna_param_vec, lna_param_inds,
+  lna_const_inds, lna_tcovar_inds, lna_initdist_inds, param_update_inds,
+  census_indices, lna_event_inds, measproc_indmat, d_meas_pointer,
+  do_prevalence, forcing_inds, forcing_matrix, initialization_attempts,
+  step_size, par_init_fcn = NULL, ess_warmup)
 }
 \arguments{
 \item{data}{matrix containing the dataset}
@@ -31,6 +31,9 @@ observation times}
 \item{lna_set_pars_pointer}{pointer for setting the LNA parameters}
 
 \item{lna_times}{times at whicht eh LNA should be evaluated}
+
+\item{lna_param_vec}{vector for storing lna parameters when evaluating the
+measurement process}
 
 \item{lna_param_inds}{C++ column indices for parameters}
 

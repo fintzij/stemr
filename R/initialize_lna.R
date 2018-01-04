@@ -35,6 +35,8 @@
 #' @param ess_warmup number of elliptical slice sampling updates where
 #'   likelihood is over indicators for monotonicity and non-negativity of LNA
 #'   increments
+#' @param lna_param_vec vector for storing lna parameters when evaluating the
+#'   measurement process
 #'
 #' @return LNA path along with its stochastic perturbations
 #' @export
@@ -48,6 +50,7 @@ initialize_lna <-
                  lna_pointer,
                  lna_set_pars_pointer,
                  lna_times,
+                 lna_param_vec,
                  lna_param_inds,
                  lna_const_inds,
                  lna_tcovar_inds,
@@ -118,6 +121,7 @@ initialize_lna <-
                                         lna_tcovar_inds   = lna_tcovar_inds,
                                         param_update_inds = param_update_inds,
                                         census_indices    = census_indices,
+                                        lna_param_vec     = lna_param_vec,
                                         d_meas_ptr        = d_meas_pointer
                                 )
 
@@ -138,7 +142,7 @@ initialize_lna <-
                               for(s in seq_along(tparam)) {
                                     
                                     # sample new draws
-                                    copy_vec(tparam[[s]]$draws_cur, rnorm(length(tparam[[s]]$times)))
+                                    draw_normals(tparam[[s]]$draws_cur)
                                     
                                     # get values
                                     insert_tparam(tcovar    = lna_parameters,
