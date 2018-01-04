@@ -2423,13 +2423,10 @@ stem_inference_lna <- function(stem_object,
             
             # Save the latent process if called for in this iteration
             if ((iter-1) %% thin_latent_proc == 0) {
-                  ess_record[, , param_rec_ind - 1] <-
-                        path$ess_record    # save the ESS record
-                  mat_2_arr(lna_paths, path$lna_path, path_rec_ind -
-                                  1) # save the path
-                  mat_2_arr(lna_draws, path$draws, path_rec_ind - 1)  # save the N(0,1) draws
-                  path_rec_ind                  <-
-                        path_rec_ind + 1 # increment the path record index
+                  ess_record[, param_rec_ind - 1] <- path$ess_record    # save the ESS record
+                  mat_2_arr(lna_paths, path$lna_path, path_rec_ind - 1) # save the path
+                  mat_2_arr(lna_draws, path$draws, path_rec_ind - 1)    # save the N(0,1) draws
+                  path_rec_ind <- path_rec_ind + 1                      # increment the path record index
             }
             
             # Save the parameters if called for in this iteration
@@ -2582,8 +2579,6 @@ stem_inference_lna <- function(stem_object,
             cbind(MCMC_results,
                   parameter_samples_nat,
                   parameter_samples_est)
-      
-      # coerce the ESS record to a vector if there is only one ESS update per iteration
       
       # set the parameters (for restart) and save the results
       stem_object$dynamics$parameters <- model_params_nat
