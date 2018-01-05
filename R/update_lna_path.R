@@ -46,7 +46,6 @@ update_lna_path <-
                  d_meas_pointer,
                  do_prevalence,
                  n_ess_updates,
-                 randomize_schedule,
                  tparam_update,
                  step_size) {
               

@@ -75,6 +75,12 @@ stem_inference_lna <- function(stem_object,
       t0_fixed               <- stem_object$dynamics$t0_fixed
       step_size              <- stem_object$dynamics$dynamics_args$step_size
       
+      if(mcmc_restart) {
+            tparam <- stem_object$stem_settings$tparam_for_restart
+      } else {
+            tparam <- stem_object$dynamics$tparam
+      }
+      
       # elliptical slice sampling settings
       if (is.null(ess_args)) {
             n_ess_updates <- 1
@@ -613,7 +619,7 @@ stem_inference_lna <- function(stem_object,
       }
       
       # get indices for time-varying parameters
-      if (!is.null(stem_object$dynamics$tparam)) {
+      if (!is.null(tparam)) {
             
             # grab the indices and update scheme
             tparam_inds <-
@@ -628,9 +634,6 @@ stem_inference_lna <- function(stem_object,
             # verify whether the mcmc is being restarted
             if (!mcmc_restart) {
                   
-                  # get the tparam list
-                  tparam <- stem_object$dynamics$tparam
-                  
                   # generate the indices for updating the time-varying parameter and initialize the values
                   for (s in seq_along(tparam)) {
                         # can get rid of the values slot
@@ -638,7 +641,7 @@ stem_inference_lna <- function(stem_object,
                         
                         # indices
                         tparam[[s]]$col_ind   <-
-                              stem_object$dynamics$lna_rates$lna_param_codes[stem_object$dynamics$tparam[[s]]$tparam_name]
+                              stem_object$dynamics$lna_rates$lna_param_codes[tparam[[s]]$tparam_name]
                         tparam[[s]]$tpar_inds <-
                               findInterval(lna_times, tparam[[s]]$times, left.open = F) - 1
                         
@@ -667,9 +670,6 @@ stem_inference_lna <- function(stem_object,
                         )
                   }
             } else {
-                  
-                  # get the tparam list
-                  tparam <- stem_object$stem_settings$tparam_for_restart
                   
                   # if restarting, just copy the values into the parameter matrices
                   for (s in seq_along(tparam)) {
@@ -854,8 +854,7 @@ stem_inference_lna <- function(stem_object,
       path <- NULL
       if (mcmc_restart) {
             # extract the path
-            assign("path",
-                   stem_object$stem_settings$path_for_restart)
+            assign("path", stem_object$stem_settings$path_for_restart)
             data_log_lik_prop <- NULL
             
             # recompute the data log likelihood
@@ -883,7 +882,6 @@ stem_inference_lna <- function(stem_object,
                         lna_tcovar_inds   = lna_tcovar_inds,
                         param_update_inds = param_update_inds,
                         census_indices    = census_indices,
-                        lna_param_vec     = lna_param_vec,
                         lna_param_vec     = lna_param_vec,
                         d_meas_ptr        = d_meas_pointer
                   )
@@ -1026,7 +1024,6 @@ stem_inference_lna <- function(stem_object,
                         d_meas_pointer          = d_meas_pointer,
                         do_prevalence           = do_prevalence,
                         n_ess_updates           = n_ess_updates,
-                        randomize_schedule      = randomize_schedule,
                         tparam_update           = tparam_update,
                         step_size               = step_size
                   )
@@ -1095,7 +1092,6 @@ stem_inference_lna <- function(stem_object,
                   d_meas_pointer          = d_meas_pointer,
                   do_prevalence           = do_prevalence,
                   n_ess_updates           = n_ess_updates,
-                  randomize_schedule      = randomize_schedule,
                   tparam_update           = tparam_update,
                   step_size               = step_size
             )
