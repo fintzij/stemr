@@ -71,20 +71,8 @@ void map_draws_2_lna(arma::mat& pathmat,
         double t_R = 0;
 
         // vector of parameters, initial compartment columes, constants, and time-varying covariates
-        std::copy(lna_pars.row(0).begin(), 
-                  lna_pars.row(0).begin() + n_lna_params, 
-                  lna_param_vec.begin());
-        
-        std::copy(lna_pars.row(0).begin() + init_start, 
-                  lna_pars.row(0).begin() + init_start + n_comps,
-                  lna_param_vec.begin() + init_start);
-        
-        std::copy(lna_pars.row(0).end() - n_tcovar,
-                  lna_pars.row(0).end(),
-                  lna_param_vec.end() - n_tcovar);
-        
         // Rcpp::NumericVector current_params(lna_pars.ncol());
-        // std::copy(lna_pars.row(0).begin(), lna_pars.row(0).end(), current_params.begin());
+        std::copy(lna_pars.row(0).begin(), lna_pars.row(0).end(), lna_param_vec.begin());
 
         CALL_SET_ODE_PARAMS(lna_param_vec, set_pars_pointer); // set the parameters in the odeintr namespace
 

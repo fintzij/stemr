@@ -40,7 +40,7 @@ void evaluate_d_measure_LNA(Rcpp::NumericMatrix& emitmat, const Rcpp::NumericMat
         int n_lna_params = lna_param_inds.size();
         int n_tcovar     = lna_tcovar_inds.size();
 
-        // initialize parameters
+        // initialize parameters and time-varying covariates/parameters
         std::copy(lna_parameters.row(0).begin(), 
                   lna_parameters.row(0).begin() + n_lna_params, 
                   lna_param_vec.begin());
