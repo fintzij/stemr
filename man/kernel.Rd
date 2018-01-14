@@ -4,10 +4,10 @@
 \alias{kernel}
 \title{Specify an MCMC transition kernel for updating the model parameters.}
 \usage{
-kernel(method = "c_rw", sigma, scale_constant = 0.5, scale_cooling = 0.5 +
-  1e-05, step_size = 1, max_scaling = Inf, target_g = 0.234,
-  target_c = 0.44, nugget = NULL, stop_adaptation = NULL,
-  pcm_setting_list = NULL, afss_setting_list = NULL, messages = TRUE)
+kernel(method, sigma, scale_constant = 0.5, scale_cooling = 0.5 + 1e-05,
+  step_size = 1, max_scaling = Inf, target_g = 0.234, target_c = 0.44,
+  nugget = NULL, stop_adaptation = NULL, pcm_setting_list = NULL,
+  afss_setting_list = NULL, messages = TRUE)
 }
 \arguments{
 \item{method}{algorithm to be used in generating parameter updates, see

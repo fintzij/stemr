@@ -86,7 +86,7 @@ stem_inference_lna <- function(stem_object,
             n_ess_updates <- 1
             ess_warmup    <- 50
             tparam_update <- "joint"
-
+            
       } else {
             n_ess_updates <- ess_args$n_ess_updates
             ess_warmup    <- ess_args$ess_warmup
@@ -97,10 +97,10 @@ stem_inference_lna <- function(stem_object,
       # lna_param_inds  <- seq_along(stem_object$dynamics$param_codes) - 1
       lna_param_inds  <- setdiff(stem_object$dynamics$param_codes, stem_object$dynamics$lna_initdist_inds)
       lna_const_inds  <- length(stem_object$dynamics$param_codes) + 
-                              seq_along(stem_object$dynamics$const_codes) - 1
+            seq_along(stem_object$dynamics$const_codes) - 1
       lna_tcovar_inds <- length(stem_object$dynamics$param_codes) + 
-                              length(lna_const_inds) + 
-                              seq_along(stem_object$dynamics$tcovar_codes) - 1
+            length(lna_const_inds) + 
+            seq_along(stem_object$dynamics$tcovar_codes) - 1
       
       # measurement process objects
       data            <- stem_object$measurement_process$data
@@ -429,7 +429,7 @@ stem_inference_lna <- function(stem_object,
             adaptation_scale_record[, 1]  <- proposal_scaling
             eigenvalue_record[, 1]        <- eigenvalues
             eigenvector_record[, , 1]     <- eigenvectors
-
+            
       } else if (mcmc_kernel$method == "afss") {
             
             # adaptation schedule
@@ -439,9 +439,13 @@ stem_inference_lna <- function(stem_object,
                   stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 1
             }
             
+            # sequence for adaptation factors
             adaptations      <-
                   mcmc_kernel$kernel_settings$scale_constant *
                   (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+            
+            # index for width adaptations, reset every time factors are adapted
+            width_adaptation_ind <- 2
             
             # empirical mean and covariance of the target
             kernel_resid <- double(n_model_params) # already initialized to 0
@@ -453,32 +457,34 @@ stem_inference_lna <- function(stem_object,
             copy_mat(kernel_cov, mcmc_kernel$sigma)
             
             # kernel nugget
-            nugget_mat <- diag(mcmc_kernel$kernel_settings$nugget, n_model_params)
+            nugget <- mcmc_kernel$kernel_settings$nugget
             
-            # eigen decomposition of the initial covariance matrix
+            # singular value decomposition of the initial covariance matrix
             e <- svd(kernel_cov)
             
             # interval widths, expansions, and contractions
             if(is.null(mcmc_kernel$kernel_settings$afss_setting_list)) {
                   
                   factor_update_interval <- 1
-                  weight_update_interval <- 1
-                  n_fss_updates          <- n_model_params 
-                  adapt_factors          <- TRUE
+                  prob_update_interval   <- 1
+                  first_factor_update    <- 100
+                  first_prob_update      <- 100
+                  min_afss_updates       <- 1
                   interval_widths        <- rep(1.0, n_model_params)
                   slice_singvals         <- e$d
                   slice_factors          <- e$u
-                  slice_weights          <- slice_singvals^0.5
-                  sample_all_initially   <- TRUE
-                  factor_update_interval_fcn <- weight_update_interval_fcn <- NULL
+                  slice_probs            <- rep(1.0, n_model_params) # sample all factors initially
+                  factor_update_interval_fcn <- prob_update_interval_fcn <- NULL
                   
             } else {
                   
                   # afss settings
-                  adapt_factors          <- mcmc_kernel$kernel_settings$afss_setting_list$adapt_factors
-                  sample_all_initially   <- mcmc_kernel$kernel_settings$afss_setting_list$sample_all_initially
-                  first_factor_update    <- mcmc_kernel$kernel_settings$afss_setting_list$first_factor_update - 1
-                  first_weight_update    <- mcmc_kernel$kernel_settings$afss_setting_list$first_weight_update - 1
+                  first_factor_update  <- mcmc_kernel$kernel_settings$afss_setting_list$first_factor_update - 1
+                  first_prob_update    <- mcmc_kernel$kernel_settings$afss_setting_list$first_prob_update - 1
+                  initial_widths       <- mcmc_kernel$kernel_settings$afss_setting_list$initial_widths
+                  initial_factors      <- mcmc_kernel$kernel_settings$afss_setting_list$initial_factors
+                  initial_slice_probs  <- mcmc_kernel$kernel_settings$afss_setting_list$initial_slice_probs
+                  min_afss_updates     <- mcmc_kernel$kernel_settings$afss_setting_list$min_afss_updates
                   
                   if(!is.function(mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval)) {
                         factor_update_interval <- mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval
@@ -489,41 +495,37 @@ stem_inference_lna <- function(stem_object,
                         factor_update_interval <- factor_update_interval_fcn()
                   }
                   
-                  if(!is.function(mcmc_kernel$kernel_settings$afss_setting_list$weight_update_interval)) {
-                        weight_update_interval <- mcmc_kernel$kernel_settings$afss_setting_list$weight_update_interval
-                        weight_update_interval_fcn <- NULL
+                  if(!is.function(mcmc_kernel$kernel_settings$afss_setting_list$prob_update_interval)) {
+                        prob_update_interval <- mcmc_kernel$kernel_settings$afss_setting_list$prob_update_interval
+                        prob_update_interval_fcn <- NULL
                   } else {
-                        weight_update_interval_fcn <-
-                              mcmc_kernel$kernel_settings$afss_setting_list$weight_update_interval
-                        weight_update_interval <- weight_update_interval_fcn()
+                        prob_update_interval_fcn <-
+                              mcmc_kernel$kernel_settings$afss_setting_list$prob_update_interval
+                        prob_update_interval <- prob_update_interval_fcn()
                   }
                   
-                  # either get the initial widths and factors or generate the defaults
-                  if(!is.null(mcmc_kernel$kernel_settings$afss_setting_list$initial_widths)) {
-                        
-                        interval_widths <- mcmc_kernel$kernel_settings$afss_setting_list$initial_widths
-                        slice_factors   <- mcmc_kernel$kernel_settings$afss_setting_list$slice_factors
-                        slice_singvals  <- svd(slice_factors, nu = 0, nv = 0)$d
-                        
-                  } else {
+                  # set defaults for the initial widths, slice directions, and sampling weights
+                  if(is.null(initial_widths)) {
                         interval_widths <- rep(1.0, n_model_params)
-                        slice_singvals  <- e$d
-                        slice_factors   <- e$u
+                  } else {
+                        interval_widths <- initial_widths
                   }
                   
+                  if(is.null(initial_factors)) {
+                        slice_factors  <- e$u
+                        slice_singvals <- e$d
+                  } else {
+                        slice_factors  <- initial_factors
+                        slice_singvals <- svd(slice_factors, nu = 0, nv = 0)$d
+                  }
                   slice_factors_t <- t(slice_factors)
                   
-                  # number of AFSS updates per iteration
-                  if(is.null(mcmc_kernel$kernel_settings$afss_setting_list$n_fss_updates)) {
-                        n_fss_updates <- n_model_params
+                  
+                  if(is.null(initial_slice_probs)) {
+                        slice_probs <- rep(1.0, n_model_params)
                   } else {
-                        n_fss_updates <- mcmc_kernel$kernel_settings$afss_setting_list$n_fss_updates
+                        slice_probs <- initial_slice_probs
                   }
-                  
-                  if(sample_all_initially) n_fss_updates <- n_model_params
-                  
-                  # slice weights
-                  slice_weights <- slice_singvals^0.5
             }
             
             n_expansions     <- rep(0, n_model_params)
@@ -533,11 +535,6 @@ stem_inference_lna <- function(stem_object,
             slice_ratios     <- rep(0.5, n_model_params)
             
             # objects for saving the adaptation history
-            interval_width_record <-
-                  matrix(1.0,
-                         ncol = floor(iterations / thin_params) + 1,
-                         nrow = n_model_params)
-            
             slice_factor_record <-
                   array(0.0,
                         dim = c(
@@ -551,18 +548,7 @@ stem_inference_lna <- function(stem_object,
                          ncol = floor(iterations / thin_params) + 1,
                          nrow = n_model_params)
             
-            expansion_record <-
-                  matrix(0,
-                         ncol = floor(iterations / thin_params),
-                         nrow = n_model_params)
-            
-            contraction_record <-
-                  matrix(0,
-                         ncol = floor(iterations / thin_params),
-                         nrow = n_model_params)
-            
             # save initial values for factors, weight
-            interval_width_record[, 1] <- interval_widths
             slice_singval_record[, 1]  <- slice_singvals
             slice_factor_record[, , 1] <- slice_factors
       }
@@ -1013,7 +999,7 @@ stem_inference_lna <- function(stem_object,
       
       # instatiate matrix for elliptical slice sampling draws
       ess_draws_prop <- matrix(0.0, nrow = nrow(path$draws), ncol = ncol(path$draws))
-            
+      
       # warmup the latent path
       if (!mcmc_restart) {
             for (warmup in seq_len(ess_warmup)) {
@@ -2188,12 +2174,21 @@ stem_inference_lna <- function(stem_object,
                         mcmc_kernel$kernel_settings$afss_setting_list = 
                               afss_settings(
                                     factor_update_interval = factor_update_interval,
-                                    n_fss_updates = n_fss_updates,
-                                    initial_widths = interval_widths,
-                                    initial_factors = slice_factors,
-                                    weight_update_interval = weight_update_interval,
-                                    adapt_factors = adapt_factors
+                                    prob_update_interval   = prob_update_interval,
+                                    first_factor_update    = first_factor_update,
+                                    first_prob_update      = first_prob_update,
+                                    initial_widths         = interval_widths,
+                                    initial_factors        = slice_factors,
+                                    initial_slice_probs    = slice_probs
                               )
+                        
+                        if(!is.null(factor_update_interval_fcn)) 
+                              mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval = 
+                              factor_update_interval_fcn()
+                        
+                        if(!is.null(prob_update_interval_fcn))
+                              mcmc_kernel$kernel_settings$afss_setting_list$prob_update_interval = 
+                              prob_update_interval_fcn()
                   }
                   
                   factor_slice_sampler(
@@ -2207,8 +2202,8 @@ stem_inference_lna <- function(stem_object,
                         n_contractions       = n_contractions,
                         n_expansions_c       = n_expansions_c,
                         n_contractions_c     = n_contractions_c,
-                        n_fss_updates        = n_fss_updates,
-                        slice_weights        = slice_weights,
+                        slice_probs          = slice_probs,
+                        min_afss_updates     = min_afss_updates,
                         path                 = path,
                         data                 = data,
                         priors               = priors,
@@ -2243,11 +2238,19 @@ stem_inference_lna <- function(stem_object,
                         step_size            = step_size
                   )
                   
-                  # save the expansion and contrction record if called for (they are reset in the adaptation)
-                  if((iter-1) %% thin_params == 0) {
-                        expansion_record[,param_rec_ind-1]   <- n_expansions
-                        contraction_record[,param_rec_ind-1] <- n_contractions
-                  }
+                  # update the interval widths
+                  update_interval_widths(
+                        interval_widths   = interval_widths,
+                        n_expansions      = n_expansions,
+                        n_contractions    = n_contractions,
+                        n_expansions_c    = n_expansions_c,
+                        n_contractions_c  = n_contractions_c,
+                        slice_ratios      = slice_ratios,
+                        adaptation_factor = adaptations[width_adaptation_ind]
+                  )
+                  
+                  # increment the width adaptation index
+                  width_adaptation_ind <- width_adaptation_ind + 1
                   
                   # update the covariance matrix for the proposal kernel
                   if (iter < stop_adaptation) {
@@ -2256,44 +2259,45 @@ stem_inference_lna <- function(stem_object,
                         kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
                         kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
                         
-                        if (((iter-1) > first_factor_update) && 
+                        if (((iter-1) >= first_factor_update) && 
                             ((iter-1) %% factor_update_interval == 0)) {
+                              
+                              # update the slice directions
                               update_factors(
-                                    interval_widths   = interval_widths,
-                                    slice_singvals    = slice_singvals,
-                                    slice_factors     = slice_factors,
-                                    slice_factors_t   = slice_factors_t,
-                                    kernel_cov        = kernel_cov + nugget_mat,
-                                    n_expansions      = n_expansions,
-                                    n_contractions    = n_contractions,
-                                    n_expansions_c    = n_expansions_c,
-                                    n_contractions_c  = n_contractions_c,
-                                    slice_ratios      = slice_ratios,
-                                    adaptation_factor = adaptations[iter],
-                                    adapt_factors     = adapt_factors
+                                    slice_singvals  = slice_singvals,
+                                    slice_factors   = slice_factors,
+                                    slice_factors_t = slice_factors_t,
+                                    kernel_cov      = kernel_cov
                               )
                               
+                              # increment the factor update interval
                               if(!is.null(factor_update_interval_fcn)) {
                                     factor_update_interval <- factor_update_interval_fcn(factor_update_interval)
                               }
                               
-                              if((iter-1) == first_factor_update && sample_all_initially) {
-                                    n_fss_updates <- mcmc_kernel$kernel_settings$afss_setting_list$n_fss_updates
+                              # reset the interval widths (new widths an average of 1 and the previous width)
+                              if(factor_update_interval != 1 || iter == first_factor_update) {
+                                    reset_slice_ratios(n_expansions     = n_expansions,
+                                                       n_contractions   = n_contractions,
+                                                       n_expansions_c   = n_expansions_c,
+                                                       n_contractions_c = n_contractions_c,
+                                                       slice_ratios     = slice_ratios)
+                                    
+                                    # reset the interval width adaptation index
+                                    width_adaptation_ind <- 2
                               }
                         }
                         
-                        if(((iter-1) >= first_weight_update) &&
-                           ((iter-1) %% weight_update_interval == 0)) {
-                              if(adapt_factors) {
-                                    copy_vec(dest = slice_weights,
-                                             orig = slice_singvals ^ 0.5)      
-                              } else {
-                                    copy_vec(dest = slice_weights,
-                                             orig = (svd(nugget_mat + kernel_cov, nu = 0, nv = 0)$d)^0.5)
-                              }
+                        # adapt the slice probabilities
+                        if(((iter-1) >= first_prob_update) &&
+                           ((iter-1) %% prob_update_interval == 0)) {
                               
-                              if(!is.null(weight_update_interval_fcn)) {
-                                    weight_update_interval <- weight_update_interval_fcn(weight_update_interval)
+                              copy_vec(dest = slice_probs, 
+                                       orig = pmax(slice_singvals ^ 0.5 / sum(slice_singvals ^ 0.5), 
+                                                   nugget))
+                              
+                              if(!is.null(prob_update_interval_fcn)) {
+                                    prob_update_interval <- prob_update_interval_fcn(prob_update_interval)
                               }
                         }
                   }
@@ -2426,7 +2430,7 @@ stem_inference_lna <- function(stem_object,
                   # N.B. no need to include the initial distribution log likelihoods
                   # since those are updated via an independence sampler so they cancel out
                   acceptance_prob <- data_log_lik_prop - path$data_log_lik
-      
+                  
                   # if t0 is not fixed, need to include the proposal probabilities in the MH ratio
                   if (!t0_fixed) acceptance_prob <- acceptance_prob + t0_logprior_prop - t0_logprior_cur + t0_new2cur - t0_cur2new
                   
@@ -2468,6 +2472,7 @@ stem_inference_lna <- function(stem_object,
                         path_cur             = path,
                         data                 = data,
                         lna_parameters       = lna_params_cur,
+                        lna_param_vec        = lna_param_vec,
                         pathmat_prop         = pathmat_prop,
                         censusmat            = censusmat,
                         emitmat              = emitmat,
@@ -2507,6 +2512,7 @@ stem_inference_lna <- function(stem_object,
             
             # Save the parameters if called for in this iteration
             if ((iter-1) %% thin_params == 0) {
+                  
                   # Save the lna log likelihood, data log likelihood, and log priors
                   data_log_lik[param_rec_ind]     <- path$data_log_lik
                   lna_log_lik[param_rec_ind]      <- sum(dnorm(path$draws, log = T))
@@ -2616,7 +2622,7 @@ stem_inference_lna <- function(stem_object,
                                     append = TRUE
                               )
                   } else if(mcmc_kernel$method == "afss") {
-                        interval_width_record[, param_rec_ind] <- interval_widths
+                        
                         slice_factor_record[, , param_rec_ind] <- slice_factors
                         slice_singval_record[, param_rec_ind]  <- slice_singvals
                         
@@ -2731,11 +2737,8 @@ stem_inference_lna <- function(stem_object,
       } else if (mcmc_kernel$method == "afss") {
             stem_object$results$adaptation_record = 
                   list(
-                        interval_width_record = t(interval_width_record),
                         slice_factor_record   = slice_factor_record,
                         slice_singval_record  = t(slice_singval_record),
-                        expansion_record      = t(expansion_record),
-                        contraction_record    = t(contraction_record),
                         proposal_covariance   = kernel_cov
                   )
       }

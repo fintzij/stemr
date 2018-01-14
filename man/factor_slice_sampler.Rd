@@ -6,7 +6,7 @@
 \usage{
 factor_slice_sampler(model_params_est, model_params_nat, params_prop_est,
   params_prop_nat, interval_widths, slice_factors, n_expansions, n_contractions,
-  n_expansions_c, n_contractions_c, n_fss_updates, slice_weights, path, data,
+  n_expansions_c, n_contractions_c, slice_probs, min_afss_updates, path, data,
   priors, params_logprior_cur, logpost_cur, lna_params_cur, lna_param_vec,
   tparam, censusmat, emitmat, flow_matrix, stoich_matrix, lna_times,
   forcing_inds, forcing_matrix, lna_param_inds, lna_const_inds, lna_tcovar_inds,
@@ -19,9 +19,9 @@ factor_slice_sampler(model_params_est, model_params_nat, params_prop_est,
 
 \item{model_params_nat}{vector of model parameters on the natural scale}
 
-\item{params_prop_est}{}
+\item{params_prop_est}{vector for proposed model parameters on their estimation scale}
 
-\item{params_prop_nat}{}
+\item{params_prop_nat}{vector for proposed model parameters on their natural scale}
 
 \item{interval_widths}{vector of slice interval widths}
 
@@ -34,6 +34,10 @@ factor_slice_sampler(model_params_est, model_params_nat, params_prop_est,
 \item{n_expansions_c}{vector for cumulative number of expansions}
 
 \item{n_contractions_c}{vector for cumulative number of contractions}
+
+\item{slice_probs}{slice direction sampling probabilities}
+
+\item{min_afss_updates}{minimum number of afss updates per iteration}
 
 \item{path}{list containing the LNA path, N(0,1) draws, and likelihood}
 
@@ -48,6 +52,8 @@ transformations to and from the estimation scale}
 
 \item{lna_params_cur}{matrix with current LNA parameters, tcovar, tparam,
 etc.}
+
+\item{lna_param_vec}{vector for lna parameters}
 
 \item{tparam}{list with time-varying parameters}
 

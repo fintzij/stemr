@@ -4,27 +4,43 @@
 \alias{afss_settings}
 \title{Generate a list of settings for automated factor slice sampling}
 \usage{
-afss_settings(factor_update_interval = 1, weight_update_interval = NULL,
-  n_fss_updates = NULL, adapt_factors = TRUE, initial_widths = NULL,
-  initial_factors = NULL)
+afss_settings(factor_update_interval = 1, prob_update_interval = NULL,
+  first_factor_update = 100, first_prob_update = 100,
+  min_afss_updates = 1, initial_widths = NULL, initial_factors = NULL,
+  initial_slice_probs = NULL)
 }
 \arguments{
 \item{factor_update_interval}{number of iterations between factor and
-interval updates (defaults to an update every iteration)}
+interval updates (defaults to an update every iteration). May also be
+supplied as a function that takes the current iteration as an input and
+returns the next iteration at which the factors should be updated. Must
+have a default set so that the first update can be determined. e.g.,
+\code{function(x = 10) 2*x} will first update the factors at iteration 10
+and will subsequently update the factors at iterations 20, 40, 80, ...}
 
-\item{weight_update_interval}{number of iterations between updates to the
-factor sampling weights, defaults to the factor update interval.}
+\item{prob_update_interval}{number of iterations between updates to the
+factor sampling probabilities, defaults to the factor update interval. May
+also be supplied as a function that takes the current iteration as an input
+and returns the next iteration at which the factors should be updated. Must
+have a default set so that the first update can be determined. The factor
+sampling probabilities are $min(nugget,
+sqrt(lambda_i)/sum(sqrt(lambda_i))$, where $lambda_i$ are the singular
+values of the empirical covariance matrix.}
 
-\item{n_fss_updates}{number of slice directions that are sampled per
-iteration, defaults to the number of model parameters if NULL.}
+\item{first_factor_update}{iteration at which the first factor update should
+occur}
 
-\item{adapt_factors}{should the factors be updated? defaults to TRUE}
+\item{first_prob_update}{iteration at which the first update to the slice
+direction probabilities should occur.}
+
+\item{min_afss_updates}{minimum number of afss updates per iteration,
+defaults to 1.}
 
 \item{initial_widths}{vector of initial slice widths}
 
 \item{initial_factors}{matrix of initial factor loadings}
 
-\item{adapt_intervals}{should the interval}
+\item{initial_slice_probs}{initial slice direction probabilities}
 }
 \value{
 list with additional settings for automated factor slice sampling

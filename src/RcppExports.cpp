@@ -648,6 +648,20 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// reset_slice_ratios
+void reset_slice_ratios(arma::vec& n_expansions, arma::vec& n_contractions, arma::vec& n_expansions_c, arma::vec& n_contractions_c, arma::vec& slice_ratios);
+RcppExport SEXP _stemr_reset_slice_ratios(SEXP n_expansionsSEXP, SEXP n_contractionsSEXP, SEXP n_expansions_cSEXP, SEXP n_contractions_cSEXP, SEXP slice_ratiosSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec& >::type n_expansions(n_expansionsSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type n_contractions(n_contractionsSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type n_expansions_c(n_expansions_cSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type n_contractions_c(n_contractions_cSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type slice_ratios(slice_ratiosSEXP);
+    reset_slice_ratios(n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios);
+    return R_NilValue;
+END_RCPP
+}
 // retrieve_census_path
 void retrieve_census_path(arma::mat& censusmat, Rcpp::NumericMatrix& path, Rcpp::NumericVector& census_times, Rcpp::IntegerVector& census_columns);
 RcppExport SEXP _stemr_retrieve_census_path(SEXP censusmatSEXP, SEXP pathSEXP, SEXP census_timesSEXP, SEXP census_columnsSEXP) {
@@ -700,23 +714,31 @@ BEGIN_RCPP
 END_RCPP
 }
 // update_factors
-void update_factors(arma::vec& interval_widths, arma::vec& slice_singvals, arma::mat& slice_factors, arma::mat& slice_factors_t, const arma::mat& kernel_cov, arma::vec& n_expansions, arma::vec& n_contractions, const arma::vec& n_expansions_c, const arma::vec& n_contractions_c, arma::vec& slice_ratios, double adaptation_factor, bool adapt_factors);
-RcppExport SEXP _stemr_update_factors(SEXP interval_widthsSEXP, SEXP slice_singvalsSEXP, SEXP slice_factorsSEXP, SEXP slice_factors_tSEXP, SEXP kernel_covSEXP, SEXP n_expansionsSEXP, SEXP n_contractionsSEXP, SEXP n_expansions_cSEXP, SEXP n_contractions_cSEXP, SEXP slice_ratiosSEXP, SEXP adaptation_factorSEXP, SEXP adapt_factorsSEXP) {
+void update_factors(arma::vec& slice_singvals, arma::mat& slice_factors, arma::mat& slice_factors_t, const arma::mat& kernel_cov);
+RcppExport SEXP _stemr_update_factors(SEXP slice_singvalsSEXP, SEXP slice_factorsSEXP, SEXP slice_factors_tSEXP, SEXP kernel_covSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec& >::type interval_widths(interval_widthsSEXP);
     Rcpp::traits::input_parameter< arma::vec& >::type slice_singvals(slice_singvalsSEXP);
     Rcpp::traits::input_parameter< arma::mat& >::type slice_factors(slice_factorsSEXP);
     Rcpp::traits::input_parameter< arma::mat& >::type slice_factors_t(slice_factors_tSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type kernel_cov(kernel_covSEXP);
+    update_factors(slice_singvals, slice_factors, slice_factors_t, kernel_cov);
+    return R_NilValue;
+END_RCPP
+}
+// update_interval_widths
+void update_interval_widths(arma::vec& interval_widths, arma::vec& n_expansions, arma::vec& n_contractions, const arma::vec& n_expansions_c, const arma::vec& n_contractions_c, arma::vec& slice_ratios, double adaptation_factor);
+RcppExport SEXP _stemr_update_interval_widths(SEXP interval_widthsSEXP, SEXP n_expansionsSEXP, SEXP n_contractionsSEXP, SEXP n_expansions_cSEXP, SEXP n_contractions_cSEXP, SEXP slice_ratiosSEXP, SEXP adaptation_factorSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec& >::type interval_widths(interval_widthsSEXP);
     Rcpp::traits::input_parameter< arma::vec& >::type n_expansions(n_expansionsSEXP);
     Rcpp::traits::input_parameter< arma::vec& >::type n_contractions(n_contractionsSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type n_expansions_c(n_expansions_cSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type n_contractions_c(n_contractions_cSEXP);
     Rcpp::traits::input_parameter< arma::vec& >::type slice_ratios(slice_ratiosSEXP);
     Rcpp::traits::input_parameter< double >::type adaptation_factor(adaptation_factorSEXP);
-    Rcpp::traits::input_parameter< bool >::type adapt_factors(adapt_factorsSEXP);
-    update_factors(interval_widths, slice_singvals, slice_factors, slice_factors_t, kernel_cov, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor, adapt_factors);
+    update_interval_widths(interval_widths, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor);
     return R_NilValue;
 END_RCPP
 }
@@ -779,10 +801,12 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_propose_lna_t", (DL_FUNC) &_stemr_propose_lna_t, 11},
     {"_stemr_rate_update_event", (DL_FUNC) &_stemr_rate_update_event, 3},
     {"_stemr_rate_update_tcovar", (DL_FUNC) &_stemr_rate_update_tcovar, 3},
+    {"_stemr_reset_slice_ratios", (DL_FUNC) &_stemr_reset_slice_ratios, 5},
     {"_stemr_retrieve_census_path", (DL_FUNC) &_stemr_retrieve_census_path, 4},
     {"_stemr_simulate_gillespie", (DL_FUNC) &_stemr_simulate_gillespie, 12},
     {"_stemr_simulate_r_measure", (DL_FUNC) &_stemr_simulate_r_measure, 6},
-    {"_stemr_update_factors", (DL_FUNC) &_stemr_update_factors, 12},
+    {"_stemr_update_factors", (DL_FUNC) &_stemr_update_factors, 4},
+    {"_stemr_update_interval_widths", (DL_FUNC) &_stemr_update_interval_widths, 7},
     {"_stemr_update_princomps", (DL_FUNC) &_stemr_update_princomps, 5},
     {NULL, NULL, 0}
 };

@@ -43,8 +43,11 @@
 #' @param d_meas_pointer external pointer for computing emission probabilities
 #' @param do_prevalence should prevalence be computed
 #' @param step_size initial step size for ODE stepper
-#' @param params_prop_est 
-#' @param params_prop_nat 
+#' @param params_prop_est vector for proposed model parameters on their estimation scale
+#' @param params_prop_nat vector for proposed model parameters on their natural scale
+#' @param slice_probs slice direction sampling probabilities
+#' @param min_afss_updates minimum number of afss updates per iteration
+#' @param lna_param_vec vector for lna parameters
 #'
 #' @return update the model parameters, path, and likelihood terms in place
 #' @export
@@ -58,8 +61,8 @@ factor_slice_sampler <- function(model_params_est,
                                  n_contractions,
                                  n_expansions_c,
                                  n_contractions_c,
-                                 n_fss_updates,
-                                 slice_weights,
+                                 slice_probs,
+                                 min_afss_updates,
                                  path,
                                  data,
                                  priors,
@@ -93,12 +96,15 @@ factor_slice_sampler <- function(model_params_est,
                                  do_prevalence,
                                  step_size) {
       
-      # for(f in sample.int(length(model_params_est), length(model_params_est))) {
-      for (f in sample.int(
-            n = length(model_params_est),
-            size = n_fss_updates,
-            replace = FALSE,
-            prob = slice_weights)) {
+      directions   <- runif(length(slice_probs)) < slice_probs
+      n_directions <- sum(directions)
+      
+      if(n_directions < min_afss_updates) {
+            extra <- sample.int(n = sum(!directions), size = min_afss_updates - n_directions, prob = slice_probs[!directions])
+            directions[!directions][extra] <- TRUE
+      }
+      
+      for(f in which(directions)) {
             
             # sample the likelihood threshold
             threshold <- logpost_cur - rexp(1)
@@ -106,28 +112,28 @@ factor_slice_sampler <- function(model_params_est,
             # construct the approximate bracket
             lower <- -interval_widths[f] * runif(1)
             upper <- lower + interval_widths[f]
-
+            
             # initialize the log-posterior at the endpoints
             logpost_lower <- NULL
             logpost_upper <- NULL
             logpost_prop  <- -Inf 
-
+            
             # step out lower bound
             while(is.null(logpost_lower) || threshold < logpost_lower) {
                   
                   # lower end of the bracket on the estimation scale
                   copy_vec(params_prop_est, model_params_est + lower * slice_factors[,f])
-
+                  
                   # get the parameters on the natural scale
                   copy_vec(params_prop_nat, priors$from_estimation_scale(params_prop_est))
-
+                  
                   # compute the prior density
                   logprior_lower <- priors$prior_density(params_nat = params_prop_nat,
                                                          params_est = params_prop_est)
                   
                   # insert the parameters into the lna_parameters matrix
                   pars2lnapars(lna_params_cur, params_prop_nat)
-
+                  
                   # compute the time-varying parameters if necessary
                   if(!is.null(tparam)) {
                         for(p in seq_along(tparam)) {
@@ -320,7 +326,7 @@ factor_slice_sampler <- function(model_params_est,
             
             # sample from the bracket
             while((logpost_prop < threshold) && !isTRUE(all.equal(lower, upper))) {
-            
+                  
                   # sample uniformly in the bracket
                   prop <- runif(1, lower, upper)
                   
@@ -436,5 +442,5 @@ factor_slice_sampler <- function(model_params_est,
             copy_vec(dest = params_logprior_cur, orig = logprior_prop)
             copy_vec(dest = path$data_log_lik,   orig = loglik_prop)
             copy_vec(dest = logpost_cur,         orig = logpost_prop)
-      }
+      }      
 }

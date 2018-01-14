@@ -53,7 +53,7 @@
 #'@return list containing the method and covariance matrix for the MCMC kernel.
 #'@export
 kernel <-
-        function(method = "c_rw",
+        function(method,
                  sigma,
                  scale_constant = 0.5,
                  scale_cooling = 0.5+1e-5,
@@ -85,10 +85,14 @@ kernel <-
 
         if(is.null(nugget)) {
                 if(method == "afss") {
-                      nugget <- 1e-6
+                      nugget <- rep(0.05, nrow(sigma))
                 } else {
                       nugget <- 0.001 * min(diag(sigma))
                 }
+        } else {
+              if(method == "afss" & length(nugget) != nrow(sigma)) {
+                    nugget <- rep(nugget, nrow(sigma))
+              }
         }
 
         if(method == "c_rw_adaptive" && length(nugget) != nrow(sigma)) {
@@ -97,6 +101,7 @@ kernel <-
                 nugget <- rep(nugget, nrow(sigma))
         }
 
+        # generate a pcm_adaptive setting list if method == "pcm_adaptive" and one is not supplied
         if(method == "pcm_adaptive" && is.null(pcm_setting_list)) {
               pcm_setting_list <- pcm_settings(weight_update_interval = 100 * nrow(sigma))
         } else if(method == "pcm_adaptive" && is.null(pcm_setting_list$weight_update_interval)) {

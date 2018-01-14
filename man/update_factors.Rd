@@ -2,15 +2,11 @@
 % Please edit documentation in R/RcppExports.R
 \name{update_factors}
 \alias{update_factors}
-\title{Update factors and interval widths for automated factor slice sampling}
+\title{Update slice factor directions for automated factor slice sampling}
 \usage{
-update_factors(interval_widths, slice_singvals, slice_factors, slice_factors_t,
-  kernel_cov, n_expansions, n_contractions, n_expansions_c, n_contractions_c,
-  slice_ratios, adaptation_factor, adapt_factors)
+update_factors(slice_singvals, slice_factors, slice_factors_t, kernel_cov)
 }
 \arguments{
-\item{interval_widths}{vector of interval widths}
-
 \item{slice_singvals}{vector of singular values}
 
 \item{slice_factors}{vector of singular vectors}
@@ -18,25 +14,10 @@ update_factors(interval_widths, slice_singvals, slice_factors, slice_factors_t,
 \item{slice_factors_t}{transpost matrix for singular vectors}
 
 \item{kernel_cov}{empirical covariance matrix of model params}
-
-\item{n_expansions}{vector with number of expansion}
-
-\item{n_contractions}{vector with number of contractions}
-
-\item{n_expansions_c}{cumulative numbers of expansions}
-
-\item{n_contractions_c}{cumulative numbers of contractions}
-
-\item{slice_ratios}{vector for storing ratio of cumulative number of 
-expansions over number of interval width changes}
-
-\item{adaptation_factor}{}
-
-\item{adapt_factors}{should the factors and singular values be updated?}
 }
 \value{
 update eigenvalues and eigenvectors in place
 }
 \description{
-Update factors and interval widths for automated factor slice sampling
+Update slice factor directions for automated factor slice sampling
 }
