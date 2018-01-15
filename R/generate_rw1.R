@@ -1,0 +1,27 @@
+#' Generate objects for setting up a random walk of order 1
+#'
+#' @param ntimes number of times (nodes)
+#'
+#' @return list containing the difference matrix, the structure matrix, the
+#'   singular value decomposition of the structure matrix, and the reference
+#'   standard deviation of the random walk (i.e., the geometric mean standard
+#'   deviation of the random walk with precision 1).
+#' @export
+generate_rw1 <- function(ntimes) {
+      
+      # Difference matrix
+      D <- diag(-1, nrow = ntimes-1, ncol = ntimes)
+      D[matrix(c(1:(ntimes-1), 2:(ntimes)), ncol = 2)] <- 1
+      
+      # Structure matrix
+      R <- t(D)%*%D
+      
+      # SVD of the structure matrix
+      R_svd <- svd(R)
+      R_svd$d[ntimes] <- 0.0
+      
+      # reference standard deviation
+      sigma_ref <- exp(sum(0.5 * log(diag(MASS::ginv(R))))/ntimes)
+      
+      return(list(D = D, R = R, R_svd = R_svd, sigma_ref = sigma_ref))
+}

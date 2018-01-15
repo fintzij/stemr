@@ -247,7 +247,7 @@ stem_inference_lna <- function(stem_object,
             if (is.null(mcmc_kernel$kernel_settings$stop_adaptation)) {
                   stop_adaptation <- iterations + 1
             } else {
-                  stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 2
+                  stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 1
             }
             
             # empirical mean and covariance of the adaptive kernel
