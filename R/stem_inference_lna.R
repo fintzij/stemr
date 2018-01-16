@@ -657,6 +657,7 @@ stem_inference_lna <- function(stem_object,
                               stem_object$dynamics$lna_rates$lna_param_codes[tparam[[s]]$tparam_name]
                         tparam[[s]]$tpar_inds <-
                               findInterval(lna_times, tparam[[s]]$times, left.open = F) - 1
+                        tparam[[s]]$tpar_inds[tparam[[s]]$tpar_inds == -1] <- 0
                         
                         # values
                         tparam[[s]]$draws_cur  <- rnorm(length(tparam[[s]]$times))

@@ -73,6 +73,7 @@ build_tcovar_matrix <- function(tcovar = NULL, tparam = NULL, forcings = NULL, t
                 if(!is.null(tparam)) {
                       for(s in seq_along(tparam)) {
                             inds <- findInterval(TCOVAR_TIMES, tparam[[s]]$times, left.open = F)
+                            inds[inds==0] <- 1
                             vals <- tparam[[s]]$draws2par(parameters = parameters, draws = tparam[[s]]$values)
                             
                             if(length(vals) != length(tparam[[s]]$times)) stop("The draws2pars argument must return as many values as there are times at which the time-varying parameter is evaluated.")
