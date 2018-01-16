@@ -34,7 +34,8 @@ scale_constant/(iteration/step_size+1)^scale_cooling. The
 \item{target_c}{target acceptance rate for componentwise Metropolis proposals
 or for principal components Metropolis proposals.}
 
-\item{nugget}{fixed nugget contribution, defaults to 0.01.}
+\item{nugget}{fixed nugget contribution, defaults to 0.5 for afss and 0.01
+otherwise.}
 
 \item{stop_adaptation}{iteration at which to stop adapting the proposal
 distribution.}

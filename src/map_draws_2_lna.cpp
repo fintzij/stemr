@@ -198,10 +198,10 @@ void map_draws_2_lna(arma::mat& pathmat,
                 // update the parameters if they need to be updated
                 if(param_update_inds[j+1]) {
                       
-                      // update parameters
-                      std::copy(lna_pars.row(j+1).begin(), 
-                                lna_pars.row(j+1).begin() + n_lna_params, 
-                                lna_param_vec.begin());
+                      // update parameters - no need, these ones are fixed in time
+                      // std::copy(lna_pars.row(j+1).begin(), 
+                      //           lna_pars.row(j+1).begin() + n_lna_params, 
+                      //           lna_param_vec.begin());
                       
                       // time-varying covariates and parameters
                       std::copy(lna_pars.row(j+1).end() - n_tcovar,

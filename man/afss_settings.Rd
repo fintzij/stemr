@@ -4,9 +4,9 @@
 \alias{afss_settings}
 \title{Generate a list of settings for automated factor slice sampling}
 \usage{
-afss_settings(factor_update_interval = 1, prob_update_interval = NULL,
+afss_settings(factor_update_interval = NULL, prob_update_interval = NULL,
   first_factor_update = 100, first_prob_update = 100,
-  min_afss_updates = 1, initial_widths = NULL, initial_factors = NULL,
+  min_afss_updates = NULL, initial_widths = NULL, initial_factors = NULL,
   initial_slice_probs = NULL)
 }
 \arguments{

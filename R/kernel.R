@@ -20,7 +20,8 @@
 #'@param target_g target acceptance rate for global Metropolis proposals.
 #'@param target_c target acceptance rate for componentwise Metropolis proposals
 #'  or for principal components Metropolis proposals.
-#'@param nugget fixed nugget contribution, defaults to 0.01.
+#'@param nugget fixed nugget contribution, defaults to 0.5 for afss and 0.01
+#'  otherwise.
 #'@param stop_adaptation iteration at which to stop adapting the proposal
 #'  distribution.
 #'@param pcm_setting_list list of settings for principal component metropolis
@@ -85,7 +86,7 @@ kernel <-
 
         if(is.null(nugget)) {
                 if(method == "afss") {
-                      nugget <- rep(0.05, nrow(sigma))
+                      nugget <- rep(0.5, nrow(sigma))
                 } else {
                       nugget <- 0.001 * min(diag(sigma))
                 }

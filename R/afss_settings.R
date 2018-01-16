@@ -24,18 +24,21 @@
 #' @param min_afss_updates minimum number of afss updates per iteration,
 #'   defaults to 1.
 #' @param initial_slice_probs initial slice direction probabilities
+#' @param use_cor should the slice directions be computed as singular vectors of
+#'   the correlation matrix (as opposed to the covariance)? defaults to TRUE.
 #'
 #' @return list with additional settings for automated factor slice sampling
 #' @export
 afss_settings <-
-      function(factor_update_interval = 1,
+      function(factor_update_interval = NULL,
                prob_update_interval = NULL,
                first_factor_update = 100,
                first_prob_update = 100,
-               min_afss_updates = 1,
+               min_afss_updates = NULL,
                initial_widths = NULL,
                initial_factors = NULL,
-               initial_slice_probs = NULL) {
+               initial_slice_probs = NULL,
+               use_cor = TRUE) {
          
       # test if the factor and prob update interval functions have defaults if they are specified via functions   
       if(is.function(factor_update_interval)) {
@@ -59,5 +62,6 @@ afss_settings <-
            min_afss_updates       = min_afss_updates,
            initial_widths         = initial_widths,
            initial_factors        = initial_factors,
-           initial_slice_probs    = initial_slice_probs)
+           initial_slice_probs    = initial_slice_probs,
+           use_cor                = use_cor)
       }

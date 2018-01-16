@@ -465,16 +465,17 @@ stem_inference_lna <- function(stem_object,
             # interval widths, expansions, and contractions
             if(is.null(mcmc_kernel$kernel_settings$afss_setting_list)) {
                   
-                  factor_update_interval <- 1
-                  prob_update_interval   <- 1
+                  factor_update_interval <- n_model_params
+                  prob_update_interval   <- n_model_params
                   first_factor_update    <- 100
                   first_prob_update      <- 100
-                  min_afss_updates       <- 1
+                  min_afss_updates       <- ceil(n_model_params/2)
                   interval_widths        <- rep(1.0, n_model_params)
                   slice_singvals         <- e$d
                   slice_factors          <- e$u
                   slice_probs            <- rep(1.0, n_model_params) # sample all factors initially
                   factor_update_interval_fcn <- prob_update_interval_fcn <- NULL
+                  use_cor                <- TRUE
                   
             } else {
                   
@@ -484,9 +485,18 @@ stem_inference_lna <- function(stem_object,
                   initial_widths       <- mcmc_kernel$kernel_settings$afss_setting_list$initial_widths
                   initial_factors      <- mcmc_kernel$kernel_settings$afss_setting_list$initial_factors
                   initial_slice_probs  <- mcmc_kernel$kernel_settings$afss_setting_list$initial_slice_probs
-                  min_afss_updates     <- mcmc_kernel$kernel_settings$afss_setting_list$min_afss_updates
+                  use_cor              <- mcmc_kernel$kernel_settings$afss_setting_list$use_cor
                   
-                  if(!is.function(mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval)) {
+                  if(is.null(mcmc_kernel$kernel_settings$afss_setting_list$min_afss_updates)) {
+                        min_afss_updates <- ceil(n_model_params / 2)
+                  } else {
+                        min_afss_updates <- mcmc_kernel$kernel_settings$afss_setting_list$min_afss_updates
+                  }
+                  
+                  if(is.null(mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval)) {
+                        factor_update_interval     <- n_model_params
+                        factor_update_interval_fcn <- NULL
+                  } else if(!is.function(mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval)) {
                         factor_update_interval <- mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval
                         factor_update_interval_fcn <- NULL
                   } else {
@@ -495,7 +505,11 @@ stem_inference_lna <- function(stem_object,
                         factor_update_interval <- factor_update_interval_fcn()
                   }
                   
-                  if(!is.function(mcmc_kernel$kernel_settings$afss_setting_list$prob_update_interval)) {
+                  if(is.null(mcmc_kernel$kernel_settings$afss_setting_list$prob_update_interval)) {
+                        prob_update_interval     <- n_model_params
+                        prob_update_interval_fcn <- NULL
+                        
+                  } else if(!is.function(mcmc_kernel$kernel_settings$afss_setting_list$prob_update_interval)) {
                         prob_update_interval <- mcmc_kernel$kernel_settings$afss_setting_list$prob_update_interval
                         prob_update_interval_fcn <- NULL
                   } else {
@@ -1004,6 +1018,7 @@ stem_inference_lna <- function(stem_object,
       # warmup the latent path
       if (!mcmc_restart) {
             for (warmup in seq_len(ess_warmup)) {
+                  
                   # Update the path via elliptical slice sampling
                   update_lna_path(
                         path_cur                = path,
@@ -2264,12 +2279,21 @@ stem_inference_lna <- function(stem_object,
                             ((iter-1) %% factor_update_interval == 0)) {
                               
                               # update the slice directions
-                              update_factors(
-                                    slice_singvals  = slice_singvals,
-                                    slice_factors   = slice_factors,
-                                    slice_factors_t = slice_factors_t,
-                                    kernel_cov      = kernel_cov
-                              )
+                              if(use_cor) {
+                                    update_factors(
+                                          slice_singvals  = slice_singvals,
+                                          slice_factors   = slice_factors,
+                                          slice_factors_t = slice_factors_t,
+                                          kernel_cov      = cov2cor(kernel_cov)
+                                    )
+                              } else {
+                                    update_factors(
+                                          slice_singvals  = slice_singvals,
+                                          slice_factors   = slice_factors,
+                                          slice_factors_t = slice_factors_t,
+                                          kernel_cov      = kernel_cov
+                                    )
+                              }
                               
                               # increment the factor update interval
                               if(!is.null(factor_update_interval_fcn)) {
