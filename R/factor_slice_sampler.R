@@ -46,6 +46,7 @@
 #' @param params_prop_est vector for proposed model parameters on their estimation scale
 #' @param params_prop_nat vector for proposed model parameters on their natural scale
 #' @param slice_probs slice direction sampling probabilities
+#' @param nugget vector of nugget probabilities
 #' @param min_afss_updates minimum number of afss updates per iteration
 #' @param lna_param_vec vector for lna parameters
 #'
@@ -62,6 +63,7 @@ factor_slice_sampler <- function(model_params_est,
                                  n_expansions_c,
                                  n_contractions_c,
                                  slice_probs,
+                                 nugget,
                                  min_afss_updates,
                                  path,
                                  data,
@@ -96,7 +98,7 @@ factor_slice_sampler <- function(model_params_est,
                                  do_prevalence,
                                  step_size) {
       
-      directions   <- runif(length(slice_probs)) < slice_probs
+      directions   <- runif(length(slice_probs)) < pmax(slice_probs, nugget)
       n_directions <- sum(directions)
       
       if(n_directions < min_afss_updates) {

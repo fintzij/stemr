@@ -475,7 +475,7 @@ stem_inference_lna <- function(stem_object,
                   slice_factors          <- e$u
                   slice_probs            <- rep(1.0, n_model_params) # sample all factors initially
                   factor_update_interval_fcn <- prob_update_interval_fcn <- NULL
-                  use_cor                <- TRUE
+                  use_cov                <- TRUE
                   
             } else {
                   
@@ -485,7 +485,7 @@ stem_inference_lna <- function(stem_object,
                   initial_widths       <- mcmc_kernel$kernel_settings$afss_setting_list$initial_widths
                   initial_factors      <- mcmc_kernel$kernel_settings$afss_setting_list$initial_factors
                   initial_slice_probs  <- mcmc_kernel$kernel_settings$afss_setting_list$initial_slice_probs
-                  use_cor              <- mcmc_kernel$kernel_settings$afss_setting_list$use_cor
+                  use_cov              <- mcmc_kernel$kernel_settings$afss_setting_list$use_cov
                   
                   if(is.null(mcmc_kernel$kernel_settings$afss_setting_list$min_afss_updates)) {
                         min_afss_updates <- ceil(n_model_params / 2)
@@ -2214,6 +2214,7 @@ stem_inference_lna <- function(stem_object,
                         params_prop_nat      = params_prop_nat,
                         interval_widths      = interval_widths,
                         slice_factors        = slice_factors,
+                        nugget               = nugget,
                         n_expansions         = n_expansions,
                         n_contractions       = n_contractions,
                         n_expansions_c       = n_expansions_c,
@@ -2279,19 +2280,19 @@ stem_inference_lna <- function(stem_object,
                             ((iter-1) %% factor_update_interval == 0)) {
                               
                               # update the slice directions
-                              if(use_cor) {
+                              if(use_cov) {
                                     update_factors(
                                           slice_singvals  = slice_singvals,
                                           slice_factors   = slice_factors,
                                           slice_factors_t = slice_factors_t,
-                                          kernel_cov      = cov2cor(kernel_cov)
+                                          kernel_cov      = kernel_cov
                                     )
                               } else {
                                     update_factors(
                                           slice_singvals  = slice_singvals,
                                           slice_factors   = slice_factors,
                                           slice_factors_t = slice_factors_t,
-                                          kernel_cov      = kernel_cov
+                                          kernel_cov      = cov2cor(kernel_cov)
                                     )
                               }
                               
@@ -2318,8 +2319,7 @@ stem_inference_lna <- function(stem_object,
                            ((iter-1) %% prob_update_interval == 0)) {
                               
                               copy_vec(dest = slice_probs, 
-                                       orig = pmax(slice_singvals ^ 0.5 / sum(slice_singvals ^ 0.5), 
-                                                   nugget))
+                                       orig = slice_singvals ^ 0.5 / sum(slice_singvals ^ 0.5))
                               
                               if(!is.null(prob_update_interval_fcn)) {
                                     prob_update_interval <- prob_update_interval_fcn(prob_update_interval)
