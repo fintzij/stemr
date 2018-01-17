@@ -6,8 +6,8 @@
 \usage{
 factor_slice_sampler(model_params_est, model_params_nat, params_prop_est,
   params_prop_nat, interval_widths, slice_factors, n_expansions, n_contractions,
-  n_expansions_c, n_contractions_c, slice_probs, min_afss_updates, path, data,
-  priors, params_logprior_cur, logpost_cur, lna_params_cur, lna_param_vec,
+  n_expansions_c, n_contractions_c, slice_probs, nugget, min_afss_updates, path,
+  data, priors, params_logprior_cur, logpost_cur, lna_params_cur, lna_param_vec,
   tparam, censusmat, emitmat, flow_matrix, stoich_matrix, lna_times,
   forcing_inds, forcing_matrix, lna_param_inds, lna_const_inds, lna_tcovar_inds,
   lna_initdist_inds, param_update_inds, lna_event_inds, census_indices,
@@ -36,6 +36,8 @@ factor_slice_sampler(model_params_est, model_params_nat, params_prop_est,
 \item{n_contractions_c}{vector for cumulative number of contractions}
 
 \item{slice_probs}{slice direction sampling probabilities}
+
+\item{nugget}{vector of nugget probabilities}
 
 \item{min_afss_updates}{minimum number of afss updates per iteration}
 

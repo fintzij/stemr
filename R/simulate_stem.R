@@ -63,7 +63,6 @@ simulate_stem <-
                  census_times = NULL,
                  max_attempts = 500,
                  lna_method = "exact",
-                 ess_updates = 10,
                  ess_warmup = 100,
                  messages = TRUE) {
 

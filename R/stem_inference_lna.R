@@ -2302,16 +2302,16 @@ stem_inference_lna <- function(stem_object,
                               }
                               
                               # reset the interval widths (new widths an average of 1 and the previous width)
-                              if(factor_update_interval != 1 || iter == first_factor_update) {
-                                    reset_slice_ratios(n_expansions     = n_expansions,
-                                                       n_contractions   = n_contractions,
-                                                       n_expansions_c   = n_expansions_c,
-                                                       n_contractions_c = n_contractions_c,
-                                                       slice_ratios     = slice_ratios)
-                                    
-                                    # reset the interval width adaptation index
-                                    width_adaptation_ind <- 2
-                              }
+                              # if(factor_update_interval != 1 || iter == first_factor_update) {
+                              #       reset_slice_ratios(n_expansions     = n_expansions,
+                              #                          n_contractions   = n_contractions,
+                              #                          n_expansions_c   = n_expansions_c,
+                              #                          n_contractions_c = n_contractions_c,
+                              #                          slice_ratios     = slice_ratios)
+                              #       
+                              #       # reset the interval width adaptation index
+                              #       width_adaptation_ind <- 2
+                              # }
                         }
                         
                         # adapt the slice probabilities
