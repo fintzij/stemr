@@ -8,7 +8,7 @@ simulate_stem(stem_object, nsim = 1, simulation_parameters = NULL,
   paths = FALSE, full_paths = FALSE, observations = FALSE,
   subject_paths = FALSE, method = "gillespie", tmax = NULL,
   census_times = NULL, max_attempts = 500, lna_method = "exact",
-  ess_updates = 10, ess_warmup = 100, messages = TRUE)
+  ess_warmup = 100, messages = TRUE)
 }
 \arguments{
 \item{nsim}{number of realizations to simulate}
