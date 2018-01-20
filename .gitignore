@@ -11,3 +11,5 @@ inst/doc
 .developement_files/
 
 *.Rdata
+
+src/\.fuse_hidden000009c200000001

@@ -476,6 +476,7 @@ stem_inference_lna <- function(stem_object,
                   slice_probs            <- rep(1.0, n_model_params) # sample all factors initially
                   factor_update_interval_fcn <- prob_update_interval_fcn <- NULL
                   use_cov                <- TRUE
+                  target_ratio           <- 0.5
                   
             } else {
                   
@@ -486,6 +487,7 @@ stem_inference_lna <- function(stem_object,
                   initial_factors      <- mcmc_kernel$kernel_settings$afss_setting_list$initial_factors
                   initial_slice_probs  <- mcmc_kernel$kernel_settings$afss_setting_list$initial_slice_probs
                   use_cov              <- mcmc_kernel$kernel_settings$afss_setting_list$use_cov
+                  target_ratio         <- mcmc_kernel$kernel_settings$afss_setting_list$target_ratio
                   
                   if(is.null(mcmc_kernel$kernel_settings$afss_setting_list$min_afss_updates)) {
                         min_afss_updates <- ceil(n_model_params / 2)
@@ -2195,7 +2197,9 @@ stem_inference_lna <- function(stem_object,
                                     first_prob_update      = first_prob_update,
                                     initial_widths         = interval_widths,
                                     initial_factors        = slice_factors,
-                                    initial_slice_probs    = slice_probs
+                                    initial_slice_probs    = slice_probs,
+                                    min_afss_updates       = min_afss_updates,
+                                    use_cov                = use_cov
                               )
                         
                         if(!is.null(factor_update_interval_fcn)) 
@@ -2263,7 +2267,8 @@ stem_inference_lna <- function(stem_object,
                         n_expansions_c    = n_expansions_c,
                         n_contractions_c  = n_contractions_c,
                         slice_ratios      = slice_ratios,
-                        adaptation_factor = adaptations[width_adaptation_ind]
+                        adaptation_factor = adaptations[width_adaptation_ind],
+                        target_ratio      = target_ratio
                   )
                   
                   # increment the width adaptation index
@@ -2300,18 +2305,6 @@ stem_inference_lna <- function(stem_object,
                               if(!is.null(factor_update_interval_fcn)) {
                                     factor_update_interval <- factor_update_interval_fcn(factor_update_interval)
                               }
-                              
-                              # reset the interval widths (new widths an average of 1 and the previous width)
-                              # if(factor_update_interval != 1 || iter == first_factor_update) {
-                              #       reset_slice_ratios(n_expansions     = n_expansions,
-                              #                          n_contractions   = n_contractions,
-                              #                          n_expansions_c   = n_expansions_c,
-                              #                          n_contractions_c = n_contractions_c,
-                              #                          slice_ratios     = slice_ratios)
-                              #       
-                              #       # reset the interval width adaptation index
-                              #       width_adaptation_ind <- 2
-                              # }
                         }
                         
                         # adapt the slice probabilities

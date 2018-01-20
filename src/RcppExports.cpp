@@ -727,8 +727,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // update_interval_widths
-void update_interval_widths(arma::vec& interval_widths, arma::vec& n_expansions, arma::vec& n_contractions, const arma::vec& n_expansions_c, const arma::vec& n_contractions_c, arma::vec& slice_ratios, double adaptation_factor);
-RcppExport SEXP _stemr_update_interval_widths(SEXP interval_widthsSEXP, SEXP n_expansionsSEXP, SEXP n_contractionsSEXP, SEXP n_expansions_cSEXP, SEXP n_contractions_cSEXP, SEXP slice_ratiosSEXP, SEXP adaptation_factorSEXP) {
+void update_interval_widths(arma::vec& interval_widths, arma::vec& n_expansions, arma::vec& n_contractions, const arma::vec& n_expansions_c, const arma::vec& n_contractions_c, arma::vec& slice_ratios, double adaptation_factor, double target_ratio);
+RcppExport SEXP _stemr_update_interval_widths(SEXP interval_widthsSEXP, SEXP n_expansionsSEXP, SEXP n_contractionsSEXP, SEXP n_expansions_cSEXP, SEXP n_contractions_cSEXP, SEXP slice_ratiosSEXP, SEXP adaptation_factorSEXP, SEXP target_ratioSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::vec& >::type interval_widths(interval_widthsSEXP);
@@ -738,7 +738,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::vec& >::type n_contractions_c(n_contractions_cSEXP);
     Rcpp::traits::input_parameter< arma::vec& >::type slice_ratios(slice_ratiosSEXP);
     Rcpp::traits::input_parameter< double >::type adaptation_factor(adaptation_factorSEXP);
-    update_interval_widths(interval_widths, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor);
+    Rcpp::traits::input_parameter< double >::type target_ratio(target_ratioSEXP);
+    update_interval_widths(interval_widths, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor, target_ratio);
     return R_NilValue;
 END_RCPP
 }
@@ -806,7 +807,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_simulate_gillespie", (DL_FUNC) &_stemr_simulate_gillespie, 12},
     {"_stemr_simulate_r_measure", (DL_FUNC) &_stemr_simulate_r_measure, 6},
     {"_stemr_update_factors", (DL_FUNC) &_stemr_update_factors, 4},
-    {"_stemr_update_interval_widths", (DL_FUNC) &_stemr_update_interval_widths, 7},
+    {"_stemr_update_interval_widths", (DL_FUNC) &_stemr_update_interval_widths, 8},
     {"_stemr_update_princomps", (DL_FUNC) &_stemr_update_princomps, 5},
     {NULL, NULL, 0}
 };

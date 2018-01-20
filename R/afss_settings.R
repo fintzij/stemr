@@ -26,6 +26,8 @@
 #' @param initial_slice_probs initial slice direction probabilities
 #' @param use_cov should the slice directions be computed as singular vectors of
 #'   the covariance matrix (as opposed to the correlation)? defaults to TRUE.
+#' @param target_ratio target ratio of expansions/(expansions + contractions),
+#'   defaults to 0.5. Smaller values overrelax the interval widths. 
 #'
 #' @return list with additional settings for automated factor slice sampling
 #' @export
@@ -38,6 +40,7 @@ afss_settings <-
                initial_widths = NULL,
                initial_factors = NULL,
                initial_slice_probs = NULL,
+               target_ratio = 0.5,
                use_cov = TRUE) {
          
       # test if the factor and prob update interval functions have defaults if they are specified via functions   
@@ -63,5 +66,6 @@ afss_settings <-
            initial_widths         = initial_widths,
            initial_factors        = initial_factors,
            initial_slice_probs    = initial_slice_probs,
+           target_ratio           = target_ratio,
            use_cov                = use_cov)
       }

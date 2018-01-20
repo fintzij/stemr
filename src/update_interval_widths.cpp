@@ -24,7 +24,8 @@ void update_interval_widths(arma::vec& interval_widths,
                             const arma::vec& n_expansions_c,
                             const arma::vec& n_contractions_c,
                             arma::vec& slice_ratios,
-                            double adaptation_factor) {
+                            double adaptation_factor,
+                            double target_ratio) {
       
       // update the expansion-contraction ratios
       slice_ratios = n_expansions_c / (n_expansions_c + n_contractions_c);
@@ -38,7 +39,7 @@ void update_interval_widths(arma::vec& interval_widths,
       // update the interval widths -- Robbins-Monro recursion
       interval_widths = arma::exp(
             log(interval_widths) +
-                  adaptation_factor * (n_expansions / (n_expansions + n_contractions) - 0.5));
+                  adaptation_factor * (n_expansions / (n_expansions + n_contractions) - target_ratio));
       
       // reset the number of contractions and expansions
       n_expansions.zeros();

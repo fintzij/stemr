@@ -832,8 +832,8 @@ update_factors <- function(slice_singvals, slice_factors, slice_factors_t, kerne
 #'
 #' @return adapt interval widths in place
 #' @export
-update_interval_widths <- function(interval_widths, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor) {
-    invisible(.Call('_stemr_update_interval_widths', PACKAGE = 'stemr', interval_widths, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor))
+update_interval_widths <- function(interval_widths, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor, target_ratio) {
+    invisible(.Call('_stemr_update_interval_widths', PACKAGE = 'stemr', interval_widths, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor, target_ratio))
 }
 
 #' Update principal component Metropolis eigenvectors and eigenvalues

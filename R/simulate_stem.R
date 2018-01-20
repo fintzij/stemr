@@ -311,6 +311,7 @@ simulate_stem <-
                                           stem_object$dynamics$tcovar_codes[stem_object$dynamics$tparam[[s]]$tparam_name]
                                     stem_object$dynamics$tparam[[s]]$tpar_inds <- 
                                           findInterval(stem_object$dynamics$tcovar[,1], tparam[[s]]$times, left.open = F) - 1
+                                    stem_object$dynamics$tparam[[s]]$tpar_inds[stem_object$dynamics$tparam[[s]]$tpar_inds == -1] <- 0
                               }
                               
                               # list for saving the time varying parameters for reuse in simulating a dataset in necessary
@@ -433,13 +434,14 @@ simulate_stem <-
                                             dimnames = list(NULL, names(stem_object$dynamics$lna_rates$lna_param_codes)))
 
                         # insert parameters, constants, and time-varying covariates
-                        parameter_inds <- seq_along(stem_object$dynamics$param_codes)
-                        constant_inds  <- (length(parameter_inds)+1):(length(parameter_inds) + length(stem_object$dynamics$const_codes))
-                        tcovar_inds    <- (max(constant_inds)+1):ncol(lna_pars)
-                        lna_pars[, parameter_inds] <- matrix(stem_object$dynamics$parameters,
+                        parameter_inds <- setdiff(stem_object$dynamics$param_codes, stem_object$dynamics$lna_initdist_inds)
+                        constant_inds  <- length(stem_object$dynamics$param_codes) + seq_along(stem_object$dynamics$const_codes) - 1
+                        tcovar_inds    <- length(stem_object$dynamics$param_codes) + length(constant_inds) + seq_along(stem_object$dynamics$tcovar_codes) - 1
+                        
+                        lna_pars[, parameter_inds+1] <- matrix(stem_object$dynamics$parameters[parameter_inds+1],
                                                              nrow = nrow(lna_pars),
                                                              ncol = length(parameter_inds), byrow = T)
-                        lna_pars[, constant_inds]  <- matrix(stem_object$dynamics$constants,
+                        lna_pars[, constant_inds+1]  <- matrix(stem_object$dynamics$constants,
                                                              nrow = nrow(lna_pars),
                                                              ncol = length(constant_inds), byrow = T)
 
@@ -447,9 +449,9 @@ simulate_stem <-
                         forcing_inds <- rep(FALSE, length(lna_times))
 
                         if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
-                                tcovar_rowinds <- match(round(lna_times, digits = 8),
-                                                        round(stem_object$dynamics$tcovar[,1], digits = 8))
-                                lna_pars[tcovar_rowinds, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
+                              
+                                tcovar_rowinds <- match(round(lna_times, digits = 8), round(stem_object$dynamics$tcovar[,1], digits = 8))
+                                lna_pars[tcovar_rowinds, tcovar_inds+1] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
 
                                 # zero out forcings if necessary
                                 if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
@@ -476,6 +478,7 @@ simulate_stem <-
                                           stem_object$dynamics$lna_rates$lna_param_codes[stem_object$dynamics$tparam[[s]]$tparam_name]
                                     stem_object$dynamics$tparam[[s]]$tpar_inds <- 
                                           findInterval(lna_times, tparam[[s]]$times, left.open = F) - 1
+                                    stem_object$dynamics$tparam[[s]]$tpar_inds[stem_object$dynamics$tparam[[s]]$tpar_inds == -1] <- 0
                               }
                               
                               # list for saving the time varying parameters for reuse in simulating a dataset in necessary
@@ -496,8 +499,6 @@ simulate_stem <-
                         census_paths <- vector(mode = "list", length = nsim)
                         lna_draws    <- vector(mode = "list", length = nsim)
                         lna_paths    <- vector(mode = "list", length = nsim)
-                        # drift_vecs   <- vector(mode = "list", length = nsim)
-                        # diff_mats    <- vector(mode = "list", length = nsim)
 
                         # retrieve the initial state
                         init_state <- lna_pars[1, stem_object$dynamics$lna_initdist_inds + 1]
@@ -587,7 +588,7 @@ simulate_stem <-
 
                         forcing_matrix <- t(forcing_matrix)
 
-                        sim_pars  <- stem_object$dynamics$parameters
+                        sim_pars  <- stem_object$dynamics$parameters[parameter_inds+1]
                         init_vols <- init_states[1,]
                         prev_inds <- match(round(census_times, digits = 8), round(lna_times, digits = 8))
                         
@@ -650,10 +651,6 @@ simulate_stem <-
                                                 census_paths[[k]] <- census_incidence(path$lna_path, census_times, census_interval_inds)
                                                 lna_paths[[k]]    <- path$prev_path[prev_inds,]
                                                 lna_draws[[k]]    <- path$draws
-                                                
-                                                # lna_moments, used in testing
-                                                # drift_vecs[[k]]   <- path$drift_vecs
-                                                # diff_mats[[k]]    <- path$diff_mats
                                           }
                                           
                                     } else if(lna_method == "approx") {
@@ -679,11 +676,7 @@ simulate_stem <-
                                           if(!is.null(path)) {
                                                 census_paths[[k]] <- census_incidence(path$incid_paths[,,1], census_times, census_interval_inds)
                                                 lna_paths[[k]]    <- path$prev_paths[prev_inds,,1]
-                                                lna_draws[[k]]    <- path$lna_draws[,,1]
-                                                
-                                                # lna_moments, used in testing
-                                                # drift_vecs[[k]]   <- path$drift_vecs
-                                                # diff_mats[[k]]    <- path$diff_mats
+                                                lna_draws[[k]]    <- path$draws[,,1]
                                           }
                                     }
                               }
@@ -715,13 +708,14 @@ simulate_stem <-
                                             dimnames = list(NULL, names(stem_object$dynamics$ode_rates$ode_param_codes)))
 
                         # insert parameters, constants, and time-varying covariates
-                        parameter_inds <- seq_along(stem_object$dynamics$param_codes)
-                        constant_inds  <- (length(parameter_inds)+1):(length(parameter_inds) + length(stem_object$dynamics$const_codes))
-                        tcovar_inds    <- (max(constant_inds)+1):ncol(ode_pars)
-                        ode_pars[, parameter_inds] <- matrix(stem_object$dynamics$parameters,
+                        parameter_inds <- setdiff(stem_object$dynamics$param_codes, stem_object$dynamics$ode_initdist_inds)
+                        constant_inds  <- length(stem_object$dynamics$param_codes) + seq_along(stem_object$dynamics$const_codes) - 1
+                        tcovar_inds    <- length(stem_object$dynamics$param_codes) + length(constant_inds) + seq_along(stem_object$dynamics$tcovar_codes) - 1
+                        
+                        ode_pars[, parameter_inds+1] <- matrix(stem_object$dynamics$parameters[parameter_inds+1],
                                                              nrow = nrow(ode_pars),
                                                              ncol = length(parameter_inds), byrow = T)
-                        ode_pars[, constant_inds]  <- matrix(stem_object$dynamics$constants,
+                        ode_pars[, constant_inds+1]  <- matrix(stem_object$dynamics$constants,
                                                              nrow = nrow(ode_pars),
                                                              ncol = length(constant_inds), byrow = T)
 
@@ -731,7 +725,7 @@ simulate_stem <-
                         if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
                                 tcovar_rowinds <- match(round(ode_times, digits = 8),
                                                         round(stem_object$dynamics$tcovar[,1], digits = 8))
-                                ode_pars[tcovar_rowinds, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
+                                ode_pars[tcovar_rowinds, tcovar_inds+1] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
 
                                 # zero out forcings if necessary
                                 if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
@@ -758,6 +752,7 @@ simulate_stem <-
                                           stem_object$dynamics$ode_rates$ode_param_codes[stem_object$dynamics$tparam[[s]]$tparam_name]
                                     stem_object$dynamics$tparam[[s]]$tpar_inds <- 
                                           findInterval(ode_times, tparam[[s]]$times, left.open = F) - 1
+                                    stem_object$dynamics$tparam[[s]]$tpar_inds[stem_object$dynamics$tparam[[s]]$tpar_inds == -1] <- 0
                               }
                               
                               # list for saving the time varying parameters for reuse in simulating a dataset in necessary
@@ -1047,6 +1042,7 @@ simulate_stem <-
                                                   stem_object$dynamics$tcovar_codes[stem_object$dynamics$tparam[[s]]$tparam_name]
                                             stem_object$dynamics$tparam[[s]]$tpar_inds <- 
                                                   findInterval(stem_object$dynamics$tcovar[,1], tparam[[s]]$times, left.open = F) - 1
+                                            stem_object$dynamics$tparam[[s]]$tpar_inds[stem_object$dynamics$tparam[[s]]$tpar_inds == -1] <- 0
                                       }
                                 }
 
@@ -1119,6 +1115,7 @@ simulate_stem <-
                                                   stem_object$dynamics$tcovar_codes[stem_object$dynamics$tparam[[s]]$tparam_name]
                                             stem_object$dynamics$tparam[[s]]$tpar_inds <- 
                                                   findInterval(stem_object$dynamics$tcovar[,1], tparam[[s]]$times, left.open = F) - 1
+                                            stem_object$dynamics$tparam[[s]]$tpar_inds[stem_object$dynamics$tparam[[s]]$tpar_inds == -1] <- 0
                                       }
                                 }
                                 
