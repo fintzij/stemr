@@ -20,16 +20,38 @@ construct_initdist_sampler_lna <- function(state_initializer, n_strata, constant
                 initdist_sampler <- eval(parse(text = paste0("function() {", initdist_sampler_body,"}")))
 
         } else {
-                comp_inds    <- sapply(state_initializer, "[[", "codes")
-                out_order    <- order(comp_inds) # order in which the counts should be returned
-                initdist_sampler_body <- paste0("as.numeric(extraDistr::rdirichlet(1, c(",
-                                              apply(sapply(state_initializer,"[[","prior"), 2, paste0, collapse = ", "),
-                                              ")))")
+              
+            # identify strata for which the initial distribution is not fixed
+            not_fixed <- sapply(state_initializer, function(x) !x$fixed)
+            
+            # initialize the sampler body
+            initdist_sampler_body <- vector("character", length(state_initializer))
+            
+            # construct the sampler for each stratum
+            for(s in seq_along(initdist_sampler_body)) {
+                  if(not_fixed[s]) {
+                        
+                        initdist_sampler_body[s] <- 
+                              paste0("as.numeric(extraDistr::rdirichlet(1, c(",
+                                     paste0(state_initializer[[s]]$prior, collapse = ", "),
+                                     ")))")
+                  } else {
+                        initdist_sampler_body[s] <- 
+                              paste0("as.numeric(c(",
+                                     paste0(state_initializer[[s]]$init_states, collapse = ", "),
+                                     "))")
+                  }
+            }
+            
+            initdist_sampler_body <- paste0(initdist_sampler_body, collapse = ", ")
+                  
+            comp_inds    <- sapply(state_initializer, "[[", "codes")
+            out_order    <- order(c(comp_inds)) # order in which the counts should be returned
 
-                initdist_sampler <- eval(parse(text = paste0("function() {c(",
-                                                           paste0(initdist_sampler_body, collapse = ", "),
-                                                           ")[c(",paste0(out_order, collapse = ", "),
-                                                           ")]}")))
+            initdist_sampler <- eval(parse(text = paste0("function() {c(",
+                                                     paste0(initdist_sampler_body, collapse = ", "),
+                                                     ")[c(",paste0(out_order, collapse = ", "),
+                                                     ")]}")))
         }
 
         return(initdist_sampler)
