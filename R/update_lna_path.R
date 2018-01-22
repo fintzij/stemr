@@ -216,7 +216,7 @@ update_lna_path <-
                                     lna_event_inds      = lna_event_inds,
                                     flow_matrix_lna     = flow_matrix,
                                     do_prevalence       = do_prevalence,
-                                    init_state          = lna_parameters[1, lna_initdist_inds + 1, drop = TRUE],
+                                    init_state          = lna_parameters[1, lna_initdist_inds + 1],
                                     forcing_matrix      = forcing_matrix
                             )
             

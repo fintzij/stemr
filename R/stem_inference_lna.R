@@ -70,7 +70,7 @@ stem_inference_lna <- function(stem_object,
       fixed_inits            <- stem_object$dynamics$fixed_inits
       n_strata               <- stem_object$dynamics$n_strata
       lna_initdist_inds      <- stem_object$dynamics$lna_initdist_inds
-      initdist_params_cur    <- stem_object$dynamics$initdist_params
+      initdist_params_cur    <- as.numeric(stem_object$dynamics$initdist_params)
       t0                     <- stem_object$dynamics$t0
       t0_fixed               <- stem_object$dynamics$t0_fixed
       step_size              <- stem_object$dynamics$dynamics_args$step_size
@@ -126,8 +126,12 @@ stem_inference_lna <- function(stem_object,
             }
       }
       
-      concs2vols <- function(concentrations, size_vec = comp_size_vec) concentrations * size_vec
-      vols2concs <- function(volumes, size_vec = comp_size_vec) volumes / size_vec
+      concs2vols <- function(concentrations, size_vec = comp_size_vec) {
+            ifelse(size_vec != 0, concentrations * size_vec, 0)
+      }
+      vols2concs <- function(volumes, size_vec = comp_size_vec) {
+            ifelse(size_vec != 0, volumes / size_vec, 0)
+      } 
       initdist_names <- names(stem_object$dynamics$initdist_params)
       convrec_initprob_names  <- paste0("p_", initdist_names)
       convrec_initvol_names   <- initdist_names
@@ -2377,8 +2381,7 @@ stem_inference_lna <- function(stem_object,
                   # If the initial compartment counts are not fixed, sample new values
                   if (!fixed_inits) {
                         initdist_params_prop <- initdist_sampler()
-                        init_volumes_prop    <-
-                              concs2vols(initdist_params_prop)
+                        init_volumes_prop    <- concs2vols(initdist_params_prop)
                   }
                   
                   # Insert the proposed parameters into the parameter proposal matrix
@@ -2459,7 +2462,7 @@ stem_inference_lna <- function(stem_object,
                         acceptances_init  <- acceptances_init + 1      # increment acceptances
                         copy_vec(path$data_log_lik, data_log_lik_prop) # update the data log likelihood
                         copy_vec(logpost_cur, path$data_log_lik + params_logprior_cur) # update log posterior
-                        copy_mat(lna_params_cur, lna_params_prop)      # update LNA parameter matrix
+                        pars2lnapars(lna_params_cur, c(model_params_nat, t0_prop, init_volumes_prop))
                         
                         # Update the initial distribution parameters and log prior if not fixed
                         if (!fixed_inits) {

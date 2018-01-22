@@ -7,7 +7,7 @@
 afss_settings(factor_update_interval = NULL, prob_update_interval = NULL,
   first_factor_update = 100, first_prob_update = 100,
   min_afss_updates = NULL, initial_widths = NULL, initial_factors = NULL,
-  initial_slice_probs = NULL, use_cov = TRUE)
+  initial_slice_probs = NULL, target_ratio = 0.5, use_cov = TRUE)
 }
 \arguments{
 \item{factor_update_interval}{number of iterations between factor and
@@ -41,6 +41,9 @@ defaults to 1.}
 \item{initial_factors}{matrix of initial factor loadings}
 
 \item{initial_slice_probs}{initial slice direction probabilities}
+
+\item{target_ratio}{target ratio of expansions/(expansions + contractions),
+defaults to 0.5. Smaller values overrelax the interval widths.}
 
 \item{use_cov}{should the slice directions be computed as singular vectors of
 the covariance matrix (as opposed to the correlation)? defaults to TRUE.}

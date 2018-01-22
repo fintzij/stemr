@@ -5,7 +5,8 @@
 \title{Update factors and interval widths for automated factor slice sampling}
 \usage{
 update_interval_widths(interval_widths, n_expansions, n_contractions,
-  n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor)
+  n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor,
+  target_ratio)
 }
 \arguments{
 \item{interval_widths}{vector of interval widths}
