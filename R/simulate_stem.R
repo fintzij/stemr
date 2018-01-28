@@ -1024,7 +1024,7 @@ simulate_stem <-
                                 sim_pars         <- stem_object$dynamics$parameters
                                 constants        <- stem_object$dynamics$constants
                                 tcovar           <- tcovar_obstimes
-                                r_measure_ptr    <- stem_object$measurement_process$meas_pointers$r_measure_ptr
+                                r_measure_ptr    <- stem_object$measurement_process$meas_pointers_lna$r_measure_ptr
                                 cens_inds        <- c(0,match(round(stem_object$measurement_process$obstimes, digits = 8),
                                                               round(census_times, digits = 8)) - 1)
                                 do_prevalence    <- stem_object$measurement_process$lna_prevalence
@@ -1229,10 +1229,6 @@ simulate_stem <-
                 if(subject_paths) stem_simulations$subject_paths <- subject_paths
                 if(method == "lna") stem_simulations$lna_draws   <- lna_draws
                 stem_simulations$failed_runs <- failed_runs
-
-                # lna_moments used in testing
-                #                 if(method == "lna") stem_simulations$lna_moments <- list(drift_vecs = drift_vecs,
-                #                                                                          diff_mats = diff_mats)
 
                 return(stem_simulations)
         }
