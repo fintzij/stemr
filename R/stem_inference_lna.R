@@ -115,7 +115,7 @@ stem_inference_lna <- function(stem_object,
       
       # function for converting concentrations to volumes
       if (n_strata == 1) {
-            comp_size_vec <- constants["popsize"]
+            comp_size_vec <- rep(constants["popsize"], n_compartments)
       } else {
             strata_sizes  <-
                   constants[paste0("popsize_",
@@ -161,9 +161,12 @@ stem_inference_lna <- function(stem_object,
             init_volumes_prop    <- initdist_params_cur
             initdist_params_cur  <- vols2concs(initdist_params_cur)
             initdist_params_prop <- initdist_params_cur
-            names(init_volumes_cur) <-
-                  names(init_volumes_prop) <-
-                  names(initdist_params_prop) <- initdist_names
+            
+            names(init_volumes_cur) <- 
+                  names(init_volumes_prop) <- convrec_initvol_names
+            
+            names(initdist_params_cur) <- 
+                  names(initdist_params_prop) <- convrec_initprob_names
             
       } else {
             acceptances_init         <- NULL
