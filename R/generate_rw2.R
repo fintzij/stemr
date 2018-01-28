@@ -10,9 +10,9 @@
 generate_rw2 <- function(ntimes) {
       
       # Difference matrix
-      D <- diag(-1, nrow = ntimes-2, ncol = ntimes)
-      D[matrix(c(1:(ntimes-2), 2:(ntimes-1)), ncol = 2)] <- 2
-      D[matrix(c(1:(ntimes-2), 3:(ntimes)), ncol = 2)] <- -1
+      D <- diag(1, nrow = ntimes-2, ncol = ntimes)
+      D[matrix(c(1:(ntimes-2), 2:(ntimes-1)), ncol = 2)] <- -2
+      D[matrix(c(1:(ntimes-2), 3:(ntimes)), ncol = 2)] <- 1
       
       # Structure matrix
       R <- t(D)%*%D
@@ -21,8 +21,13 @@ generate_rw2 <- function(ntimes) {
       R_svd <- svd(R)
       R_svd$d[(ntimes-1):ntimes] <- 0.0
       
+      # kernel
+      kern <- matrix(c(rep(1,ntimes), 1:ntimes), ncol = 2)
+      kern_outer <- kern %*% t(kern)
+      kern_svd <- svd(kern_outer)
+      
       # reference standard deviation
       sigma_ref <- exp(sum(0.5 * log(diag(MASS::ginv(R))))/ntimes)
       
-      return(list(D = D, R = R, R_svd = R_svd, sigma_ref = sigma_ref))
+      return(list(D = D, R = R, R_svd = R_svd, kern = kern, kern_outer = kern_outer, kern_svd = kern_svd, sigma_ref = sigma_ref))
 }

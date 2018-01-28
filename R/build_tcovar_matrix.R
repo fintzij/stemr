@@ -26,7 +26,9 @@ build_tcovar_matrix <- function(tcovar = NULL, tparam = NULL, forcings = NULL, t
                         warning("Time varying covariates were only specified beginning at some time after t0. It will be assumed that the values of the time-varying covariates at the first time indicated in that matrix are the same for all prior times.")
                 }
 
-                timeseq <- unique(sort(c(seq(t0, tmax, timestep), tmax, census_times)))
+                timeseq <- unique(sort(c(seq(t0, tmax, timestep), 
+                                         tmax, census_times, tcovar[,1], 
+                                         unlist(lapply(tparam, function(x) x$times)))))
                   
                 # get times of time-varying parameters and restrict to those between t0 and tmax
                 if(!is.null(tparam)) {
@@ -40,24 +42,37 @@ build_tcovar_matrix <- function(tcovar = NULL, tparam = NULL, forcings = NULL, t
                 TCOVAR_TIMES <- sort(unique(c(tcovar[,1, drop = FALSE], tparam_times, timeseq)))
 
                 TCOVAR <- matrix(0, nrow = length(TCOVAR_TIMES), 
-                                 ncol = 1 + ifelse(is.null(tcovar), 0, ncol(tcovar)-1) + 
+                                 ncol = 1 + 
+                                       ifelse(is.null(tcovar), 0, ncol(tcovar)-1) + 
                                        ifelse(is.null(tparam), 0, length(tparam)) +
                                        ifelse(is.null(timestep), 0, 1))
                 TCOVAR[,1] <- TCOVAR_TIMES
 
-                # if there are no timevarying covariates
-                if(is.null(tcovar)) {
+                # if there are no timevarying covariates or parameters
+                if(is.null(tcovar) & is.null(tparam)) {
                         TCOVAR[,2] <- TCOVAR_TIMES
                         colnames(TCOVAR) <- c("_time", "TIME")
-                } else {
-                        tcovar_inds <- findInterval(TCOVAR_TIMES, tcovar[,1], left.open = T) + 1
-                        TCOVAR[,seq(2,1 + (ncol(tcovar)-1))] <- tcovar[tcovar_inds, seq(2,ncol(tcovar))]
-                        TCOVAR[,ncol(TCOVAR)] <- timeseq[findInterval(TCOVAR_TIMES, timeseq)]
                         
-                        colnames(TCOVAR) <- c("_time", 
-                                              colnames(tcovar)[2:ncol(tcovar)], 
-                                              sapply(tparam, function(x) x$tparam_name),
-                                              "TIME")
+                } else {
+                      
+                      if(!is.null(tcovar)) {
+                            tcovar_inds <- findInterval(TCOVAR_TIMES, tcovar[,1], left.open = T) + 1
+                            TCOVAR[,seq(2,1 + (ncol(tcovar)-1))] <- tcovar[tcovar_inds, seq(2,ncol(tcovar))]
+                            tcovar_names <- colnames(tcovar)[2:ncol(tcovar)]
+                      } else {
+                            tcovar_names <- NULL
+                            tcovar_inds <- NULL
+                      }
+                      
+                      if(!is.null(tparam)) {
+                            tparam_names <- sapply(tparam, function(x) x$tparam_name)
+                      } else {
+                            tparam_names <- NULL
+                      }
+                      
+                      TCOVAR[,ncol(TCOVAR)] <- timeseq[findInterval(TCOVAR_TIMES, timeseq)]
+                      
+                      colnames(TCOVAR) <- c("_time", tcovar_names, tparam_names, "TIME")
                 }
                 
                 # zero out duplicated forcings

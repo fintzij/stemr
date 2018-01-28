@@ -20,8 +20,13 @@ generate_rw1 <- function(ntimes) {
       R_svd <- svd(R)
       R_svd$d[ntimes] <- 0.0
       
+      # kernel
+      kern <- matrix(rep(1,ntimes), ncol = 1)
+      kern_outer <- kern %*% t(kern)
+      kern_svd <- svd(kern_outer)
+      
       # reference standard deviation
       sigma_ref <- exp(sum(0.5 * log(diag(MASS::ginv(R))))/ntimes)
       
-      return(list(D = D, R = R, R_svd = R_svd, sigma_ref = sigma_ref))
+      return(list(D = D, R = R, R_svd = R_svd, kern = kern, kern_outer = kern_outer, kern_svd = kern_svd, sigma_ref = sigma_ref))
 }
