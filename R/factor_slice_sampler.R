@@ -98,7 +98,7 @@ factor_slice_sampler <- function(model_params_est,
                                  do_prevalence,
                                  step_size) {
       
-      directions   <- runif(length(slice_probs)) < pmax(slice_probs, nugget)
+      directions   <- runif(length(slice_probs)) < slice_probs
       n_directions <- sum(directions)
       
       if(n_directions < min_afss_updates) {

@@ -810,8 +810,8 @@ simulate_r_measure <- function(censusmat, measproc_indmat, parameters, constants
 #'
 #' @param slice_singvals vector of singular values
 #' @param slice_factors vector of singular vectors
-#' @param slice_factors_t transpost matrix for singular vectors
 #' @param kernel_cov empirical covariance matrix of model params
+#' @param I_mat identity matrix of the same size as kernel_cov
 #' 
 #' @return update eigenvalues and eigenvectors in place
 #' @export

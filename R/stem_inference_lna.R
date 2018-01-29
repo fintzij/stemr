@@ -476,7 +476,7 @@ stem_inference_lna <- function(stem_object,
                   prob_update_interval   <- n_model_params
                   first_factor_update    <- 100
                   first_prob_update      <- 100
-                  min_afss_updates       <- ceil(n_model_params/2)
+                  min_afss_updates       <- n_model_params
                   interval_widths        <- rep(1.0, n_model_params)
                   slice_singvals         <- e$d
                   slice_factors          <- e$u
@@ -488,8 +488,8 @@ stem_inference_lna <- function(stem_object,
             } else {
                   
                   # afss settings
-                  first_factor_update  <- mcmc_kernel$kernel_settings$afss_setting_list$first_factor_update - 1
-                  first_prob_update    <- mcmc_kernel$kernel_settings$afss_setting_list$first_prob_update - 1
+                  first_factor_update  <- mcmc_kernel$kernel_settings$afss_setting_list$first_factor_update + 1
+                  first_prob_update    <- mcmc_kernel$kernel_settings$afss_setting_list$first_prob_update + 1
                   initial_widths       <- mcmc_kernel$kernel_settings$afss_setting_list$initial_widths
                   initial_factors      <- mcmc_kernel$kernel_settings$afss_setting_list$initial_factors
                   initial_slice_probs  <- mcmc_kernel$kernel_settings$afss_setting_list$initial_slice_probs
@@ -497,17 +497,23 @@ stem_inference_lna <- function(stem_object,
                   target_ratio         <- mcmc_kernel$kernel_settings$afss_setting_list$target_ratio
                   
                   if(is.null(mcmc_kernel$kernel_settings$afss_setting_list$min_afss_updates)) {
-                        min_afss_updates <- ceil(n_model_params / 2)
+                        mcmc_kernel$kernel_settings$afss_setting_list$min_afss_updates <- n_model_params
+                        min_afss_updates <- mcmc_kernel$kernel_settings$afss_setting_list$min_afss_updates
                   } else {
                         min_afss_updates <- mcmc_kernel$kernel_settings$afss_setting_list$min_afss_updates
                   }
                   
                   if(is.null(mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval)) {
-                        factor_update_interval     <- n_model_params
+                        
+                        mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval <-  n_model_params
+                        factor_update_interval     <- mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval
                         factor_update_interval_fcn <- NULL
+                        
                   } else if(!is.function(mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval)) {
+                        
                         factor_update_interval <- mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval
                         factor_update_interval_fcn <- NULL
+                  
                   } else {
                         factor_update_interval_fcn <-
                               mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval
@@ -515,7 +521,8 @@ stem_inference_lna <- function(stem_object,
                   }
                   
                   if(is.null(mcmc_kernel$kernel_settings$afss_setting_list$prob_update_interval)) {
-                        prob_update_interval     <- n_model_params
+                        mcmc_kernel$kernel_settings$afss_setting_list$prob_update_interval <- n_model_params
+                        prob_update_interval     <- mcmc_kernel$kernel_settings$afss_setting_list$prob_update_interval
                         prob_update_interval_fcn <- NULL
                         
                   } else if(!is.function(mcmc_kernel$kernel_settings$afss_setting_list$prob_update_interval)) {
@@ -529,12 +536,14 @@ stem_inference_lna <- function(stem_object,
                   
                   # set defaults for the initial widths, slice directions, and sampling weights
                   if(is.null(initial_widths)) {
-                        interval_widths <- rep(1.0, n_model_params)
+                        mcmc_kernel$kernel_settings$afss_setting_list$initial_widths <- rep(1.0, n_model_params)
+                        interval_widths <- mcmc_kernel$kernel_settings$afss_setting_list$initial_widths
                   } else {
                         interval_widths <- initial_widths
                   }
                   
                   if(is.null(initial_factors)) {
+                        mcmc_kernel$kernel_settings$afss_setting_list$initial_factors <- e$u
                         slice_factors  <- e$u
                         slice_singvals <- e$d
                   } else {
@@ -545,6 +554,7 @@ stem_inference_lna <- function(stem_object,
                   
                   
                   if(is.null(initial_slice_probs)) {
+                        mcmc_kernel$kernel_settings$afss_setting_list$initial_slice_probs <- rep(1.0, n_model_params)
                         slice_probs <- rep(1.0, n_model_params)
                   } else {
                         slice_probs <- initial_slice_probs
@@ -1065,6 +1075,42 @@ stem_inference_lna <- function(stem_object,
                         tparam_update           = tparam_update,
                         step_size               = step_size
                   )
+                  
+                  if (!is.null(tparam) && tparam_update == "block") {
+                        update_tparam(
+                              tparam               = tparam,
+                              path_cur             = path,
+                              data                 = data,
+                              lna_parameters       = lna_params_cur,
+                              lna_param_vec        = lna_param_vec,
+                              pathmat_prop         = pathmat_prop,
+                              censusmat            = censusmat,
+                              emitmat              = emitmat,
+                              flow_matrix          = flow_matrix,
+                              stoich_matrix        = stoich_matrix,
+                              lna_times            = lna_times,
+                              forcing_inds         = forcing_inds,
+                              forcing_matrix       = forcing_matrix,
+                              lna_param_inds       = lna_param_inds,
+                              lna_const_inds       = lna_const_inds,
+                              lna_tcovar_inds      = lna_tcovar_inds,
+                              lna_initdist_inds    = lna_initdist_inds,
+                              param_update_inds    = param_update_inds,
+                              census_indices       = census_indices,
+                              lna_event_inds       = lna_event_inds,
+                              measproc_indmat      = measproc_indmat,
+                              svd_sqrt             = svd_sqrt,
+                              svd_d                = svd_d,
+                              svd_U                = svd_U,
+                              svd_V                = svd_V,
+                              lna_pointer          = lna_pointer,
+                              lna_set_pars_pointer = lna_set_pars_pointer,
+                              d_meas_pointer       = d_meas_pointer,
+                              do_prevalence        = do_prevalence,
+                              step_size            = step_size,
+                              tparam_ess           = tparam_ess
+                        )
+                  }
             }
       }
       
@@ -1882,8 +1928,8 @@ stem_inference_lna <- function(stem_object,
                               insert_tparam(
                                     tcovar    = lna_params_prop,
                                     values    = tparam[[p]]$draws2par(
-                                          parameters = params_prop_nat,
-                                          draws = tparam[[p]]$draws_cur
+                                                      parameters = params_prop_nat,
+                                                      draws = tparam[[p]]$draws_cur
                                     ),
                                     col_ind   = tparam[[p]]$col_ind,
                                     tpar_inds = tparam[[p]]$tpar_inds
@@ -2312,17 +2358,30 @@ stem_inference_lna <- function(stem_object,
                               if(!is.null(factor_update_interval_fcn)) {
                                     factor_update_interval <- factor_update_interval_fcn(factor_update_interval)
                               }
-                        }
-                        
-                        # adapt the slice probabilities
-                        if(((iter-1) >= first_prob_update) &&
-                           ((iter-1) %% prob_update_interval == 0)) {
                               
-                              copy_vec(dest = slice_probs, 
-                                       orig = slice_singvals ^ 0.5 / sum(slice_singvals ^ 0.5))
+                              # reset the slice contractions and expansions
+                              # reset the slice ratios and interval widths
+                              if(factor_update_interval != 1) {
+                                    
+                                    reset_slice_ratios(
+                                          n_expansions     = n_expansions,
+                                          n_contractions   = n_contractions,
+                                          n_expansions_c   = n_expansions_c,
+                                          n_contractions_c = n_contractions_c,
+                                          slice_ratios     = slice_ratios
+                                    )
+                                    
+                                    interval_widths      <- mcmc_kernel$kernel_settings$afss_setting_list$initial_widths
+                                    width_adaptation_ind <- 2
+                              }
                               
-                              if(!is.null(prob_update_interval_fcn)) {
-                                    prob_update_interval <- prob_update_interval_fcn(prob_update_interval)
+                              # adapt the slice probabilities
+                              if((min_afss_updates != n_model_params) && 
+                                 ((iter-1) >= first_prob_update)) {
+                                    
+                                    copy_vec(dest = slice_probs, 
+                                             orig = pmax(slice_singvals ^ 0.5 / sum(slice_singvals ^ 0.5),
+                                                         nugget))
                               }
                         }
                   }
@@ -2763,7 +2822,10 @@ stem_inference_lna <- function(stem_object,
                   list(
                         slice_factor_record   = slice_factor_record,
                         slice_singval_record  = t(slice_singval_record),
-                        proposal_covariance   = kernel_cov
+                        proposal_covariance   = kernel_cov,
+                        slice_ratios          = slice_ratios,
+                        n_expansions_c        = n_expansions_c,
+                        n_contractions_c      = n_contractions_c
                   )
       }
       

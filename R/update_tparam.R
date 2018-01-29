@@ -237,13 +237,11 @@ update_tparam <-
               
       } else {
             # recover the original time-varying parameter values
-            if(!is.null(tparam) && tparam_update == "joint") {
-                  for(p in seq_along(tparam)) {
-                        insert_tparam(tcovar    = lna_parameters,
-                                      values    = tparam[[p]]$draws2par(parameters = lna_parameters[1,], draws = tparam[[p]]$draws_cur),
-                                      col_ind   = tparam[[p]]$col_ind,
-                                      tpar_inds = tparam[[p]]$tpar_inds)
-                  }
+            for(p in seq_along(tparam)) {
+                  insert_tparam(tcovar    = lna_parameters,
+                                values    = tparam[[p]]$draws2par(parameters = lna_parameters[1,], draws = tparam[[p]]$draws_cur),
+                                col_ind   = tparam[[p]]$col_ind,
+                                tpar_inds = tparam[[p]]$tpar_inds)
             }
       }
       
