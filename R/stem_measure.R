@@ -43,7 +43,10 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                 if(any(unlist(lapply(lapply(emissions, "[[", "obstimes"), is.null)))) {
                         stop("If no dataset is provided, the observation times for each measurement process must be supplied in an emission list.")
                 }
+        } else {
+              if(is.data.frame(data)) data <- as.matrix(data)
         }
+      
       
         # determine whether the measurement process should be compiled for the LNA/ODE and/or for gillespie
         do_exact  <- !is.null(dynamics$rate_ptrs$lumped_ptr)
