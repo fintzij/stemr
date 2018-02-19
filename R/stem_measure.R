@@ -308,12 +308,12 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                         meas_procs[[k]]$rmeasure <- paste0("Rcpp::rbinom(1,", paste(meas_procs[[k]]$emission_params, collapse = ","), ")")
                         meas_procs[[k]]$dmeasure <- paste0("Rcpp::dbinom(obs,", paste(meas_procs[[k]]$emission_params, collapse = ","), ",1)")
                         meas_procs[[k]]$mmeasure <- paste0(meas_procs[[k]]$emission_params[1:2], collapse = "*")
-                        meas_procs[[k]]$vmeasure <- paste0(meas_procs[[k]]$mmeasure_lna,"*(1-",meas_procs[[k]]$emission_params[2],")")
+                        meas_procs[[k]]$vmeasure <- paste0(meas_procs[[k]]$mmeasure,"*(1-",meas_procs[[k]]$emission_params[2],")")
                         
-                        meas_procs_lna[[k]]$rmeasure <- paste0("Rcpp::rbinom(1,", paste(meas_procs_lna[[k]]$emission_params, collapse = ","), ")")
-                        meas_procs_lna[[k]]$dmeasure <- paste0("Rcpp::dbinom(obs,", paste(meas_procs_lna[[k]]$emission_params, collapse = ","), ",1)")
-                        meas_procs_lna[[k]]$mmeasure <- paste0(meas_procs_lna[[k]]$emission_params[1:2], collapse = "*")
-                        meas_procs_lna[[k]]$vmeasure <- paste0(meas_procs_lna[[k]]$mmeasure_lna,"*(1-",meas_procs_lna[[k]]$emission_params[2],")")
+                        meas_procs_lna[[k]]$rmeasure <- NULL
+                        meas_procs_lna[[k]]$dmeasure <- NULL
+                        meas_procs_lna[[k]]$mmeasure <- NULL
+                        meas_procs_lna[[k]]$vmeasure <- NULL
 
                 } else if(meas_procs[[k]]$distribution == "negbinomial") {
 

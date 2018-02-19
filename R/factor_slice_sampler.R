@@ -47,7 +47,7 @@
 #' @param params_prop_nat vector for proposed model parameters on their natural scale
 #' @param slice_probs slice direction sampling probabilities
 #' @param nugget vector of nugget probabilities
-#' @param min_afss_updates minimum number of afss updates per iteration
+#' @param n_afss_updates number of afss updates per iteration
 #' @param lna_param_vec vector for lna parameters
 #'
 #' @return update the model parameters, path, and likelihood terms in place
@@ -64,7 +64,7 @@ factor_slice_sampler <- function(model_params_est,
                                  n_contractions_c,
                                  slice_probs,
                                  nugget,
-                                 min_afss_updates,
+                                 n_afss_updates,
                                  path,
                                  data,
                                  priors,
@@ -98,15 +98,9 @@ factor_slice_sampler <- function(model_params_est,
                                  do_prevalence,
                                  step_size) {
       
-      directions   <- runif(length(slice_probs)) < slice_probs
-      n_directions <- sum(directions)
+      directions <- sample.int(n = length(slice_probs), size = n_afss_updates, replace = FALSE, prob = slice_probs)
       
-      if(n_directions < min_afss_updates) {
-            extra <- sample.int(n = sum(!directions), size = min_afss_updates - n_directions, prob = slice_probs[!directions])
-            directions[!directions][extra] <- TRUE
-      }
-      
-      for(f in which(directions)) {
+      for(f in directions) {
             
             # sample the likelihood threshold
             threshold <- logpost_cur - rexp(1)
@@ -436,13 +430,33 @@ factor_slice_sampler <- function(model_params_est,
                   }
             }
             
-            # update vectors of model parameters
-            copy_vec(dest = model_params_est, orig = params_prop_est)
-            copy_vec(dest = model_params_nat, orig = params_prop_nat)
-            
-            # update the likelihood terms
-            copy_vec(dest = params_logprior_cur, orig = logprior_prop)
-            copy_vec(dest = path$data_log_lik,   orig = loglik_prop)
-            copy_vec(dest = logpost_cur,         orig = logpost_prop)
+            if(!isTRUE(all.equal(lower, upper))) {
+                  
+                  # update vectors of model parameters
+                  copy_vec(dest = model_params_est, orig = params_prop_est)
+                  copy_vec(dest = model_params_nat, orig = params_prop_nat)
+                  
+                  # update the likelihood terms
+                  copy_vec(dest = params_logprior_cur, orig = logprior_prop)
+                  copy_vec(dest = path$data_log_lik,   orig = loglik_prop)
+                  copy_vec(dest = logpost_cur,         orig = logpost_prop)
+                  
+            } else {
+                  
+                  # insert the parameters into the lna_parameters matrix
+                  pars2lnapars(lna_params_cur, model_params_nat)
+                  
+                  # recover the original time-varying covariates
+                  # compute the time-varying parameters if necessary
+                  if(!is.null(tparam)) {
+                        for(p in seq_along(tparam)) {
+                              insert_tparam(tcovar    = lna_params_cur,
+                                            values    = tparam[[p]]$draws2par(parameters = model_params_nat,
+                                                                              draws = tparam[[p]]$draws_cur),
+                                            col_ind   = tparam[[p]]$col_ind,
+                                            tpar_inds = tparam[[p]]$tpar_inds)
+                        }
+                  }
+            }
       }      
 }

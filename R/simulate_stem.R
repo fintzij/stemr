@@ -130,6 +130,18 @@ simulate_stem <-
           } else {
                   census_times <- as.numeric(sort(unique(c(t0, census_times, tmax))))
           }
+          
+          if(!is.numeric(stem_object$dynamics$parameters)) {
+                stop("The model parameters must be a named numeric vector.")
+          }
+          
+          if(!is.numeric(stem_object$dynamics$initdist_params)) {
+                stop("The initial distribution parameters must be a named numeric vector.")
+          }
+          
+          if(!is.numeric(stem_object$dynamics$constants)) {
+                stop("The model constants must be a named numeric vector.")
+          }
 
           # build the time varying covariate matrix (includes, at a minimum, the endpoints of the simulation interval)
           # if timestep is null, there are no time-varying covariates
@@ -199,7 +211,7 @@ simulate_stem <-
 
                           # if all initial states are fixed, just copy the initial compartment counts
                           init_states <- matrix(
-                                  rep(stem_object$dynamics$initdist_params, nsim),
+                                  rep(as.numeric(stem_object$dynamics$initdist_params), nsim),
                                   nrow = nsim,
                                   byrow = TRUE
                           )
@@ -229,7 +241,7 @@ simulate_stem <-
 
                                           } else {
                                                   init_states[, stem_object$dynamics$state_initializer[[s]]$codes] <-
-                                                          matrix(stem_object$dynamics$state_initializer[[s]]$init_states,
+                                                          matrix(as.numeric(stem_object$dynamics$state_initializer[[s]]$init_states),
                                                                  nrow = nsim,
                                                                  ncol = length(stem_object$dynamics$state_initializer[[s]]$init_states),
                                                                  byrow = T)
@@ -442,10 +454,10 @@ simulate_stem <-
                   constant_inds  <- length(stem_object$dynamics$param_codes) + seq_along(stem_object$dynamics$const_codes) - 1
                   tcovar_inds    <- length(stem_object$dynamics$param_codes) + length(constant_inds) + seq_along(stem_object$dynamics$tcovar_codes) - 1
                   
-                  lna_pars[, parameter_inds+1] <- matrix(stem_object$dynamics$parameters[parameter_inds+1],
+                  lna_pars[, parameter_inds+1] <- matrix(as.numeric(stem_object$dynamics$parameters[parameter_inds+1]),
                                                        nrow = nrow(lna_pars),
                                                        ncol = length(parameter_inds), byrow = T)
-                  lna_pars[, constant_inds+1]  <- matrix(stem_object$dynamics$constants,
+                  lna_pars[, constant_inds+1]  <- matrix(as.numeric(stem_object$dynamics$constants),
                                                        nrow = nrow(lna_pars),
                                                        ncol = length(constant_inds), byrow = T)
 
@@ -530,7 +542,7 @@ simulate_stem <-
 
                                           } else {
                                                   init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <-
-                                                          matrix(stem_object$dynamics$state_initializer[[s]]$init_states,
+                                                          matrix(as.numeric(stem_object$dynamics$state_initializer[[s]]$init_states),
                                                                  nrow = nsim,
                                                                  ncol = length(stem_object$dynamics$state_initializer[[s]]$init_states),
                                                                  byrow = TRUE)
@@ -539,7 +551,7 @@ simulate_stem <-
                           }
                   } else {
                           if(stem_object$dynamics$n_strata == 1) {
-                                  init_states <- matrix(rep(stem_object$dynamics$state_initializer$init_states, nsim), nrow = nsim, byrow = T)
+                                  init_states <- matrix(rep(as.numeric(stem_object$dynamics$state_initializer$init_states), nsim), nrow = nsim, byrow = T)
 
                           } else {
                                   init_states <- matrix(0.0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
@@ -547,7 +559,7 @@ simulate_stem <-
 
                                   for(s in seq_len(stem_object$dynamics$n_strata)) {
                                           init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <-
-                                                  matrix(stem_object$dynamics$state_initializer[[s]]$init_states,
+                                                  matrix(as.numeric(stem_object$dynamics$state_initializer[[s]]$init_states),
                                                          nrow = nsim,
                                                          ncol = length(stem_object$dynamics$state_initializer[[s]]$init_states),
                                                          byrow = TRUE)
@@ -607,7 +619,7 @@ simulate_stem <-
                         }
                         
                         # set the parameters and initial volumes
-                        pars2lnapars(lna_pars, c(sim_pars, init_vols))
+                        pars2lnapars(lna_pars, as.numeric(c(sim_pars, init_vols)))
                         
                         # draw values for the time-varying parameters
                         if(!is.null(stem_object$dynamics$tparam)) {
@@ -716,10 +728,10 @@ simulate_stem <-
                   constant_inds  <- length(stem_object$dynamics$param_codes) + seq_along(stem_object$dynamics$const_codes) - 1
                   tcovar_inds    <- length(stem_object$dynamics$param_codes) + length(constant_inds) + seq_along(stem_object$dynamics$tcovar_codes) - 1
                   
-                  ode_pars[, parameter_inds+1] <- matrix(stem_object$dynamics$parameters[parameter_inds+1],
+                  ode_pars[, parameter_inds+1] <- matrix(as.numeric(stem_object$dynamics$parameters[parameter_inds+1]),
                                                        nrow = nrow(ode_pars),
                                                        ncol = length(parameter_inds), byrow = T)
-                  ode_pars[, constant_inds+1]  <- matrix(stem_object$dynamics$constants,
+                  ode_pars[, constant_inds+1]  <- matrix(as.numeric(stem_object$dynamics$constants),
                                                        nrow = nrow(ode_pars),
                                                        ncol = length(constant_inds), byrow = T)
 
@@ -809,7 +821,7 @@ simulate_stem <-
 
                                           } else {
                                                   init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <-
-                                                          matrix(stem_object$dynamics$state_initializer[[s]]$init_states,
+                                                          matrix(as.numeric(stem_object$dynamics$state_initializer[[s]]$init_states),
                                                                  nrow = nsim,
                                                                  ncol = length(stem_object$dynamics$state_initializer[[s]]$init_states),
                                                                  byrow = TRUE)
@@ -818,7 +830,7 @@ simulate_stem <-
                           }
                   } else {
                           if(stem_object$dynamics$n_strata == 1) {
-                                  init_states <- matrix(rep(stem_object$dynamics$state_initializer$init_states, nsim), nrow = nsim, byrow = T)
+                                  init_states <- matrix(rep(as.numeric(stem_object$dynamics$state_initializer$init_states), nsim), nrow = nsim, byrow = T)
 
                           } else {
                                   init_states <- matrix(0.0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
@@ -826,7 +838,7 @@ simulate_stem <-
 
                                   for(s in seq_len(stem_object$dynamics$n_strata)) {
                                           init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <-
-                                                  matrix(stem_object$dynamics$state_initializer[[s]]$init_states,
+                                                  matrix(as.numeric(stem_object$dynamics$state_initializer[[s]]$init_states),
                                                          nrow = nsim,
                                                          ncol = length(stem_object$dynamics$state_initializer[[s]]$init_states),
                                                          byrow = TRUE)
@@ -885,7 +897,7 @@ simulate_stem <-
                           }
 
                           # set the parameters and initial volumes
-                          pars2lnapars(ode_pars, c(sim_pars, init_vols))
+                          pars2lnapars(ode_pars, as.numeric(c(sim_pars, init_vols)))
                           
                           # draw values for the time-varying parameters
                           if(!is.null(stem_object$dynamics$tparam)) {
@@ -1025,8 +1037,8 @@ simulate_stem <-
 
                           # get the objects for simulating from the measurement process
                           measproc_indmat  <- stem_object$measurement_process$measproc_indmat
-                          sim_pars         <- stem_object$dynamics$parameters
-                          constants        <- stem_object$dynamics$constants
+                          sim_pars         <- as.numeric(stem_object$dynamics$parameters)
+                          constants        <- as.numeric(stem_object$dynamics$constants)
                           tcovar           <- tcovar_obstimes
                           r_measure_ptr    <- stem_object$measurement_process$meas_pointers_lna$r_measure_ptr
                           cens_inds        <- c(0,match(round(stem_object$measurement_process$obstimes, digits = 8),
@@ -1099,8 +1111,8 @@ simulate_stem <-
 
                           # get the objects for simulating from the measurement process
                           measproc_indmat  <- stem_object$measurement_process$measproc_indmat
-                          sim_pars         <- stem_object$dynamics$parameters
-                          constants        <- stem_object$dynamics$constants
+                          sim_pars         <- as.numeric(stem_object$dynamics$parameters)
+                          constants        <- as.numeric(stem_object$dynamics$constants)
                           tcovar           <- tcovar_obstimes
                           r_measure_ptr    <- stem_object$measurement_process$meas_pointers$r_measure_ptr
                           cens_inds        <- c(0,match(round(stem_object$measurement_process$obstimes, digits = 8),

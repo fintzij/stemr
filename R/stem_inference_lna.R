@@ -269,7 +269,7 @@ stem_inference_lna <- function(stem_object,
                                               ncol = floor(iterations / thin_params) + 1,
                                               nrow = n_model_params)
             
-            adaptation_shape_record <-
+            kernel_cov_record <-
                   array(0.0,
                         dim = c(
                               n_model_params,
@@ -278,9 +278,10 @@ stem_inference_lna <- function(stem_object,
                         ))
             
             adaptation_scale_record[, 1]  <- proposal_scaling
-            adaptation_shape_record[, , 1] <- kernel_cov
+            kernel_cov_record[, , 1] <- kernel_cov
             
       } else if (mcmc_kernel$method == "mvn_g_adaptive") {
+            
             # MCMC objects
             acceptances_g    <- 0.0
             proposal_scaling <- 1
@@ -308,7 +309,7 @@ stem_inference_lna <- function(stem_object,
             adaptation_scale_record <-
                   rep(1.0, nrow = floor(iterations / thin_params) + 1)
             
-            adaptation_shape_record <-
+            kernel_cov_record <-
                   array(0.0,
                         dim = c(
                               n_model_params,
@@ -316,8 +317,8 @@ stem_inference_lna <- function(stem_object,
                               floor(iterations / thin_params) + 1
                         ))
             
-            adaptation_scale_record[1]   <- proposal_scaling
-            adaptation_shape_record[, , 1] <- kernel_cov
+            adaptation_scale_record[1] <- proposal_scaling
+            kernel_cov_record[, , 1]   <- kernel_cov
             
       } else if (mcmc_kernel$method == "mvn_c_adaptive") {
             # MCMC objects
@@ -367,7 +368,7 @@ stem_inference_lna <- function(stem_object,
                                                                  thin_params) + 1,
                                               nrow = n_model_params)
             
-            adaptation_shape_record <-
+            kernel_cov_record <-
                   array(0.0,
                         dim = c(
                               n_model_params,
@@ -376,7 +377,7 @@ stem_inference_lna <- function(stem_object,
                         ))
             
             adaptation_scale_record[, 1]  <- proposal_scaling
-            adaptation_shape_record[, , 1] <- kernel_cov
+            kernel_cov_record[, , 1] <- kernel_cov
             
       } else if (mcmc_kernel$method == "pcm_adaptive") {
             # MCMC objects
@@ -456,7 +457,6 @@ stem_inference_lna <- function(stem_object,
             
             # empirical mean and covariance of the target
             kernel_resid <- double(n_model_params) # already initialized to 0
-            
             kernel_mean  <- double(n_model_params)
             copy_vec(kernel_mean, model_params_est)
             
@@ -476,7 +476,7 @@ stem_inference_lna <- function(stem_object,
                   prob_update_interval   <- n_model_params
                   first_factor_update    <- 100
                   first_prob_update      <- 100
-                  min_afss_updates       <- n_model_params
+                  n_afss_updates         <- n_model_params
                   interval_widths        <- rep(1.0, n_model_params)
                   slice_singvals         <- e$d
                   slice_factors          <- e$u
@@ -496,11 +496,11 @@ stem_inference_lna <- function(stem_object,
                   use_cov              <- mcmc_kernel$kernel_settings$afss_setting_list$use_cov
                   target_ratio         <- mcmc_kernel$kernel_settings$afss_setting_list$target_ratio
                   
-                  if(is.null(mcmc_kernel$kernel_settings$afss_setting_list$min_afss_updates)) {
-                        mcmc_kernel$kernel_settings$afss_setting_list$min_afss_updates <- n_model_params
-                        min_afss_updates <- mcmc_kernel$kernel_settings$afss_setting_list$min_afss_updates
+                  if(is.null(mcmc_kernel$kernel_settings$afss_setting_list$n_afss_updates)) {
+                        mcmc_kernel$kernel_settings$afss_setting_list$n_afss_updates <- n_model_params
+                        n_afss_updates <- mcmc_kernel$kernel_settings$afss_setting_list$n_afss_updates
                   } else {
-                        min_afss_updates <- mcmc_kernel$kernel_settings$afss_setting_list$min_afss_updates
+                        n_afss_updates <- mcmc_kernel$kernel_settings$afss_setting_list$n_afss_updates
                   }
                   
                   if(is.null(mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval)) {
@@ -567,6 +567,21 @@ stem_inference_lna <- function(stem_object,
             n_contractions_c <- rep(1, n_model_params)
             slice_ratios     <- rep(0.5, n_model_params)
             
+            # set up global adaptive metropolis objects if n_afss_updates != n_model_params
+            if(n_afss_updates != n_model_params) {
+                  
+                  acceptances_g    <- 0.0
+                  proposal_scaling <- 1
+                  nugget_g         <- 1e-6
+                  max_scaling      <- mcmc_kernel$kernel_settings$max_scaling
+                  target_g         <- mcmc_kernel$kernel_settings$target_g
+                  
+                  adaptation_scale_record <-
+                  rep(1.0, nrow = floor(iterations / thin_params) + 1)
+                  
+                  adaptation_scale_record[1]     <- proposal_scaling
+            }
+            
             # objects for saving the adaptation history
             slice_factor_record <-
                   array(0.0,
@@ -581,9 +596,18 @@ stem_inference_lna <- function(stem_object,
                          ncol = floor(iterations / thin_params) + 1,
                          nrow = n_model_params)
             
+            kernel_cov_record <-
+                        array(0.0,
+                              dim = c(
+                                    n_model_params,
+                                    n_model_params,
+                                    floor(iterations / thin_params) + 1
+                              ))
+            
             # save initial values for factors, weight
-            slice_singval_record[, 1]  <- slice_singvals
-            slice_factor_record[, , 1] <- slice_factors
+            slice_singval_record[,1] <- slice_singvals
+            slice_factor_record[,,1] <- slice_factors
+            kernel_cov_record[,,1]   <- kernel_cov
       }
       
       # set up objects for sampling t0 if it is not fixed
@@ -1131,6 +1155,7 @@ stem_inference_lna <- function(stem_object,
       # begin the MCMC
       start.time <- Sys.time()
       for (iter in (seq_len(iterations) + 1)) {
+            
             # Print the status if messages are enabled
             if (messages && iter %% thin_latent_proc == 0) {
                   # print the iteration
@@ -1141,47 +1166,6 @@ stem_inference_lna <- function(stem_object,
                         append = TRUE
                   )
             }
-            
-            # Update the path via elliptical slice sampling
-            update_lna_path(
-                  path_cur                = path,
-                  data                    = data,
-                  lna_parameters          = lna_params_cur,
-                  lna_param_vec           = lna_param_vec,
-                  tparam                  = tparam,
-                  pathmat_prop            = pathmat_prop,
-                  censusmat               = censusmat,
-                  draws_prop              = draws_prop,
-                  ess_draws_prop          = ess_draws_prop,
-                  emitmat                 = emitmat,
-                  flow_matrix             = flow_matrix,
-                  stoich_matrix           = stoich_matrix,
-                  lna_times               = lna_times,
-                  forcing_inds            = forcing_inds,
-                  forcing_matrix          = forcing_matrix,
-                  lna_param_inds          = lna_param_inds,
-                  lna_const_inds          = lna_const_inds,
-                  lna_tcovar_inds         = lna_tcovar_inds,
-                  lna_initdist_inds       = lna_initdist_inds,
-                  param_update_inds       = param_update_inds,
-                  lna_event_inds          = lna_event_inds,
-                  census_indices          = census_indices,
-                  measproc_indmat         = measproc_indmat,
-                  svd_sqrt                = svd_sqrt,
-                  svd_d                   = svd_d,
-                  svd_U                   = svd_U,
-                  svd_V                   = svd_V,
-                  lna_pointer             = lna_pointer,
-                  lna_set_pars_pointer    = lna_set_pars_pointer,
-                  d_meas_pointer          = d_meas_pointer,
-                  do_prevalence           = do_prevalence,
-                  n_ess_updates           = n_ess_updates,
-                  tparam_update           = tparam_update,
-                  step_size               = step_size
-            )
-            
-            # compute the current log posterior
-            copy_vec(logpost_cur, path$data_log_lik + params_logprior_cur)
             
             # Sample new parameter values
             if (mcmc_kernel$method == "c_rw") {
@@ -1325,6 +1309,7 @@ stem_inference_lna <- function(stem_object,
                   }
                   
             } else if (mcmc_kernel$method == "mvn_rw") {
+                  
                   # propose new parameters
                   mvn_rw(params_prop_est,
                          model_params_est,
@@ -1894,6 +1879,7 @@ stem_inference_lna <- function(stem_object,
                   }
                   
             } else if (mcmc_kernel$method == "mvn_g_adaptive") {
+                  
                   if (iter == stop_adaptation) {
                         mcmc_kernel$sigma = proposal_scaling * kernel_cov
                         sigma_chol        = chol(mcmc_kernel$sigma)
@@ -2041,12 +2027,9 @@ stem_inference_lna <- function(stem_object,
                               ),
                               max_scaling)
                         
-                        kernel_resid <-
-                              model_params_est - kernel_mean
-                        kernel_cov   <-
-                              kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
-                        kernel_mean  <-
-                              kernel_mean + adaptations[iter] * kernel_resid
+                        kernel_resid <- model_params_est - kernel_mean
+                        kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
+                        kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
                   }
             } else if (mcmc_kernel$method == "pcm_adaptive") {
                   if (iter == stop_adaptation) {
@@ -2242,6 +2225,7 @@ stem_inference_lna <- function(stem_object,
                   
                   if (iter == stop_adaptation) {
                         mcmc_kernel$sigma = kernel_cov
+                        
                         mcmc_kernel$kernel_settings$afss_setting_list = 
                               afss_settings(
                                     factor_update_interval = factor_update_interval,
@@ -2251,9 +2235,12 @@ stem_inference_lna <- function(stem_object,
                                     initial_widths         = interval_widths,
                                     initial_factors        = slice_factors,
                                     initial_slice_probs    = slice_probs,
-                                    min_afss_updates       = min_afss_updates,
+                                    n_afss_updates         = n_afss_updates,
                                     use_cov                = use_cov
                               )
+                        
+                        if(n_afss_updates != n_model_params) 
+                              mcmc_kernel$kernel_settings$afss_setting_list$proposal_scaling = proposal_scaling
                         
                         if(!is.null(factor_update_interval_fcn)) 
                               mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval = 
@@ -2262,6 +2249,10 @@ stem_inference_lna <- function(stem_object,
                         if(!is.null(prob_update_interval_fcn))
                               mcmc_kernel$kernel_settings$afss_setting_list$prob_update_interval = 
                               prob_update_interval_fcn()
+                  }
+                  
+                  if(path$data_log_lik == -Inf) {
+                        stop("Check before factor slice sampler.")
                   }
                   
                   factor_slice_sampler(
@@ -2277,7 +2268,7 @@ stem_inference_lna <- function(stem_object,
                         n_expansions_c       = n_expansions_c,
                         n_contractions_c     = n_contractions_c,
                         slice_probs          = slice_probs,
-                        min_afss_updates     = min_afss_updates,
+                        n_afss_updates       = n_afss_updates,
                         path                 = path,
                         data                 = data,
                         priors               = priors,
@@ -2312,6 +2303,10 @@ stem_inference_lna <- function(stem_object,
                         step_size            = step_size
                   )
                   
+                  if(path$data_log_lik == -Inf) {
+                        stop("Check factor slice sampler.")
+                  }
+                  
                   # update the interval widths
                   update_interval_widths(
                         interval_widths   = interval_widths,
@@ -2327,12 +2322,136 @@ stem_inference_lna <- function(stem_object,
                   # increment the width adaptation index
                   width_adaptation_ind <- width_adaptation_ind + 1
                   
+                  # Propose a global metropolis update if not sampling all slice directions
+                  if(n_afss_updates != n_model_params) {
+                        
+                        copy_vec(dest = params_prop_est,
+                                 orig = model_params_est + 
+                                        rnorm(n_model_params) %*% t(slice_factors) * sqrt(proposal_scaling * pmax(slice_singvals, 0)))
+                        
+                        # Convert the proposed parameters to their natural scale
+                        params_prop_nat <- from_estimation_scale(params_prop_est)
+                        
+                        # Compute the log prior for the proposed parameters
+                        params_logprior_prop <- prior_density(params_prop_nat, params_prop_est)
+                        
+                        # Insert the proposed parameters into the parameter proposal matrix
+                        pars2lnapars(lna_params_prop, c(params_prop_nat, t0, init_volumes_cur))
+                        
+                        # update time-varying parameters if necessary
+                        if (!is.null(tparam)) {
+                              for (p in seq_along(tparam)) {
+                                    insert_tparam(
+                                          tcovar    = lna_params_prop,
+                                          values    = tparam[[p]]$draws2par(
+                                                            parameters = params_prop_nat,
+                                                            draws = tparam[[p]]$draws_cur
+                                          ),
+                                          col_ind   = tparam[[p]]$col_ind,
+                                          tpar_inds = tparam[[p]]$tpar_inds
+                                    )
+                              }
+                        }
+                        
+                        # set the data log likelihood for the proposal to NULL
+                        data_log_lik_prop <- NULL
+                        
+                        try({
+                              map_draws_2_lna(
+                                    pathmat           = pathmat_prop,
+                                    draws             = path$draws,
+                                    lna_times         = lna_times,
+                                    lna_pars          = lna_params_prop,
+                                    lna_param_vec     = lna_param_vec,
+                                    lna_param_inds    = lna_param_inds,
+                                    lna_tcovar_inds   = lna_tcovar_inds,
+                                    init_start        = lna_initdist_inds[1],
+                                    param_update_inds = param_update_inds,
+                                    stoich_matrix     = stoich_matrix,
+                                    forcing_inds      = forcing_inds,
+                                    forcing_matrix    = forcing_matrix,
+                                    svd_sqrt          = svd_sqrt,
+                                    svd_d             = svd_d,
+                                    svd_U             = svd_U,
+                                    svd_V             = svd_V,
+                                    lna_pointer       = lna_pointer,
+                                    set_pars_pointer  = lna_set_pars_pointer,
+                                    step_size         = step_size
+                              )
+                              
+                              census_lna(
+                                    path                = pathmat_prop,
+                                    census_path         = censusmat,
+                                    census_inds         = census_indices,
+                                    lna_event_inds      = lna_event_inds,
+                                    flow_matrix_lna     = flow_matrix,
+                                    do_prevalence       = do_prevalence,
+                                    init_state          = init_volumes_cur,
+                                    forcing_matrix      = forcing_matrix
+                              )
+                              
+                              # evaluate the density of the incidence counts
+                              evaluate_d_measure_LNA(
+                                    emitmat           = emitmat,
+                                    obsmat            = data,
+                                    censusmat         = censusmat,
+                                    measproc_indmat   = measproc_indmat,
+                                    lna_parameters    = lna_params_prop,
+                                    lna_param_inds    = lna_param_inds,
+                                    lna_const_inds    = lna_const_inds,
+                                    lna_tcovar_inds   = lna_tcovar_inds,
+                                    param_update_inds = param_update_inds,
+                                    census_indices    = census_indices,
+                                    lna_param_vec     = lna_param_vec,
+                                    d_meas_ptr        = d_meas_pointer
+                              )
+                              
+                              # compute the data log likelihood
+                              data_log_lik_prop <- sum(emitmat[, -1][measproc_indmat])
+                              if (is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
+                        }, silent = TRUE)
+                        
+                        if (is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
+                        
+                        # compute the log posterior for the proposed parameters
+                        logpost_prop <- data_log_lik_prop + params_logprior_prop
+                        
+                        ## Compute the acceptance probability
+                        acceptance_prob <- logpost_prop - logpost_cur
+                        
+                        # Accept/Reject via metropolis-hastings
+                        if (acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
+                        
+                              ### ACCEPTANCE
+                              acceptances_g <- acceptances_g + 1    # increment acceptances
+                              
+                              copy_vec(path$data_log_lik, data_log_lik_prop)      # update the data log likelihood
+                              copy_vec(params_logprior_cur, params_logprior_prop) # update the prior density
+                              copy_vec(logpost_cur, logpost_prop)                 # update the log posterior
+                              
+                              copy_mat(lna_params_cur, lna_params_prop)   # update the model parameter
+                              copy_vec(model_params_nat, params_prop_nat) # update LNA parameters on their natural scales
+                              copy_vec(model_params_est, params_prop_est) # update LNA parameters on their estimation scales
+                        }
+                  }
+                  
+                  if(path$data_log_lik == -Inf) {
+                        stop("Check metropolis update step.")
+                  }
+                  
                   # update the covariance matrix for the proposal kernel
                   if (iter < stop_adaptation) {
                         
                         kernel_resid <- model_params_est - kernel_mean
                         kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
                         kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
+                        
+                        if(n_afss_updates != n_model_params) {
+                              # Adapt the proposal kernel
+                              proposal_scaling <- min(exp(log(proposal_scaling) + 
+                                                                adaptations[iter] * (min(exp(acceptance_prob), 1) - target_g)), 
+                                                      max_scaling)
+                        }
                         
                         if (((iter-1) >= first_factor_update) && 
                             ((iter-1) %% factor_update_interval == 0)) {
@@ -2376,7 +2495,7 @@ stem_inference_lna <- function(stem_object,
                               }
                               
                               # adapt the slice probabilities
-                              if((min_afss_updates != n_model_params) && 
+                              if((n_afss_updates != n_model_params) && 
                                  ((iter-1) >= first_prob_update)) {
                                     
                                     copy_vec(dest = slice_probs, 
@@ -2546,6 +2665,10 @@ stem_inference_lna <- function(stem_object,
                               pathmat_prop[1, 1] <- t0
                         }
                   }
+                  
+                  if(path$data_log_lik == -Inf) {
+                        stop("Check init state sampler.")
+                  }
             }
             
             # update the tparam draws
@@ -2583,6 +2706,51 @@ stem_inference_lna <- function(stem_object,
                         step_size            = step_size,
                         tparam_ess           = tparam_ess
                   )
+            }
+            
+            # Update the path via elliptical slice sampling
+            update_lna_path(
+                  path_cur                = path,
+                  data                    = data,
+                  lna_parameters          = lna_params_cur,
+                  lna_param_vec           = lna_param_vec,
+                  tparam                  = tparam,
+                  pathmat_prop            = pathmat_prop,
+                  censusmat               = censusmat,
+                  draws_prop              = draws_prop,
+                  ess_draws_prop          = ess_draws_prop,
+                  emitmat                 = emitmat,
+                  flow_matrix             = flow_matrix,
+                  stoich_matrix           = stoich_matrix,
+                  lna_times               = lna_times,
+                  forcing_inds            = forcing_inds,
+                  forcing_matrix          = forcing_matrix,
+                  lna_param_inds          = lna_param_inds,
+                  lna_const_inds          = lna_const_inds,
+                  lna_tcovar_inds         = lna_tcovar_inds,
+                  lna_initdist_inds       = lna_initdist_inds,
+                  param_update_inds       = param_update_inds,
+                  lna_event_inds          = lna_event_inds,
+                  census_indices          = census_indices,
+                  measproc_indmat         = measproc_indmat,
+                  svd_sqrt                = svd_sqrt,
+                  svd_d                   = svd_d,
+                  svd_U                   = svd_U,
+                  svd_V                   = svd_V,
+                  lna_pointer             = lna_pointer,
+                  lna_set_pars_pointer    = lna_set_pars_pointer,
+                  d_meas_pointer          = d_meas_pointer,
+                  do_prevalence           = do_prevalence,
+                  n_ess_updates           = n_ess_updates,
+                  tparam_update           = tparam_update,
+                  step_size               = step_size
+            )
+            
+            # compute the current log posterior
+            copy_vec(logpost_cur, path$data_log_lik + params_logprior_cur)
+            
+            if(path$data_log_lik == -Inf) {
+                  stop("Check elliptical slice slice sampler.")
             }
             
             # Save the latent process if called for in this iteration
@@ -2623,7 +2791,7 @@ stem_inference_lna <- function(stem_object,
                   # Store the proposal covariance matrix if monitoring is requested
                   if (mcmc_kernel$method == "c_rw_adaptive") {
                         adaptation_scale_record[, param_rec_ind] <- proposal_scaling
-                        adaptation_shape_record[, , param_rec_ind] <-
+                        kernel_cov_record[, , param_rec_ind] <-
                               kernel_cov
                         
                         if (messages &&
@@ -2645,8 +2813,7 @@ stem_inference_lna <- function(stem_object,
                         
                   } else if (mcmc_kernel$method == "mvn_c_adaptive") {
                         adaptation_scale_record[, param_rec_ind] <- proposal_scaling
-                        adaptation_shape_record[, , param_rec_ind] <-
-                              kernel_cov
+                        kernel_cov_record[, , param_rec_ind]     <- kernel_cov
                         
                         if (messages &&
                             iter < stop_adaptation)
@@ -2663,9 +2830,8 @@ stem_inference_lna <- function(stem_object,
                               )
                         
                   } else if (mcmc_kernel$method == "mvn_g_adaptive") {
-                        adaptation_scale_record[param_rec_ind]   <- proposal_scaling
-                        adaptation_shape_record[, , param_rec_ind] <-
-                              kernel_cov
+                        adaptation_scale_record[param_rec_ind] <- proposal_scaling
+                        kernel_cov_record[, , param_rec_ind]   <- kernel_cov
                         
                         if (messages &&
                             iter < stop_adaptation)
@@ -2683,10 +2849,8 @@ stem_inference_lna <- function(stem_object,
                         
                   } else if (mcmc_kernel$method == "pcm_adaptive") {
                         adaptation_scale_record[, param_rec_ind] <- proposal_scaling
-                        eigenvalue_record[, param_rec_ind]        <-
-                              eigenvalues
-                        eigenvector_record[, , param_rec_ind]      <-
-                              eigenvectors
+                        eigenvalue_record[, param_rec_ind]       <- eigenvalues
+                        eigenvector_record[, , param_rec_ind]    <- eigenvectors
                         
                         if (messages &&
                             iter < stop_adaptation)
@@ -2706,15 +2870,35 @@ stem_inference_lna <- function(stem_object,
                               )
                   } else if(mcmc_kernel$method == "afss") {
                         
+                        if(n_afss_updates != n_model_params) {
+                              
+                              adaptation_scale_record[param_rec_ind] <- proposal_scaling
+                              
+                              if (messages &&
+                                  iter < stop_adaptation)
+                                    cat(
+                                          paste0("Iteration: ", iter),
+                                          paste0("Global acceptances: ", acceptances_g),
+                                          paste0(
+                                                "Global acceptance rate: ",
+                                                acceptances_g / (iter - 1)
+                                          ),
+                                          file = status_file,
+                                          sep = "\n",
+                                          append = TRUE
+                                    )
+                        } else {
+                              if(messages) {
+                                    cat(paste0("Iteration: ", iter),
+                                        file = status_file,
+                                        sep = "\n",
+                                        append = T)
+                              }
+                        }
+                        
+                        kernel_cov_record[, , param_rec_ind]   <- kernel_cov
                         slice_factor_record[, , param_rec_ind] <- slice_factors
                         slice_singval_record[, param_rec_ind]  <- slice_singvals
-                        
-                        if(messages) {
-                              cat(paste0("Iteration: ", iter),
-                                  file = status_file,
-                                  sep = "\n",
-                                  append = T)
-                        }
                   }
                   
                   # Increment the parameter record index
@@ -2783,7 +2967,7 @@ stem_inference_lna <- function(stem_object,
             stem_object$results$adaptation_record =
                   list(
                         adaptation_scale_record  = t(adaptation_scale_record),
-                        adaptation_shape_record  = adaptation_shape_record,
+                        kernel_cov_record  = kernel_cov_record,
                         proposal_covariance      =
                               diag(sqrt(proposal_scaling)) %*% kernel_cov %*% diag(sqrt(proposal_scaling))
                   )
@@ -2793,7 +2977,7 @@ stem_inference_lna <- function(stem_object,
             stem_object$results$adaptation_record =
                   list(
                         adaptation_scale_record  = t(adaptation_scale_record),
-                        adaptation_shape_record  = adaptation_shape_record,
+                        kernel_cov_record  = kernel_cov_record,
                         proposal_covariance      =
                               diag(sqrt(proposal_scaling)) %*% kernel_cov %*% diag(sqrt(proposal_scaling))
                   )
@@ -2803,7 +2987,7 @@ stem_inference_lna <- function(stem_object,
             stem_object$results$adaptation_record =
                   list(
                         adaptation_scale_record  = adaptation_scale_record,
-                        adaptation_shape_record  = adaptation_shape_record,
+                        kernel_cov_record  = kernel_cov_record,
                         proposal_covariance      = proposal_scaling * kernel_cov
                   )
             
@@ -2822,11 +3006,17 @@ stem_inference_lna <- function(stem_object,
                   list(
                         slice_factor_record   = slice_factor_record,
                         slice_singval_record  = t(slice_singval_record),
+                        kernel_cov_record     = kernel_cov_record,
                         proposal_covariance   = kernel_cov,
                         slice_ratios          = slice_ratios,
                         n_expansions_c        = n_expansions_c,
                         n_contractions_c      = n_contractions_c
                   )
+            
+            if(n_afss_updates != n_model_params) {
+                  stem_object$results$adaptation_record$acceptances_g = acceptances_g
+                  stem_object$results$adaptation_record$adaptation_scale_record = adaptation_scale_record
+            }
       }
       
       if (!fixed_inits || !t0_fixed) {

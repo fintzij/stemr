@@ -85,11 +85,9 @@ kernel <-
         }
 
         if(is.null(nugget)) {
-                if(method == "afss") {
-                      nugget <- rep(0.5, nrow(sigma))
-                } else {
-                      nugget <- 0.001 * min(diag(sigma))
-                }
+              
+                nugget <- 0.001 * min(diag(sigma))
+                
         } else {
               if(method == "afss" & length(nugget) != nrow(sigma)) {
                     nugget <- rep(nugget, nrow(sigma))
