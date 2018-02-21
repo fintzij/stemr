@@ -21,13 +21,15 @@
 #'   occur
 #' @param first_prob_update iteration at which the first update to the slice
 #'   direction probabilities should occur.
+#' @param sample_all_initially should all factors be sampled until the first
+#'   slice probability update? defaults to TRUE.
 #' @param min_afss_updates minimum number of afss updates per iteration,
 #'   defaults to 1.
 #' @param initial_slice_probs initial slice direction probabilities
 #' @param use_cov should the slice directions be computed as singular vectors of
 #'   the covariance matrix (as opposed to the correlation)? defaults to TRUE.
 #' @param target_ratio target ratio of expansions/(expansions + contractions),
-#'   defaults to 0.5. Smaller values overrelax the interval widths. 
+#'   defaults to 0.5. Smaller values overrelax the interval widths.
 #'
 #' @return list with additional settings for automated factor slice sampling
 #' @export
@@ -36,6 +38,7 @@ afss_settings <-
                prob_update_interval = NULL,
                first_factor_update = 100,
                first_prob_update = 100,
+               sample_all_initially = TRUE,
                n_afss_updates = NULL,
                initial_widths = NULL,
                initial_factors = NULL,
@@ -62,6 +65,7 @@ afss_settings <-
            prob_update_interval   = prob_update_interval,
            first_factor_update    = first_factor_update,
            first_prob_update      = first_prob_update,
+           sample_all_initially   = sample_all_initially,
            n_afss_updates         = n_afss_updates,
            initial_widths         = initial_widths,
            initial_factors        = initial_factors,

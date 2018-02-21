@@ -26,6 +26,7 @@ generate_rw3 <- function(ntimes) {
       kern <- matrix(c(rep(1,ntimes), 1:ntimes, c(1:ntimes)^2), ncol = 3)
       kern_outer <- kern %*% t(kern)
       kern_svd <- svd(kern_outer)
+      kern_svd$d[-c(1:3)] <- 0.0
       
       # reference standard deviation
       sigma_ref <- exp(sum(0.5 * log(diag(MASS::ginv(R))))/ntimes)

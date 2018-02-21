@@ -193,6 +193,12 @@ stem_inference_lna <- function(stem_object,
       model_params_nat <- parameters[param_names_nat]
       model_params_est <- to_estimation_scale(model_params_nat)
       
+      # check that the functions to and from the estimation scale are 1:1
+      if(!all.equal(model_params_nat,
+               from_estimation_scale(to_estimation_scale(model_params_nat)))) {
+            stop("The functions that transform parameters to and from their estimation scales must be inverses of one another.")
+      }
+      
       # create analogous vectors for storing the proposed parameter values
       params_prop_nat  <- double(length(param_names_nat))
       copy_vec(params_prop_nat, model_params_nat)
@@ -484,6 +490,7 @@ stem_inference_lna <- function(stem_object,
                   factor_update_interval_fcn <- prob_update_interval_fcn <- NULL
                   use_cov                <- TRUE
                   target_ratio           <- 0.5
+                  sample_all_initially   <- TRUE
                   
             } else {
                   
@@ -495,6 +502,7 @@ stem_inference_lna <- function(stem_object,
                   initial_slice_probs  <- mcmc_kernel$kernel_settings$afss_setting_list$initial_slice_probs
                   use_cov              <- mcmc_kernel$kernel_settings$afss_setting_list$use_cov
                   target_ratio         <- mcmc_kernel$kernel_settings$afss_setting_list$target_ratio
+                  sample_all_initially <- mcmc_kernel$kernel_settings$afss_setting_list$sample_all_initially
                   
                   if(is.null(mcmc_kernel$kernel_settings$afss_setting_list$n_afss_updates)) {
                         mcmc_kernel$kernel_settings$afss_setting_list$n_afss_updates <- n_model_params
@@ -561,6 +569,7 @@ stem_inference_lna <- function(stem_object,
                   }
             }
             
+            # vectors for tracking the numbers of expansions and contractions
             n_expansions     <- rep(0, n_model_params)
             n_contractions   <- rep(0, n_model_params)
             n_expansions_c   <- rep(1, n_model_params)
@@ -2251,10 +2260,7 @@ stem_inference_lna <- function(stem_object,
                               prob_update_interval_fcn()
                   }
                   
-                  if(path$data_log_lik == -Inf) {
-                        stop("Check before factor slice sampler.")
-                  }
-                  
+                  # sample new parameter values
                   factor_slice_sampler(
                         model_params_est     = model_params_est,
                         model_params_nat     = model_params_nat,
@@ -2268,7 +2274,9 @@ stem_inference_lna <- function(stem_object,
                         n_expansions_c       = n_expansions_c,
                         n_contractions_c     = n_contractions_c,
                         slice_probs          = slice_probs,
-                        n_afss_updates       = n_afss_updates,
+                        n_afss_updates       = ifelse(iter > first_prob_update || !sample_all_initially, 
+                                                      n_afss_updates, 
+                                                      n_model_params),
                         path                 = path,
                         data                 = data,
                         priors               = priors,
@@ -2302,11 +2310,7 @@ stem_inference_lna <- function(stem_object,
                         do_prevalence        = do_prevalence,
                         step_size            = step_size
                   )
-                  
-                  if(path$data_log_lik == -Inf) {
-                        stop("Check factor slice sampler.")
-                  }
-                  
+
                   # update the interval widths
                   update_interval_widths(
                         interval_widths   = interval_widths,
@@ -2433,10 +2437,6 @@ stem_inference_lna <- function(stem_object,
                               copy_vec(model_params_nat, params_prop_nat) # update LNA parameters on their natural scales
                               copy_vec(model_params_est, params_prop_est) # update LNA parameters on their estimation scales
                         }
-                  }
-                  
-                  if(path$data_log_lik == -Inf) {
-                        stop("Check metropolis update step.")
                   }
                   
                   # update the covariance matrix for the proposal kernel
@@ -2665,10 +2665,6 @@ stem_inference_lna <- function(stem_object,
                               pathmat_prop[1, 1] <- t0
                         }
                   }
-                  
-                  if(path$data_log_lik == -Inf) {
-                        stop("Check init state sampler.")
-                  }
             }
             
             # update the tparam draws
@@ -2748,10 +2744,6 @@ stem_inference_lna <- function(stem_object,
             
             # compute the current log posterior
             copy_vec(logpost_cur, path$data_log_lik + params_logprior_cur)
-            
-            if(path$data_log_lik == -Inf) {
-                  stop("Check elliptical slice slice sampler.")
-            }
             
             # Save the latent process if called for in this iteration
             if ((iter-1) %% thin_latent_proc == 0) {

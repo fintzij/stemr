@@ -25,9 +25,22 @@ generate_rw2 <- function(ntimes) {
       kern <- matrix(c(rep(1,ntimes), 1:ntimes), ncol = 2)
       kern_outer <- kern %*% t(kern)
       kern_svd <- svd(kern_outer)
+      kern_svd$d[-c(1:2)] <- 0.0
       
       # reference standard deviation
       sigma_ref <- exp(sum(0.5 * log(diag(MASS::ginv(R))))/ntimes)
       
-      return(list(D = D, R = R, R_svd = R_svd, kern = kern, kern_outer = kern_outer, kern_svd = kern_svd, sigma_ref = sigma_ref))
+      return(
+            list(
+                  D = D,
+                  R = R,
+                  R_svd = R_svd,
+                  R_norm = R * sigma_ref^2,
+                  R_norm_svd = svd(rnorm),
+                  kern = kern,
+                  kern_outer = kern_outer,
+                  kern_svd = kern_svd,
+                  sigma_ref = sigma_ref
+            )
+      )
 }
