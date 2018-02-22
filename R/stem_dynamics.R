@@ -242,9 +242,11 @@ stem_dynamics <-
 
         # check that there are no partial matches among compartment names
         comp_match <- rep(FALSE, length(compartments))
+        
         for(p in seq_along(compartments)) {
                 comp_match[p] <- any(grepl(compartment_names[p], compartment_names[-p]))
         }
+        
         if(any(comp_match)) {
                 stop(paste("Compartment(s)", paste(which(comp_match), collapse = ", "), "have a partial name match with another compartment. Give unique names to resolve ambiguities."))
         }
