@@ -28,9 +28,10 @@ generate_rw2 <- function(ntimes) {
       kern_svd$d[-c(1:2)] <- 0.0
       
       # reference standard deviation
-      sigma_ref <- exp(sum(0.5 * log(diag(MASS::ginv(R))))/ntimes)
-      R_norm    <- R * sigma_ref^2 # precision matrix, normalized to have generalized marginal variance equal to 1
-      R_norm_svd <- svd(R_norm)
+      sigma_ref    <- exp(sum(0.5 * log(diag(MASS::ginv(R))))/ntimes)
+
+      R_norm       <- R * sigma_ref^2 # precision matrix, normalized to have generalized marginal variance equal to 1
+      R_norm_svd   <- svd(R_norm)
       R_norm_svd$d[(ntimes-1):ntimes] <- 0.0
       
       return(

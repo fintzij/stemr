@@ -320,7 +320,8 @@ stem_dynamics <-
         }
 
         # construct the mapping for the compartment_strata to the columns in the bookkeeping matrix
-        compartment_codes <- 0:(n_compartments - 1);    names(compartment_codes)<- compartment_names
+        compartment_codes        <- 0:(n_compartments - 1)
+        names(compartment_codes) <- compartment_names
 
         param_codes <- 0:(n_params - 1)
         param_names <- names(parameters)

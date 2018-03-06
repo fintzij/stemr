@@ -77,11 +77,13 @@ update_lna_path <-
                         draw_normals(tparam[[p]]$draws_prop)
                         
                         # compute proposal
-                        copy_vec(dest = tparam[[p]]$draws_ess, orig = cos(theta) * tparam[[p]]$draws_cur + sin(theta) * tparam[[p]]$draws_prop)
+                        copy_vec(dest = tparam[[p]]$draws_ess, 
+                                 orig = cos(theta) * tparam[[p]]$draws_cur + sin(theta) * tparam[[p]]$draws_prop)
                         
                         # map to parameter
                         insert_tparam(tcovar    = lna_parameters,
-                                      values    = tparam[[p]]$draws2par(parameters = lna_parameters[1,], draws = tparam[[p]]$draws_ess),
+                                      values    = tparam[[p]]$draws2par(parameters = lna_parameters[1,], 
+                                                                        draws = tparam[[p]]$draws_ess),
                                       col_ind   = tparam[[p]]$col_ind,
                                       tpar_inds = tparam[[p]]$tpar_inds)
                   }
@@ -165,14 +167,15 @@ update_lna_path <-
                     theta <- runif(1, lower, upper)
             
                     # construct the next LNA path proposal
-                    copy_mat(draws_prop, cos(theta)*path_cur$draws + sin(theta)*ess_draws_prop)
+                    copy_mat(draws_prop, cos(theta) * path_cur$draws + sin(theta) * ess_draws_prop)
                     
                     # construct the next proposal for time-varying parameters
                     if(!is.null(tparam) && tparam_update == "joint") {
                           
                           for(p in seq_along(tparam)) {
                                 # compute proposal
-                                copy_vec(dest = tparam[[p]]$draws_ess, orig = cos(theta) * tparam[[p]]$draws_cur + sin(theta) * tparam[[p]]$draws_prop)
+                                copy_vec(dest = tparam[[p]]$draws_ess, 
+                                         orig = cos(theta) * tparam[[p]]$draws_cur + sin(theta) * tparam[[p]]$draws_prop)
                                 
                                 # map to parameter
                                 insert_tparam(tcovar    = lna_parameters,

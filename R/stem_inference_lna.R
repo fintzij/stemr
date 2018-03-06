@@ -223,12 +223,8 @@ stem_inference_lna <- function(stem_object,
       ))
       tmax              <- max(lna_times)
       n_times           <- length(lna_times)
-      param_update_inds <- round(lna_times, digits = 8) %in%
-            round(sort(unique(
-                  c(t0, tmax, stem_object$dynamics$dynamics_args$tcovar[, 1])
-            )), digits = 8)
-      census_indices    <- 
-            unique(c(0, findInterval(obstimes, lna_times) - 1))
+      param_update_inds <- apply(stem_object$dynamics$tcovar_changemat, 1, any)
+      census_indices    <- unique(c(0, findInterval(obstimes, lna_times) - 1))
       
       # objects for computing the SVD of the LNA diffusion matrix
       svd_sqrt <- diag(0.0, n_rates)
@@ -726,9 +722,9 @@ stem_inference_lna <- function(stem_object,
                         tparam[[s]]$tpar_inds[tparam[[s]]$tpar_inds == -1] <- 0
                         
                         # values
-                        tparam[[s]]$draws_cur  <- rnorm(length(tparam[[s]]$times))
-                        tparam[[s]]$draws_prop <- rnorm(length(tparam[[s]]$times))
-                        tparam[[s]]$draws_ess  <- rnorm(length(tparam[[s]]$times))
+                        tparam[[s]]$draws_cur  <- rep(0.0, length(tparam[[s]]$times))
+                        tparam[[s]]$draws_prop <- rep(0.0, length(tparam[[s]]$times))
+                        tparam[[s]]$draws_ess  <- rep(0.0, length(tparam[[s]]$times))
                         tparam[[s]]$log_lik    <- sum(dnorm(tparam[[s]]$draws_cur, log = TRUE))
                         
                         # get values
@@ -1143,6 +1139,7 @@ stem_inference_lna <- function(stem_object,
                               step_size            = step_size,
                               tparam_ess           = tparam_ess
                         )
+                        
                   }
             }
       }
