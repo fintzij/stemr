@@ -1139,7 +1139,6 @@ stem_inference_lna <- function(stem_object,
                               step_size            = step_size,
                               tparam_ess           = tparam_ess
                         )
-                        
                   }
             }
       }

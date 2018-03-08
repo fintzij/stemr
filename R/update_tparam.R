@@ -59,7 +59,7 @@ update_tparam <-
       for(p in seq_along(tparam)) {
         
             # sample perturbations
-            copy_vec(dest = tparam[[p]]$draws_prop, orig = rnorm(length(tparam[[p]]$times)))
+            draw_normals(tparam[[p]]$draws_prop)
             
             # compute proposal
             copy_vec(dest = tparam[[p]]$draws_ess, orig = cos(theta) * tparam[[p]]$draws_cur + sin(theta) * tparam[[p]]$draws_prop)

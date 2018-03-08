@@ -34,8 +34,6 @@ generate_rw1 <- function(ntimes) {
                   D = D,
                   R = R,
                   R_svd = R_svd,
-                  R_norm = R * sigma_ref^2,
-                  R_norm_svd = svd(rnorm),
                   kern = kern,
                   kern_outer = kern_outer,
                   kern_svd = kern_svd,
