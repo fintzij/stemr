@@ -57,6 +57,7 @@ build_tcovar_matrix <- function(tcovar = NULL, tparam = NULL, forcings = NULL, t
                       
                       if(!is.null(tcovar)) {
                             tcovar_inds <- findInterval(TCOVAR_TIMES, tcovar[,1], left.open = T) + 1
+                            tcovar_inds[tcovar_inds > nrow(tcovar)] <- nrow(tcovar)
                             TCOVAR[,seq(2,1 + (ncol(tcovar)-1))] <- tcovar[tcovar_inds, seq(2,ncol(tcovar))]
                             tcovar_names <- colnames(tcovar)[2:ncol(tcovar)]
                       } else {

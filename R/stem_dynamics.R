@@ -136,7 +136,7 @@ stem_dynamics <-
         # check for partial matches in parameter names
         param_match <- rep(FALSE, length(parameters)); param_names <- names(parameters)
         for(p in seq_along(parameters)) {
-                param_match[p] <- any(grepl(param_names[p], param_names[-p]))
+                param_match[p] <- any(grepl(pattern = paste0('\\<', param_names[p], '\\>'), param_names[-p]))
         }
         if(any(param_match)) {
                 stop(paste("Parameter(s)", paste(which(param_match), collapse = ", "), "have a partial name match with another parameter. Give unique names to resolve ambiguities."))
@@ -244,7 +244,7 @@ stem_dynamics <-
         comp_match <- rep(FALSE, length(compartments))
         
         for(p in seq_along(compartments)) {
-                comp_match[p] <- any(grepl(compartment_names[p], compartment_names[-p]))
+                comp_match[p] <- any(grepl(paste0('\\<', compartment_names[p], '\\>'), compartment_names[-p]))
         }
         
         if(any(comp_match)) {
@@ -312,7 +312,7 @@ stem_dynamics <-
         if(timevarying) {
                 tcovar_match <- rep(FALSE, length(tcovar_names))
                 for(p in seq_along(tcovar_match)) {
-                        tcovar_match[p] <- any(grepl(tcovar_names[p], tcovar_names[-p]))
+                        tcovar_match[p] <- any(grepl(paste0('\\<', tcovar_names[p], '\\>'), tcovar_names[-p]))
                 }
                 if(any(tcovar_match)) {
                         stop(paste("Time-varying covariates or parameters have a partial name match. Give unique names to resolve ambiguities."))
