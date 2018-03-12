@@ -6,7 +6,7 @@
 \usage{
 factor_slice_sampler(model_params_est, model_params_nat, params_prop_est,
   params_prop_nat, interval_widths, slice_factors, n_expansions, n_contractions,
-  n_expansions_c, n_contractions_c, slice_probs, nugget, min_afss_updates, path,
+  n_expansions_c, n_contractions_c, slice_probs, nugget, n_afss_updates, path,
   data, priors, params_logprior_cur, logpost_cur, lna_params_cur, lna_param_vec,
   tparam, censusmat, emitmat, flow_matrix, stoich_matrix, lna_times,
   forcing_inds, forcing_matrix, lna_param_inds, lna_const_inds, lna_tcovar_inds,
@@ -39,7 +39,7 @@ factor_slice_sampler(model_params_est, model_params_nat, params_prop_est,
 
 \item{nugget}{vector of nugget probabilities}
 
-\item{min_afss_updates}{minimum number of afss updates per iteration}
+\item{n_afss_updates}{number of afss updates per iteration}
 
 \item{path}{list containing the LNA path, N(0,1) draws, and likelihood}
 

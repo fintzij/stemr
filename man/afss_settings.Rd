@@ -6,7 +6,8 @@
 \usage{
 afss_settings(factor_update_interval = NULL, prob_update_interval = NULL,
   first_factor_update = 100, first_prob_update = 100,
-  min_afss_updates = NULL, initial_widths = NULL, initial_factors = NULL,
+  sample_all_initially = TRUE, n_afss_updates = NULL,
+  initial_widths = NULL, initial_factors = NULL,
   initial_slice_probs = NULL, target_ratio = 0.5, use_cov = TRUE)
 }
 \arguments{
@@ -33,8 +34,8 @@ occur}
 \item{first_prob_update}{iteration at which the first update to the slice
 direction probabilities should occur.}
 
-\item{min_afss_updates}{minimum number of afss updates per iteration,
-defaults to 1.}
+\item{sample_all_initially}{should all factors be sampled until the first
+slice probability update? defaults to TRUE.}
 
 \item{initial_widths}{vector of initial slice widths}
 
@@ -47,6 +48,9 @@ defaults to 0.5. Smaller values overrelax the interval widths.}
 
 \item{use_cov}{should the slice directions be computed as singular vectors of
 the covariance matrix (as opposed to the correlation)? defaults to TRUE.}
+
+\item{min_afss_updates}{minimum number of afss updates per iteration,
+defaults to 1.}
 }
 \value{
 list with additional settings for automated factor slice sampling

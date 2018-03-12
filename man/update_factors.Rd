@@ -11,9 +11,9 @@ update_factors(slice_singvals, slice_factors, slice_factors_t, kernel_cov)
 
 \item{slice_factors}{vector of singular vectors}
 
-\item{slice_factors_t}{transpost matrix for singular vectors}
-
 \item{kernel_cov}{empirical covariance matrix of model params}
+
+\item{I_mat}{identity matrix of the same size as kernel_cov}
 }
 \value{
 update eigenvalues and eigenvectors in place

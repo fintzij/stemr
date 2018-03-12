@@ -242,35 +242,6 @@ mat_2_arr <- function(dest, orig, ind) {
     invisible(.Call('_stemr_mat_2_arr', PACKAGE = 'stemr', dest, orig, ind))
 }
 
-#' Componentwise Metropolis random walk transition kernel with componentwise
-#'   adaptive scaling
-#'
-#' @param params_prop vector in which the proposed parameters should be stored
-#' @param params_cur vector containing the current parameter vector
-#' @param ind C++ style index for the component index
-#' @param kernel_cov vector of component proposal standard deviations
-#' @param proposal_scaling vector of scaling factors
-#' @param nugget vector of fixed variance nugget contributions
-#'
-#' @return propose new parameter values in place
-#' @export
-c_rw_adaptive <- function(params_prop, params_cur, ind, kernel_cov, proposal_scaling, nugget) {
-    invisible(.Call('_stemr_c_rw_adaptive', PACKAGE = 'stemr', params_prop, params_cur, ind, kernel_cov, proposal_scaling, nugget))
-}
-
-#' Componentwise Metropolis random walk transition kernel
-#'
-#' @param params_prop vector in which the proposed parameters should be stored
-#' @param params_cur vector containing the current parameter vector
-#' @param ind C++ style index for the component index
-#' @param kernel_cov vector of component proposal standard deviations
-#'
-#' @return propose new parameter values in place
-#' @export
-c_rw <- function(params_prop, params_cur, ind, kernel_cov) {
-    invisible(.Call('_stemr_c_rw', PACKAGE = 'stemr', params_prop, params_cur, ind, kernel_cov))
-}
-
 #' Draw new N(0,1) values and fill a vector.
 #'
 #' @param v vector to fill with new N(0,1) draws
@@ -562,22 +533,6 @@ mvn_rw <- function(params_prop, params_cur, sigma_chol) {
     invisible(.Call('_stemr_mvn_rw', PACKAGE = 'stemr', params_prop, params_cur, sigma_chol))
 }
 
-#' Adaptive principal component metropolis proposal.
-#'
-#' @param params_prop vector in which the proposed parameters should be stored
-#' @param params_cur vector containing the current parameter vector
-#' @param eigenvalues vector of eigenvalues of the proposal covariance matrix
-#' @param eigenvectors matrix of eigenvectors for the proposal covariance
-#' @param proposal_scaling vector of component scaling parameters
-#' @param direction component to be used in the proposal
-#' @param nugget
-#'
-#' @return propose new parameter values in place
-#' @export
-pcm_adaptive <- function(params_prop, params_cur, eigenvalues, eigenvectors, proposal_scaling, direction, nugget) {
-    invisible(.Call('_stemr_pcm_adaptive', PACKAGE = 'stemr', params_prop, params_cur, eigenvalues, eigenvectors, proposal_scaling, direction, nugget))
-}
-
 #' Simulate an approximate LNA path using a non-centered parameterization for the
 #' log-transformed counting process LNA. Resample the initial path in place, then
 #' update with elliptical slice sampling.
@@ -645,66 +600,6 @@ propose_lna_approx <- function(lna_times, lna_pars, init_start, param_update_ind
 #' @export
 propose_lna <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, reject_negatives, max_attempts, step_size, lna_pointer, set_pars_pointer) {
     .Call('_stemr_propose_lna', PACKAGE = 'stemr', lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, reject_negatives, max_attempts, step_size, lna_pointer, set_pars_pointer)
-}
-
-#' Simulate an LNA path using a non-centered parameterization for the
-#' log-transformed counting process LNA.
-#'
-#' @param lna_times vector of interval endpoint times
-#' @param lna_pars numeric matrix of parameters, constants, and time-varying
-#'   covariates at each of the lna_times
-#' @param init_start index in the parameter vector where the initial compartment
-#'   volumes start
-#' @param param_update_inds logical vector indicating at which of the times the
-#'   LNA parameters need to be updated.
-#' @param stoich_matrix stoichiometry matrix giving the changes to compartments
-#'   from each reaction
-#' @param forcing_inds logical vector of indicating at which times in the
-#'   time-varying covariance matrix a forcing is applied.
-#' @param forcing_matrix matrix containing the forcings.
-#' @param step_size initial step size for the ODE solver (adapted internally,
-#' but too large of an initial step can lead to failure in stiff systems).
-#' @param df student-t degrees of freedom
-#' @param rate_orders logical vector indicating which rates are of order 0 or 1.
-#' @param lna_pointer external pointer to LNA integration function.
-#' @param set_pars_pointer external pointer to the function for setting the LNA
-#'   parameters.
-#'
-#' @return list containing the stochastic perturbations (i.i.d. N(0,1) draws) and
-#' the LNA path on its natural scale which is determined by the perturbations.
-#'
-#' @export
-propose_lna_semi_t <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, df, rate_orders, lna_pointer, set_pars_pointer) {
-    .Call('_stemr_propose_lna_semi_t', PACKAGE = 'stemr', lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, df, rate_orders, lna_pointer, set_pars_pointer)
-}
-
-#' Simulate an LNA path using a non-centered parameterization for the
-#' log-transformed counting process LNA.
-#'
-#' @param lna_times vector of interval endpoint times
-#' @param lna_pars numeric matrix of parameters, constants, and time-varying
-#'   covariates at each of the lna_times
-#' @param init_start index in the parameter vector where the initial compartment
-#'   volumes start
-#' @param param_update_inds logical vector indicating at which of the times the
-#'   LNA parameters need to be updated.
-#' @param stoich_matrix stoichiometry matrix giving the changes to compartments
-#'   from each reaction
-#' @param forcing_inds logical vector of indicating at which times in the
-#'   time-varying covariance matrix a forcing is applied.
-#' @param forcing_matrix matrix containing the forcings.
-#' @param step_size initial step size for the ODE solver (adapted internally,
-#' but too large of an initial step can lead to failure in stiff systems).
-#' @param lna_pointer external pointer to LNA integration function.
-#' @param set_pars_pointer external pointer to the function for setting the LNA
-#'   parameters.
-#'
-#' @return list containing the stochastic perturbations (i.i.d. N(0,1) draws) and
-#' the LNA path on its natural scale which is determined by the perturbations.
-#'
-#' @export
-propose_lna_t <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, df, lna_pointer, set_pars_pointer) {
-    .Call('_stemr_propose_lna_t', PACKAGE = 'stemr', lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, df, lna_pointer, set_pars_pointer)
 }
 
 #' Identify which rates to update when a state transition event occurs.
@@ -834,20 +729,5 @@ update_factors <- function(slice_singvals, slice_factors, slice_factors_t, kerne
 #' @export
 update_interval_widths <- function(interval_widths, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor, target_ratio) {
     invisible(.Call('_stemr_update_interval_widths', PACKAGE = 'stemr', interval_widths, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor, target_ratio))
-}
-
-#' Update principal component Metropolis eigenvectors and eigenvalues
-#'
-#' @param eigenvalues vector of eigenvalues of the proposal covariance matrix
-#' @param eigenvectors matrix of eigenvectors for the proposal covariance
-#' @param comp_weights vector of component weights
-#' @param kernel_cov proposal covariance matrix
-#' @param update_weights should the weights for the direction sampling 
-#'  distribution be recomputed. 
-#'
-#' @return update eigenvalues and eigenvectors in place
-#' @export
-update_princomps <- function(eigenvalues, eigenvectors, comp_weights, kernel_cov, update_weights) {
-    invisible(.Call('_stemr_update_princomps', PACKAGE = 'stemr', eigenvalues, eigenvectors, comp_weights, kernel_cov, update_weights))
 }
 
