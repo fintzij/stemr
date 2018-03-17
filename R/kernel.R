@@ -18,8 +18,6 @@
 #'@param step_size adaptation increment for each iteration, defaults to 1.
 #'@param max_scaling maximum scale factor, defaults to Inf.
 #'@param target_g target acceptance rate for global Metropolis proposals.
-#'@param target_c target acceptance rate for componentwise adaptive Metropolis
-#'  proposals or for principal components Metropolis proposals.
 #'@param nugget fixed nugget contribution, defaults to 0.5 for afss and 0.01
 #'  otherwise.
 #'@param stop_adaptation iteration at which to stop adapting the proposal
@@ -30,12 +28,11 @@
 #'
 #'@details Specifies a Metropolis transition kernel wtih symmetric Gaussian
 #'  proposals. The options for the method are as follows: 1) mvn_rw: global
-#'  random walk, updating all parameters jointly. 2) mvn_rw_c_adaptive: global
-#'  adaptive Metropolis with componentwise adaptive scaling (Alg. 6 in Andrieu
-#'  and Thoms). 3) mvn_rw_g_adaptive: global adaptive Metropolis with global
-#'  adaptive scaling (Alg. 4 in Andrieu and Thoms). 4) Automated
-#'  factor slice sampler (modified adaptive version of the adaptation scheme in
-#'  Tibbits, et al. 2014). 5) Adaptive hit-and-run slice sampler. 
+#'  random walk, updating all parameters jointly. 2) mvn_g_adaptive: global
+#'  adaptive Metropolis with global adaptive scaling (Alg. 4 in Andrieu and
+#'  Thoms). 3) Automated factor slice sampler (modified adaptive version of the
+#'  adaptation scheme in Tibbits, et al. 2014) with hit and run updates when not
+#'  updating along all factor directions. 4) Hit-and-run slice sampler.
 #'
 #'  References:
 #'
@@ -56,47 +53,42 @@ kernel <-
                  step_size = 1,
                  max_scaling = Inf,
                  target_g = 0.234,
-                 target_c = 0.44,
                  nugget = NULL,
                  stop_adaptation = NULL,
                  afss_setting_list = NULL,
+                 harss_setting_list = NULL,
                  messages = TRUE) {
 
-        if(!method %in% c( "mvn_rw", "mvn_c_adaptive", "mvn_g_adaptive", "afss", "harss")) {
-                stop("The method for the MCMC kernel is not correctly specified.")
-        }
-          
-        if(scale_cooling <=0.5 | scale_cooling > 1) {
-                stop("The cooling rate must be between 0.5 and 1.")
-        }
-
-        if(target_g < 0 || target_g >1) {
-                stop("The target acceptance rate must be between 0 and 1.")
-        }
-
-        if(target_c < 0 || target_c >1) {
-                stop("The target acceptance rate must be between 0 and 1.")
-        }
-
-        if(is.null(nugget)) {
-              
-                nugget <- 0.001 * min(diag(sigma))
-                
-        } else {
-              if(method == "afss" & length(nugget) != nrow(sigma)) {
-                    nugget <- rep(nugget, nrow(sigma))
-              }
-        }
-
-        kernel_settings <- list(scale_constant = scale_constant,
-                                scale_cooling = scale_cooling,
-                                step_size     = step_size,
-                                max_scaling   = as.numeric(max_scaling),
-                                target_g      = target_g,
-                                target_c      = target_c,
-                                nugget        = nugget,
-                                stop_adaptation = stop_adaptation,
-                                afss_setting_list = afss_setting_list)
-
-        return(list(method = method, sigma = sigma, kernel_settings = kernel_settings))
+      if(!method %in% c( "mvn_rw", "mvn_g_adaptive", "afss", "harss")) {
+            stop("The method for the MCMC kernel is not correctly specified.")
+      }
+      
+      if(scale_cooling <=0.5 | scale_cooling > 1) {
+            stop("The cooling rate must be between 0.5 and 1.")
+      }
+      
+      if(target_g < 0 || target_g >1) {
+            stop("The target acceptance rate must be between 0 and 1.")
+      }
+      
+      if(is.null(nugget)) {
+        
+            if(method %in% c("afss", "harss")) {
+                  nugget <- 0.05
+            } else {
+                  nugget <- 0.001 * min(diag(sigma))
+            }
+      }
+        
+      kernel_settings <- list(scale_constant = scale_constant,
+                          scale_cooling = scale_cooling,
+                          step_size     = step_size,
+                          max_scaling   = as.numeric(max_scaling),
+                          target_g      = target_g,
+                          nugget        = nugget,
+                          stop_adaptation = stop_adaptation,
+                          afss_setting_list = afss_setting_list,
+                          harss_setting_list = harss_setting_list)
+      
+      return(list(method = method, sigma = sigma, kernel_settings = kernel_settings))
 }

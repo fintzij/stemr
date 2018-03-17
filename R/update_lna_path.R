@@ -4,7 +4,7 @@
 #' @param n_ess_updates number of elliptical slice sampling updates
 #' @param svd_sqrt,svd_d,svd_U,svd_V objects for computing the SVD of LNA
 #'   diffusion matrics
-#' @param tparam_update if "joint" then time-varying parameters are updated jointly
+#' @param tparam_update if TRUE then time-varying parameters are updated jointly
 #'   along with the LNA path
 #' @inheritParams initialize_lna
 #'
@@ -68,7 +68,7 @@ update_lna_path <-
             copy_mat(draws_prop, cos(theta)*path_cur$draws + sin(theta)*ess_draws_prop)
             
             # propose time-varying parameter values if called for
-            if(!is.null(tparam) && tparam_update == "joint") {
+            if(!is.null(tparam) && tparam_update) {
                   
                   # sample a new set of perturbations and construct the first proposal
                   for(p in seq_along(tparam)) {
@@ -170,7 +170,7 @@ update_lna_path <-
                     copy_mat(draws_prop, cos(theta) * path_cur$draws + sin(theta) * ess_draws_prop)
                     
                     # construct the next proposal for time-varying parameters
-                    if(!is.null(tparam) && tparam_update == "joint") {
+                    if(!is.null(tparam) && tparam_update) {
                           
                           for(p in seq_along(tparam)) {
                                 # compute proposal
@@ -253,7 +253,7 @@ update_lna_path <-
                   # transfer the new path and residual path into the* sin(theta) path_prop list
                   copy_mat(path_cur$draws, draws_prop)
                   
-                  if(!is.null(tparam) && tparam_update == "joint") {
+                  if(!is.null(tparam) && tparam_update) {
                         # Copy the tparam draws
                         for(p in seq_along(tparam)) {
                               copy_vec(tparam[[p]]$draws_cur, tparam[[p]]$draws_ess)
@@ -267,7 +267,7 @@ update_lna_path <-
             } else {
                   # if updating the time-varying parameters jointly with the LNA path
                   # recover the original time-varying parameter values
-                  if(!is.null(tparam) && tparam_update == "joint") {
+                  if(!is.null(tparam) && tparam_update) {
                         for(p in seq_along(tparam)) {
                               insert_tparam(tcovar    = lna_parameters,
                                             values    = tparam[[p]]$draws2par(parameters = lna_parameters[1,], draws = tparam[[p]]$draws_cur),

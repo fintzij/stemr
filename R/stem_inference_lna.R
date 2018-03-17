@@ -85,12 +85,12 @@ stem_inference_lna <- function(stem_object,
       if (is.null(ess_args)) {
             n_ess_updates <- 1
             ess_warmup    <- 50
-            tparam_update <- "joint"
+            tparam_ess_update <- TRUE
             
       } else {
             n_ess_updates <- ess_args$n_ess_updates
             ess_warmup    <- ess_args$ess_warmup
-            tparam_update <- ess_args$tparam_update
+            tparam_ess_update <- ess_args$tparam_update
       }
       
       # indices of parameters, constants, and time-varying covariates in the lna_params_* matrices
@@ -221,7 +221,6 @@ stem_inference_lna <- function(stem_object,
                   stem_object$dynamics$tmax
             )
       ))
-      tmax              <- max(lna_times)
       n_times           <- length(lna_times)
       param_update_inds <- apply(stem_object$dynamics$tcovar_changemat, 1, any)
       census_indices    <- unique(c(0, findInterval(obstimes, lna_times) - 1))
@@ -277,65 +276,6 @@ stem_inference_lna <- function(stem_object,
             adaptation_scale_record[1] <- proposal_scaling
             kernel_cov_record[, , 1]   <- kernel_cov
             
-      } else if (mcmc_kernel$method == "mvn_c_adaptive") {
-            # MCMC objects
-            acceptances_g    <- 0.0
-            proposal_scaling <- rep(1.0, n_model_params)
-            sqrt_scalemat    <- diag(1.0, n_model_params)
-            nugget           <- mcmc_kernel$kernel_settings$nugget
-            max_scaling      <- mcmc_kernel$kernel_settings$max_scaling
-            target_c         <- mcmc_kernel$kernel_settings$target_c
-            logpost_g2c_cur  <- 0.0
-            g2c_mat_est      <-
-                  matrix(
-                        model_params_est,
-                        byrow = T,
-                        nrow = n_model_params,
-                        ncol = n_model_params
-                  )
-            g2c_mat_nat      <-
-                  matrix(
-                        model_params_nat,
-                        byrow = T,
-                        nrow = n_model_params,
-                        ncol = n_model_params
-                  )
-            adaptations      <-
-                  mcmc_kernel$kernel_settings$scale_constant *
-                  (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^
-                  -mcmc_kernel$kernel_settings$scale_cooling
-            
-            # adaptation schedule
-            if (is.null(mcmc_kernel$kernel_settings$stop_adaptation)) {
-                  stop_adaptation <- iterations + 1
-            } else {
-                  stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 1
-            }
-            
-            # empirical mean and covariance of the adaptive kernel
-            kernel_resid <- double(n_model_params) # already initialized to 0
-            kernel_mean  <- double(n_model_params)
-            copy_vec(kernel_mean, model_params_est)
-            kernel_cov   <- diag(1, n_model_params)
-            copy_mat(kernel_cov, mcmc_kernel$sigma)
-            
-            # Adaptation record objects
-            adaptation_scale_record <- matrix(1.0,
-                                              ncol = floor(iterations /
-                                                                 thin_params) + 1,
-                                              nrow = n_model_params)
-            
-            kernel_cov_record <-
-                  array(0.0,
-                        dim = c(
-                              n_model_params,
-                              n_model_params,
-                              floor(iterations / thin_params) + 1
-                        ))
-            
-            adaptation_scale_record[, 1]  <- proposal_scaling
-            kernel_cov_record[, , 1] <- kernel_cov
-            
       } else if (mcmc_kernel$method == "afss") {
             
             # adaptation schedule
@@ -381,69 +321,71 @@ stem_inference_lna <- function(stem_object,
                   slice_probs            <- rep(1.0, n_model_params) # sample all factors initially
                   factor_update_interval_fcn <- prob_update_interval_fcn <- NULL
                   use_cov                <- TRUE
-                  target_ratio           <- 0.5
+                  afss_target_ratio      <- 0.5
                   sample_all_initially   <- TRUE
                   
             } else {
                   
-                  # afss settings
-                  first_factor_update  <- mcmc_kernel$kernel_settings$afss_setting_list$first_factor_update + 1
-                  first_prob_update    <- mcmc_kernel$kernel_settings$afss_setting_list$first_prob_update + 1
-                  initial_widths       <- mcmc_kernel$kernel_settings$afss_setting_list$initial_widths
-                  initial_factors      <- mcmc_kernel$kernel_settings$afss_setting_list$initial_factors
-                  initial_slice_probs  <- mcmc_kernel$kernel_settings$afss_setting_list$initial_slice_probs
-                  use_cov              <- mcmc_kernel$kernel_settings$afss_setting_list$use_cov
-                  target_ratio         <- mcmc_kernel$kernel_settings$afss_setting_list$target_ratio
-                  sample_all_initially <- mcmc_kernel$kernel_settings$afss_setting_list$sample_all_initially
+                  afss_setting_list <- mcmc_kernel$kernel_settings$afss_setting_list
                   
-                  if(is.null(mcmc_kernel$kernel_settings$afss_setting_list$n_afss_updates)) {
-                        mcmc_kernel$kernel_settings$afss_setting_list$n_afss_updates <- n_model_params
-                        n_afss_updates <- mcmc_kernel$kernel_settings$afss_setting_list$n_afss_updates
+                  # afss settings
+                  first_factor_update  <- afss_setting_list$first_factor_update + 1
+                  first_prob_update    <- afss_setting_list$first_prob_update + 1
+                  initial_widths       <- afss_setting_list$initial_widths
+                  initial_factors      <- afss_setting_list$initial_factors
+                  initial_slice_probs  <- afss_setting_list$initial_slice_probs
+                  use_cov              <- afss_setting_list$use_cov
+                  afss_target_ratio    <- afss_setting_list$target_ratio
+                  sample_all_initially <- afss_setting_list$sample_all_initially
+                  
+                  if(is.null(afss_setting_list$n_afss_updates)) {
+                        afss_setting_list$n_afss_updates <- n_model_params
+                        n_afss_updates <- afss_setting_list$n_afss_updates
                   } else {
-                        n_afss_updates <- mcmc_kernel$kernel_settings$afss_setting_list$n_afss_updates
+                        n_afss_updates <- afss_setting_list$n_afss_updates
                   }
                   
-                  if(is.null(mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval)) {
+                  if(is.null(afss_setting_list$factor_update_interval)) {
                         
-                        mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval <-  n_model_params
-                        factor_update_interval     <- mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval
+                        afss_setting_list$factor_update_interval <-  n_model_params
+                        factor_update_interval     <- afss_setting_list$factor_update_interval
                         factor_update_interval_fcn <- NULL
                         
-                  } else if(!is.function(mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval)) {
+                  } else if(!is.function(afss_setting_list$factor_update_interval)) {
                         
-                        factor_update_interval <- mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval
+                        factor_update_interval <- afss_setting_list$factor_update_interval
                         factor_update_interval_fcn <- NULL
                   
                   } else {
                         factor_update_interval_fcn <-
-                              mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval
+                              afss_setting_list$factor_update_interval
                         factor_update_interval <- factor_update_interval_fcn()
                   }
                   
-                  if(is.null(mcmc_kernel$kernel_settings$afss_setting_list$prob_update_interval)) {
-                        mcmc_kernel$kernel_settings$afss_setting_list$prob_update_interval <- n_model_params
-                        prob_update_interval     <- mcmc_kernel$kernel_settings$afss_setting_list$prob_update_interval
+                  if(is.null(afss_setting_list$prob_update_interval)) {
+                        afss_setting_list$prob_update_interval <- n_model_params
+                        prob_update_interval     <- afss_setting_list$prob_update_interval
                         prob_update_interval_fcn <- NULL
                         
-                  } else if(!is.function(mcmc_kernel$kernel_settings$afss_setting_list$prob_update_interval)) {
-                        prob_update_interval <- mcmc_kernel$kernel_settings$afss_setting_list$prob_update_interval
+                  } else if(!is.function(afss_setting_list$prob_update_interval)) {
+                        prob_update_interval <- afss_setting_list$prob_update_interval
                         prob_update_interval_fcn <- NULL
                   } else {
                         prob_update_interval_fcn <-
-                              mcmc_kernel$kernel_settings$afss_setting_list$prob_update_interval
+                              afss_setting_list$prob_update_interval
                         prob_update_interval <- prob_update_interval_fcn()
                   }
                   
                   # set defaults for the initial widths, slice directions, and sampling weights
                   if(is.null(initial_widths)) {
-                        mcmc_kernel$kernel_settings$afss_setting_list$initial_widths <- rep(1.0, n_model_params)
-                        interval_widths <- mcmc_kernel$kernel_settings$afss_setting_list$initial_widths
+                        afss_setting_list$initial_widths <- rep(1.0, n_model_params)
+                        interval_widths <- afss_setting_list$initial_widths
                   } else {
                         interval_widths <- initial_widths
                   }
                   
                   if(is.null(initial_factors)) {
-                        mcmc_kernel$kernel_settings$afss_setting_list$initial_factors <- e$u
+                        afss_setting_list$initial_factors <- e$u
                         slice_factors  <- e$u
                         slice_singvals <- e$d
                   } else {
@@ -454,7 +396,7 @@ stem_inference_lna <- function(stem_object,
                   
                   
                   if(is.null(initial_slice_probs)) {
-                        mcmc_kernel$kernel_settings$afss_setting_list$initial_slice_probs <- rep(1.0, n_model_params)
+                        afss_setting_list$initial_slice_probs <- rep(1.0, n_model_params)
                         slice_probs <- rep(1.0, n_model_params)
                   } else {
                         slice_probs <- initial_slice_probs
@@ -466,37 +408,31 @@ stem_inference_lna <- function(stem_object,
             n_contractions   <- rep(0, n_model_params)
             n_expansions_c   <- rep(1, n_model_params)
             n_contractions_c <- rep(1, n_model_params)
-            slice_ratios     <- rep(0.5, n_model_params)
+            slice_ratios     <- rep(afss_target_ratio, n_model_params)
             
-            # set up global adaptive metropolis objects if n_afss_updates != n_model_params
+            # set up hit and run slice sampler if n_afss_updates != n_model_params
             if(n_afss_updates != n_model_params) {
                   
-                  acceptances_g    <- 0.0
-                  proposal_scaling <- 1
-                  nugget_g         <- 1e-6
-                  max_scaling      <- mcmc_kernel$kernel_settings$max_scaling
-                  target_g         <- mcmc_kernel$kernel_settings$target_g
+                  if(is.null(mcmc_kernel$kernel_settings$harss_setting_list)) {
+                        harss_setting_list <- harss_settings()
+                  } else {
+                        harss_setting_list <- mcmc_kernel$kernel_settings$harss_setting_list
+                  }
                   
-                  adaptation_scale_record <-
-                  rep(1.0, nrow = floor(iterations / thin_params) + 1)
+                  # extract list settings
+                  n_harss_updates     <- harss_setting_list$n_harss_updates
+                  harss_target_ratio  <- harss_setting_list$target_ratio
+                  harss_bracket_width <- harss_setting_list$initial_width
+
+                  # vectors for tracking the numbers of expansions and contractions
+                  n_expansions_harss   <- c(harss_target_ratio)
+                  n_contractions_harss <- c(harss_target_ratio)
                   
-                  adaptation_scale_record[1]     <- proposal_scaling
+                  # vector for direction proposal
+                  har_direction <- rep(0.0, n_model_params)
             }
             
             # objects for saving the adaptation history
-            slice_factor_record <-
-                  array(0.0,
-                        dim = c(
-                              n_model_params,
-                              n_model_params,
-                              floor(iterations / thin_params) + 1
-                        ))
-            
-            slice_singval_record <- 
-                  matrix(1.0,
-                         ncol = floor(iterations / thin_params) + 1,
-                         nrow = n_model_params)
-            
             kernel_cov_record <-
                         array(0.0,
                               dim = c(
@@ -506,9 +442,41 @@ stem_inference_lna <- function(stem_object,
                               ))
             
             # save initial values for factors, weight
-            slice_singval_record[,1] <- slice_singvals
-            slice_factor_record[,,1] <- slice_factors
             kernel_cov_record[,,1]   <- kernel_cov
+            
+      } else if (mcmc_kernel$method == "harss") {
+            
+            # adaptation schedule
+            if (is.null(mcmc_kernel$kernel_settings$stop_adaptation)) {
+                  stop_adaptation <- iterations + 1
+            } else {
+                  stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 1
+            }
+            
+            # sequence for adaptation factors
+            adaptations      <-
+                  mcmc_kernel$kernel_settings$scale_constant *
+                  (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+            
+            # interval widths, expansions, and contractions
+            if(is.null(mcmc_kernel$kernel_settings$harss_setting_list)) {
+                  harss_setting_list <- harss_settings()
+                  
+            } else {
+                  harss_setting_list <- mcmc_kernel$kernel_settings$harss_setting_list
+            }
+            
+            # extract list settings
+            n_harss_updates          <- harss_setting_list$n_harss_updates
+            harss_target_ratio       <- harss_setting_list$target_ratio
+            harss_bracket_width      <- harss_setting_list$initial_width
+            
+            # vectors for tracking the numbers of expansions and contractions
+            n_expansions_harss   <- c(harss_target_ratio)
+            n_contractions_harss <- c(harss_target_ratio)
+            
+            # vector for direction proposal
+            har_direction <- rep(0.0, n_model_params)
       }
       
       # set up objects for sampling t0 if it is not fixed
@@ -596,7 +564,7 @@ stem_inference_lna <- function(stem_object,
             tparam_inds <-
                   stem_object$dynamics$lna_rates$lna_param_codes[sapply(tparam, function(x) x$tparam_name)]
             
-            if (tparam_update == "block") {
+            if (!tparam_ess_update ) {
                   tparam_ess  <- 1
             } else {
                   tparam_ess <- NULL
@@ -808,7 +776,7 @@ stem_inference_lna <- function(stem_object,
                         dimnames = list(NULL, paste0(sapply(tparam, function(x) x$tparam_name),"_loglik"))
                   )
             
-            if (tparam_update == "block") {
+            if (!tparam_ess_update) {
                   tparam_ess_record <- rep(1, floor(iterations / thin_params))
             } else {
                   tparam_ess_record <- NULL
@@ -947,8 +915,7 @@ stem_inference_lna <- function(stem_object,
       lna_log_lik[1]        <- sum(dnorm(path$draws, log = T))
       params_log_prior[1]   <- params_logprior_cur
       
-      if (!fixed_inits)
-            initdist_log_prior[1] <- initdist_prior(initdist_params_cur)
+      if (!fixed_inits) initdist_log_prior[1] <- initdist_prior(initdist_params_cur)
       
       if (!is.null(tparam)) {
             for (p in seq_along(tparam)) tparam[[p]]$log_lik <- sum(dnorm(tparam[[p]]$draws_cur, log = T))
@@ -997,11 +964,11 @@ stem_inference_lna <- function(stem_object,
                         d_meas_pointer          = d_meas_pointer,
                         do_prevalence           = do_prevalence,
                         n_ess_updates           = n_ess_updates,
-                        tparam_update           = tparam_update,
+                        tparam_update           = tparam_ess_update,
                         step_size               = step_size
                   )
                   
-                  if (!is.null(tparam) && tparam_update == "block") {
+                  if (!is.null(tparam) && !tparam_ess_update) {
                         update_tparam(
                               tparam               = tparam,
                               path_cur             = path,
@@ -1072,9 +1039,7 @@ stem_inference_lna <- function(stem_object,
             if (mcmc_kernel$method == "mvn_rw") {
                   
                   # propose new parameters
-                  mvn_rw(params_prop_est,
-                         model_params_est,
-                         sigma_chol)
+                  mvn_rw(params_prop_est, model_params_est, sigma_chol)
                   
                   # Convert the proposed parameters to their natural scale
                   params_prop_nat <-
@@ -1342,6 +1307,7 @@ stem_inference_lna <- function(stem_object,
                         kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
                         kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
                   }
+                  
             } else if (mcmc_kernel$method == "afss") {
                   
                   if (iter == stop_adaptation) {
@@ -1360,8 +1326,12 @@ stem_inference_lna <- function(stem_object,
                                     use_cov                = use_cov
                               )
                         
-                        if(n_afss_updates != n_model_params) 
-                              mcmc_kernel$kernel_settings$afss_setting_list$proposal_scaling = proposal_scaling
+                        mcmc_kernel$kernel_settings$harss_setting_list = 
+                              harss_settings(
+                                    n_harss_updates = n_harss_updates,
+                                    initial_width   = harss_bracket_width,
+                                    target_ratio    = harss_target_ratio
+                              )
                         
                         if(!is.null(factor_update_interval_fcn)) 
                               mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval = 
@@ -1380,7 +1350,6 @@ stem_inference_lna <- function(stem_object,
                         params_prop_nat      = params_prop_nat,
                         interval_widths      = interval_widths,
                         slice_factors        = slice_factors,
-                        nugget               = nugget,
                         n_expansions         = n_expansions,
                         n_contractions       = n_contractions,
                         n_expansions_c       = n_expansions_c,
@@ -1422,148 +1391,83 @@ stem_inference_lna <- function(stem_object,
                         do_prevalence        = do_prevalence,
                         step_size            = step_size
                   )
-
-                  # update the interval widths
-                  update_interval_widths(
-                        interval_widths   = interval_widths,
-                        n_expansions      = n_expansions,
-                        n_contractions    = n_contractions,
-                        n_expansions_c    = n_expansions_c,
-                        n_contractions_c  = n_contractions_c,
-                        slice_ratios      = slice_ratios,
-                        adaptation_factor = adaptations[width_adaptation_ind],
-                        target_ratio      = target_ratio
-                  )
                   
-                  # increment the width adaptation index
-                  width_adaptation_ind <- width_adaptation_ind + 1
-                  
-                  # Propose a global metropolis update if not sampling all slice directions
+                  # Hit-and-run update if not sampling all slice directions
                   if(n_afss_updates != n_model_params) {
                         
-                        copy_vec(dest = params_prop_est,
-                                 orig = model_params_est + 
-                                        rnorm(n_model_params) %*% t(slice_factors) * sqrt(proposal_scaling * pmax(slice_singvals, 0)))
-                        
-                        # Convert the proposed parameters to their natural scale
-                        params_prop_nat <- from_estimation_scale(params_prop_est)
-                        
-                        # Compute the log prior for the proposed parameters
-                        params_logprior_prop <- prior_density(params_prop_nat, params_prop_est)
-                        
-                        # Insert the proposed parameters into the parameter proposal matrix
-                        pars2lnapars(lna_params_prop, c(params_prop_nat, t0, init_volumes_cur))
-                        
-                        # update time-varying parameters if necessary
-                        if (!is.null(tparam)) {
-                              for (p in seq_along(tparam)) {
-                                    insert_tparam(
-                                          tcovar    = lna_params_prop,
-                                          values    = tparam[[p]]$draws2par(
-                                                            parameters = params_prop_nat,
-                                                            draws = tparam[[p]]$draws_cur
-                                          ),
-                                          col_ind   = tparam[[p]]$col_ind,
-                                          tpar_inds = tparam[[p]]$tpar_inds
-                                    )
-                              }
-                        }
-                        
-                        # set the data log likelihood for the proposal to NULL
-                        data_log_lik_prop <- NULL
-                        
-                        try({
-                              map_draws_2_lna(
-                                    pathmat           = pathmat_prop,
-                                    draws             = path$draws,
-                                    lna_times         = lna_times,
-                                    lna_pars          = lna_params_prop,
-                                    lna_param_vec     = lna_param_vec,
-                                    lna_param_inds    = lna_param_inds,
-                                    lna_tcovar_inds   = lna_tcovar_inds,
-                                    init_start        = lna_initdist_inds[1],
-                                    param_update_inds = param_update_inds,
-                                    stoich_matrix     = stoich_matrix,
-                                    forcing_inds      = forcing_inds,
-                                    forcing_matrix    = forcing_matrix,
-                                    svd_sqrt          = svd_sqrt,
-                                    svd_d             = svd_d,
-                                    svd_U             = svd_U,
-                                    svd_V             = svd_V,
-                                    lna_pointer       = lna_pointer,
-                                    set_pars_pointer  = lna_set_pars_pointer,
-                                    step_size         = step_size
-                              )
-                              
-                              census_lna(
-                                    path                = pathmat_prop,
-                                    census_path         = censusmat,
-                                    census_inds         = census_indices,
-                                    lna_event_inds      = lna_event_inds,
-                                    flow_matrix_lna     = flow_matrix,
-                                    do_prevalence       = do_prevalence,
-                                    init_state          = init_volumes_cur,
-                                    forcing_matrix      = forcing_matrix
-                              )
-                              
-                              # evaluate the density of the incidence counts
-                              evaluate_d_measure_LNA(
-                                    emitmat           = emitmat,
-                                    obsmat            = data,
-                                    censusmat         = censusmat,
-                                    measproc_indmat   = measproc_indmat,
-                                    lna_parameters    = lna_params_prop,
-                                    lna_param_inds    = lna_param_inds,
-                                    lna_const_inds    = lna_const_inds,
-                                    lna_tcovar_inds   = lna_tcovar_inds,
-                                    param_update_inds = param_update_inds,
-                                    census_indices    = census_indices,
-                                    lna_param_vec     = lna_param_vec,
-                                    d_meas_ptr        = d_meas_pointer
-                              )
-                              
-                              # compute the data log likelihood
-                              data_log_lik_prop <- sum(emitmat[, -1][measproc_indmat])
-                              if (is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
-                        }, silent = TRUE)
-                        
-                        if (is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
-                        
-                        # compute the log posterior for the proposed parameters
-                        logpost_prop <- data_log_lik_prop + params_logprior_prop
-                        
-                        ## Compute the acceptance probability
-                        acceptance_prob <- logpost_prop - logpost_cur
-                        
-                        # Accept/Reject via metropolis-hastings
-                        if (acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
-                        
-                              ### ACCEPTANCE
-                              acceptances_g <- acceptances_g + 1    # increment acceptances
-                              
-                              copy_vec(path$data_log_lik, data_log_lik_prop)      # update the data log likelihood
-                              copy_vec(params_logprior_cur, params_logprior_prop) # update the prior density
-                              copy_vec(logpost_cur, logpost_prop)                 # update the log posterior
-                              
-                              copy_mat(lna_params_cur, lna_params_prop)   # update the model parameter
-                              copy_vec(model_params_nat, params_prop_nat) # update LNA parameters on their natural scales
-                              copy_vec(model_params_est, params_prop_est) # update LNA parameters on their estimation scales
-                        }
+                        hit_and_run_slice_sampler(
+                              model_params_est     = model_params_est,
+                              model_params_nat     = model_params_nat,
+                              params_prop_est      = params_prop_est,
+                              params_prop_nat      = params_prop_nat,
+                              har_direction        = har_direction,
+                              harss_bracket_width  = harss_bracket_width,
+                              n_expansions_harss   = n_expansions_harss,
+                              n_contractions_harss = n_contractions_harss,
+                              n_harss_updates      = n_harss_updates, 
+                              path                 = path,
+                              data                 = data,
+                              priors               = priors,
+                              params_logprior_cur  = params_logprior_cur,
+                              logpost_cur          = logpost_cur,
+                              lna_params_cur       = lna_params_cur,
+                              lna_param_vec        = lna_param_vec,
+                              tparam               = tparam,
+                              censusmat            = censusmat,
+                              emitmat              = emitmat,
+                              flow_matrix          = flow_matrix,
+                              stoich_matrix        = stoich_matrix,
+                              lna_times            = lna_times,
+                              forcing_inds         = forcing_inds,
+                              forcing_matrix       = forcing_matrix,
+                              lna_param_inds       = lna_param_inds,
+                              lna_const_inds       = lna_const_inds,
+                              lna_tcovar_inds      = lna_tcovar_inds,
+                              lna_initdist_inds    = lna_initdist_inds,
+                              param_update_inds    = param_update_inds,
+                              lna_event_inds       = lna_event_inds,
+                              census_indices       = census_indices,
+                              measproc_indmat      = measproc_indmat,
+                              svd_sqrt             = svd_sqrt,
+                              svd_d                = svd_d,
+                              svd_U                = svd_U,
+                              svd_V                = svd_V,
+                              lna_pointer          = lna_pointer,
+                              lna_set_pars_pointer = lna_set_pars_pointer,
+                              d_meas_pointer       = d_meas_pointer,
+                              do_prevalence        = do_prevalence,
+                              step_size            = step_size
+                        )
                   }
                   
                   # update the covariance matrix for the proposal kernel
                   if (iter < stop_adaptation) {
                         
+                        # update the interval widths
+                        update_interval_widths(
+                              interval_widths   = interval_widths,
+                              n_expansions      = n_expansions,
+                              n_contractions    = n_contractions,
+                              n_expansions_c    = n_expansions_c,
+                              n_contractions_c  = n_contractions_c,
+                              slice_ratios      = slice_ratios,
+                              adaptation_factor = adaptations[width_adaptation_ind],
+                              target_ratio      = afss_target_ratio
+                        )
+                        
+                        # increment the width adaptation index
+                        width_adaptation_ind <- width_adaptation_ind + 1
+                        
+                        # update the bracket width
+                        harss_bracket_width <- 
+                              exp(log(harss_bracket_width) + 
+                                        adaptations[iter] * 
+                                        (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - harss_target_ratio))
+                        
+                        # update the kernel covariance
                         kernel_resid <- model_params_est - kernel_mean
                         kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
                         kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
-                        
-                        if(n_afss_updates != n_model_params) {
-                              # Adapt the proposal kernel
-                              proposal_scaling <- min(exp(log(proposal_scaling) + 
-                                                                adaptations[iter] * (min(exp(acceptance_prob), 1) - target_g)), 
-                                                      max_scaling)
-                        }
                         
                         if (((iter-1) >= first_factor_update) && 
                             ((iter-1) %% factor_update_interval == 0)) {
@@ -1615,6 +1519,75 @@ stem_inference_lna <- function(stem_object,
                                                          nugget))
                               }
                         }
+                        
+                  }
+                  
+            } else if (mcmc_kernel$method == "harss") {
+                  
+                  if (iter == stop_adaptation) {
+                        mcmc_kernel$sigma = cov(parameter_samples_est[1:(param_rec_ind-1),])
+                              
+                        mcmc_kernel$kernel_settings$harss_setting_list = 
+                              harss_settings(
+                                    n_harss_updates = n_harss_updates,
+                                    initial_width   = harss_bracket_width,
+                                    target_ratio    = harss_target_ratio
+                              )
+                  }
+                  
+                  # sample new parameter values
+                  hit_and_run_slice_sampler(
+                        model_params_est     = model_params_est,
+                        model_params_nat     = model_params_nat,
+                        params_prop_est      = params_prop_est,
+                        params_prop_nat      = params_prop_nat,
+                        har_direction        = har_direction,
+                        harss_bracket_width  = harss_bracket_width,
+                        n_expansions_harss   = n_expansions_harss,
+                        n_contractions_harss = n_contractions_harss,
+                        n_harss_updates      = n_harss_updates, 
+                        path                 = path,
+                        data                 = data,
+                        priors               = priors,
+                        params_logprior_cur  = params_logprior_cur,
+                        logpost_cur          = logpost_cur,
+                        lna_params_cur       = lna_params_cur,
+                        lna_param_vec        = lna_param_vec,
+                        tparam               = tparam,
+                        censusmat            = censusmat,
+                        emitmat              = emitmat,
+                        flow_matrix          = flow_matrix,
+                        stoich_matrix        = stoich_matrix,
+                        lna_times            = lna_times,
+                        forcing_inds         = forcing_inds,
+                        forcing_matrix       = forcing_matrix,
+                        lna_param_inds       = lna_param_inds,
+                        lna_const_inds       = lna_const_inds,
+                        lna_tcovar_inds      = lna_tcovar_inds,
+                        lna_initdist_inds    = lna_initdist_inds,
+                        param_update_inds    = param_update_inds,
+                        lna_event_inds       = lna_event_inds,
+                        census_indices       = census_indices,
+                        measproc_indmat      = measproc_indmat,
+                        svd_sqrt             = svd_sqrt,
+                        svd_d                = svd_d,
+                        svd_U                = svd_U,
+                        svd_V                = svd_V,
+                        lna_pointer          = lna_pointer,
+                        lna_set_pars_pointer = lna_set_pars_pointer,
+                        d_meas_pointer       = d_meas_pointer,
+                        do_prevalence        = do_prevalence,
+                        step_size            = step_size
+                  )
+            
+                  # update the covariance matrix for the proposal kernel
+                  if (iter < stop_adaptation) {
+                  
+                        # update the bracket width
+                        harss_bracket_width <- 
+                              exp(log(harss_bracket_width) + 
+                                        adaptations[iter] * 
+                                        (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - harss_target_ratio))
                   }
             }
             
@@ -1780,7 +1753,7 @@ stem_inference_lna <- function(stem_object,
             }
             
             # update the tparam draws
-            if (!is.null(tparam) && tparam_update == "block") {
+            if (!is.null(tparam) && !tparam_ess_update) {
                   update_tparam(
                         tparam               = tparam,
                         path_cur             = path,
@@ -1850,7 +1823,7 @@ stem_inference_lna <- function(stem_object,
                   d_meas_pointer          = d_meas_pointer,
                   do_prevalence           = do_prevalence,
                   n_ess_updates           = n_ess_updates,
-                  tparam_update           = tparam_update,
+                  tparam_update           = tparam_ess_update,
                   step_size               = step_size
             )
             
@@ -1873,14 +1846,12 @@ stem_inference_lna <- function(stem_object,
                   lna_log_lik[param_rec_ind]      <- sum(dnorm(path$draws, log = T))
                   params_log_prior[param_rec_ind] <- params_logprior_cur
                   
-                  if (!fixed_inits)
-                        initdist_log_prior[param_rec_ind] <- initdist_prior(initdist_params_cur)
-                  if (!t0_fixed)
-                        t0_log_prior[param_rec_ind] <- t0_logprior_cur
+                  if (!fixed_inits) initdist_log_prior[param_rec_ind] <- initdist_prior(initdist_params_cur)
+                  if (!t0_fixed) t0_log_prior[param_rec_ind] <- t0_logprior_cur
                   
                   if (!is.null(tparam)) {
                         
-                        if (tparam_update == "block") tparam_ess_record[param_rec_ind] <- tparam_ess
+                        if (!tparam_ess_update) tparam_ess_record[param_rec_ind] <- tparam_ess
                         
                         for (p in seq_along(tparam)) tparam[[p]]$log_lik <- sum(dnorm(tparam[[p]]$draws_cur, log = T))
                         
@@ -1893,25 +1864,7 @@ stem_inference_lna <- function(stem_object,
                   parameter_samples_est[param_rec_ind,] <- c(model_params_est, t0, init_volumes_cur)
                   
                   # Store the proposal covariance matrix if monitoring is requested
-                  if (mcmc_kernel$method == "mvn_c_adaptive") {
-                        adaptation_scale_record[, param_rec_ind] <- proposal_scaling
-                        kernel_cov_record[, , param_rec_ind]     <- kernel_cov
-                        
-                        if (messages &&
-                            iter < stop_adaptation)
-                              cat(
-                                    paste0("Iteration: ", iter),
-                                    paste0("Global acceptances: ", acceptances_g),
-                                    paste0(
-                                          "Global acceptance rate: ",
-                                          acceptances_g / (iter - 1)
-                                    ),
-                                    file = status_file,
-                                    sep = "\n",
-                                    append = TRUE
-                              )
-                        
-                  } else if (mcmc_kernel$method == "mvn_g_adaptive") {
+                  if (mcmc_kernel$method == "mvn_g_adaptive") {
                         adaptation_scale_record[param_rec_ind] <- proposal_scaling
                         kernel_cov_record[, , param_rec_ind]   <- kernel_cov
                         
@@ -1933,17 +1886,10 @@ stem_inference_lna <- function(stem_object,
                         
                         if(n_afss_updates != n_model_params) {
                               
-                              adaptation_scale_record[param_rec_ind] <- proposal_scaling
-                              
                               if (messages &&
                                   iter < stop_adaptation)
                                     cat(
                                           paste0("Iteration: ", iter),
-                                          paste0("Global acceptances: ", acceptances_g),
-                                          paste0(
-                                                "Global acceptance rate: ",
-                                                acceptances_g / (iter - 1)
-                                          ),
                                           file = status_file,
                                           sep = "\n",
                                           append = TRUE
@@ -1958,8 +1904,15 @@ stem_inference_lna <- function(stem_object,
                         }
                         
                         kernel_cov_record[, , param_rec_ind]   <- kernel_cov
-                        slice_factor_record[, , param_rec_ind] <- slice_factors
-                        slice_singval_record[, param_rec_ind]  <- slice_singvals
+                        
+                  } else if(mcmc_kernel$method == "harss") {
+                        
+                        if(messages) {
+                              cat(paste0("Iteration: ", iter),
+                                  file = status_file,
+                                  sep = "\n",
+                                  append = T)
+                        }
                   }
                   
                   # Increment the parameter record index
@@ -2013,24 +1966,14 @@ stem_inference_lna <- function(stem_object,
       
       if (!is.null(tparam)) {
             stem_object$results$tparam_samples <- tparam_samples
-            if (tparam_update == "block")
-                  stem_object$results$tparam_ess_record <- tparam_ess_record
+            if (!tparam_ess_update) stem_object$results$tparam_ess_record <- tparam_ess_record
       }
       
       if (mcmc_kernel$method == "mvn_rw") {
             stem_object$results$acceptances_g = acceptances_g
             
-      } else if (mcmc_kernel$method == "mvn_c_adaptive") {
-            stem_object$results$acceptances_g     = acceptances_g
-            stem_object$results$adaptation_record =
-                  list(
-                        adaptation_scale_record  = t(adaptation_scale_record),
-                        kernel_cov_record  = kernel_cov_record,
-                        proposal_covariance      =
-                              diag(sqrt(proposal_scaling)) %*% kernel_cov %*% diag(sqrt(proposal_scaling))
-                  )
-            
       } else if (mcmc_kernel$method == "mvn_g_adaptive") {
+            
             stem_object$results$acceptances_g     = acceptances_g
             stem_object$results$adaptation_record =
                   list(
@@ -2040,10 +1983,9 @@ stem_inference_lna <- function(stem_object,
                   )
             
       } else if (mcmc_kernel$method == "afss") {
+            
             stem_object$results$adaptation_record = 
                   list(
-                        slice_factor_record   = slice_factor_record,
-                        slice_singval_record  = t(slice_singval_record),
                         kernel_cov_record     = kernel_cov_record,
                         proposal_covariance   = kernel_cov,
                         slice_ratios          = slice_ratios,
@@ -2052,9 +1994,17 @@ stem_inference_lna <- function(stem_object,
                   )
             
             if(n_afss_updates != n_model_params) {
-                  stem_object$results$adaptation_record$acceptances_g = acceptances_g
-                  stem_object$results$adaptation_record$adaptation_scale_record = adaptation_scale_record
+                  stem_object$results$adaptation_record$n_expansions_harss = n_expansions_harss
+                  stem_object$results$adaptation_record$n_contractions_harss = n_contractions_harss
             }
+            
+      } else if (mcmc_kernel$method == "harss") {
+            
+            stem_object$results$adaptation_record = 
+                  list(
+                        n_expansions_harss    = n_expansions_harss,
+                        n_contractions_harss  = n_contractions_harss
+                  )
       }
       
       if (!fixed_inits || !t0_fixed) {

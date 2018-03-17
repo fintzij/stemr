@@ -27,3 +27,15 @@ void draw_normals2(arma::mat& M) {
       
       M.randn();
 }
+
+//' Sample the unit sphere.
+//'
+//' @param v vector to fill with a vector of draws on the unit sphere
+//'
+//' @return draw new values in place
+//' @export
+// [[Rcpp::export]]
+void sample_unit_sphere(arma::vec& v) {
+      v.randn();
+      v = arma::normalise(v, 2);
+}

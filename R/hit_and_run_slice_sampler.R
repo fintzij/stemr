@@ -2,12 +2,8 @@
 #'
 #' @param model_params_est vector of model parameters on the estimation scale
 #' @param model_params_nat vector of model parameters on the natural scale
-#' @param interval_widths vector of slice interval widths
-#' @param slice_factors matrix of slice factors
-#' @param n_expansions vector for number of expansions
-#' @param n_contractions vector for number of contractions
-#' @param n_expansions_c vector for cumulative number of expansions
-#' @param n_contractions_c vector for cumulative number of contractions
+#' @param n_expansions_harss vector for number of hit and run expansions
+#' @param n_contractions_harss vector for number of hit and run contractions
 #' @param path list containing the LNA path, N(0,1) draws, and likelihood
 #' @param data matrix containing the data
 #' @param priors list with functions for computing the prior density and
@@ -43,82 +39,82 @@
 #' @param d_meas_pointer external pointer for computing emission probabilities
 #' @param do_prevalence should prevalence be computed
 #' @param step_size initial step size for ODE stepper
-#' @param params_prop_est vector for proposed model parameters on their estimation scale
-#' @param params_prop_nat vector for proposed model parameters on their natural scale
-#' @param slice_probs slice direction sampling probabilities
-#' @param n_afss_updates number of afss updates per iteration
+#' @param params_prop_est vector for proposed model parameters on their
+#'   estimation scale
 #' @param lna_param_vec vector for lna parameters
+#' @param har_direction vector for the hit and run direction
+#' @param harss_bracket_width width of the bracket
+#' @param n_harss_updates number of hit and run updates
+#' @param params_prop_nat vector for proposed parameters on their natural scale
 #'
 #' @return update the model parameters, path, and likelihood terms in place
 #' @export
-factor_slice_sampler <- 
-      function(
-            model_params_est,
-            model_params_nat,
-            params_prop_est,
-            params_prop_nat,
-            interval_widths,
-            slice_factors,
-            n_expansions,
-            n_contractions,
-            n_expansions_c,
-            n_contractions_c,
-            slice_probs,
-            n_afss_updates,
-            path,
-            data,
-            priors,
-            params_logprior_cur,
-            logpost_cur,
-            lna_params_cur,
-            lna_param_vec,
-            tparam,
-            censusmat,
-            emitmat,
-            flow_matrix,
-            stoich_matrix,
-            lna_times,
-            forcing_inds,
-            forcing_matrix,
-            lna_param_inds,
-            lna_const_inds,
-            lna_tcovar_inds,
-            lna_initdist_inds,
-            param_update_inds,
-            lna_event_inds,
-            census_indices,
-            measproc_indmat,
-            svd_sqrt,
-            svd_d,
-            svd_U,
-            svd_V,
-            lna_pointer,
-            lna_set_pars_pointer,
-            d_meas_pointer,
-            do_prevalence,
-            step_size) {
+hit_and_run_slice_sampler <- 
+      function(model_params_est,
+               model_params_nat,
+               params_prop_est,
+               params_prop_nat,
+               har_direction,
+               harss_bracket_width,
+               n_expansions_harss,
+               n_contractions_harss,
+               n_harss_updates,
+               path,
+               data,
+               priors,
+               params_logprior_cur,
+               logpost_cur,
+               lna_params_cur,
+               lna_param_vec,
+               tparam,
+               censusmat,
+               emitmat,
+               flow_matrix,
+               stoich_matrix,
+               lna_times,
+               forcing_inds,
+               forcing_matrix,
+               lna_param_inds,
+               lna_const_inds,
+               lna_tcovar_inds,
+               lna_initdist_inds,
+               param_update_inds,
+               lna_event_inds,
+               census_indices,
+               measproc_indmat,
+               svd_sqrt,
+               svd_d,
+               svd_U,
+               svd_V,
+               lna_pointer,
+               lna_set_pars_pointer,
+               d_meas_pointer,
+               do_prevalence,
+               step_size) {
       
-      directions <- sample.int(n = length(slice_probs), size = n_afss_updates, replace = FALSE, prob = slice_probs)
-      
-      for(f in directions) {
+      for(f in seq_len(n_harss_updates)) {
             
             # sample the likelihood threshold
             threshold <- logpost_cur - rexp(1)
             
             # construct the approximate bracket
-            lower <- -interval_widths[f] * runif(1)
-            upper <- lower + interval_widths[f]
+            center <- runif(1)
+            lower  <- -harss_bracket_width * center
+            upper  <- lower + harss_bracket_width
             
             # initialize the log-posterior at the endpoints
             logpost_lower <- NULL
             logpost_upper <- NULL
             logpost_prop  <- -Inf 
             
+            # sample the hit-and-run direction
+            sample_unit_sphere(har_direction)
+            
             # step out lower bound
             while(is.null(logpost_lower) || threshold < logpost_lower) {
                   
                   # lower end of the bracket on the estimation scale
-                  copy_vec(params_prop_est, model_params_est + lower * slice_factors[,f])
+                  copy_vec(params_prop_est, model_params_est + lower * har_direction)
                   
                   # get the parameters on the natural scale
                   copy_vec(params_prop_nat, priors$from_estimation_scale(params_prop_est))
@@ -133,13 +129,13 @@ factor_slice_sampler <-
                   # compute the time-varying parameters if necessary
                   if(!is.null(tparam)) {
                         for(p in seq_along(tparam)) {
-                                    insert_tparam(tcovar    = lna_params_cur,
-                                                  values    = tparam[[p]]$draws2par(
-                                                                  parameters = params_prop_nat,
-                                                                  draws      = tparam[[p]]$draws_cur),
-                                                  col_ind   = tparam[[p]]$col_ind,
-                                                  tpar_inds = tparam[[p]]$tpar_inds)
-                        }      
+                              insert_tparam(tcovar    = lna_params_cur,
+                                            values    = tparam[[p]]$draws2par(
+                                                            parameters = params_prop_nat,
+                                                            draws      = tparam[[p]]$draws_cur),
+                                            col_ind   = tparam[[p]]$col_ind,
+                                            tpar_inds = tparam[[p]]$tpar_inds)
+                        }
                   }
                   
                   # initialize data log likelihood
@@ -210,11 +206,10 @@ factor_slice_sampler <-
                   if(threshold < logpost_lower) {
                         
                         # decrease the lower endpoint of the bracket
-                        lower <- lower - interval_widths[f]
+                        lower <- lower - harss_bracket_width
                         
                         # increment the number of expansions
-                        increment_elem(n_expansions, f-1)
-                        increment_elem(n_expansions_c, f-1)
+                        increment_elem(n_expansions_harss, 0)
                   }
             }
             
@@ -222,7 +217,7 @@ factor_slice_sampler <-
             while(is.null(logpost_upper) || threshold < logpost_upper) {
                   
                   # upper end of the bracket on the estimation scale
-                  copy_vec(params_prop_est, model_params_est + upper * slice_factors[,f])
+                  copy_vec(params_prop_est, model_params_est + upper * har_direction)
                   
                   # get the parameters on the natural scale
                   copy_vec(params_prop_nat, priors$from_estimation_scale(params_prop_est))
@@ -239,8 +234,8 @@ factor_slice_sampler <-
                         for(p in seq_along(tparam)) {
                               insert_tparam(tcovar    = lna_params_cur,
                                             values    = tparam[[p]]$draws2par(
-                                                              parameters = params_prop_nat,
-                                                              draws      = tparam[[p]]$draws_cur),
+                                                             parameters = params_prop_nat,
+                                                             draws      = tparam[[p]]$draws_cur),
                                             col_ind   = tparam[[p]]$col_ind,
                                             tpar_inds = tparam[[p]]$tpar_inds)
                         }
@@ -314,11 +309,10 @@ factor_slice_sampler <-
                   if(threshold < logpost_upper) {
                         
                         # decrease the upper endpoint of the bracket
-                        upper <- upper + interval_widths[f]
+                        upper <- upper + harss_bracket_width
                         
                         # increment the number of expansions
-                        increment_elem(n_expansions, f-1)
-                        increment_elem(n_expansions_c, f-1)
+                        increment_elem(n_expansions_harss, 0)
                   }
             }
             
@@ -329,7 +323,7 @@ factor_slice_sampler <-
                   prop <- runif(1, lower, upper)
                   
                   # proposed parameters on the estimation scale
-                  copy_vec(params_prop_est, model_params_est + prop * slice_factors[,f])
+                  copy_vec(params_prop_est, model_params_est + prop * har_direction)
                   
                   # get the parameters on the natural scale
                   copy_vec(params_prop_nat, priors$from_estimation_scale(params_prop_est))
@@ -344,12 +338,12 @@ factor_slice_sampler <-
                   # compute the time-varying parameters if necessary
                   if(!is.null(tparam)) {
                         for(p in seq_along(tparam)) {
-                                    insert_tparam(tcovar    = lna_params_cur,
-                                                  values    = tparam[[p]]$draws2par(
-                                                                  parameters = params_prop_nat,
-                                                                  draws      = tparam[[p]]$draws_cur),
-                                                  col_ind   = tparam[[p]]$col_ind,
-                                                  tpar_inds = tparam[[p]]$tpar_inds)
+                              insert_tparam(tcovar    = lna_params_cur,
+                                            values    = tparam[[p]]$draws2par(
+                                                      parameters = params_prop_nat,
+                                                      draws      = tparam[[p]]$draws_cur),
+                                            col_ind   = tparam[[p]]$col_ind,
+                                            tpar_inds = tparam[[p]]$tpar_inds)
                         }
                   }
                   
@@ -428,8 +422,7 @@ factor_slice_sampler <-
                         }
                         
                         # increment the number of contractions
-                        increment_elem(n_contractions, f-1)
-                        increment_elem(n_contractions_c, f-1)
+                        increment_elem(n_contractions_harss, 0)
                   }
             }
             
@@ -451,8 +444,7 @@ factor_slice_sampler <-
                   # insert the parameters into the lna_parameters matrix
                   pars2lnapars(lna_params_cur, model_params_nat)
                   
-                  # recover the original time-varying covariates
-                  # compute the time-varying parameters if necessary
+                  # recover the original time-varying parameter draws and compute the values
                   if(!is.null(tparam)) {
                         for(p in seq_along(tparam)) {
                               insert_tparam(tcovar    = lna_params_cur,

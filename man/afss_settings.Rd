@@ -8,7 +8,8 @@ afss_settings(factor_update_interval = NULL, prob_update_interval = NULL,
   first_factor_update = 100, first_prob_update = 100,
   sample_all_initially = TRUE, n_afss_updates = NULL,
   initial_widths = NULL, initial_factors = NULL,
-  initial_slice_probs = NULL, target_ratio = 0.5, use_cov = TRUE)
+  initial_slice_probs = NULL, target_ratio = 0.5, use_cov = TRUE,
+  tparam_update = TRUE)
 }
 \arguments{
 \item{factor_update_interval}{number of iterations between factor and
@@ -37,6 +38,8 @@ direction probabilities should occur.}
 \item{sample_all_initially}{should all factors be sampled until the first
 slice probability update? defaults to TRUE.}
 
+\item{n_afss_updates}{number of factor slice sampling directions to update}
+
 \item{initial_widths}{vector of initial slice widths}
 
 \item{initial_factors}{matrix of initial factor loadings}
@@ -49,8 +52,9 @@ defaults to 0.5. Smaller values overrelax the interval widths.}
 \item{use_cov}{should the slice directions be computed as singular vectors of
 the covariance matrix (as opposed to the correlation)? defaults to TRUE.}
 
-\item{min_afss_updates}{minimum number of afss updates per iteration,
-defaults to 1.}
+\item{tparam_update}{either TRUE if a joint hit-and-run update for
+time-varying parameters should be carried out (default), or FALSE if
+time-varying parameters should be updated separately.}
 }
 \value{
 list with additional settings for automated factor slice sampling

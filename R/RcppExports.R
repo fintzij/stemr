@@ -262,6 +262,16 @@ draw_normals2 <- function(M) {
     invisible(.Call('_stemr_draw_normals2', PACKAGE = 'stemr', M))
 }
 
+#' Sample the unit sphere.
+#'
+#' @param v vector to fill with a vector of draws on the unit sphere
+#'
+#' @return draw new values in place
+#' @export
+sample_unit_sphere <- function(v) {
+    invisible(.Call('_stemr_sample_unit_sphere', PACKAGE = 'stemr', v))
+}
+
 #' Evaluate the log-density of the measurement process by calling measurement
 #' process density functions via external Xptr.
 #'
@@ -502,20 +512,6 @@ dmvtn <- function(x, mu, sigma, logd = FALSE) {
 #'
 #' @return propose new parameter values in place
 #' @export
-mvn_c_adaptive <- function(params_prop, params_cur, kernel_cov, proposal_scaling, sqrt_scalemat, nugget) {
-    invisible(.Call('_stemr_mvn_c_adaptive', PACKAGE = 'stemr', params_prop, params_cur, kernel_cov, proposal_scaling, sqrt_scalemat, nugget))
-}
-
-#' Global Metropolis random walk with global adaptive scaling
-#'
-#' @param params_prop vector in which the proposed parameters should be stored
-#' @param params_cur vector containing the current parameter vector
-#' @param kernel_cov vector of component proposal standard deviations
-#' @param proposal_scaling scaling parameter for the proposal
-#' @param nugget fixed covariance nugget contribution
-#'
-#' @return propose new parameter values in place
-#' @export
 mvn_g_adaptive <- function(params_prop, params_cur, kernel_cov, proposal_scaling, nugget) {
     invisible(.Call('_stemr_mvn_g_adaptive', PACKAGE = 'stemr', params_prop, params_cur, kernel_cov, proposal_scaling, nugget))
 }
@@ -531,6 +527,17 @@ mvn_g_adaptive <- function(params_prop, params_cur, kernel_cov, proposal_scaling
 #' @export
 mvn_rw <- function(params_prop, params_cur, sigma_chol) {
     invisible(.Call('_stemr_mvn_rw', PACKAGE = 'stemr', params_prop, params_cur, sigma_chol))
+}
+
+#' normalise a vector in place
+#'
+#' @param v vector to be normalised
+#' @param p norm
+#' 
+#' @return normalise vector in place
+#' @export
+normalise <- function(v, p) {
+    invisible(.Call('_stemr_normalise', PACKAGE = 'stemr', v, p))
 }
 
 #' Simulate an approximate LNA path using a non-centered parameterization for the

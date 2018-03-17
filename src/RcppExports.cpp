@@ -263,6 +263,16 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// sample_unit_sphere
+void sample_unit_sphere(arma::vec& v);
+RcppExport SEXP _stemr_sample_unit_sphere(SEXP vSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec& >::type v(vSEXP);
+    sample_unit_sphere(v);
+    return R_NilValue;
+END_RCPP
+}
 // evaluate_d_measure
 void evaluate_d_measure(Rcpp::NumericMatrix& emitmat, const Rcpp::NumericMatrix& obsmat, const Rcpp::NumericMatrix& statemat, const Rcpp::LogicalMatrix& measproc_indmat, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericMatrix& tcovar_censusmat, SEXP d_meas_ptr);
 RcppExport SEXP _stemr_evaluate_d_measure(SEXP emitmatSEXP, SEXP obsmatSEXP, SEXP statematSEXP, SEXP measproc_indmatSEXP, SEXP parametersSEXP, SEXP constantsSEXP, SEXP tcovar_censusmatSEXP, SEXP d_meas_ptrSEXP) {
@@ -450,21 +460,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// mvn_c_adaptive
-void mvn_c_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& kernel_cov, const arma::vec& proposal_scaling, arma::mat& sqrt_scalemat, double nugget);
-RcppExport SEXP _stemr_mvn_c_adaptive(SEXP params_propSEXP, SEXP params_curSEXP, SEXP kernel_covSEXP, SEXP proposal_scalingSEXP, SEXP sqrt_scalematSEXP, SEXP nuggetSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::rowvec& >::type params_prop(params_propSEXP);
-    Rcpp::traits::input_parameter< const arma::rowvec& >::type params_cur(params_curSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type kernel_cov(kernel_covSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type proposal_scaling(proposal_scalingSEXP);
-    Rcpp::traits::input_parameter< arma::mat& >::type sqrt_scalemat(sqrt_scalematSEXP);
-    Rcpp::traits::input_parameter< double >::type nugget(nuggetSEXP);
-    mvn_c_adaptive(params_prop, params_cur, kernel_cov, proposal_scaling, sqrt_scalemat, nugget);
-    return R_NilValue;
-END_RCPP
-}
 // mvn_g_adaptive
 void mvn_g_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& kernel_cov, double proposal_scaling, double nugget);
 RcppExport SEXP _stemr_mvn_g_adaptive(SEXP params_propSEXP, SEXP params_curSEXP, SEXP kernel_covSEXP, SEXP proposal_scalingSEXP, SEXP nuggetSEXP) {
@@ -488,6 +483,17 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::rowvec& >::type params_cur(params_curSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type sigma_chol(sigma_cholSEXP);
     mvn_rw(params_prop, params_cur, sigma_chol);
+    return R_NilValue;
+END_RCPP
+}
+// normalise
+void normalise(arma::vec& v, int p);
+RcppExport SEXP _stemr_normalise(SEXP vSEXP, SEXP pSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec& >::type v(vSEXP);
+    Rcpp::traits::input_parameter< int >::type p(pSEXP);
+    normalise(v, p);
     return R_NilValue;
 END_RCPP
 }
@@ -678,6 +684,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_mat_2_arr", (DL_FUNC) &_stemr_mat_2_arr, 3},
     {"_stemr_draw_normals", (DL_FUNC) &_stemr_draw_normals, 1},
     {"_stemr_draw_normals2", (DL_FUNC) &_stemr_draw_normals2, 1},
+    {"_stemr_sample_unit_sphere", (DL_FUNC) &_stemr_sample_unit_sphere, 1},
     {"_stemr_evaluate_d_measure", (DL_FUNC) &_stemr_evaluate_d_measure, 8},
     {"_stemr_evaluate_d_measure_LNA", (DL_FUNC) &_stemr_evaluate_d_measure_LNA, 12},
     {"_stemr_find_interval", (DL_FUNC) &_stemr_find_interval, 4},
@@ -689,9 +696,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_map_pars_2_ode", (DL_FUNC) &_stemr_map_pars_2_ode, 11},
     {"_stemr_rmvtn", (DL_FUNC) &_stemr_rmvtn, 3},
     {"_stemr_dmvtn", (DL_FUNC) &_stemr_dmvtn, 4},
-    {"_stemr_mvn_c_adaptive", (DL_FUNC) &_stemr_mvn_c_adaptive, 6},
     {"_stemr_mvn_g_adaptive", (DL_FUNC) &_stemr_mvn_g_adaptive, 5},
     {"_stemr_mvn_rw", (DL_FUNC) &_stemr_mvn_rw, 3},
+    {"_stemr_normalise", (DL_FUNC) &_stemr_normalise, 2},
     {"_stemr_propose_lna_approx", (DL_FUNC) &_stemr_propose_lna_approx, 14},
     {"_stemr_propose_lna", (DL_FUNC) &_stemr_propose_lna, 12},
     {"_stemr_rate_update_event", (DL_FUNC) &_stemr_rate_update_event, 3},

@@ -72,7 +72,7 @@ diffusion matrics}
 
 \item{n_ess_updates}{number of elliptical slice sampling updates}
 
-\item{tparam_update}{if "joint" then time-varying parameters are updated jointly
+\item{tparam_update}{if TRUE then time-varying parameters are updated jointly
 along with the LNA path}
 
 \item{step_size}{initial step size for the ODE solver (adapted internally,
