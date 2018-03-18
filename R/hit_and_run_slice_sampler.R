@@ -9,7 +9,6 @@
 #' @param priors list with functions for computing the prior density and
 #'   transformations to and from the estimation scale
 #' @param params_logprior_cur log prior density of model parameters
-#' @param logpost_cur current log posterior
 #' @param lna_params_cur matrix with current LNA parameters, tcovar, tparam,
 #'   etc.
 #' @param tparam list with time-varying parameters
@@ -63,7 +62,6 @@ hit_and_run_slice_sampler <-
                data,
                priors,
                params_logprior_cur,
-               logpost_cur,
                lna_params_cur,
                lna_param_vec,
                tparam,
@@ -95,7 +93,10 @@ hit_and_run_slice_sampler <-
       for(f in seq_len(n_harss_updates)) {
             
             # sample the likelihood threshold
-            threshold <- logpost_cur - rexp(1)
+            threshold <- path$data_log_lik + params_logprior_cur - rexp(1)
+            
+            # sample the hit-and-run direction
+            sample_unit_sphere(har_direction)
             
             # construct the approximate bracket
             center <- runif(1)
@@ -107,25 +108,22 @@ hit_and_run_slice_sampler <-
             logpost_upper <- NULL
             logpost_prop  <- -Inf 
             
-            # sample the hit-and-run direction
-            sample_unit_sphere(har_direction)
-            
-            # step out lower bound
+            # # step out lower bound
             while(is.null(logpost_lower) || threshold < logpost_lower) {
-                  
+
                   # lower end of the bracket on the estimation scale
                   copy_vec(params_prop_est, model_params_est + lower * har_direction)
-                  
+
                   # get the parameters on the natural scale
                   copy_vec(params_prop_nat, priors$from_estimation_scale(params_prop_est))
-                  
+
                   # compute the prior density
                   logprior_lower <- priors$prior_density(params_nat = params_prop_nat,
                                                          params_est = params_prop_est)
-                  
+
                   # insert the parameters into the lna_parameters matrix
                   pars2lnapars(lna_params_cur, params_prop_nat)
-                  
+
                   # compute the time-varying parameters if necessary
                   if(!is.null(tparam)) {
                         for(p in seq_along(tparam)) {
@@ -137,10 +135,10 @@ hit_and_run_slice_sampler <-
                                             tpar_inds = tparam[[p]]$tpar_inds)
                         }
                   }
-                  
+
                   # initialize data log likelihood
                   loglik_lower <- NULL
-                  
+
                   # map the perturbations to an LNA path
                   try({
                         map_draws_2_lna(
@@ -164,7 +162,7 @@ hit_and_run_slice_sampler <-
                               set_pars_pointer  = lna_set_pars_pointer,
                               step_size         = step_size
                         )
-                        
+
                         census_lna(
                               path                = path$lna_path,
                               census_path         = censusmat,
@@ -175,7 +173,7 @@ hit_and_run_slice_sampler <-
                               init_state          = lna_params_cur[1, lna_initdist_inds + 1],
                               forcing_matrix      = forcing_matrix
                         )
-                        
+
                         # evaluate the density of the incidence counts
                         evaluate_d_measure_LNA(
                               emitmat           = emitmat,
@@ -191,44 +189,44 @@ hit_and_run_slice_sampler <-
                               lna_param_vec     = lna_param_vec,
                               d_meas_ptr        = d_meas_pointer
                         )
-                        
+
                         # compute the data log likelihood
                         loglik_lower <- sum(emitmat[,-1][measproc_indmat])
                         if(is.nan(loglik_lower)) loglik_lower <- -Inf
                   }, silent = TRUE)
-                  
+
                   if(is.null(loglik_lower)) loglik_lower <- -Inf
-                  
+
                   # compute log-posterior
                   logpost_lower <- loglik_lower + logprior_lower
-                  
+
                   # step out the bracket if necessary
                   if(threshold < logpost_lower) {
-                        
+
                         # decrease the lower endpoint of the bracket
                         lower <- lower - harss_bracket_width
-                        
+
                         # increment the number of expansions
                         increment_elem(n_expansions_harss, 0)
                   }
             }
-            
+
             # step out upper
             while(is.null(logpost_upper) || threshold < logpost_upper) {
-                  
+
                   # upper end of the bracket on the estimation scale
                   copy_vec(params_prop_est, model_params_est + upper * har_direction)
-                  
+
                   # get the parameters on the natural scale
                   copy_vec(params_prop_nat, priors$from_estimation_scale(params_prop_est))
-                  
+
                   # compute the prior density
                   logprior_upper <- priors$prior_density(params_nat = params_prop_nat,
                                                          params_est = params_prop_est)
-                  
+
                   # insert the parameters into the lna_parameters matrix
                   pars2lnapars(lna_params_cur, params_prop_nat)
-                  
+
                   # compute the time-varying parameters if necessary
                   if(!is.null(tparam)) {
                         for(p in seq_along(tparam)) {
@@ -240,10 +238,10 @@ hit_and_run_slice_sampler <-
                                             tpar_inds = tparam[[p]]$tpar_inds)
                         }
                   }
-                  
+
                   # initialize data log likelihood
                   loglik_upper <- NULL
-                  
+
                   # map the perturbations to an LNA path
                   try({
                         map_draws_2_lna(
@@ -267,7 +265,7 @@ hit_and_run_slice_sampler <-
                               set_pars_pointer  = lna_set_pars_pointer,
                               step_size         = step_size
                         )
-                        
+
                         census_lna(
                               path                = path$lna_path,
                               census_path         = censusmat,
@@ -278,7 +276,7 @@ hit_and_run_slice_sampler <-
                               init_state          = lna_params_cur[1, lna_initdist_inds + 1],
                               forcing_matrix      = forcing_matrix
                         )
-                        
+
                         # evaluate the density of the incidence counts
                         evaluate_d_measure_LNA(
                               emitmat           = emitmat,
@@ -294,28 +292,28 @@ hit_and_run_slice_sampler <-
                               lna_param_vec     = lna_param_vec,
                               d_meas_ptr        = d_meas_pointer
                         )
-                        
+
                         # compute the data log likelihood
                         loglik_upper <- sum(emitmat[,-1][measproc_indmat])
                         if(is.nan(loglik_upper)) loglik_upper <- -Inf
                   }, silent = TRUE)
-                  
+
                   if(is.null(loglik_upper)) loglik_upper <- -Inf
-                  
+
                   # compute log-posterior
                   logpost_upper <- loglik_upper + logprior_upper
-                  
+
                   # step out the bracket if necessary
                   if(threshold < logpost_upper) {
-                        
-                        # decrease the upper endpoint of the bracket
+
+                        # increase the upper endpoint of the bracket
                         upper <- upper + harss_bracket_width
-                        
+
                         # increment the number of expansions
                         increment_elem(n_expansions_harss, 0)
                   }
             }
-            
+
             # sample from the bracket
             while((logpost_prop < threshold) && !isTRUE(all.equal(lower, upper))) {
                   
@@ -421,8 +419,8 @@ hit_and_run_slice_sampler <-
                               upper <- prop
                         }
                         
-                        # increment the number of contractions
-                        increment_elem(n_contractions_harss, 0)
+                        # increment the number of contractions 
+                        # increment_elem(n_contractions_harss, 0) 
                   }
             }
             
@@ -435,9 +433,6 @@ hit_and_run_slice_sampler <-
                   # update the likelihood terms
                   copy_vec(dest = params_logprior_cur, orig = logprior_prop)
                   copy_vec(dest = path$data_log_lik,   orig = loglik_prop)
-                  
-                  # copy the new log posterior
-                  copy_vec(dest = logpost_cur, orig = logpost_prop)
                   
             } else {
                   

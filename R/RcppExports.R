@@ -710,31 +710,25 @@ simulate_r_measure <- function(censusmat, measproc_indmat, parameters, constants
 
 #' Update slice factor directions for automated factor slice sampling
 #'
-#' @param slice_singvals vector of singular values
-#' @param slice_factors vector of singular vectors
+#' @param slice_eigenvals vector of singular values
+#' @param slice_eigenvecs vector of singular vectors
 #' @param kernel_cov empirical covariance matrix of model params
-#' @param I_mat identity matrix of the same size as kernel_cov
 #' 
 #' @return update eigenvalues and eigenvectors in place
 #' @export
-update_factors <- function(slice_singvals, slice_factors, slice_factors_t, kernel_cov) {
-    invisible(.Call('_stemr_update_factors', PACKAGE = 'stemr', slice_singvals, slice_factors, slice_factors_t, kernel_cov))
+update_factors <- function(slice_eigenvals, slice_eigenvecs, kernel_cov) {
+    invisible(.Call('_stemr_update_factors', PACKAGE = 'stemr', slice_eigenvals, slice_eigenvecs, kernel_cov))
 }
 
 #' Update factors and interval widths for automated factor slice sampling
 #'
 #' @param interval_widths vector of interval widths
-#' @param n_expansions vector with number of expansion
-#' @param n_contractions vector with number of contractions
-#' @param n_expansions_c cumulative numbers of expansions
-#' @param n_contractions_c cumulative numbers of contractions
-#' @param slice_ratios vector for storing ratio of cumulative number of 
-#'   expansions over number of interval width changes
-#' @param adaptation_factor 
+#' @param slice_eigenvals eigenvalues of the posterior covariance
+#' @param width_scaling scaling factor for the interval widths
 #'
 #' @return adapt interval widths in place
 #' @export
-update_interval_widths <- function(interval_widths, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor, target_ratio) {
-    invisible(.Call('_stemr_update_interval_widths', PACKAGE = 'stemr', interval_widths, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor, target_ratio))
+update_interval_widths <- function(interval_widths, slice_eigenvals, width_scaling) {
+    invisible(.Call('_stemr_update_interval_widths', PACKAGE = 'stemr', interval_widths, slice_eigenvals, width_scaling))
 }
 

@@ -49,7 +49,7 @@ update_lna_path <-
                  tparam_update,
                  step_size) {
               
-      copy_vec(path_cur$ess_record, rep(1, n_ess_updates))
+      copy_vec(dest = path_cur$ess_record, orig = rep(1, n_ess_updates))
       
       # perform the ESS updates, retaining the last state
       for(k in seq_len(n_ess_updates)) {
@@ -65,7 +65,7 @@ update_lna_path <-
             lower <- theta - 2*pi; upper <- theta
             
             # construct the first proposal
-            copy_mat(draws_prop, cos(theta)*path_cur$draws + sin(theta)*ess_draws_prop)
+            copy_mat(dest = draws_prop, orig = cos(theta)*path_cur$draws + sin(theta)*ess_draws_prop)
             
             # propose time-varying parameter values if called for
             if(!is.null(tparam) && tparam_update) {
@@ -167,7 +167,7 @@ update_lna_path <-
                     theta <- runif(1, lower, upper)
             
                     # construct the next LNA path proposal
-                    copy_mat(draws_prop, cos(theta) * path_cur$draws + sin(theta) * ess_draws_prop)
+                    copy_mat(dest = draws_prop, orig = cos(theta) * path_cur$draws + sin(theta) * ess_draws_prop)
                     
                     # construct the next proposal for time-varying parameters
                     if(!is.null(tparam) && tparam_update) {
@@ -251,18 +251,18 @@ update_lna_path <-
             if(!isTRUE(all.equal(lower, upper))) {
             
                   # transfer the new path and residual path into the* sin(theta) path_prop list
-                  copy_mat(path_cur$draws, draws_prop)
+                  copy_mat(dest = path_cur$draws, orig = draws_prop)
                   
                   if(!is.null(tparam) && tparam_update) {
                         # Copy the tparam draws
                         for(p in seq_along(tparam)) {
-                              copy_vec(tparam[[p]]$draws_cur, tparam[[p]]$draws_ess)
+                              copy_vec(dest = tparam[[p]]$draws_cur, orig = tparam[[p]]$draws_ess)
                         }
                   }
             
                   # copy the LNA path and the data log likelihood
-                  copy_mat(path_cur$lna_path, pathmat_prop)
-                  copy_vec(path_cur$data_log_lik, data_log_lik_prop)
+                  copy_mat(dest = path_cur$lna_path, orig = pathmat_prop)
+                  copy_vec(dest = path_cur$data_log_lik, orig = data_log_lik_prop)
                     
             } else {
                   # if updating the time-varying parameters jointly with the LNA path

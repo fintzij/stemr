@@ -157,7 +157,7 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol, stepper) {
         if(compile_code) {
                 # compile the LNA code
                 if(messages) print("Compiling LNA functions.")
-                Rcpp::sourceCpp(code = LNA_code, env = globalenv())
+                Rcpp::sourceCpp(code = LNA_code, env = globalenv(), verbose = FALSE)
 
                 # get the LNA function pointers
                 lna_pointer <- c(lna_ptr = LNA_XPtr(),
