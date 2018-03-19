@@ -14,12 +14,14 @@
 #' @export
 load_ode <- function(ode_rates, compile_ode, messages, atol, rtol, stepper) {
 
+        ODE_XPtr = NULL
+        ODE_set_params_XPtr = NULL
+      
         if(is.logical(compile_ode) && compile_ode) {
                 generate_code <- TRUE
                 compile_code  <- TRUE
                 load_file     <- FALSE
         } else {
-                files <- list.files()
                 if(compile_ode %in% list.files()) {
                         generate_code <- FALSE
                         compile_code  <- TRUE
@@ -35,8 +37,6 @@ load_ode <- function(ode_rates, compile_ode, messages, atol, rtol, stepper) {
                 # get the number of rates and the number of compartments
                 n_rates         <- length(ode_rates$hazards)
                 n_params        <- length(ode_rates$ode_param_codes)
-                n_odes          <- n_rates + n_rates^2
-                init_state_ind  <- grep(pattern = "_0", names(ode_rates$ode_param_codes))[1] - 1 # num. params before initial comp counts
 
                 # construct the body of the ode ODEs.
                 # The first n_rates compartments are the odes for the hazard functions.
@@ -110,7 +110,7 @@ load_ode <- function(ode_rates, compile_ode, messages, atol, rtol, stepper) {
         if(compile_code) {
                 # compile the ODE code
                 if(messages) print("Compiling ODE functions.")
-                Rcpp::sourceCpp(code = ODE_code, env = globalenv(), verbose = FALSE)
+                Rcpp::sourceCpp(code = ODE_code, env = globalenv())
 
                 # get the ODE function pointers
                 ode_pointer <- c(ode_ptr = ODE_XPtr(),

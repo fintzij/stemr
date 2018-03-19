@@ -2,7 +2,7 @@
 exportPattern("^[[:alpha:]]+")
 importFrom(Rcpp, evalCpp)
 importFrom(odeintr, compile_sys)
-useDynLib(stemr)
+useDynLib(stemr, .registration=TRUE)
 
 export(CALL_D_MEASURE)
 export(CALL_INTEGRATE_STEM_ODE)

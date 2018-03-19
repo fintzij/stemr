@@ -1,1 +1,4 @@
 PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
+CXX_STD=CXX11
+PKG_CPPFLAGS=-I"../inst/include"
+CXXFLAGS= -Wno-unused-variable -Wno-unused-function -Wno-macro-redefined -Wno-unused-local-typedefs -Wno-ignored-attributes -Wno-deprecated-declarations

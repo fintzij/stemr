@@ -13,12 +13,14 @@
 #' @export
 load_lna <- function(lna_rates, compile_lna, messages, atol, rtol, stepper) {
 
+        LNA_XPtr <- NULL
+        LNA_set_params_XPtr <- NULL
+      
         if(is.logical(compile_lna) && compile_lna) {
                 generate_code <- TRUE
                 compile_code  <- TRUE
                 load_file     <- FALSE
         } else {
-                files <- list.files()
                 if(compile_lna %in% list.files()) {
                         generate_code <- FALSE
                         compile_code  <- TRUE
@@ -35,11 +37,9 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol, stepper) {
                 n_rates         <- length(lna_rates$lna_rates)
                 n_params        <- length(lna_rates$lna_param_codes)
                 n_odes          <- n_rates + n_rates^2
-                init_state_ind  <- grep(pattern = "_0", names(lna_rates$lna_param_codes))[1] - 1 # num. params before initial comp counts
 
                 # construct the body of the lna ODEs.
                 # The first n_rates compartments are the odes for the hazard functions.
-                diff_start      <- n_rates
                 jacobian_inds   <- matrix(c(rep(seq(0, n_rates - 1), each = n_rates),
                                             rep(seq(0, n_rates - 1), n_rates)), ncol = 2)
                 drift_inds      <- seq_len(n_rates)-1
@@ -157,7 +157,7 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol, stepper) {
         if(compile_code) {
                 # compile the LNA code
                 if(messages) print("Compiling LNA functions.")
-                Rcpp::sourceCpp(code = LNA_code, env = globalenv(), verbose = FALSE)
+                Rcpp::sourceCpp(code = LNA_code, env = globalenv())
 
                 # get the LNA function pointers
                 lna_pointer <- c(lna_ptr = LNA_XPtr(),

@@ -12,12 +12,14 @@
 #' @export
 parse_rates_exact <- function(rates, compile_rates, messages = TRUE) {
 
+        LUMPED_XPtr = NULL
+        UNLUMPED_XPtr = NULL
+      
         if(is.logical(compile_rates) && compile_rates) {
                 generate_code <- TRUE
                 compile_code  <- TRUE
                 load_file     <- FALSE
         } else {
-                files <- list.files()
                 if(compile_rates %in% list.files()) {
                         generate_code <- FALSE
                         compile_code  <- TRUE
@@ -103,7 +105,7 @@ parse_rates_exact <- function(rates, compile_rates, messages = TRUE) {
         }
 
         if(load_file) {
-                exact_code <- readChar(compile_rates, nchar = 1e6)
+                exact_code <- readChar(compile_rates, nchars = 1e6)
         }
 
         if(compile_code) {

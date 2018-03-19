@@ -11,7 +11,7 @@
 #' @return matrix containing the compartment counts at census times.
 #' @export
 build_census_path <- function(path, census_times, census_columns) {
-    .Call('_stemr_build_census_path', PACKAGE = 'stemr', path, census_times, census_columns)
+    .Call(`_stemr_build_census_path`, path, census_times, census_columns)
 }
 
 #' Evaluate the log-density of the measurement process by calling measurement
@@ -29,7 +29,7 @@ build_census_path <- function(path, census_times, census_columns) {
 #'
 #' @export
 CALL_D_MEASURE <- function(emitmat, emit_inds, record_ind, record, state, parameters, constants, tcovar, d_meas_ptr) {
-    invisible(.Call('_stemr_CALL_D_MEASURE', PACKAGE = 'stemr', emitmat, emit_inds, record_ind, record, state, parameters, constants, tcovar, d_meas_ptr))
+    invisible(.Call(`_stemr_CALL_D_MEASURE`, emitmat, emit_inds, record_ind, record, state, parameters, constants, tcovar, d_meas_ptr))
 }
 
 #' Integrate a system of ODEs via external Xptr.
@@ -42,7 +42,7 @@ CALL_D_MEASURE <- function(emitmat, emit_inds, record_ind, record, state, parame
 #'
 #' @export
 CALL_INTEGRATE_STEM_ODE <- function(init, start, end, step_size, stem_ode_ptr) {
-    invisible(.Call('_stemr_CALL_INTEGRATE_STEM_ODE', PACKAGE = 'stemr', init, start, end, step_size, stem_ode_ptr))
+    invisible(.Call(`_stemr_CALL_INTEGRATE_STEM_ODE`, init, start, end, step_size, stem_ode_ptr))
 }
 
 #' Update rates by calling rate functions via Xptr.
@@ -57,7 +57,7 @@ CALL_INTEGRATE_STEM_ODE <- function(init, start, end, step_size, stem_ode_ptr) {
 #'
 #' @export
 CALL_RATE_FCN <- function(rates, inds, state, parameters, constants, tcovar, rate_ptr) {
-    invisible(.Call('_stemr_CALL_RATE_FCN', PACKAGE = 'stemr', rates, inds, state, parameters, constants, tcovar, rate_ptr))
+    invisible(.Call(`_stemr_CALL_RATE_FCN`, rates, inds, state, parameters, constants, tcovar, rate_ptr))
 }
 
 #' Simulate from the measurement process by calling measurement process
@@ -74,7 +74,7 @@ CALL_RATE_FCN <- function(rates, inds, state, parameters, constants, tcovar, rat
 #'
 #' @export
 CALL_R_MEASURE <- function(obsmat, emit_inds, record_ind, state, parameters, constants, tcovar, r_meas_ptr) {
-    invisible(.Call('_stemr_CALL_R_MEASURE', PACKAGE = 'stemr', obsmat, emit_inds, record_ind, state, parameters, constants, tcovar, r_meas_ptr))
+    invisible(.Call(`_stemr_CALL_R_MEASURE`, obsmat, emit_inds, record_ind, state, parameters, constants, tcovar, r_meas_ptr))
 }
 
 #' Set the parameters for a system of ODEs via XPtr.
@@ -84,7 +84,7 @@ CALL_R_MEASURE <- function(obsmat, emit_inds, record_ind, state, parameters, con
 #'
 #' @export
 CALL_SET_ODE_PARAMS <- function(p, set_ode_params_ptr) {
-    invisible(.Call('_stemr_CALL_SET_ODE_PARAMS', PACKAGE = 'stemr', p, set_ode_params_ptr))
+    invisible(.Call(`_stemr_CALL_SET_ODE_PARAMS`, p, set_ode_params_ptr))
 }
 
 #' Construct a matrix containing the incidence counts at a sequence of census times.
@@ -96,7 +96,7 @@ CALL_SET_ODE_PARAMS <- function(p, set_ode_params_ptr) {
 #' @return matrix containing the incidence counts at census times.
 #' @export
 census_incidence <- function(incid_mat, census_times, interval_inds) {
-    .Call('_stemr_census_incidence', PACKAGE = 'stemr', incid_mat, census_times, interval_inds)
+    .Call(`_stemr_census_incidence`, incid_mat, census_times, interval_inds)
 }
 
 #' Construct a matrix containing the compartment counts and the incidence at a sequence of census times.
@@ -116,7 +116,7 @@ census_incidence <- function(incid_mat, census_times, interval_inds) {
 #' @return matrix containing the compartment counts at census times.
 #' @export
 census_lna <- function(path, census_path, census_inds, lna_event_inds, flow_matrix_lna, do_prevalence, init_state, forcing_matrix) {
-    invisible(.Call('_stemr_census_lna', PACKAGE = 'stemr', path, census_path, census_inds, lna_event_inds, flow_matrix_lna, do_prevalence, init_state, forcing_matrix))
+    invisible(.Call(`_stemr_census_lna`, path, census_path, census_inds, lna_event_inds, flow_matrix_lna, do_prevalence, init_state, forcing_matrix))
 }
 
 #' Difference an incidence variable in a census matrix.
@@ -129,7 +129,7 @@ census_lna <- function(path, census_path, census_inds, lna_event_inds, flow_matr
 #' @return update the census matrix in place
 #' @export
 compute_incidence <- function(censusmat, col_inds, row_inds) {
-    invisible(.Call('_stemr_compute_incidence', PACKAGE = 'stemr', censusmat, col_inds, row_inds))
+    invisible(.Call(`_stemr_compute_incidence`, censusmat, col_inds, row_inds))
 }
 
 #' Convert an LNA path from the counting process on transition events to the
@@ -147,7 +147,7 @@ compute_incidence <- function(censusmat, col_inds, row_inds) {
 #'
 #' @export
 convert_lna2 <- function(path, flow_matrix, init_state, statemat) {
-    invisible(.Call('_stemr_convert_lna2', PACKAGE = 'stemr', path, flow_matrix, init_state, statemat))
+    invisible(.Call(`_stemr_convert_lna2`, path, flow_matrix, init_state, statemat))
 }
 
 #' Identify which rates to update when a state transition event occurs.
@@ -158,7 +158,7 @@ convert_lna2 <- function(path, flow_matrix, init_state, statemat) {
 #' @return modifies the lna parameter matrix in place
 #' @export
 pars2lnapars <- function(lnapars, parameters) {
-    invisible(.Call('_stemr_pars2lnapars', PACKAGE = 'stemr', lnapars, parameters))
+    invisible(.Call(`_stemr_pars2lnapars`, lnapars, parameters))
 }
 
 #' Copy an element from one vector into another
@@ -170,7 +170,7 @@ pars2lnapars <- function(lnapars, parameters) {
 #' @return copy an element of one row vector into another.
 #' @export
 copy_elem <- function(dest, orig, ind) {
-    invisible(.Call('_stemr_copy_elem', PACKAGE = 'stemr', dest, orig, ind))
+    invisible(.Call(`_stemr_copy_elem`, dest, orig, ind))
 }
 
 #' Increment an element of a vector by 1
@@ -181,7 +181,7 @@ copy_elem <- function(dest, orig, ind) {
 #' @return Add 1 to an element of a vector
 #' @export
 increment_elem <- function(vec, ind) {
-    invisible(.Call('_stemr_increment_elem', PACKAGE = 'stemr', vec, ind))
+    invisible(.Call(`_stemr_increment_elem`, vec, ind))
 }
 
 #' Copy the contents of one vector into another
@@ -192,7 +192,7 @@ increment_elem <- function(vec, ind) {
 #' @return copy the elements of one row vector into another.
 #' @export
 copy_vec <- function(dest, orig) {
-    invisible(.Call('_stemr_copy_vec', PACKAGE = 'stemr', dest, orig))
+    invisible(.Call(`_stemr_copy_vec`, dest, orig))
 }
 
 #' Copy the contents of one matrix into another
@@ -203,7 +203,7 @@ copy_vec <- function(dest, orig) {
 #' @return copy the elements of one matrix into another.
 #' @export
 copy_mat <- function(dest, orig) {
-    invisible(.Call('_stemr_copy_mat', PACKAGE = 'stemr', dest, orig))
+    invisible(.Call(`_stemr_copy_mat`, dest, orig))
 }
 
 #' Copy the contents of one matrix into another
@@ -215,7 +215,7 @@ copy_mat <- function(dest, orig) {
 #' @return copy the elements of one matrix into another.
 #' @export
 copy_col <- function(dest, orig, ind) {
-    invisible(.Call('_stemr_copy_col', PACKAGE = 'stemr', dest, orig, ind))
+    invisible(.Call(`_stemr_copy_col`, dest, orig, ind))
 }
 
 #' Copy some of the rows of one matrix into another
@@ -227,7 +227,7 @@ copy_col <- function(dest, orig, ind) {
 #' @return copy the elements of one matrix into another.
 #' @export
 copy_2_rows <- function(dest, orig, inds) {
-    invisible(.Call('_stemr_copy_2_rows', PACKAGE = 'stemr', dest, orig, inds))
+    invisible(.Call(`_stemr_copy_2_rows`, dest, orig, inds))
 }
 
 #' Copy a matrix into a slice of an array
@@ -239,7 +239,7 @@ copy_2_rows <- function(dest, orig, inds) {
 #' @return copy a matrix into an array.
 #' @export
 mat_2_arr <- function(dest, orig, ind) {
-    invisible(.Call('_stemr_mat_2_arr', PACKAGE = 'stemr', dest, orig, ind))
+    invisible(.Call(`_stemr_mat_2_arr`, dest, orig, ind))
 }
 
 #' Draw new N(0,1) values and fill a vector.
@@ -249,7 +249,7 @@ mat_2_arr <- function(dest, orig, ind) {
 #' @return draw new values in place
 #' @export
 draw_normals <- function(v) {
-    invisible(.Call('_stemr_draw_normals', PACKAGE = 'stemr', v))
+    invisible(.Call(`_stemr_draw_normals`, v))
 }
 
 #' Draw new N(0,1) values and fill a matrix.
@@ -259,7 +259,7 @@ draw_normals <- function(v) {
 #' @return draw new values in place
 #' @export
 draw_normals2 <- function(M) {
-    invisible(.Call('_stemr_draw_normals2', PACKAGE = 'stemr', M))
+    invisible(.Call(`_stemr_draw_normals2`, M))
 }
 
 #' Sample the unit sphere.
@@ -269,7 +269,7 @@ draw_normals2 <- function(M) {
 #' @return draw new values in place
 #' @export
 sample_unit_sphere <- function(v) {
-    invisible(.Call('_stemr_sample_unit_sphere', PACKAGE = 'stemr', v))
+    invisible(.Call(`_stemr_sample_unit_sphere`, v))
 }
 
 #' Evaluate the log-density of the measurement process by calling measurement
@@ -288,7 +288,7 @@ sample_unit_sphere <- function(v) {
 #'
 #' @export
 evaluate_d_measure <- function(emitmat, obsmat, statemat, measproc_indmat, parameters, constants, tcovar_censusmat, d_meas_ptr) {
-    invisible(.Call('_stemr_evaluate_d_measure', PACKAGE = 'stemr', emitmat, obsmat, statemat, measproc_indmat, parameters, constants, tcovar_censusmat, d_meas_ptr))
+    invisible(.Call(`_stemr_evaluate_d_measure`, emitmat, obsmat, statemat, measproc_indmat, parameters, constants, tcovar_censusmat, d_meas_ptr))
 }
 
 #' Evaluate the log-density of a possibly time-verying measurement process
@@ -315,7 +315,7 @@ evaluate_d_measure <- function(emitmat, obsmat, statemat, measproc_indmat, param
 #'
 #' @export
 evaluate_d_measure_LNA <- function(emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, lna_param_vec, d_meas_ptr) {
-    invisible(.Call('_stemr_evaluate_d_measure_LNA', PACKAGE = 'stemr', emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, lna_param_vec, d_meas_ptr))
+    invisible(.Call(`_stemr_evaluate_d_measure_LNA`, emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, lna_param_vec, d_meas_ptr))
 }
 
 #' Given a vector of interval endpoints \code{breaks}, determine in which
@@ -335,7 +335,7 @@ evaluate_d_measure_LNA <- function(emitmat, obsmat, censusmat, measproc_indmat, 
 #' @return matrix containing the compartment counts at census times.
 #' @export
 find_interval <- function(x, breaks, rightmost_closed, all_inside) {
-    .Call('_stemr_find_interval', PACKAGE = 'stemr', x, breaks, rightmost_closed, all_inside)
+    .Call(`_stemr_find_interval`, x, breaks, rightmost_closed, all_inside)
 }
 
 #' Get componentwise proposals from a global proposal.
@@ -347,7 +347,7 @@ find_interval <- function(x, breaks, rightmost_closed, all_inside) {
 #' @return fill g2c_mat with componentwise proposals
 #' @export
 g_prop2c_prop <- function(g2c_mat, params_cur, params_prop) {
-    invisible(.Call('_stemr_g_prop2c_prop', PACKAGE = 'stemr', g2c_mat, params_cur, params_prop))
+    invisible(.Call(`_stemr_g_prop2c_prop`, g2c_mat, params_cur, params_prop))
 }
 
 #' Insert time-varying parameters into a tcovar matrix.
@@ -360,7 +360,7 @@ g_prop2c_prop <- function(g2c_mat, params_cur, params_prop) {
 #' @return copy the values in place
 #' @export
 insert_tparam <- function(tcovar, values, col_ind, tpar_inds) {
-    invisible(.Call('_stemr_insert_tparam', PACKAGE = 'stemr', tcovar, values, col_ind, tpar_inds))
+    invisible(.Call(`_stemr_insert_tparam`, tcovar, values, col_ind, tpar_inds))
 }
 
 #' Obtain the path of the deterministic mean of a stochastic epidemic model by
@@ -388,7 +388,7 @@ insert_tparam <- function(tcovar, values, col_ind, tpar_inds) {
 #'
 #' @export
 integrate_odes <- function(ode_times, ode_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer) {
-    .Call('_stemr_integrate_odes', PACKAGE = 'stemr', ode_times, ode_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer)
+    .Call(`_stemr_integrate_odes`, ode_times, ode_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer)
 }
 
 #' Convert an LNA path from the counting process on transition events to the
@@ -407,7 +407,7 @@ integrate_odes <- function(ode_times, ode_pars, init_start, param_update_inds, s
 #'
 #' @export
 lna_incid2prev <- function(path, flow_matrix, init_state, forcing_inds, forcing_matrix) {
-    .Call('_stemr_lna_incid2prev', PACKAGE = 'stemr', path, flow_matrix, init_state, forcing_inds, forcing_matrix)
+    .Call(`_stemr_lna_incid2prev`, path, flow_matrix, init_state, forcing_inds, forcing_matrix)
 }
 
 #' Map N(0,1) stochastic perturbations to an LNA path.
@@ -442,7 +442,7 @@ lna_incid2prev <- function(path, flow_matrix, init_state, forcing_inds, forcing_
 #'
 #' @export
 map_draws_2_lna <- function(pathmat, draws, lna_times, lna_pars, lna_param_vec, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, svd_sqrt, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer) {
-    invisible(.Call('_stemr_map_draws_2_lna', PACKAGE = 'stemr', pathmat, draws, lna_times, lna_pars, lna_param_vec, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, svd_sqrt, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer))
+    invisible(.Call(`_stemr_map_draws_2_lna`, pathmat, draws, lna_times, lna_pars, lna_param_vec, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, svd_sqrt, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer))
 }
 
 #' Map parameters to the deterministic mean incidence increments for a stochastic
@@ -471,7 +471,7 @@ map_draws_2_lna <- function(pathmat, draws, lna_times, lna_pars, lna_param_vec, 
 #'
 #' @export
 map_pars_2_ode <- function(pathmat, ode_times, ode_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer) {
-    invisible(.Call('_stemr_map_pars_2_ode', PACKAGE = 'stemr', pathmat, ode_times, ode_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer))
+    invisible(.Call(`_stemr_map_pars_2_ode`, pathmat, ode_times, ode_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer))
 }
 
 #' Produce samples from a multivariate normal density using the Cholesky
@@ -485,7 +485,7 @@ map_pars_2_ode <- function(pathmat, ode_times, ode_pars, init_start, param_updat
 #'
 #' @export
 rmvtn <- function(n, mu, sigma) {
-    .Call('_stemr_rmvtn', PACKAGE = 'stemr', n, mu, sigma)
+    .Call(`_stemr_rmvtn`, n, mu, sigma)
 }
 
 #' Multivariate normal density
@@ -499,7 +499,7 @@ rmvtn <- function(n, mu, sigma) {
 #'
 #' @export
 dmvtn <- function(x, mu, sigma, logd = FALSE) {
-    .Call('_stemr_dmvtn', PACKAGE = 'stemr', x, mu, sigma, logd)
+    .Call(`_stemr_dmvtn`, x, mu, sigma, logd)
 }
 
 #' Global Metropolis random walk with global adaptive scaling
@@ -513,7 +513,7 @@ dmvtn <- function(x, mu, sigma, logd = FALSE) {
 #' @return propose new parameter values in place
 #' @export
 mvn_g_adaptive <- function(params_prop, params_cur, kernel_cov, proposal_scaling, nugget) {
-    invisible(.Call('_stemr_mvn_g_adaptive', PACKAGE = 'stemr', params_prop, params_cur, kernel_cov, proposal_scaling, nugget))
+    invisible(.Call(`_stemr_mvn_g_adaptive`, params_prop, params_cur, kernel_cov, proposal_scaling, nugget))
 }
 
 #' Random walk Metropolis-Hastings transition kernel.
@@ -526,7 +526,7 @@ mvn_g_adaptive <- function(params_prop, params_cur, kernel_cov, proposal_scaling
 #' @return propose new parameter values in place
 #' @export
 mvn_rw <- function(params_prop, params_cur, sigma_chol) {
-    invisible(.Call('_stemr_mvn_rw', PACKAGE = 'stemr', params_prop, params_cur, sigma_chol))
+    invisible(.Call(`_stemr_mvn_rw`, params_prop, params_cur, sigma_chol))
 }
 
 #' normalise a vector in place
@@ -537,7 +537,7 @@ mvn_rw <- function(params_prop, params_cur, sigma_chol) {
 #' @return normalise vector in place
 #' @export
 normalise <- function(v, p) {
-    invisible(.Call('_stemr_normalise', PACKAGE = 'stemr', v, p))
+    invisible(.Call(`_stemr_normalise`, v, p))
 }
 
 #' Simulate an approximate LNA path using a non-centered parameterization for the
@@ -571,7 +571,7 @@ normalise <- function(v, p) {
 #'
 #' @export
 propose_lna_approx <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, nsim, ess_updates, ess_warmup, step_size, lna_pointer, set_pars_pointer) {
-    .Call('_stemr_propose_lna_approx', PACKAGE = 'stemr', lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, nsim, ess_updates, ess_warmup, step_size, lna_pointer, set_pars_pointer)
+    .Call(`_stemr_propose_lna_approx`, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, nsim, ess_updates, ess_warmup, step_size, lna_pointer, set_pars_pointer)
 }
 
 #' Simulate an LNA path using a non-centered parameterization for the
@@ -606,7 +606,7 @@ propose_lna_approx <- function(lna_times, lna_pars, init_start, param_update_ind
 #'
 #' @export
 propose_lna <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, reject_negatives, max_attempts, step_size, lna_pointer, set_pars_pointer) {
-    .Call('_stemr_propose_lna', PACKAGE = 'stemr', lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, reject_negatives, max_attempts, step_size, lna_pointer, set_pars_pointer)
+    .Call(`_stemr_propose_lna`, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, reject_negatives, max_attempts, step_size, lna_pointer, set_pars_pointer)
 }
 
 #' Identify which rates to update when a state transition event occurs.
@@ -618,7 +618,7 @@ propose_lna <- function(lna_times, lna_pars, init_start, param_update_inds, stoi
 #' @return modifies logical vector stating which rates need to be updated
 #' @export
 rate_update_event <- function(rate_inds, M, event_code) {
-    invisible(.Call('_stemr_rate_update_event', PACKAGE = 'stemr', rate_inds, M, event_code))
+    invisible(.Call(`_stemr_rate_update_event`, rate_inds, M, event_code))
 }
 
 #' Identify which rates to update based on changes in the time-varying covariates.
@@ -630,7 +630,7 @@ rate_update_event <- function(rate_inds, M, event_code) {
 #' @return logical vector stating which rates need to be updated
 #' @export
 rate_update_tcovar <- function(rate_inds, M, I) {
-    invisible(.Call('_stemr_rate_update_tcovar', PACKAGE = 'stemr', rate_inds, M, I))
+    invisible(.Call(`_stemr_rate_update_tcovar`, rate_inds, M, I))
 }
 
 #' Reset counters for interval expansions/contractions and slice ratios
@@ -645,7 +645,7 @@ rate_update_tcovar <- function(rate_inds, M, I) {
 #' @return reset objects in place
 #' @export
 reset_slice_ratios <- function(n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios) {
-    invisible(.Call('_stemr_reset_slice_ratios', PACKAGE = 'stemr', n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios))
+    invisible(.Call(`_stemr_reset_slice_ratios`, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios))
 }
 
 #' Insert the compartment counts at a sequence of census times into an existing census matrix.
@@ -659,7 +659,7 @@ reset_slice_ratios <- function(n_expansions, n_contractions, n_expansions_c, n_c
 #' @return matrix containing the compartment counts at census times.
 #' @export
 retrieve_census_path <- function(censusmat, path, census_times, census_columns) {
-    invisible(.Call('_stemr_retrieve_census_path', PACKAGE = 'stemr', censusmat, path, census_times, census_columns))
+    invisible(.Call(`_stemr_retrieve_census_path`, censusmat, path, census_times, census_columns))
 }
 
 #' Simulate a stochastic epidemic model path via Gillespie's direct method and
@@ -687,7 +687,7 @@ retrieve_census_path <- function(censusmat, path, census_times, census_columns) 
 #' @return matrix with a simulated path from a stochastic epidemic model.
 #' @export
 simulate_gillespie <- function(flow, parameters, constants, tcovar, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, forcing_inds, forcing_matrix, rate_ptr) {
-    .Call('_stemr_simulate_gillespie', PACKAGE = 'stemr', flow, parameters, constants, tcovar, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, forcing_inds, forcing_matrix, rate_ptr)
+    .Call(`_stemr_simulate_gillespie`, flow, parameters, constants, tcovar, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, forcing_inds, forcing_matrix, rate_ptr)
 }
 
 #' Simulate a data matrix from the measurement process of a stochastic epidemic
@@ -705,7 +705,7 @@ simulate_gillespie <- function(flow, parameters, constants, tcovar, init_states,
 #' @return matrix with a simulated dataset from a stochastic epidemic model.
 #' @export
 simulate_r_measure <- function(censusmat, measproc_indmat, parameters, constants, tcovar, r_measure_ptr) {
-    .Call('_stemr_simulate_r_measure', PACKAGE = 'stemr', censusmat, measproc_indmat, parameters, constants, tcovar, r_measure_ptr)
+    .Call(`_stemr_simulate_r_measure`, censusmat, measproc_indmat, parameters, constants, tcovar, r_measure_ptr)
 }
 
 #' Update slice factor directions for automated factor slice sampling
@@ -717,7 +717,7 @@ simulate_r_measure <- function(censusmat, measproc_indmat, parameters, constants
 #' @return update eigenvalues and eigenvectors in place
 #' @export
 update_factors <- function(slice_eigenvals, slice_eigenvecs, kernel_cov) {
-    invisible(.Call('_stemr_update_factors', PACKAGE = 'stemr', slice_eigenvals, slice_eigenvecs, kernel_cov))
+    invisible(.Call(`_stemr_update_factors`, slice_eigenvals, slice_eigenvecs, kernel_cov))
 }
 
 #' Update factors and interval widths for automated factor slice sampling
@@ -729,6 +729,6 @@ update_factors <- function(slice_eigenvals, slice_eigenvecs, kernel_cov) {
 #' @return adapt interval widths in place
 #' @export
 update_interval_widths <- function(interval_widths, slice_eigenvals, width_scaling) {
-    invisible(.Call('_stemr_update_interval_widths', PACKAGE = 'stemr', interval_widths, slice_eigenvals, width_scaling))
+    invisible(.Call(`_stemr_update_interval_widths`, interval_widths, slice_eigenvals, width_scaling))
 }
 
