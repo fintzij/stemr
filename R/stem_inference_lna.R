@@ -333,7 +333,7 @@ stem_inference_lna <- function(stem_object,
                   harss_prob           <- afss_setting_list$harss_prob
                   harss_warmup         <- afss_setting_list$harss_warmup
                   interval_widths      <- afss_setting_list$initial_widths
-                  target_prop_totsd      <- afss_setting_list$target_prop_totsd
+                  target_prop_totsd    <- afss_setting_list$target_prop_totsd
                   target_contraction_rate <- afss_setting_list$target_contraction_rate
                   n_contractions_afss <- rep(target_contraction_rate, n_model_params)
                   
@@ -965,6 +965,7 @@ stem_inference_lna <- function(stem_object,
                   }
                   
                   if(mcmc_kernel$method == "afss" && harss_warmup) {
+                        
                         hit_and_run_slice_sampler(
                               model_params_est     = model_params_est,
                               model_params_nat     = model_params_nat,
@@ -1008,15 +1009,20 @@ stem_inference_lna <- function(stem_object,
                               step_size            = step_size
                         )
                         
-                        # adapt the bracket width
-                        harss_bracket_width <-  
-                              exp(log(harss_bracket_width) * (warmup - 1) / warmup +  
-                                        (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5) / warmup) 
-                        
                         # adapt the kernel covariance
                         kernel_resid <- model_params_est - kernel_mean
-                        kernel_cov   <- kernel_cov * (warmup - 1) / warmup + (kernel_resid %*% t(kernel_resid) - kernel_cov) / warmup
-                        kernel_mean  <- kernel_mean * (warmup - 1) / warmup + kernel_resid / warmup
+                        kernel_cov   <- kernel_cov * warmup / (warmup+1) + (kernel_resid %*% t(kernel_resid) - kernel_cov) / (warmup+1)
+                        kernel_mean  <- kernel_mean * warmup / (warmup+1) + kernel_resid / (warmup+1)
+                        
+                        # adapt the bracket width
+                        kernel_log_gm_sd <- abs(mean(0.5 * log(diag(kernel_cov))))
+                        harss_bracket_bounds <- c(-kernel_log_gm_sd, kernel_log_gm_sd)
+                        harss_bracket_width <-  
+                              exp(pmax(harss_bracket_bounds[1],
+                                       pmin(harss_bracket_bounds[2],
+                                            log(harss_bracket_width) * warmup / (warmup+1) +  
+                                                  (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5) / (warmup+1)
+                                       )))
                   }
             }
             
@@ -1382,7 +1388,9 @@ stem_inference_lna <- function(stem_object,
                                     step_out_fixed          = afss_step_out_fixed,
                                     sample_all_initially    = FALSE,
                                     target_contraction_rate = target_contraction_rate,
-                                    target_prop_totsd       = target_prop_totsd
+                                    target_prop_totsd       = target_prop_totsd,
+                                    harss_prob              = harss_prob,
+                                    harss_warmup            = harss_warmup
                               )
                   
                         if(n_model_params != n_afss_updates) {
@@ -1497,15 +1505,14 @@ stem_inference_lna <- function(stem_object,
                         
                         # adapt the bracket width
                         if(iter < stop_adaptation) {
-                              # harss bracket width - geometric mean interval width
+                              kernel_log_gm_sd <- abs(mean(0.5 * log(diag(kernel_cov))))
+                              harss_bracket_bounds <- c(-kernel_log_gm_sd, kernel_log_gm_sd)
                               harss_bracket_width <-  
-                                    exp(log(harss_bracket_width) +  
-                                              adaptations[iter] *  
-                                              (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5))
-                              
-                              # reset counters
-                              n_expansions_harss   <- 0.5
-                              n_contractions_harss <- 0.5
+                                    exp(pmax(harss_bracket_bounds[1],
+                                             pmin(harss_bracket_bounds[2],
+                                                log(harss_bracket_width) +  
+                                                      (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5) * adaptations[iter]
+                                          )))
                         }
                   }
                   
@@ -1530,6 +1537,15 @@ stem_inference_lna <- function(stem_object,
                                                      contraction_rates       = n_contractions_afss/iter, 
                                                      adaptation_factor       = adaptations[iter],
                                                      target_contraction_rate = target_contraction_rate)
+                              
+                              # clamp the interval widths for safety
+                              # lower is the estimated standard deviation in each eigen direction
+                              # upper is the estimated standard deviation times 100
+                              kernel_log_sds <- 0.5 * log(slice_eigenvals)
+                              copy_vec(dest = interval_widths,
+                                       orig = exp(
+                                                pmax(kernel_log_sds,
+                                                     pmin(log(interval_widths), kernel_log_sds + log(100)))))
                               
                               # increment the factor update interval
                               if(!is.null(factor_update_interval_fcn)) {
@@ -1604,16 +1620,16 @@ stem_inference_lna <- function(stem_object,
                         step_size            = step_size
                   )
             
-                  # update the bracket width
-                  if (iter < stop_adaptation) {
+                  # adapt the bracket width
+                  if(iter < stop_adaptation) {
+                        kernel_log_gm_sd <- abs(mean(0.5 * log(diag(kernel_cov))))
+                        harss_bracket_bounds <- c(-kernel_log_gm_sd, kernel_log_gm_sd)
                         harss_bracket_width <-  
-                              exp(log(harss_bracket_width) +  
-                                        adaptations[iter] *  
-                                        (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5))
-                        
-                        # reset number of expansions and contractions
-                        n_expansions_harss <- 0.5
-                        n_contractions_harss <- 0.5
+                              exp(pmax(harss_bracket_bounds[1],
+                                       pmin(harss_bracket_bounds[2],
+                                            log(harss_bracket_width) +  
+                                                  (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5) * adaptations[iter]
+                                       )))
                   }
             }
             

@@ -122,7 +122,7 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
                 // set the times of the interval endpoints
                 t_L = lna_times[j];
                 t_R = lna_times[j+1];
-
+                
                 // Reset the LNA state vector and integrate the LNA ODEs over the next interval to 0
                 std::fill(lna_state_vec.begin(), lna_state_vec.end(), 0.0);
                 CALL_INTEGRATE_STEM_ODE(lna_state_vec, t_L, t_R, step_size, lna_pointer);

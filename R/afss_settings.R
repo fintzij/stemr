@@ -40,8 +40,8 @@
 #'   ones.
 #' @param step_out_fixed should the slice sampler be stepped out after the
 #'   adaptation is stopped, defaults to TRUE
-#' @param target_contraction_rate expected number of contractions per iteration,
-#'   defaults to 0.5.
+#' @param target_contraction_rate expected number of contraction for each
+#'   proposal per iteration, defaults to 0.5
 #'
 #' @return list with additional settings for automated factor slice sampling
 #' @export

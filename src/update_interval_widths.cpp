@@ -19,5 +19,5 @@ void update_interval_widths(arma::vec& interval_widths,
                             const double adaptation_factor,
                             const double target_contraction_rate) {
       interval_widths = 
-            arma::exp(arma::log(interval_widths) + adaptation_factor * (contraction_rates - target_contraction_rate)); 
+            arma::exp(arma::log(interval_widths) - adaptation_factor * (contraction_rates - target_contraction_rate)); 
 }

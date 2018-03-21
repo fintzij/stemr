@@ -420,7 +420,7 @@ hit_and_run_slice_sampler <-
                         }
                         
                         # increment the number of contractions 
-                        # increment_elem(n_contractions_harss, 0) 
+                        increment_elem(n_contractions_harss, 0)
                   }
             }
             

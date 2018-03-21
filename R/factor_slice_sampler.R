@@ -311,8 +311,8 @@ factor_slice_sampler <-
             }
             
             # initialize the log-posterior
-            logpost_prop  <- -Inf 
-            
+            logpost_prop <- -Inf 
+
             # sample from the bracket
             while((logpost_prop < threshold) && !isTRUE(all.equal(lower, upper))) {
                   

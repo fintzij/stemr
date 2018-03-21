@@ -51,8 +51,8 @@ adaptation is stopped, defaults to TRUE}
 \item{sample_all_initially}{should all factor directions be sampled until the
 first slice probability update? defaults to TRUE}
 
-\item{target_contraction_rate}{expected number of contractions per iteration,
-defaults to 0.5.}
+\item{target_contraction_rate}{expected number of contraction for each
+proposal per iteration, defaults to 0.5}
 
 \item{target_prop_totsd}{Between 0 and 1. If supplied, the number of factor
 directions sampled after the first probability update set to be the maximum
