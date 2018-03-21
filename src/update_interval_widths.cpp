@@ -7,15 +7,17 @@ using namespace arma;
 //' Update factors and interval widths for automated factor slice sampling
 //'
 //' @param interval_widths vector of interval widths
-//' @param slice_eigenvals eigenvalues of the posterior covariance
-//' @param width_scaling scaling factor for the interval widths
+//' @param contraction_rates rates of contractions along each slice direction
+//' @param adaptation_factor weight for adaptation
+//' @param target_contraction_rate expected number of contractions per iteration
 //'
 //' @return adapt interval widths in place
 //' @export
 // [[Rcpp::export]]
 void update_interval_widths(arma::vec& interval_widths,
-                            const arma::vec& slice_eigenvals,
-                            const double width_scaling) {
-
-      interval_widths = width_scaling * arma::sqrt(slice_eigenvals);
+                            const arma::vec& contraction_rates,
+                            const double adaptation_factor,
+                            const double target_contraction_rate) {
+      interval_widths = 
+            arma::exp(arma::log(interval_widths) + adaptation_factor * (contraction_rates - target_contraction_rate)); 
 }

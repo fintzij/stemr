@@ -5,8 +5,8 @@
 \title{Specify an MCMC transition kernel for updating the model parameters.}
 \usage{
 kernel(method, sigma, scale_constant = 0.5, scale_cooling = 0.5 + 1e-05,
-  step_size = 1, max_scaling = Inf, target_g = 0.234, target_c = 0.44,
-  nugget = NULL, stop_adaptation = NULL, afss_setting_list = NULL,
+  step_size = 1, max_scaling = Inf, target_g = 0.234, nugget = NULL,
+  stop_adaptation = NULL, afss_setting_list = NULL,
   harss_setting_list = NULL, messages = TRUE)
 }
 \arguments{
@@ -31,9 +31,6 @@ scale_constant/(iteration/step_size+1)^scale_cooling. The
 
 \item{target_g}{target acceptance rate for global Metropolis proposals.}
 
-\item{target_c}{target acceptance rate for componentwise adaptive Metropolis
-proposals or for principal components Metropolis proposals.}
-
 \item{nugget}{fixed nugget contribution, defaults to 0.5 for afss and 0.01
 otherwise.}
 
@@ -56,12 +53,11 @@ Model parameters can be updated either using either componentwise
 \details{
 Specifies a Metropolis transition kernel wtih symmetric Gaussian
  proposals. The options for the method are as follows: 1) mvn_rw: global
- random walk, updating all parameters jointly. 2) mvn_rw_c_adaptive: global
- adaptive Metropolis with componentwise adaptive scaling (Alg. 6 in Andrieu
- and Thoms). 3) mvn_rw_g_adaptive: global adaptive Metropolis with global
- adaptive scaling (Alg. 4 in Andrieu and Thoms). 4) Automated
- factor slice sampler (modified adaptive version of the adaptation scheme in
- Tibbits, et al. 2014). 5) Adaptive hit-and-run slice sampler. 
+ random walk, updating all parameters jointly. 2) mvn_g_adaptive: global
+ adaptive Metropolis with global adaptive scaling (Alg. 4 in Andrieu and
+ Thoms). 3) Automated factor slice sampler (modified adaptive version of the
+ adaptation scheme in Tibbits, et al. 2014) with hit and run updates when not
+ updating along all factor directions. 4) Hit-and-run slice sampler.
 
  References:
 

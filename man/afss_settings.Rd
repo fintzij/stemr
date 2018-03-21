@@ -6,10 +6,10 @@
 \usage{
 afss_settings(factor_update_interval = NULL, prob_update_interval = NULL,
   first_factor_update = 100, first_prob_update = 100,
-  sample_all_initially = TRUE, n_afss_updates = NULL,
-  initial_widths = NULL, initial_factors = NULL,
-  initial_slice_probs = NULL, target_ratio = 0.5, use_cov = TRUE,
-  tparam_update = TRUE)
+  initial_slice_probs = NULL, initial_widths = NULL,
+  n_afss_updates = NULL, step_out_adapt = TRUE, step_out_fixed = TRUE,
+  sample_all_initially = TRUE, target_contraction_rate = 0.5,
+  target_prop_totsd = NULL, harss_prob = 0.05, harss_warmup = TRUE)
 }
 \arguments{
 \item{factor_update_interval}{number of iterations between factor and
@@ -26,8 +26,8 @@ also be supplied as a function that takes the current iteration as an input
 and returns the next iteration at which the factors should be updated. Must
 have a default set so that the first update can be determined. The factor
 sampling probabilities are $min(nugget,
-sqrt(lambda_i)/sum(sqrt(lambda_i))$, where $lambda_i$ are the singular
-values of the empirical covariance matrix.}
+sqrt(lambda_i)/sum(sqrt(lambda_i))$, where $lambda_i$ are the eigen values
+of the empirical covariance matrix.}
 
 \item{first_factor_update}{iteration at which the first factor update should
 occur}
@@ -35,26 +35,39 @@ occur}
 \item{first_prob_update}{iteration at which the first update to the slice
 direction probabilities should occur.}
 
-\item{sample_all_initially}{should all factors be sampled until the first
-slice probability update? defaults to TRUE.}
+\item{initial_slice_probs}{vector of initial slice probabilities}
+
+\item{initial_widths}{vector of initial slice widths, defaults to a vector of
+ones.}
 
 \item{n_afss_updates}{number of factor slice sampling directions to update}
 
-\item{initial_widths}{vector of initial slice widths}
+\item{step_out_adapt}{should a stepping out procedure be used to expand the
+initial slice bracket during the adaptation? defaults to TRUE}
 
-\item{initial_factors}{matrix of initial factor loadings}
+\item{step_out_fixed}{should the slice sampler be stepped out after the
+adaptation is stopped, defaults to TRUE}
 
-\item{initial_slice_probs}{initial slice direction probabilities}
+\item{sample_all_initially}{should all factor directions be sampled until the
+first slice probability update? defaults to TRUE}
 
-\item{target_ratio}{target ratio of expansions/(expansions + contractions),
-defaults to 0.5. Smaller values overrelax the interval widths.}
+\item{target_contraction_rate}{expected number of contractions per iteration,
+defaults to 0.5.}
 
-\item{use_cov}{should the slice directions be computed as singular vectors of
-the covariance matrix (as opposed to the correlation)? defaults to TRUE.}
+\item{target_prop_totsd}{Between 0 and 1. If supplied, the number of factor
+directions sampled after the first probability update set to be the maximum
+of the requested number of directions and number of factors required to
+explain the specified proportion of the total standard deviation in the
+posterior. If not equal to the number of parameters, a hit and run update
+is carried out to ensure ergodicity.}
 
-\item{tparam_update}{either TRUE if a joint hit-and-run update for
-time-varying parameters should be carried out (default), or FALSE if
-time-varying parameters should be updated separately.}
+\item{harss_prob}{probability of a hit and run update at each iteration}
+
+\item{harss_warmup}{should a hit and run update be performed along with the
+elliptical slice sampling warm up? defaults to TRUE}
+
+\item{step_out_adapt}{should a stepping out procedure be used to expand the
+initial slice bracket when the kernel is fixed? defaults to TRUE}
 }
 \value{
 list with additional settings for automated factor slice sampling

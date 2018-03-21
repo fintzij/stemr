@@ -5,14 +5,14 @@
 \title{Update model parameters via factor slice sampling}
 \usage{
 hit_and_run_slice_sampler(model_params_est, model_params_nat, params_prop_est,
-  params_prop_nat, har_direction, bracket_width, n_expansions_harss,
-  n_contractions_harss, n_harss_updates, tparam_harss_update, path, data,
-  priors, params_logprior_cur, logpost_cur, lna_params_cur, lna_param_vec,
-  tparam, censusmat, emitmat, flow_matrix, stoich_matrix, lna_times,
-  forcing_inds, forcing_matrix, lna_param_inds, lna_const_inds, lna_tcovar_inds,
-  lna_initdist_inds, param_update_inds, lna_event_inds, census_indices,
-  measproc_indmat, svd_sqrt, svd_d, svd_U, svd_V, lna_pointer,
-  lna_set_pars_pointer, d_meas_pointer, do_prevalence, step_size)
+  params_prop_nat, har_direction, harss_bracket_width, n_expansions_harss,
+  n_contractions_harss, n_harss_updates, path, data, priors,
+  params_logprior_cur, lna_params_cur, lna_param_vec, tparam, censusmat,
+  emitmat, flow_matrix, stoich_matrix, lna_times, forcing_inds, forcing_matrix,
+  lna_param_inds, lna_const_inds, lna_tcovar_inds, lna_initdist_inds,
+  param_update_inds, lna_event_inds, census_indices, measproc_indmat, svd_sqrt,
+  svd_d, svd_U, svd_V, lna_pointer, lna_set_pars_pointer, d_meas_pointer,
+  do_prevalence, step_size)
 }
 \arguments{
 \item{model_params_est}{vector of model parameters on the estimation scale}
@@ -26,16 +26,13 @@ estimation scale}
 
 \item{har_direction}{vector for the hit and run direction}
 
-\item{bracket_width}{width of the bracket}
+\item{harss_bracket_width}{width of the bracket}
 
 \item{n_expansions_harss}{vector for number of hit and run expansions}
 
 \item{n_contractions_harss}{vector for number of hit and run contractions}
 
 \item{n_harss_updates}{number of hit and run updates}
-
-\item{tparam_harss_update}{should time-varying parameters be updated along
-with parameters}
 
 \item{path}{list containing the LNA path, N(0,1) draws, and likelihood}
 
@@ -45,8 +42,6 @@ with parameters}
 transformations to and from the estimation scale}
 
 \item{params_logprior_cur}{log prior density of model parameters}
-
-\item{logpost_cur}{current log posterior}
 
 \item{lna_params_cur}{matrix with current LNA parameters, tcovar, tparam,
 etc.}
@@ -104,15 +99,6 @@ contributions}
 \item{do_prevalence}{should prevalence be computed}
 
 \item{step_size}{initial step size for ODE stepper}
-
-\item{slice_singvecs}{singular vectors of the kernel covariance matrix}
-
-\item{slice_singvals}{singular values of the kernel covariance matrix}
-
-\item{slice_singvecs_t}{transpose of the singular vector matrix}
-
-\item{nugget}{probability of a hit-and-run proposal on the unit hyper-sphere
-rather than the unit ellipse defined by the posterior covariance matrix}
 }
 \value{
 update the model parameters, path, and likelihood terms in place

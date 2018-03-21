@@ -4,16 +4,14 @@
 \alias{update_factors}
 \title{Update slice factor directions for automated factor slice sampling}
 \usage{
-update_factors(slice_singvals, slice_factors, slice_factors_t, kernel_cov)
+update_factors(slice_eigenvals, slice_eigenvecs, kernel_cov)
 }
 \arguments{
-\item{slice_singvals}{vector of singular values}
+\item{slice_eigenvals}{vector of singular values}
 
-\item{slice_factors}{vector of singular vectors}
+\item{slice_eigenvecs}{vector of singular vectors}
 
 \item{kernel_cov}{empirical covariance matrix of model params}
-
-\item{I_mat}{identity matrix of the same size as kernel_cov}
 }
 \value{
 update eigenvalues and eigenvectors in place

@@ -140,7 +140,7 @@ parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, l
                 derivatives[s] <- sub_powers(derivatives[s])
         }
 
-        # substitute exp(Z[*]), exp(-Z[*]), and exp(-2*Z[*]) for precomputed vector elements
+        # substitute exp(Z[*])-1, exp(-Z[*]), and exp(-2*Z[*]) for precomputed vector elements
         for(s in seq_along(ito_coefs)) {
                 # exp(-Z) expressions
                 exp_neg_Z_matches <- gregexpr("exp\\(-Z\\[\\d\\]\\)", ito_coefs[s])
@@ -165,11 +165,11 @@ parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, l
 
         for(s in seq_along(lna_rates)) {
                 # exp(Z) expressions
-                exp_Z_matches <- gregexpr("exp\\(Z\\[\\d\\]\\)", lna_rates[s])
+                exp_Z_matches <- gregexpr("\\(exp\\(Z\\[\\d\\]\\)-1\\)", lna_rates[s])
                 exp_Z_indices <- unlist(regmatches(lna_rates[s], exp_Z_matches))
                 exp_Z_indices <- as.character(unlist(regmatches(exp_Z_indices, gregexpr("\\[[[:digit:]]+\\]", exp_Z_indices))))
 
-                lna_rates[s] <- gsub(pattern = "exp\\(Z\\[\\d\\]\\)", "odeintr::exp_Z__INDEX__", lna_rates[s])
+                lna_rates[s] <- gsub(pattern = "\\(exp\\(Z\\[\\d\\]\\)-1\\)", "odeintr::expm1_Z__INDEX__", lna_rates[s])
                 for(r in seq_along(exp_Z_indices)) {
                         lna_rates[s] <- sub("__INDEX__", exp_Z_indices[r], lna_rates[s])
                 }
@@ -197,11 +197,11 @@ parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, l
 
         for(s in seq_along(hazards)) {
                 # exp(Z) expressions
-                exp_Z_matches <- gregexpr("exp\\(Z\\[\\d\\]\\)", hazards[s])
+                exp_Z_matches <- gregexpr("\\(exp\\(Z\\[\\d\\]\\)-1\\)", hazards[s])
                 exp_Z_indices <- unlist(regmatches(hazards[s], exp_Z_matches))
                 exp_Z_indices <- as.character(unlist(regmatches(exp_Z_indices, gregexpr("\\[[[:digit:]]+\\]", exp_Z_indices))))
 
-                hazards[s] <- gsub(pattern = "exp\\(Z\\[\\d\\]\\)", "odeintr::exp_Z__INDEX__", hazards[s])
+                hazards[s] <- gsub(pattern = "\\(exp\\(Z\\[\\d\\]\\)-1\\)", "odeintr::expm1_Z__INDEX__", hazards[s])
                 for(r in seq_along(exp_Z_indices)) {
                         hazards[s] <- sub("__INDEX__", exp_Z_indices[r], hazards[s])
                 }
@@ -229,11 +229,11 @@ parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, l
 
         for(s in seq_along(derivatives)) {
                 # exp(Z) expressions
-                exp_Z_matches <- gregexpr("exp\\(Z\\[\\d\\]\\)", derivatives[s])
+                exp_Z_matches <- gregexpr("\\(exp\\(Z\\[\\d\\]\\)-1\\)", derivatives[s])
                 exp_Z_indices <- unlist(regmatches(derivatives[s], exp_Z_matches))
                 exp_Z_indices <- as.character(unlist(regmatches(exp_Z_indices, gregexpr("\\[[[:digit:]]+\\]", exp_Z_indices))))
 
-                derivatives[s] <- gsub(pattern = "exp\\(Z\\[\\d\\]\\)", "odeintr::exp_Z__INDEX__", derivatives[s])
+                derivatives[s] <- gsub(pattern = "\\(exp\\(Z\\[\\d\\]\\)-1\\)", "odeintr::expm1_Z__INDEX__", derivatives[s])
                 for(r in seq_along(exp_Z_indices)) {
                         derivatives[s] <- sub("__INDEX__", exp_Z_indices[r], derivatives[s])
                 }

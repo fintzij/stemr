@@ -4,25 +4,17 @@
 \alias{update_interval_widths}
 \title{Update factors and interval widths for automated factor slice sampling}
 \usage{
-update_interval_widths(interval_widths, n_expansions, n_contractions,
-  n_expansions_c, n_contractions_c, slice_ratios, adaptation_factor,
-  target_ratio)
+update_interval_widths(interval_widths, contraction_rates, adaptation_factor,
+  target_contraction_rate)
 }
 \arguments{
 \item{interval_widths}{vector of interval widths}
 
-\item{n_expansions}{vector with number of expansion}
+\item{contraction_rates}{rates of contractions along each slice direction}
 
-\item{n_contractions}{vector with number of contractions}
+\item{adaptation_factor}{weight for adaptation}
 
-\item{n_expansions_c}{cumulative numbers of expansions}
-
-\item{n_contractions_c}{cumulative numbers of contractions}
-
-\item{slice_ratios}{vector for storing ratio of cumulative number of 
-expansions over number of interval width changes}
-
-\item{adaptation_factor}{}
+\item{target_contraction_rate}{expected number of contractions per iteration}
 }
 \value{
 adapt interval widths in place

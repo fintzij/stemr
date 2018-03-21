@@ -44,6 +44,7 @@
 #' @param n_afss_updates number of afss updates per iteration
 #' @param lna_param_vec vector for lna parameters
 #' @param afss_step_out should the bracket be stepped out
+#' @param n_contractions_afss vector for storing the number of contractions
 #'
 #' @return update the model parameters, path, and likelihood terms in place
 #' @export
@@ -54,6 +55,7 @@ factor_slice_sampler <-
             params_prop_est,
             params_prop_nat,
             interval_widths,
+            n_contractions_afss,
             slice_eigenvecs,
             slice_probs,
             n_afss_updates,
@@ -415,6 +417,9 @@ factor_slice_sampler <-
                         } else {
                               upper <- prop
                         }
+                        
+                        # increment the number of contractions
+                        increment_elem(n_contractions_afss, f-1)
                   }
             }
             

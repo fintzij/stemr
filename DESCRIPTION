@@ -25,7 +25,7 @@ Imports:
     numDeriv,
     mrds,
     extraDistr,
-    Rcpp (>= 0.12.4)
+    Rcpp (>= 0.12.16)
 LinkingTo: Rcpp,
     RcppArmadillo
 RoxygenNote: 6.0.1

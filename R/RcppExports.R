@@ -723,12 +723,13 @@ update_factors <- function(slice_eigenvals, slice_eigenvecs, kernel_cov) {
 #' Update factors and interval widths for automated factor slice sampling
 #'
 #' @param interval_widths vector of interval widths
-#' @param slice_eigenvals eigenvalues of the posterior covariance
-#' @param width_scaling scaling factor for the interval widths
+#' @param contraction_rates rates of contractions along each slice direction
+#' @param adaptation_factor weight for adaptation
+#' @param target_contraction_rate expected number of contractions per iteration
 #'
 #' @return adapt interval widths in place
 #' @export
-update_interval_widths <- function(interval_widths, slice_eigenvals, width_scaling) {
-    invisible(.Call(`_stemr_update_interval_widths`, interval_widths, slice_eigenvals, width_scaling))
+update_interval_widths <- function(interval_widths, contraction_rates, adaptation_factor, target_contraction_rate) {
+    invisible(.Call(`_stemr_update_interval_widths`, interval_widths, contraction_rates, adaptation_factor, target_contraction_rate))
 }
 

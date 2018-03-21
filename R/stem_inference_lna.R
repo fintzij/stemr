@@ -307,12 +307,17 @@ stem_inference_lna <- function(stem_object,
                   first_factor_update    <- 100
                   first_prob_update      <- 100
                   n_afss_updates         <- n_model_params
+                  target_prop_totsd        <- NULL
                   slice_probs            <- rep(1.0, n_model_params) # sample all factors initially
                   factor_update_interval_fcn <- prob_update_interval_fcn <- NULL
                   sample_all_initially   <- TRUE
-                  width_scaling          <- 3*2*sqrt(2*log(2))
-                  afss_step_out          <- TRUE
+                  interval_widths        <- rep(1.0, n_model_params)
+                  afss_step_out_adapt    <- TRUE
+                  afss_step_out_fixed    <- TRUE
                   harss_prob             <- 0.05
+                  harss_warmup           <- TRUE
+                  target_contraction_rate <- 0.5
+                  n_contractions_afss <- rep(target_contraction_rate, n_model_params)
                   
             } else {
                   
@@ -322,10 +327,17 @@ stem_inference_lna <- function(stem_object,
                   first_factor_update  <- afss_setting_list$first_factor_update + 1
                   first_prob_update    <- afss_setting_list$first_prob_update + 1
                   initial_slice_probs  <- afss_setting_list$initial_slice_probs
-                  width_scaling        <- afss_setting_list$width_scaling
                   sample_all_initially <- afss_setting_list$sample_all_initially
-                  afss_step_out        <- afss_setting_list$step_out
+                  afss_step_out_adapt  <- afss_setting_list$step_out_adapt
+                  afss_step_out_fixed  <- afss_setting_list$step_out_fixed
                   harss_prob           <- afss_setting_list$harss_prob
+                  harss_warmup         <- afss_setting_list$harss_warmup
+                  interval_widths      <- afss_setting_list$initial_widths
+                  target_prop_totsd      <- afss_setting_list$target_prop_totsd
+                  target_contraction_rate <- afss_setting_list$target_contraction_rate
+                  n_contractions_afss <- rep(target_contraction_rate, n_model_params)
+                  
+                  if(is.null(interval_widths)) interval_widths <- rep(1.0, n_model_params)
                   
                   if(is.null(afss_setting_list$n_afss_updates)) {
                         afss_setting_list$n_afss_updates <- n_model_params
@@ -381,7 +393,6 @@ stem_inference_lna <- function(stem_object,
             e               <- eigen(kernel_cov)
             slice_eigenvals <- e$values
             slice_eigenvecs <- e$vectors
-            interval_widths <- width_scaling * sqrt(slice_eigenvals)
             
             # set up hit and run slice sampler settings
             n_harss_updates     <- 1
@@ -393,7 +404,9 @@ stem_inference_lna <- function(stem_object,
             n_contractions_harss <- 0.5
             
             # should a harss update be attempted
-            do_harss_update <- n_afss_updates != n_model_params
+            do_harss_update <- 
+                  (n_afss_updates != n_model_params) |
+                  !is.null(target_prop_totsd)
             
             # objects for saving the adaptation history
             kernel_cov_record <-
@@ -870,6 +883,9 @@ stem_inference_lna <- function(stem_object,
       # instatiate matrix for elliptical slice sampling draws
       ess_draws_prop <- matrix(0.0, nrow = nrow(path$draws), ncol = ncol(path$draws))
       
+      # set the log posterior and prior log likelihood
+      params_logprior_cur  <- prior_density(model_params_nat, model_params_est)
+      
       # warmup the latent path
       if (!mcmc_restart) {
             for (warmup in seq_len(ess_warmup)) {
@@ -947,6 +963,72 @@ stem_inference_lna <- function(stem_object,
                               tparam_ess           = tparam_ess
                         )
                   }
+                  
+                  if(mcmc_kernel$method == "afss" && harss_warmup) {
+                        hit_and_run_slice_sampler(
+                              model_params_est     = model_params_est,
+                              model_params_nat     = model_params_nat,
+                              params_prop_est      = params_prop_est,
+                              params_prop_nat      = params_prop_nat,
+                              har_direction        = har_direction,
+                              harss_bracket_width  = harss_bracket_width, 
+                              n_expansions_harss   = n_expansions_harss,
+                              n_contractions_harss = n_contractions_harss,
+                              n_harss_updates      = n_harss_updates, 
+                              path                 = path,
+                              data                 = data,
+                              priors               = priors,
+                              params_logprior_cur  = params_logprior_cur,
+                              lna_params_cur       = lna_params_cur,
+                              lna_param_vec        = lna_param_vec,
+                              tparam               = tparam,
+                              censusmat            = censusmat,
+                              emitmat              = emitmat,
+                              flow_matrix          = flow_matrix,
+                              stoich_matrix        = stoich_matrix,
+                              lna_times            = lna_times,
+                              forcing_inds         = forcing_inds,
+                              forcing_matrix       = forcing_matrix,
+                              lna_param_inds       = lna_param_inds,
+                              lna_const_inds       = lna_const_inds,
+                              lna_tcovar_inds      = lna_tcovar_inds,
+                              lna_initdist_inds    = lna_initdist_inds,
+                              param_update_inds    = param_update_inds,
+                              lna_event_inds       = lna_event_inds,
+                              census_indices       = census_indices,
+                              measproc_indmat      = measproc_indmat,
+                              svd_sqrt             = svd_sqrt,
+                              svd_d                = svd_d,
+                              svd_U                = svd_U,
+                              svd_V                = svd_V,
+                              lna_pointer          = lna_pointer,
+                              lna_set_pars_pointer = lna_set_pars_pointer,
+                              d_meas_pointer       = d_meas_pointer,
+                              do_prevalence        = do_prevalence,
+                              step_size            = step_size
+                        )
+                        
+                        # adapt the bracket width
+                        harss_bracket_width <-  
+                              exp(log(harss_bracket_width) * (warmup - 1) / warmup +  
+                                        (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5) / warmup) 
+                        
+                        # adapt the kernel covariance
+                        kernel_resid <- model_params_est - kernel_mean
+                        kernel_cov   <- kernel_cov * (warmup - 1) / warmup + (kernel_resid %*% t(kernel_resid) - kernel_cov) / warmup
+                        kernel_mean  <- kernel_mean * (warmup - 1) / warmup + kernel_resid / warmup
+                  }
+            }
+            
+            # reset the numbers of harss expansions and contractions and update the factors
+            if(mcmc_kernel$method == "afss" && harss_warmup) {
+                  
+                  n_expansions_harss   <- 0.5
+                  n_contractions_harss <- 0.5
+                  
+                  update_factors(slice_eigenvals = slice_eigenvals,
+                                 slice_eigenvecs = slice_eigenvecs,
+                                 kernel_cov      = kernel_cov)
             }
       }
       
@@ -1289,13 +1371,18 @@ stem_inference_lna <- function(stem_object,
                         
                         mcmc_kernel$kernel_settings$afss_setting_list = 
                               afss_settings(
-                                    factor_update_interval = factor_update_interval,
-                                    prob_update_interval   = prob_update_interval,
-                                    first_factor_update    = first_factor_update,
-                                    first_prob_update      = first_prob_update,
-                                    initial_slice_probs    = slice_probs,
-                                    width_scaling          = width_scaling,
-                                    n_afss_updates         = n_afss_updates
+                                    factor_update_interval  = factor_update_interval,
+                                    prob_update_interval    = prob_update_interval,
+                                    first_factor_update     = first_factor_update,
+                                    first_prob_update       = first_prob_update,
+                                    initial_slice_probs     = slice_probs,
+                                    n_afss_updates          = n_afss_updates,
+                                    initial_widths          = interval_widths,
+                                    step_out_adapt          = afss_step_out_adapt,
+                                    step_out_fixed          = afss_step_out_fixed,
+                                    sample_all_initially    = FALSE,
+                                    target_contraction_rate = target_contraction_rate,
+                                    target_prop_totsd       = target_prop_totsd
                               )
                   
                         if(n_model_params != n_afss_updates) {
@@ -1327,7 +1414,8 @@ stem_inference_lna <- function(stem_object,
                         n_afss_updates       = ifelse(iter <= first_prob_update && sample_all_initially, 
                                                       n_model_params,
                                                       n_afss_updates),
-                        afss_step_out        = afss_step_out,
+                        n_contractions_afss  = n_contractions_afss,
+                        afss_step_out        = ifelse(iter <= stop_adaptation, afss_step_out_adapt, afss_step_out_fixed),
                         path                 = path,
                         data                 = data,
                         priors               = priors,
@@ -1413,7 +1501,11 @@ stem_inference_lna <- function(stem_object,
                               harss_bracket_width <-  
                                     exp(log(harss_bracket_width) +  
                                               adaptations[iter] *  
-                                              (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5)) 
+                                              (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5))
+                              
+                              # reset counters
+                              n_expansions_harss   <- 0.5
+                              n_contractions_harss <- 0.5
                         }
                   }
                   
@@ -1433,25 +1525,33 @@ stem_inference_lna <- function(stem_object,
                                              slice_eigenvecs = slice_eigenvecs,
                                              kernel_cov      = kernel_cov)
                         
-                              update_interval_widths(interval_widths = interval_widths,
-                                                     slice_eigenvals = slice_eigenvals,
-                                                     width_scaling   = width_scaling)
+                              # upddate interval widths
+                              update_interval_widths(interval_widths         = interval_widths,
+                                                     contraction_rates       = n_contractions_afss/iter, 
+                                                     adaptation_factor       = adaptations[iter],
+                                                     target_contraction_rate = target_contraction_rate)
                               
                               # increment the factor update interval
                               if(!is.null(factor_update_interval_fcn)) {
                                     factor_update_interval <- factor_update_interval_fcn(factor_update_interval)
                               }
-                              
-                              # adapt the slice probabilities
-                              if((n_afss_updates != n_model_params) && 
-                                 ((iter-1) >= first_prob_update)) {
-                                    
-                                    copy_vec(dest = slice_probs, 
-                                             orig = pmax(slice_eigenvals^0.5 / sum(slice_eigenvals^0.5),
-                                                         nugget))
-                              }
                         }
                         
+                        # adapt the slice probabilities
+                        if (((iter-1) >= first_prob_update) && 
+                                    ((iter-1) %% prob_update_interval == 0)) {
+                              
+                              copy_vec(dest = slice_probs, 
+                                       orig = pmax(slice_eigenvals^0.5 / sum(slice_eigenvals^0.5),
+                                                   nugget))
+                              
+                              if(!is.null(target_prop_totsd)) {
+                                    n_afss_updates <- 
+                                          max(n_afss_updates,
+                                              Position(function(x) x > target_prop_totsd,
+                                                       cumsum(rev(sqrt(slice_eigenvals))/sum(sqrt(slice_eigenvals)))))
+                              }
+                        }
                   }
                   
             } else if (mcmc_kernel$method == "harss") {

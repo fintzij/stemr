@@ -2,18 +2,24 @@
 % Please edit documentation in R/ess_settings.R
 \name{ess_settings}
 \alias{ess_settings}
-\title{Generates a list of settings for sampling the latent LNA paths via elliptical
-slice sampling.}
+\title{Generates a list of settings for sampling the latent LNA paths and
+time-varying parameters via elliptical slice sampling.}
 \usage{
-ess_settings(n_ess_updates = 1, tparam_update = TRUE, ess_warmup = 50)
+ess_settings(n_ess_updates = 1, lna_update = TRUE, tparam_update = TRUE,
+  ess_warmup = 50)
 }
 \arguments{
 \item{n_ess_updates}{number of elliptical slice sampling updates per MCMC
 iteration, defaults to 1.}
 
-\item{tparam_update}{either TRUE (default) if time-varying parameter
-values should be updated jointly with the LNA path, or FALSE if
-time-varying parameters should be updated in their own block.}
+\item{lna_update}{either TRUE (default) if the LNA path should be updated in
+a separate ESS step, possibly jointly with the time-varying parameters, or
+FALSE if time-varying parameters should be updated in their own block.}
+
+\item{tparam_update}{either TRUE (default) if time-varying parameter values
+should be updated in a separate ESS step, possibly jointly with the LNA
+path, or FALSE if time-varying parameters should be updated in their own
+block.}
 
 \item{ess_warmup}{ess_warmup ESS updates prior to starting MCMC}
 }
@@ -21,6 +27,6 @@ time-varying parameters should be updated in their own block.}
 list with settings for elliptical slice sampling
 }
 \description{
-Generates a list of settings for sampling the latent LNA paths via elliptical
-slice sampling.
+Generates a list of settings for sampling the latent LNA paths and
+time-varying parameters via elliptical slice sampling.
 }

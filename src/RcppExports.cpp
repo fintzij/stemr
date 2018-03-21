@@ -645,14 +645,15 @@ BEGIN_RCPP
 END_RCPP
 }
 // update_interval_widths
-void update_interval_widths(arma::vec& interval_widths, const arma::vec& slice_eigenvals, const double width_scaling);
-RcppExport SEXP _stemr_update_interval_widths(SEXP interval_widthsSEXP, SEXP slice_eigenvalsSEXP, SEXP width_scalingSEXP) {
+void update_interval_widths(arma::vec& interval_widths, const arma::vec& contraction_rates, const double adaptation_factor, const double target_contraction_rate);
+RcppExport SEXP _stemr_update_interval_widths(SEXP interval_widthsSEXP, SEXP contraction_ratesSEXP, SEXP adaptation_factorSEXP, SEXP target_contraction_rateSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::vec& >::type interval_widths(interval_widthsSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type slice_eigenvals(slice_eigenvalsSEXP);
-    Rcpp::traits::input_parameter< const double >::type width_scaling(width_scalingSEXP);
-    update_interval_widths(interval_widths, slice_eigenvals, width_scaling);
+    Rcpp::traits::input_parameter< const arma::vec& >::type contraction_rates(contraction_ratesSEXP);
+    Rcpp::traits::input_parameter< const double >::type adaptation_factor(adaptation_factorSEXP);
+    Rcpp::traits::input_parameter< const double >::type target_contraction_rate(target_contraction_rateSEXP);
+    update_interval_widths(interval_widths, contraction_rates, adaptation_factor, target_contraction_rate);
     return R_NilValue;
 END_RCPP
 }
@@ -702,7 +703,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_simulate_gillespie", (DL_FUNC) &_stemr_simulate_gillespie, 12},
     {"_stemr_simulate_r_measure", (DL_FUNC) &_stemr_simulate_r_measure, 6},
     {"_stemr_update_factors", (DL_FUNC) &_stemr_update_factors, 3},
-    {"_stemr_update_interval_widths", (DL_FUNC) &_stemr_update_interval_widths, 3},
+    {"_stemr_update_interval_widths", (DL_FUNC) &_stemr_update_interval_widths, 4},
     {NULL, NULL, 0}
 };
 

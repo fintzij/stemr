@@ -21,13 +21,27 @@
 #'   direction probabilities should occur.
 #' @param initial_slice_probs vector of initial slice probabilities
 #' @param n_afss_updates number of factor slice sampling directions to update
-#' @param width_scaling constant by which to scale the widths, defaults to 3
-#'   times the full width at half maximum
+#' @param target_prop_totsd Between 0 and 1. If supplied, the number of factor
+#'   directions sampled after the first probability update set to be the maximum
+#'   of the requested number of directions and number of factors required to
+#'   explain the specified proportion of the total standard deviation in the
+#'   posterior. If not equal to the number of parameters, a hit and run update
+#'   is carried out to ensure ergodicity.
 #' @param sample_all_initially should all factor directions be sampled until the
 #'   first slice probability update? defaults to TRUE
-#' @param step_out should a stepping out procedure be used to expand the initial
-#'   slice bracket? defaults to TRUE
+#' @param step_out_adapt should a stepping out procedure be used to expand the
+#'   initial slice bracket during the adaptation? defaults to TRUE
+#' @param step_out_adapt should a stepping out procedure be used to expand the
+#'   initial slice bracket when the kernel is fixed? defaults to TRUE
 #' @param harss_prob probability of a hit and run update at each iteration
+#' @param harss_warmup should a hit and run update be performed along with the
+#'   elliptical slice sampling warm up? defaults to TRUE
+#' @param initial_widths vector of initial slice widths, defaults to a vector of
+#'   ones.
+#' @param step_out_fixed should the slice sampler be stepped out after the
+#'   adaptation is stopped, defaults to TRUE
+#' @param target_contraction_rate expected number of contractions per iteration,
+#'   defaults to 0.5.
 #'
 #' @return list with additional settings for automated factor slice sampling
 #' @export
@@ -37,11 +51,15 @@ afss_settings <-
                first_factor_update = 100,
                first_prob_update = 100,
                initial_slice_probs = NULL,
-               width_scaling = 3*2*sqrt(2*log(2)),
+               initial_widths = NULL,
                n_afss_updates = NULL,
-               step_out = TRUE,
+               step_out_adapt = TRUE,
+               step_out_fixed = TRUE,
                sample_all_initially = TRUE,
-               harss_prob = 0.05) {
+               target_contraction_rate = 0.5,
+               target_prop_totsd = NULL,
+               harss_prob = 0.05,
+               harss_warmup = TRUE) {
                
       # test if the factor and prob update interval functions have defaults if they are specified via functions   
       if(is.function(factor_update_interval)) {
@@ -55,17 +73,25 @@ afss_settings <-
             try({fui <- prob_update_interval()}, silent = T)
             if(is.null(fui)) stop("If the probability update interval is supplied as a function, it must have a default value for the first interval.")
       }
+            
+      if(!is.null(target_prop_totsd) && !(target_prop_totsd >= 0 & target_prop_totsd < 1)) {
+            stop("The proportion of the total standard deviation explained by the afss proposals must be between 0 and 1.")
+      }
       
       if(is.null(prob_update_interval)) prob_update_interval <- factor_update_interval
       
-      list(factor_update_interval = factor_update_interval,
-           prob_update_interval   = prob_update_interval,
-           first_factor_update    = first_factor_update,
-           first_prob_update      = first_prob_update,
-           initial_slice_probs    = initial_slice_probs,
-           width_scaling          = width_scaling,
-           n_afss_updates         = n_afss_updates,
-           step_out               = step_out,
-           sample_all_initially   = TRUE,
-           harss_prob             = harss_prob)
+      list(factor_update_interval  = factor_update_interval,
+           prob_update_interval    = prob_update_interval,
+           first_factor_update     = first_factor_update,
+           first_prob_update       = first_prob_update,
+           initial_slice_probs     = initial_slice_probs,
+           initial_widths          = initial_widths,
+           n_afss_updates          = n_afss_updates,
+           step_out_adapt          = step_out_adapt,
+           step_out_fixed          = step_out_fixed,
+           sample_all_initially    = TRUE,
+           target_contraction_rate = target_contraction_rate,
+           target_prop_totsd       = target_prop_totsd,
+           harss_prob              = harss_prob,
+           harss_warmup            = harss_warmup)
       }

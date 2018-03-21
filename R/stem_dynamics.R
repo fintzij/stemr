@@ -759,7 +759,7 @@ stem_dynamics <-
 
         # construct the rate adjacency matrix -- specifies which rates need to
         # be updates when a transition occurs
-        rate_adjmat <- build_rate_adjmat(rate_fcns, compartment_codes)
+        rate_adjmat <- build_rate_adjmat(rates = rate_fcns, compartment_codes = compartment_codes)
 
         # build the time-varying covariate matrix so that it contains the census intervals
         tcovar <- build_tcovar_matrix(tcovar     = tcovar,

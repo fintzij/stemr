@@ -51,267 +51,267 @@
 #'   simulated datasets is returned.
 #' @export
 simulate_stem <-
-        function(stem_object,
-                 nsim = 1,
-                 simulation_parameters = NULL,
-                 paths = FALSE,
-                 full_paths = FALSE,
-                 observations = FALSE,
-                 subject_paths = FALSE,
-                 method = "gillespie",
-                 tmax = NULL, 
-                 census_times = NULL,
-                 max_attempts = 500,
-                 lna_method = "exact",
-                 ess_warmup = 100,
-                 messages = TRUE) {
-
-                # ensure that the method is correctly specified
-                if(!method %in% c("gillespie", "lna", "ode")) {
-                        stop("The simulation method must either be 'gillespie', 'lna', or 'ode'.")
-                }
-
-                # if lna, subject paths are not available
-                if(subject_paths && (method == "lna" | method == "ode")) {
-                        warning("Subject-paths are only available when simulating paths when method='gillespie'.")
-                }
-
-                # check that the stem_dynamics are supplied
-                if(is.null(stem_object$dynamics)) {
-                        stop("The stochastic epidemic model dynamics must be specified.")
-                }
-
-                # check that a measurement process is supplied if one is required
-                if(is.null(stem_object$measurement_process) & observations) {
-                        stop("In order to simulate a dataset, a measurement process must be supplied in the stem_object.")
-                }
-
-                # check that if simulation parameters are supplied, they are supplied in a list of named vectors of
-                # length equal to the number of simulations. Also check that the parameters are supplied in the same
-                # order as the parameters in the stem object.
-                if(!is.null(simulation_parameters)) {
-                        if(!is.list(simulation_parameters)) {
-                                stop("Simulation parameters must be supplied as a list of vectors.")
-                        }
-
-                        if(length(simulation_parameters) != nsim) {
-                                stop("If simulation parameters are supplied, there must be an equal number of vectors in the list as requested paths to be simulated.")
-                        }
-
-                        if(!all(sapply(simulation_parameters, function(x) all(names(x) == names(stem_object$dynamics$parameters))))) {
-                                stop("The simulation parameters list must consist of named vectors with elements given in the same order as the parameters in the stem object.")
-                        }
-                }
-
-          if(paths == observations) {
+      function(stem_object,
+               nsim = 1,
+               simulation_parameters = NULL,
+               paths = FALSE,
+               full_paths = FALSE,
+               observations = FALSE,
+               subject_paths = FALSE,
+               method = "gillespie",
+               tmax = NULL, 
+               census_times = NULL,
+               max_attempts = 500,
+               lna_method = "exact",
+               ess_warmup = 100,
+               messages = TRUE) {
+            
+            # ensure that the method is correctly specified
+            if(!method %in% c("gillespie", "lna", "ode")) {
+                  stop("The simulation method must either be 'gillespie', 'lna', or 'ode'.")
+            }
+            
+            # if lna, subject paths are not available
+            if(subject_paths && (method == "lna" | method == "ode")) {
+                  warning("Subject-paths are only available when simulating paths when method='gillespie'.")
+            }
+            
+            # check that the stem_dynamics are supplied
+            if(is.null(stem_object$dynamics)) {
+                  stop("The stochastic epidemic model dynamics must be specified.")
+            }
+            
+            # check that a measurement process is supplied if one is required
+            if(is.null(stem_object$measurement_process) & observations) {
+                  stop("In order to simulate a dataset, a measurement process must be supplied in the stem_object.")
+            }
+            
+            # check that if simulation parameters are supplied, they are supplied in a list of named vectors of
+            # length equal to the number of simulations. Also check that the parameters are supplied in the same
+            # order as the parameters in the stem object.
+            if(!is.null(simulation_parameters)) {
+                  if(!is.list(simulation_parameters)) {
+                        stop("Simulation parameters must be supplied as a list of vectors.")
+                  }
+                  
+                  if(length(simulation_parameters) != nsim) {
+                        stop("If simulation parameters are supplied, there must be an equal number of vectors in the list as requested paths to be simulated.")
+                  }
+                  
+                  if(!all(sapply(simulation_parameters, function(x) all(names(x) == names(stem_object$dynamics$parameters))))) {
+                        stop("The simulation parameters list must consist of named vectors with elements given in the same order as the parameters in the stem object.")
+                  }
+            }
+            
+            if(paths == observations) {
                   paths <- TRUE
                   observations <- ifelse(is.null(stem_object$measurement_process), FALSE, TRUE)
-          }
-
-          # t0 and tmax if not supplied
-          t0                     <- stem_object$dynamics$t0
-          if(is.null(tmax)) tmax <- stem_object$dynamics$tmax
-
-          if(is.null(stem_object$dynamics$timestep)) {
+            }
+            
+            # t0 and tmax if not supplied
+            t0                     <- stem_object$dynamics$t0
+            if(is.null(tmax)) tmax <- stem_object$dynamics$tmax
+            
+            if(is.null(stem_object$dynamics$timestep)) {
                   timestep <- 1
-          } else {
+            } else {
                   timestep <- stem_object$dynamics$timestep
-          }
-
-          # make sure that there exists a vector of census times
-          if(is.null(census_times)) {
+            }
+            
+            # make sure that there exists a vector of census times
+            if(is.null(census_times)) {
                   if(is.null(stem_object$measurement_process$obstimes)) {
-                          census_times <- as.numeric(unique(c(t0, seq(t0,tmax,by=timestep), tmax)))
-
+                        census_times <- as.numeric(unique(c(t0, seq(t0,tmax,by=timestep), tmax)))
+                        
                   } else {
-                          census_times <- as.numeric(unique(c(t0, stem_object$measurement_process$obstimes, tmax)))
+                        census_times <- as.numeric(unique(c(t0, stem_object$measurement_process$obstimes, tmax)))
                   }
-
-          } else {
+                  
+            } else {
                   census_times <- as.numeric(sort(unique(c(t0, census_times, tmax))))
-          }
-          
-          if(!is.numeric(stem_object$dynamics$parameters)) {
-                stop("The model parameters must be a named numeric vector.")
-          }
-          
-          if(!is.numeric(stem_object$dynamics$initdist_params)) {
-                stop("The initial distribution parameters must be a named numeric vector.")
-          }
-          
-          if(!is.numeric(stem_object$dynamics$constants)) {
-                stop("The model constants must be a named numeric vector.")
-          }
-
-          # build the time varying covariate matrix (includes, at a minimum, the endpoints of the simulation interval)
-          # if timestep is null, there are no time-varying covariates
-          if(method == "gillespie") {
-
+            }
+            
+            if(!is.numeric(stem_object$dynamics$parameters)) {
+                  stop("The model parameters must be a named numeric vector.")
+            }
+            
+            if(!is.numeric(stem_object$dynamics$initdist_params)) {
+                  stop("The initial distribution parameters must be a named numeric vector.")
+            }
+            
+            if(!is.numeric(stem_object$dynamics$constants)) {
+                  stop("The model constants must be a named numeric vector.")
+            }
+            
+            # build the time varying covariate matrix (includes, at a minimum, the endpoints of the simulation interval)
+            # if timestep is null, there are no time-varying covariates
+            if(method == "gillespie") {
+                  
                   # if any of t0, tmax, or a timestep was supplied,
                   # check if they differ from the parameters supplied in the stem_object$dynamics.
                   # if they differ, reconstruct the tcovar matrix and associated objects
                   rebuild_tcovar <- (t0 != stem_object$dynamics$t0) ||
-                          (tmax != stem_object$dynamics$tcovar[nrow(stem_object$dynamics$tcovar), 1]) ||
-                          timestep != stem_object$dynamics$timestep ||
-                          !identical(stem_object$dynamics$tcovar[,1], census_times)
-
+                        (tmax != stem_object$dynamics$tcovar[nrow(stem_object$dynamics$tcovar), 1]) ||
+                        timestep != stem_object$dynamics$timestep ||
+                        !identical(stem_object$dynamics$tcovar[,1], census_times)
+                  
                   if(rebuild_tcovar) {
-
-                          # rebuild the time-varying covariate matrix so that it contains the census intervals
-                          stem_object$dynamics$tcovar <- build_tcovar_matrix(tcovar       = stem_object$dynamics$dynamics_args$tcovar, 
-                                                                             tparam       = stem_object$dynamics$tparam,
-                                                                             forcings     = stem_object$dynamics$forcings,
-                                                                             parameters   = stem_object$dynamics$parameters,
-                                                                             timestep     = timestep, 
-                                                                             census_times = census_times,
-                                                                             t0           = t0, 
-                                                                             tmax         = tmax, 
-                                                                             messages     = messages)
-                          
-                          stem_object$dynamics$tcovar_codes        <- seq_len(ncol(stem_object$dynamics$tcovar) - 1)
-                          names(stem_object$dynamics$tcovar_codes) <- colnames(stem_object$dynamics$tcovar)[2:ncol(stem_object$dynamics$tcovar)]
-                          stem_object$dynamics$n_tcovar            <- ncol(stem_object$dynamics$tcovar) - 1
-                          stem_object$dynamics$tcovar_changemat    <- build_tcovar_changemat(tcovar = stem_object$dynamics$tcovar,
-                                                                                             tparam = stem_object$dynamics$tparam,
-                                                                                             forcings = stem_object$dynamics$forcings)
-                          stem_object$dynamics$tcovar_adjmat       <- build_tcovar_adjmat(rates        = stem_object$dynamics$rates, 
-                                                                                          tcovar_codes = stem_object$dynamics$tcovar_codes,
-                                                                                          forcings     = stem_object$dynamics$forcings)
-
-                          # zero out forcings if necessary
-                          if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
-
-                                  # get the forcing indices (supplied in the original tcovar matrix)
-                                  forcing_inds <- vector("logical", nrow(stem_object$dynamics$tcovar))
-                                  for(f in seq_along(stem_object$dynamics$forcings)) {
-                                        forcing_inds <- forcing_inds | stem_object$dynamics$tcovar[,stem_object$dynamics$forcings[[f]]$tcovar_name] != 0
-                                  }
-                                  
-                          } else {
-                                  forcing_inds   <- rep(FALSE, nrow(stem_object$dynamics$tcovar))
-                          }
-                          
+                        
+                        # rebuild the time-varying covariate matrix so that it contains the census intervals
+                        stem_object$dynamics$tcovar <- build_tcovar_matrix(tcovar       = stem_object$dynamics$dynamics_args$tcovar, 
+                                                                           tparam       = stem_object$dynamics$tparam,
+                                                                           forcings     = stem_object$dynamics$forcings,
+                                                                           parameters   = stem_object$dynamics$parameters,
+                                                                           timestep     = timestep, 
+                                                                           census_times = census_times,
+                                                                           t0           = t0, 
+                                                                           tmax         = tmax, 
+                                                                           messages     = messages)
+                        
+                        stem_object$dynamics$tcovar_codes        <- seq_len(ncol(stem_object$dynamics$tcovar) - 1)
+                        names(stem_object$dynamics$tcovar_codes) <- colnames(stem_object$dynamics$tcovar)[2:ncol(stem_object$dynamics$tcovar)]
+                        stem_object$dynamics$n_tcovar            <- ncol(stem_object$dynamics$tcovar) - 1
+                        stem_object$dynamics$tcovar_changemat    <- build_tcovar_changemat(tcovar = stem_object$dynamics$tcovar,
+                                                                                           tparam = stem_object$dynamics$tparam,
+                                                                                           forcings = stem_object$dynamics$forcings)
+                        stem_object$dynamics$tcovar_adjmat       <- build_tcovar_adjmat(rates        = stem_object$dynamics$rates, 
+                                                                                        tcovar_codes = stem_object$dynamics$tcovar_codes,
+                                                                                        forcings     = stem_object$dynamics$forcings)
+                        
+                        # zero out forcings if necessary
+                        if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
+                              
+                              # get the forcing indices (supplied in the original tcovar matrix)
+                              forcing_inds <- vector("logical", nrow(stem_object$dynamics$tcovar))
+                              for(f in seq_along(stem_object$dynamics$forcings)) {
+                                    forcing_inds <- forcing_inds | stem_object$dynamics$tcovar[,stem_object$dynamics$forcings[[f]]$tcovar_name] != 0
+                              }
+                              
+                        } else {
+                              forcing_inds   <- rep(FALSE, nrow(stem_object$dynamics$tcovar))
+                        }
+                        
                   } else {
-                          # Get the forcing indices if there are forcings
-                          if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
-
-                                  # get the forcing indices (supplied in the original tcovar matrix)
-                                  forcing_inds <- vector("logical", nrow(stem_object$dynamics$tcovar))
-                                  for(f in seq_along(stem_object$dynamics$forcings)) {
-                                        forcing_inds <- forcing_inds | stem_object$dynamics$tcovar[,stem_object$dynamics$forcings[[f]]$tcovar_name] != 0
-                                  }
-                                  
-                          } else {
-                                  forcing_inds   <- rep(FALSE, nrow(stem_object$dynamics$tcovar))
-                          }
+                        # Get the forcing indices if there are forcings
+                        if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
+                              
+                              # get the forcing indices (supplied in the original tcovar matrix)
+                              forcing_inds <- vector("logical", nrow(stem_object$dynamics$tcovar))
+                              for(f in seq_along(stem_object$dynamics$forcings)) {
+                                    forcing_inds <- forcing_inds | stem_object$dynamics$tcovar[,stem_object$dynamics$forcings[[f]]$tcovar_name] != 0
+                              }
+                              
+                        } else {
+                              forcing_inds   <- rep(FALSE, nrow(stem_object$dynamics$tcovar))
+                        }
                   }
-
+                  
                   # generate or copy the initial states
                   if(stem_object$dynamics$fixed_inits) {
-
-                          # if all initial states are fixed, just copy the initial compartment counts
-                          init_states <- matrix(
-                                  rep(as.numeric(stem_object$dynamics$initdist_params), nsim),
-                                  nrow = nsim,
-                                  byrow = TRUE
-                          )
-                          colnames(init_states) <- names(stem_object$dynamics$comp_codes)
-
+                        
+                        # if all initial states are fixed, just copy the initial compartment counts
+                        init_states <- matrix(
+                              rep(as.numeric(stem_object$dynamics$initdist_params), nsim),
+                              nrow = nsim,
+                              byrow = TRUE
+                        )
+                        colnames(init_states) <- names(stem_object$dynamics$comp_codes)
+                        
                   } else {
-
-                          if(stem_object$dynamics$n_strata == 1) {
-
-                                  # simulate the initial compartment counts
-                                  init_states <- t(as.matrix(rmultinom(nsim, stem_object$dynamics$popsize,stem_object$dynamics$initdist_priors)))
-                                  colnames(init_states) <- names(stem_object$dynamics$comp_codes)
-
-                          } else if(stem_object$dynamics$n_strata > 1) {
-
-                                  # generate the matrix of initial compartment counts
-                                  init_states <- matrix(0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
-                                  colnames(init_states) <- names(stem_object$dynamics$comp_codes)
-
-                                  for(s in seq_len(stem_object$dynamics$n_strata)) {
-
-                                          if(!stem_object$dynamics$state_initializer[[s]]$fixed) {
-                                                  init_states[, stem_object$dynamics$state_initializer[[s]]$codes] <-
-                                                          as.matrix(t(rmultinom(nsim,
-                                                                                stem_object$dynamics$strata_sizes[s],
-                                                                                stem_object$dynamics$state_initializer[[s]]$prior)))
-
-                                          } else {
-                                                  init_states[, stem_object$dynamics$state_initializer[[s]]$codes] <-
-                                                          matrix(as.numeric(stem_object$dynamics$state_initializer[[s]]$init_states),
-                                                                 nrow = nsim,
-                                                                 ncol = length(stem_object$dynamics$state_initializer[[s]]$init_states),
-                                                                 byrow = T)
-                                          }
-                                  }
-                          }
+                        
+                        if(stem_object$dynamics$n_strata == 1) {
+                              
+                              # simulate the initial compartment counts
+                              init_states <- t(as.matrix(rmultinom(nsim, stem_object$dynamics$popsize,stem_object$dynamics$initdist_priors)))
+                              colnames(init_states) <- names(stem_object$dynamics$comp_codes)
+                              
+                        } else if(stem_object$dynamics$n_strata > 1) {
+                              
+                              # generate the matrix of initial compartment counts
+                              init_states <- matrix(0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
+                              colnames(init_states) <- names(stem_object$dynamics$comp_codes)
+                              
+                              for(s in seq_len(stem_object$dynamics$n_strata)) {
+                                    
+                                    if(!stem_object$dynamics$state_initializer[[s]]$fixed) {
+                                          init_states[, stem_object$dynamics$state_initializer[[s]]$codes] <-
+                                                as.matrix(t(rmultinom(nsim,
+                                                                      stem_object$dynamics$strata_sizes[s],
+                                                                      stem_object$dynamics$state_initializer[[s]]$prior)))
+                                          
+                                    } else {
+                                          init_states[, stem_object$dynamics$state_initializer[[s]]$codes] <-
+                                                matrix(as.numeric(stem_object$dynamics$state_initializer[[s]]$init_states),
+                                                       nrow = nsim,
+                                                       ncol = length(stem_object$dynamics$state_initializer[[s]]$init_states),
+                                                       byrow = T)
+                                    }
+                              }
+                        }
                   }
-
+                  
                   # if there are artificial incidence compartments, copy the
                   # incidence counts and add them to the initial state matrix
                   if(!is.null(stem_object$dynamics$incidence_codes)) {
-                          # init_incid <- init_states[, stem_object$dynamics$incidence_sources + 1, drop = FALSE]
-                          init_incid <- matrix(0, nrow = nrow(init_states), ncol = length(stem_object$dynamics$incidence_codes))
-                          colnames(init_incid) <- names(stem_object$dynamics$incidence_codes)
-                          init_states <- cbind(init_states, init_incid)
+                        # init_incid <- init_states[, stem_object$dynamics$incidence_sources + 1, drop = FALSE]
+                        init_incid <- matrix(0, nrow = nrow(init_states), ncol = length(stem_object$dynamics$incidence_codes))
+                        colnames(init_incid) <- names(stem_object$dynamics$incidence_codes)
+                        init_states <- cbind(init_states, init_incid)
                   }
-
+                  
                   # guess the initial dimensions. need an extra column for event times and another for event IDs.
                   if(stem_object$dynamics$progressive & any(stem_object$dynamics$absorbing_states)) {
-                          if(stem_object$dynamics$n_strata == 1) {
-                                  init_dims <- c(n_rows = sum(stem_object$dynamics$popsize * stem_object$dynamics$n_compartments),
-                                                 n_cols = ncol(stem_object$dynamics$flow_matrix) + 2)
-                          } else {
-                                  init_dims <- c(n_rows = sum(stem_object$dynamics$strata_sizes * sapply(sapply(stem_object$dynamics$state_initializer, "[[", 4), length)),
-                                                 n_cols = ncol(stem_object$dynamics$flow_matrix) + 2)
-
-                          }
+                        if(stem_object$dynamics$n_strata == 1) {
+                              init_dims <- c(n_rows = sum(stem_object$dynamics$popsize * stem_object$dynamics$n_compartments),
+                                             n_cols = ncol(stem_object$dynamics$flow_matrix) + 2)
+                        } else {
+                              init_dims <- c(n_rows = sum(stem_object$dynamics$strata_sizes * sapply(sapply(stem_object$dynamics$state_initializer, "[[", 4), length)),
+                                             n_cols = ncol(stem_object$dynamics$flow_matrix) + 2)
+                              
+                        }
                   } else {
-                          if(stem_object$dynamics$n_strata == 1) {
-                                  init_dims <- c(n_rows = sum(stem_object$dynamics$popsize * stem_object$dynamics$n_compartments) * 3,
-                                                 n_cols = ncol(stem_object$dynamics$flow_matrix) + 2)
-                          } else if(stem_object$dynamics$n_strata > 1) {
-                                  init_dims <- c(n_rows = sum(stem_object$dynamics$strata_sizes * sapply(sapply(stem_object$dynamics$state_initializer, "[[", 4), length)) * 3,
-                                                 n_cols = ncol(stem_object$dynamics$flow_matrix) + 2)
-                          }
+                        if(stem_object$dynamics$n_strata == 1) {
+                              init_dims <- c(n_rows = sum(stem_object$dynamics$popsize * stem_object$dynamics$n_compartments) * 3,
+                                             n_cols = ncol(stem_object$dynamics$flow_matrix) + 2)
+                        } else if(stem_object$dynamics$n_strata > 1) {
+                              init_dims <- c(n_rows = sum(stem_object$dynamics$strata_sizes * sapply(sapply(stem_object$dynamics$state_initializer, "[[", 4), length)) * 3,
+                                             n_cols = ncol(stem_object$dynamics$flow_matrix) + 2)
+                        }
                   }
-
+                  
                   # make the initial dimensions a little bigger (round up to nearest power of 2)
                   p <- 1
                   while(2^p < init_dims[1]) {
-                          p <- p+1
-                          if(2^p > init_dims[1]) init_dims[1] <- 2^p
+                        p <- p+1
+                        if(2^p > init_dims[1]) init_dims[1] <- 2^p
                   }
-
+                  
                   # get the compartment names
                   path_colnames <-
-                          c("time", "event", c(
-                                  names(stem_object$dynamics$comp_codes),
-                                  names(stem_object$dynamics$incidence_codes)
-                          ))
-
+                        c("time", "event", c(
+                              names(stem_object$dynamics$comp_codes),
+                              names(stem_object$dynamics$incidence_codes)
+                        ))
+                  
                   # generate forcings if they are specified
                   forcing_matrix <- matrix(0.0,
                                            nrow = nrow(stem_object$dynamics$tcovar),
                                            ncol = length(path_colnames)-2,
                                            dimnames = list(NULL, path_colnames[-c(1:2)]))
-
+                  
                   if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
-
-                          for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
-
-                                  # insert the flow into the forcing matrix
-                                  forcing_matrix[forcing_inds, stem_object$dynamics$forcings[[l]]$from] <-
-                                          forcing_matrix[forcing_inds, stem_object$dynamics$forcings[[l]]$from] -
-                                          stem_object$dynamics$tcovar[forcing_inds, stem_object$dynamics$forcings[[l]]$tcovar_name]
-
-                                  forcing_matrix[forcing_inds, stem_object$dynamics$forcings[[l]]$to] <-
-                                        forcing_matrix[forcing_inds, stem_object$dynamics$forcings[[l]]$to] +
-                                        stem_object$dynamics$tcovar[forcing_inds, stem_object$dynamics$forcings[[l]]$tcovar_name]
-                          }
+                        
+                        for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
+                              
+                              # insert the flow into the forcing matrix
+                              forcing_matrix[forcing_inds, stem_object$dynamics$forcings[[l]]$from] <-
+                                    forcing_matrix[forcing_inds, stem_object$dynamics$forcings[[l]]$from] -
+                                    stem_object$dynamics$tcovar[forcing_inds, stem_object$dynamics$forcings[[l]]$tcovar_name]
+                              
+                              forcing_matrix[forcing_inds, stem_object$dynamics$forcings[[l]]$to] <-
+                                    forcing_matrix[forcing_inds, stem_object$dynamics$forcings[[l]]$to] +
+                                    stem_object$dynamics$tcovar[forcing_inds, stem_object$dynamics$forcings[[l]]$tcovar_name]
+                        }
                   }
                   
                   # tparam indices and initial values
@@ -334,79 +334,79 @@ simulate_stem <-
                         tparam_draws <- NULL
                         tparam_times <- NULL
                   }
-
+                  
                   # initialize the list of paths
                   if(full_paths) paths_full <- vector(mode = "list", length = nsim)
-
+                  
                   census_paths    <- vector(mode = "list", length = nsim)
                   census_colnames <- c("time", c(names(stem_object$dynamics$comp_codes),
                                                  names(stem_object$dynamics$incidence_codes)))
-
+                  
                   # add 2 to the codes b/c 'time' and 'event' are in the full path
                   census_codes  <- c(stem_object$dynamics$comp_codes, stem_object$dynamics$incidence_codes) + 2
                   get_incidence <- !is.null(stem_object$dynamics$incidence_codes)
-
+                  
                   if(get_incidence) {
-                          incidence_codes       <- stem_object$dynamics$incidence_codes + 1
-                          census_incidence_rows <- rep(list(seq_along(census_times) - 1),
-                                                       length(stem_object$dynamics$incidence_codes))
+                        incidence_codes       <- stem_object$dynamics$incidence_codes + 1
+                        census_incidence_rows <- rep(list(seq_along(census_times) - 1),
+                                                     length(stem_object$dynamics$incidence_codes))
                   }
-
+                  
                   # vector of model parameters
                   sim_pars <- stem_object$dynamics$parameters
-
+                  
                   for(k in seq_len(nsim)) {
-
-                          attempt <- 0
-                          path_full <- NULL
-                          
-                          if(!is.null(simulation_parameters)) {
-                                sim_pars <- as.numeric(simulation_parameters[[k]])
-                          } 
-                          
-                          # draw new time-varying parameters if necessary
-                          if(!is.null(stem_object$dynamics$tparam)) {
-                                for(s in seq_along(stem_object$dynamics$tparam)) {
-                                      
-                                      #draw new values
-                                      draw_normals(stem_object$dynamics$tparam[[s]]$values)
-                                      
-                                      # insert the new values into the tcovar matrix
-                                      insert_tparam(tcovar = stem_object$dynamics$tcovar, 
-                                                    values = stem_object$dynamics$tparam[[s]]$draws2par(
-                                                          sim_pars, 
-                                                          stem_object$dynamics$tparam[[s]]$values),
-                                                    col_ind   = stem_object$dynamics$tparam[[s]]$col_ind,
-                                                    tpar_inds = stem_object$dynamics$tparam[[s]]$tpar_inds)
-                                      
-                                }
-                                
-                                tparam_draws[[k]] <- lapply(stem_object$dynamics$tparam, function(x) x$values)
-                          }
-
-                          while(is.null(path_full) & attempt < max_attempts) {
-                                  try({
-                                          path_full <- simulate_gillespie(flow             = stem_object$dynamics$flow_matrix,
-                                                                          parameters       = sim_pars,
-                                                                          constants        = stem_object$dynamics$constants,
-                                                                          tcovar           = stem_object$dynamics$tcovar,
-                                                                          init_states      = init_states[k,],
-                                                                          rate_adjmat      = stem_object$dynamics$rate_adjmat,
-                                                                          tcovar_adjmat    = stem_object$dynamics$tcovar_adjmat,
-                                                                          tcovar_changemat = stem_object$dynamics$tcovar_changemat,
-                                                                          init_dims        = init_dims,
-                                                                          forcing_inds     = forcing_inds,
-                                                                          forcing_matrix   = forcing_matrix,
-                                                                          rate_ptr         = stem_object$dynamics$rate_ptrs[[1]])
-                                  }, silent = TRUE)
-                                  attempt <- attempt + 1
-                          }
-
-                          # get the census path
-                          if(!is.null(path_full)) {
-                                census_paths[[k]] <- build_census_path(path = path_full,
-                                                                       census_times = census_times,
-                                                                       census_columns = census_codes)
+                        
+                        attempt <- 0
+                        path_full <- NULL
+                        
+                        if(!is.null(simulation_parameters)) {
+                              sim_pars <- as.numeric(simulation_parameters[[k]])
+                        } 
+                        
+                        # draw new time-varying parameters if necessary
+                        if(!is.null(stem_object$dynamics$tparam)) {
+                              for(s in seq_along(stem_object$dynamics$tparam)) {
+                                    
+                                    #draw new values
+                                    draw_normals(stem_object$dynamics$tparam[[s]]$values)
+                                    
+                                    # insert the new values into the tcovar matrix
+                                    insert_tparam(tcovar = stem_object$dynamics$tcovar, 
+                                                  values = stem_object$dynamics$tparam[[s]]$draws2par(
+                                                        sim_pars, 
+                                                        stem_object$dynamics$tparam[[s]]$values),
+                                                  col_ind   = stem_object$dynamics$tparam[[s]]$col_ind,
+                                                  tpar_inds = stem_object$dynamics$tparam[[s]]$tpar_inds)
+                                    
+                              }
+                              
+                              tparam_draws[[k]] <- lapply(stem_object$dynamics$tparam, function(x) x$values)
+                        }
+                        
+                        while(is.null(path_full) & attempt < max_attempts) {
+                              try({
+                                    path_full <- simulate_gillespie(flow             = stem_object$dynamics$flow_matrix,
+                                                                    parameters       = sim_pars,
+                                                                    constants        = stem_object$dynamics$constants,
+                                                                    tcovar           = stem_object$dynamics$tcovar,
+                                                                    init_states      = init_states[k,],
+                                                                    rate_adjmat      = stem_object$dynamics$rate_adjmat,
+                                                                    tcovar_adjmat    = stem_object$dynamics$tcovar_adjmat,
+                                                                    tcovar_changemat = stem_object$dynamics$tcovar_changemat,
+                                                                    init_dims        = init_dims,
+                                                                    forcing_inds     = forcing_inds,
+                                                                    forcing_matrix   = forcing_matrix,
+                                                                    rate_ptr         = stem_object$dynamics$rate_ptrs[[1]])
+                              }, silent = TRUE)
+                              attempt <- attempt + 1
+                        }
+                        
+                        # get the census path
+                        if(!is.null(path_full)) {
+                              census_paths[[k]] <- build_census_path(path = path_full,
+                                                                     census_times = census_times,
+                                                                     census_columns = census_codes)
                                 
                                 # compute incidence if required. n.b. add 1 to the incidence codes b/c 'time' is in the census path
                                 if(get_incidence) compute_incidence(censusmat = census_paths[[k]],

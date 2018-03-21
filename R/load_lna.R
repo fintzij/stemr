@@ -49,7 +49,7 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol, stepper) {
                 # exponentiate the current state
                 exp_Z_terms     <- paste(paste0("odeintr::Z = arma::vec(x).subvec(0,",n_rates-1,");"),
                                          "Z.elem(arma::find(Z<0)).zeros();", # ensures compartment counts are nonnegative
-                                         "odeintr::exp_Z = arma::exp(odeintr::Z);",
+                                         "odeintr::expm1_Z = arma::vec(expm1(Rcpp::NumericVector(odeintr::Z.begin(), odeintr::Z.end())));",
                                          "odeintr::exp_neg_Z = arma::exp(-odeintr::Z);",
                                          "odeintr::exp_neg_2Z = arma::square(odeintr::exp_neg_Z);", sep = "\n")
 
@@ -120,7 +120,7 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol, stepper) {
                                                  globals = paste(paste(
                                                          "\n",
                                                          paste0("static arma::vec Z(", n_rates,",arma::fill::zeros);"),
-                                                         paste0("static arma::vec exp_Z(", n_rates,",arma::fill::zeros);"),
+                                                         paste0("static arma::vec expm1_Z(", n_rates,",arma::fill::zeros);"),
                                                          paste0("static arma::vec exp_neg_Z(", n_rates,",arma::fill::zeros);"),
                                                          paste0("static arma::vec exp_neg_2Z(", n_rates,",arma::fill::zeros);"),
                                                          paste0("static arma::vec hazards(",n_rates,",arma::fill::zeros);"),
@@ -135,7 +135,7 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol, stepper) {
 
                 # RcppArmadillo is included, so remove the include tag for Rcpp
                 LNA_code <- gsub("#include <Rcpp.h>", "", LNA_code)
-
+                
                 # we don't need the odeintr functions exported to the R global environment,
                 # so remove the export attributes
                 LNA_code <- gsub("// \\[\\[Rcpp::export\\]\\]", "", LNA_code)
@@ -157,8 +157,8 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol, stepper) {
         if(compile_code) {
                 # compile the LNA code
                 if(messages) print("Compiling LNA functions.")
-                Rcpp::sourceCpp(code = LNA_code, env = globalenv())
-
+                Rcpp::sourceCpp(code = LNA_code, env = globalenv(), showOutput = FALSE)   
+                
                 # get the LNA function pointers
                 lna_pointer <- c(lna_ptr = LNA_XPtr(),
                                  set_lna_params_ptr = LNA_set_params_XPtr(),

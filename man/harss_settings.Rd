@@ -4,20 +4,12 @@
 \alias{harss_settings}
 \title{Generate a list of settings for automated factor slice sampling}
 \usage{
-harss_settings(n_harss_updates = 1, initial_width = 1, target_ratio = 0.5,
-  tparam_update = TRUE)
+harss_settings(n_harss_updates = 1, bracket_update_interval = 100)
 }
 \arguments{
 \item{n_harss_updates}{number of hit-and-run updates.}
 
-\item{initial_width}{initial bracket width, defaults to 1.}
-
-\item{target_ratio}{target ratio of expansions/(expansions + contractions),
-defaults to 0.5. Smaller values overrelax the interval widths.}
-
-\item{tparam_update}{either TRUE if a joint hit-and-run update for
-time-varying parameters should be carried out (default), or FALSE if
-time-varying parameters should be updated separately.}
+\item{bracket_update_interval}{how often the bracket update interval should be updated}
 }
 \value{
 list with additional settings for hit and run slice sampling
