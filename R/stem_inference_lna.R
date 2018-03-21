@@ -1604,12 +1604,16 @@ stem_inference_lna <- function(stem_object,
                         step_size            = step_size
                   )
             
-                  # update the covariance matrix for the proposal kernel
+                  # update the bracket width
                   if (iter < stop_adaptation) {
                         harss_bracket_width <-  
                               exp(log(harss_bracket_width) +  
                                         adaptations[iter] *  
                                         (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5))
+                        
+                        # reset number of expansions and contractions
+                        n_expansions_harss <- 0.5
+                        n_contractions_harss <- 0.5
                   }
             }
             
