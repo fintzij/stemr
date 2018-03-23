@@ -723,13 +723,17 @@ update_factors <- function(slice_eigenvals, slice_eigenvecs, kernel_cov) {
 #' Update factors and interval widths for automated factor slice sampling
 #'
 #' @param interval_widths vector of interval widths
-#' @param contraction_rates rates of contractions along each slice direction
-#' @param adaptation_factor weight for adaptation
-#' @param target_contraction_rate expected number of contractions per iteration
+#' @param n_expansions_afss vector with number of expansion
+#' @param n_contractions_afss vector with number of contractions
+#' @param c_expansions_afss cumulative numbers of expansions
+#' @param c_contractions_afss cumulative numbers of contractions
+#' @param slice_ratios vector for storing ratio of cumulative number of 
+#'   expansions over number of interval width changes
+#' @param adaptation_factor 
 #'
 #' @return adapt interval widths in place
 #' @export
-update_interval_widths <- function(interval_widths, contraction_rates, adaptation_factor, target_contraction_rate) {
-    invisible(.Call(`_stemr_update_interval_widths`, interval_widths, contraction_rates, adaptation_factor, target_contraction_rate))
+update_interval_widths <- function(interval_widths, n_expansions_afss, n_contractions_afss, c_expansions_afss, c_contractions_afss, slice_ratios, adaptation_factor, target_ratio) {
+    invisible(.Call(`_stemr_update_interval_widths`, interval_widths, n_expansions_afss, n_contractions_afss, c_expansions_afss, c_contractions_afss, slice_ratios, adaptation_factor, target_ratio))
 }
 

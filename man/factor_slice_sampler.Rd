@@ -5,14 +5,14 @@
 \title{Update model parameters via factor slice sampling}
 \usage{
 factor_slice_sampler(model_params_est, model_params_nat, params_prop_est,
-  params_prop_nat, interval_widths, n_contractions_afss, slice_eigenvecs,
-  slice_probs, n_afss_updates, afss_step_out, path, data, priors,
-  params_logprior_cur, lna_params_cur, lna_param_vec, tparam, censusmat,
-  emitmat, flow_matrix, stoich_matrix, lna_times, forcing_inds, forcing_matrix,
-  lna_param_inds, lna_const_inds, lna_tcovar_inds, lna_initdist_inds,
-  param_update_inds, lna_event_inds, census_indices, measproc_indmat, svd_sqrt,
-  svd_d, svd_U, svd_V, lna_pointer, lna_set_pars_pointer, d_meas_pointer,
-  do_prevalence, step_size)
+  params_prop_nat, interval_widths, n_contractions_afss, n_expansions_afss,
+  c_contractions_afss, c_expansions_afss, slice_eigenvecs, slice_probs,
+  n_afss_updates, path, data, priors, params_logprior_cur, lna_params_cur,
+  lna_param_vec, tparam, censusmat, emitmat, flow_matrix, stoich_matrix,
+  lna_times, forcing_inds, forcing_matrix, lna_param_inds, lna_const_inds,
+  lna_tcovar_inds, lna_initdist_inds, param_update_inds, lna_event_inds,
+  census_indices, measproc_indmat, svd_sqrt, svd_d, svd_U, svd_V, lna_pointer,
+  lna_set_pars_pointer, d_meas_pointer, do_prevalence, step_size)
 }
 \arguments{
 \item{model_params_est}{vector of model parameters on the estimation scale}
@@ -27,13 +27,17 @@ factor_slice_sampler(model_params_est, model_params_nat, params_prop_est,
 
 \item{n_contractions_afss}{vector for storing the number of contractions}
 
+\item{n_expansions_afss}{number of expansions}
+
+\item{c_contractions_afss}{cumulative number of contractions}
+
+\item{c_expansions_afss}{cumulative number of expansions}
+
 \item{slice_eigenvecs}{matrix of slice factors}
 
 \item{slice_probs}{slice direction sampling probabilities}
 
 \item{n_afss_updates}{number of afss updates per iteration}
-
-\item{afss_step_out}{should the bracket be stepped out}
 
 \item{path}{list containing the LNA path, N(0,1) draws, and likelihood}
 

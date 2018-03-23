@@ -29,20 +29,12 @@
 #'   is carried out to ensure ergodicity.
 #' @param sample_all_initially should all factor directions be sampled until the
 #'   first slice probability update? defaults to TRUE
-#' @param step_out_adapt should a stepping out procedure be used to expand the
-#'   initial slice bracket during the adaptation? defaults to TRUE
-#' @param step_out_adapt should a stepping out procedure be used to expand the
-#'   initial slice bracket when the kernel is fixed? defaults to TRUE
 #' @param harss_prob probability of a hit and run update at each iteration
 #' @param harss_warmup should a hit and run update be performed along with the
 #'   elliptical slice sampling warm up? defaults to TRUE
 #' @param initial_widths vector of initial slice widths, defaults to a vector of
-#'   ones.
-#' @param step_out_fixed should the slice sampler be stepped out after the
-#'   adaptation is stopped, defaults to TRUE
-#' @param target_contraction_rate expected number of contraction for each
-#'   proposal per iteration, defaults to 0.5
-#'
+#' @param afss_slice_ratio target ratio of expansions / (expansions +
+#'   contractions) ones.
 #' @return list with additional settings for automated factor slice sampling
 #' @export
 afss_settings <-
@@ -53,10 +45,8 @@ afss_settings <-
                initial_slice_probs = NULL,
                initial_widths = NULL,
                n_afss_updates = NULL,
-               step_out_adapt = TRUE,
-               step_out_fixed = TRUE,
                sample_all_initially = TRUE,
-               target_contraction_rate = 0.5,
+               afss_slice_ratio = 0.5,
                target_prop_totsd = NULL,
                harss_prob = 0.05,
                harss_warmup = TRUE) {
@@ -87,10 +77,8 @@ afss_settings <-
            initial_slice_probs     = initial_slice_probs,
            initial_widths          = initial_widths,
            n_afss_updates          = n_afss_updates,
-           step_out_adapt          = step_out_adapt,
-           step_out_fixed          = step_out_fixed,
-           sample_all_initially    = TRUE,
-           target_contraction_rate = target_contraction_rate,
+           sample_all_initially    = sample_all_initially,
+           afss_slice_ratio        = afss_slice_ratio,
            target_prop_totsd       = target_prop_totsd,
            harss_prob              = harss_prob,
            harss_warmup            = harss_warmup)

@@ -7,9 +7,9 @@
 afss_settings(factor_update_interval = NULL, prob_update_interval = NULL,
   first_factor_update = 100, first_prob_update = 100,
   initial_slice_probs = NULL, initial_widths = NULL,
-  n_afss_updates = NULL, step_out_adapt = TRUE, step_out_fixed = TRUE,
-  sample_all_initially = TRUE, target_contraction_rate = 0.5,
-  target_prop_totsd = NULL, harss_prob = 0.05, harss_warmup = TRUE)
+  n_afss_updates = NULL, sample_all_initially = TRUE,
+  afss_slice_ratio = 0.5, target_prop_totsd = NULL, harss_prob = 0.05,
+  harss_warmup = TRUE)
 }
 \arguments{
 \item{factor_update_interval}{number of iterations between factor and
@@ -37,22 +37,15 @@ direction probabilities should occur.}
 
 \item{initial_slice_probs}{vector of initial slice probabilities}
 
-\item{initial_widths}{vector of initial slice widths, defaults to a vector of
-ones.}
+\item{initial_widths}{vector of initial slice widths, defaults to a vector of}
 
 \item{n_afss_updates}{number of factor slice sampling directions to update}
-
-\item{step_out_adapt}{should a stepping out procedure be used to expand the
-initial slice bracket during the adaptation? defaults to TRUE}
-
-\item{step_out_fixed}{should the slice sampler be stepped out after the
-adaptation is stopped, defaults to TRUE}
 
 \item{sample_all_initially}{should all factor directions be sampled until the
 first slice probability update? defaults to TRUE}
 
-\item{target_contraction_rate}{expected number of contraction for each
-proposal per iteration, defaults to 0.5}
+\item{afss_slice_ratio}{target ratio of expansions / (expansions +
+contractions) ones.}
 
 \item{target_prop_totsd}{Between 0 and 1. If supplied, the number of factor
 directions sampled after the first probability update set to be the maximum
@@ -65,9 +58,6 @@ is carried out to ensure ergodicity.}
 
 \item{harss_warmup}{should a hit and run update be performed along with the
 elliptical slice sampling warm up? defaults to TRUE}
-
-\item{step_out_adapt}{should a stepping out procedure be used to expand the
-initial slice bracket when the kernel is fixed? defaults to TRUE}
 }
 \value{
 list with additional settings for automated factor slice sampling

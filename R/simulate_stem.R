@@ -658,7 +658,6 @@ simulate_stem <-
                                                               lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
                                                               set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
                                           
-                                          
                                     }, silent = TRUE)
                                     
                                     attempt           <- attempt + 1

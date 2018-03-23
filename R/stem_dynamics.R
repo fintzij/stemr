@@ -915,8 +915,9 @@ stem_dynamics <-
                         # get the C++ indices for the initial distribution parameters in the lna_pars matrix
                         ode_initdist_inds <- sapply(paste0(names(compartment_codes), "_0"),
                                                     grep, names(ode_rates$ode_param_codes)) - 1
+                } else {
+                      ode_pointers <- NULL
                 }
-
         }
 
         if(!do_lna) {

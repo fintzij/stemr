@@ -48,10 +48,12 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol, stepper) {
             # strings to construct the drift and diffusion vectors, and to exponentiate the current state
             # exponentiate the current state
             exp_Z_terms     <- paste(paste0("odeintr::Z = arma::vec(x).subvec(0,",n_rates-1,");"),
-                                     "Z.elem(arma::find(Z<0)).zeros();", # ensures compartment counts are nonnegative
+                                     "odeintr::Z.elem(arma::find(odeintr::Z<0)).zeros();", # ensures compartment counts are nonnegative
                                      "odeintr::exp_Z = arma::exp(odeintr::Z);",
+                                     "odeintr::expm1_Z = arma::vec(expm1(Rcpp::NumericVector(odeintr::Z.begin(), odeintr::Z.end())));",
                                      "odeintr::exp_neg_Z = arma::exp(-odeintr::Z);",
-                                     "odeintr::exp_neg_2Z = arma::square(odeintr::exp_neg_Z);", sep = "\n")
+                                     "odeintr::exp_neg_2Z = arma::exp(-2*odeintr::Z);", 
+                                     sep = "\n")
             
             # strings to compute the ito terms, hazards, drift, and jacobian
             haz_terms      <- paste(paste("odeintr::hazards[",0:(n_rates-1),"]", " = ",
@@ -60,7 +62,9 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol, stepper) {
             non_zero_inds  <- which(lna_rates$derivatives != "0")
             jacobian_terms <- paste(paste("odeintr::jacobian(",
                                           jacobian_inds[non_zero_inds,1], ", ", jacobian_inds[non_zero_inds,2], ") = ",
-                                          lna_rates$derivatives[non_zero_inds],";", sep = ""), collapse = "\n")
+                                          lna_rates$derivatives[non_zero_inds],";", sep = ""),
+                                    "odeintr::jacobian.rows(arma::find(odeintr::hazards == 0)).zeros();",
+                                    collapse = "\n")
             
             # diffusion_ode  <- paste0("odeintr::diffusion_ode = arma::vectorise(odeintr::diffusion * odeintr::jacobian.t() + ",
             #                          "arma::diagmat(odeintr::exp_neg_2Z % odeintr::hazards) + ",
@@ -70,7 +74,7 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol, stepper) {
                                             n_rates, ",", n_odes-1, "),", n_rates,",", n_rates,");"),
                                      paste0("odeintr::diffusion = odeintr::diffusion * odeintr::jacobian.t() + ",
                                             "odeintr::jacobian * odeintr::diffusion;"),
-                                     "odeintr::diffusion.diag() += odeintr::exp_neg_2Z % odeintr::hazards;",sep = "\n")
+                                     "odeintr::diffusion.diag() += odeintr::exp_neg_2Z % odeintr::hazards;", sep = "\n")
             
             # dxdt strings
             dxdt_drift     <- paste("dxdt[", drift_inds, "] = ",
@@ -121,6 +125,7 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol, stepper) {
                                                    "\n",
                                                    paste0("static arma::vec Z(", n_rates,",arma::fill::zeros);"),
                                                    paste0("static arma::vec exp_Z(", n_rates,",arma::fill::zeros);"),
+                                                   paste0("static arma::vec expm1_Z(", n_rates,",arma::fill::zeros);"),
                                                    paste0("static arma::vec exp_neg_Z(", n_rates,",arma::fill::zeros);"),
                                                    paste0("static arma::vec exp_neg_2Z(", n_rates,",arma::fill::zeros);"),
                                                    paste0("static arma::vec hazards(",n_rates,",arma::fill::zeros);"),
@@ -157,7 +162,7 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol, stepper) {
       if(compile_code) {
             # compile the LNA code
             if(messages) print("Compiling LNA functions.")
-            Rcpp::sourceCpp(code = LNA_code, env = globalenv())
+            Rcpp::sourceCpp(code = LNA_code, env = globalenv(), rebuild = TRUE, verbose = FALSE)
             
             # get the LNA function pointers
             lna_pointer <- c(lna_ptr = LNA_XPtr(),

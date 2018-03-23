@@ -645,15 +645,19 @@ BEGIN_RCPP
 END_RCPP
 }
 // update_interval_widths
-void update_interval_widths(arma::vec& interval_widths, const arma::vec& contraction_rates, const double adaptation_factor, const double target_contraction_rate);
-RcppExport SEXP _stemr_update_interval_widths(SEXP interval_widthsSEXP, SEXP contraction_ratesSEXP, SEXP adaptation_factorSEXP, SEXP target_contraction_rateSEXP) {
+void update_interval_widths(arma::vec& interval_widths, arma::vec& n_expansions_afss, arma::vec& n_contractions_afss, const arma::vec& c_expansions_afss, const arma::vec& c_contractions_afss, arma::vec& slice_ratios, double adaptation_factor, double target_ratio);
+RcppExport SEXP _stemr_update_interval_widths(SEXP interval_widthsSEXP, SEXP n_expansions_afssSEXP, SEXP n_contractions_afssSEXP, SEXP c_expansions_afssSEXP, SEXP c_contractions_afssSEXP, SEXP slice_ratiosSEXP, SEXP adaptation_factorSEXP, SEXP target_ratioSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::vec& >::type interval_widths(interval_widthsSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type contraction_rates(contraction_ratesSEXP);
-    Rcpp::traits::input_parameter< const double >::type adaptation_factor(adaptation_factorSEXP);
-    Rcpp::traits::input_parameter< const double >::type target_contraction_rate(target_contraction_rateSEXP);
-    update_interval_widths(interval_widths, contraction_rates, adaptation_factor, target_contraction_rate);
+    Rcpp::traits::input_parameter< arma::vec& >::type n_expansions_afss(n_expansions_afssSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type n_contractions_afss(n_contractions_afssSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type c_expansions_afss(c_expansions_afssSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type c_contractions_afss(c_contractions_afssSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type slice_ratios(slice_ratiosSEXP);
+    Rcpp::traits::input_parameter< double >::type adaptation_factor(adaptation_factorSEXP);
+    Rcpp::traits::input_parameter< double >::type target_ratio(target_ratioSEXP);
+    update_interval_widths(interval_widths, n_expansions_afss, n_contractions_afss, c_expansions_afss, c_contractions_afss, slice_ratios, adaptation_factor, target_ratio);
     return R_NilValue;
 END_RCPP
 }
@@ -703,7 +707,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_simulate_gillespie", (DL_FUNC) &_stemr_simulate_gillespie, 12},
     {"_stemr_simulate_r_measure", (DL_FUNC) &_stemr_simulate_r_measure, 6},
     {"_stemr_update_factors", (DL_FUNC) &_stemr_update_factors, 3},
-    {"_stemr_update_interval_widths", (DL_FUNC) &_stemr_update_interval_widths, 4},
+    {"_stemr_update_interval_widths", (DL_FUNC) &_stemr_update_interval_widths, 8},
     {NULL, NULL, 0}
 };
 
