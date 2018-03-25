@@ -1644,7 +1644,7 @@ stem_inference_ode <- function(stem_object,
                         data_log_lik[param_rec_ind]     <- path$data_log_lik
                         params_log_prior[param_rec_ind] <- params_logprior_cur
 
-                        if(!fixed_inits) initdist_log_prior[param_rec_ind] <- initdist_lp
+                        if(!fixed_inits) initdist_log_prior[param_rec_ind] <- initdist_lp_cur
                         if(!t0_fixed) t0_log_prior[param_rec_ind] <- t0_logprior_cur
                         
                         if (!is.null(tparam)) {
