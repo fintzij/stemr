@@ -60,28 +60,36 @@ stem_inference <-
         if(method == "lna") {
 
                 # get the results
-                results <- stem_inference_lna(stem_object,
-                                              iterations,
-                                              priors,
-                                              mcmc_kernel,
-                                              t0_kernel,
-                                              thin_params,
-                                              thin_latent_proc,
-                                              initialization_attempts,
-                                              ess_args,
-                                              messages)
-
+              results <-
+                    stem_inference_lna(
+                          stem_object = stem_object,
+                          iterations = iterations,
+                          priors = priors,
+                          mcmc_kernel = mcmc_kernel,
+                          t0_kernel = t0_kernel,
+                          thin_params = thin_params,
+                          thin_latent_proc = thin_latent_proc,
+                          initialization_attempts = initialization_attempts,
+                          ess_args = ess_args,
+                          messages = messages
+                    )
+              
         } else if(method == "ode") {
 
                 # get the results
-                results <- stem_inference_ode(stem_object,
-                                              iterations,
-                                              priors,
-                                              mcmc_kernel,
-                                              t0_kernel,
-                                              thin_params,
-                                              thin_latent_proc,
-                                              messages)
+              results <-
+                    stem_inference_ode(
+                          stem_object = stem_object,
+                          iterations = iterations,
+                          priors = priors,
+                          mcmc_kernel = mcmc_kernel,
+                          t0_kernel = t0_kernel,
+                          thin_params = thin_params,
+                          thin_latent_proc = thin_latent_proc,
+                          initialization_attempts = initialization_attempts,
+                          ess_args = ess_args,
+                          messages = messages
+                    )
 
         } else if (method == "bda") {
                 print("bda not yet implemented")

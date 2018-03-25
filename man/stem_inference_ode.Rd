@@ -6,7 +6,8 @@
 deterministic trajectory matching.}
 \usage{
 stem_inference_ode(stem_object, iterations, priors, mcmc_kernel, t0_kernel,
-  thin_params, thin_latent_proc, messages)
+  thin_params, thin_latent_proc, initialization_attempts = 500,
+  ess_args = NULL, messages)
 }
 \arguments{
 \item{stem_object}{stochastic epidemic model object with model dynamics, the

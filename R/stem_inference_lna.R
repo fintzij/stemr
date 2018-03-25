@@ -1065,7 +1065,10 @@ stem_inference_lna <- function(stem_object,
       lna_log_lik[1]        <- sum(dnorm(path$draws, log = T))
       params_log_prior[1]   <- params_logprior_cur
       
-      if (!fixed_inits) initdist_log_prior[1] <- initdist_prior(initdist_params_cur)
+      if (!fixed_inits) {
+            initdist_lp_cur <- initdist_prior(initdist_params_cur)
+            initdist_log_prior[1] <- initdist_lp_cur
+      } 
       
       if (!is.null(tparam)) {
             for (p in seq_along(tparam)) tparam[[p]]$log_lik <- sum(dnorm(tparam[[p]]$draws_cur, log = T))
@@ -1748,6 +1751,9 @@ stem_inference_lna <- function(stem_object,
                   # since those are updated via an independence sampler so they cancel out
                   acceptance_prob <- data_log_lik_prop - path$data_log_lik
                   
+                  # still need to check that the initial distribution does not have loglik of -Inf
+                  initdist_lp_prop <- initdist_prior(initdist_params_prop)
+                  
                   # if t0 is not fixed, need to include the proposal probabilities in the MH ratio
                   if (!t0_fixed) acceptance_prob <- 
                         acceptance_prob + 
@@ -1755,7 +1761,7 @@ stem_inference_lna <- function(stem_object,
                         t0_new2cur - t0_cur2new
                   
                   # Accept/Reject via metropolis-hastings
-                  if (acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
+                  if((initdist_lp_prop != -Inf) && (acceptance_prob >= 0 || acceptance_prob >= log(runif(1)))) {
                         
                         ### ACCEPTANCE
                         acceptances_init  <- acceptances_init + 1      # increment acceptances
@@ -1773,6 +1779,9 @@ stem_inference_lna <- function(stem_object,
                               t0              <- t0_prop              # update t0
                               t0_logprior_cur <- t0_logprior_prop     # update the log prior for t0
                         }
+                        
+                        # update the initial distribution log likelihood
+                        initdist_lp_cur <- initdist_lp_prop
                         
                   } else {
                         ### REJECTION - only need to reset t0 if it is not fixed
@@ -1875,7 +1884,7 @@ stem_inference_lna <- function(stem_object,
                   lna_log_lik[param_rec_ind]      <- sum(dnorm(path$draws, log = T))
                   params_log_prior[param_rec_ind] <- params_logprior_cur
                   
-                  if (!fixed_inits) initdist_log_prior[param_rec_ind] <- initdist_prior(initdist_params_cur)
+                  if (!fixed_inits) initdist_log_prior[param_rec_ind] <- initdist_lp_cur
                   if (!t0_fixed) t0_log_prior[param_rec_ind] <- t0_logprior_cur
                   
                   if (!is.null(tparam)) {

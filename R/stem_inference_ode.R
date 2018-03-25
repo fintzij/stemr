@@ -70,8 +70,8 @@ stem_inference_ode <- function(stem_object,
               }
         }
         
-        flow_matrix            <- stem_object$dynamics$flow_matrix_ode
-        stoich_matrix          <- stem_object$dynamics$stoich_matrix_ode
+        flow_matrix            <- stem_object$dynamics$flow_matrix_lna
+        stoich_matrix          <- stem_object$dynamics$stoich_matrix_lna
         ode_pointer            <- stem_object$dynamics$ode_pointers$ode_ptr
         ode_set_pars_pointer   <- stem_object$dynamics$ode_pointers$set_ode_params_ptr
         censusmat              <- stem_object$measurement_process$censusmat
@@ -925,7 +925,10 @@ stem_inference_ode <- function(stem_object,
         data_log_lik[1]       <- path$data_log_lik
         params_log_prior[1]   <- params_logprior_cur
         
-        if (!fixed_inits) initdist_log_prior[1] <- initdist_prior(initdist_params_cur)
+        if (!fixed_inits) {
+              initdist_lp_cur <- initdist_prior(initdist_params_cur)
+              initdist_log_prior[1] <- initdist_lp_cur
+        }
         
         if (!is.null(tparam)) {
               for (p in seq_along(tparam)) tparam[[p]]$log_lik <- sum(dnorm(tparam[[p]]$draws_cur, log = T))
@@ -1052,7 +1055,6 @@ stem_inference_ode <- function(stem_object,
 
                                 copy_vec(path$data_log_lik, data_log_lik_prop)      # update the data log likelihood
                                 copy_vec(params_logprior_cur, params_logprior_prop) # update the prior density
-                                copy_vec(logpost_cur, logpost_prop)                 # update the log posterior
 
                                 copy_mat(ode_params_cur, ode_params_prop)   # update the model parameter
                                 copy_vec(model_params_nat, params_prop_nat) # update ode parameters on their natural scales
@@ -1170,7 +1172,6 @@ stem_inference_ode <- function(stem_object,
 
                                 copy_vec(path$data_log_lik, data_log_lik_prop)      # update the data log likelihood
                                 copy_vec(params_logprior_cur, params_logprior_prop) # update the prior density
-                                copy_vec(logpost_cur, logpost_prop)                 # update the log posterior
 
                                 copy_mat(ode_params_cur, ode_params_prop)   # update the model parameter
                                 copy_vec(model_params_nat, params_prop_nat) # update ode parameters on their natural scales
@@ -1552,6 +1553,9 @@ stem_inference_ode <- function(stem_object,
                         # N.B. no need to include the initial distribution log likelihoods
                         # since those are updated via an independence sampler so they cancel out
                         acceptance_prob <- data_log_lik_prop - path$data_log_lik
+                        
+                        # still need to check that the initial distribution does not have loglik of -Inf
+                        initdist_lp_prop <- initdist_prior(initdist_params_prop)
 
                         # if t0 is not fixed, need to include the proposal probabilities in the MH ratio
                         if(!t0_fixed) acceptance_prob <- acceptance_prob +
@@ -1559,12 +1563,11 @@ stem_inference_ode <- function(stem_object,
                                 t0_new2cur - t0_cur2new
 
                         # Accept/Reject via metropolis-hastings
-                        if(acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
+                        if((initdist_lp_prop != -Inf) && (acceptance_prob >= 0 || acceptance_prob >= log(runif(1)))) {
 
                                 ### ACCEPTANCE
                                 acceptances_init  <- acceptances_init + 1      # increment acceptances
                                 copy_vec(path$data_log_lik, data_log_lik_prop) # update the data log likelihood
-                                copy_vec(logpost_cur, path$data_log_lik + params_logprior_cur) # update log posterior
                                 copy_mat(ode_params_cur, ode_params_prop)      # update ode parameter matrix
 
                                 # Update the initial distribution parameters and log prior if not fixed
@@ -1578,6 +1581,9 @@ stem_inference_ode <- function(stem_object,
                                         t0              <- t0_prop              # update t0
                                         t0_logprior_cur <- t0_logprior_prop     # update the log prior for t0
                                 }
+                                
+                                # update the initial distribution log likelihood
+                                initdist_lp_cur <- initdist_lp_prop
 
                         } else {
                                 ### REJECTION - only need to reset t0 if it is not fixed
@@ -1638,7 +1644,7 @@ stem_inference_ode <- function(stem_object,
                         data_log_lik[param_rec_ind]     <- path$data_log_lik
                         params_log_prior[param_rec_ind] <- params_logprior_cur
 
-                        if(!fixed_inits) initdist_log_prior[param_rec_ind] <- initdist_prior(initdist_params_cur)
+                        if(!fixed_inits) initdist_log_prior[param_rec_ind] <- initdist_lp
                         if(!t0_fixed) t0_log_prior[param_rec_ind] <- t0_logprior_cur
                         
                         if (!is.null(tparam)) {
