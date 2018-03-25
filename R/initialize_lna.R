@@ -69,8 +69,7 @@ initialize_lna <-
                  ess_warmup) {
 
                 # get the initial state parameters
-                init_state <- lna_parameters[1, lna_initdist_inds + 1]
-
+                init_state   <- lna_parameters[1, lna_initdist_inds + 1]
                 data_log_lik <- NaN
                 attempt      <- 0
                 keep_going   <- TRUE

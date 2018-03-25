@@ -616,12 +616,13 @@ stem_dynamics <-
                         rate_fcns[[k]][c(1,3,4,5)] <- rates[[k]][c("rate", "from", "to", "incidence")]
 
                         # if the lumped rates were provided, save them in the lumped rate slot
-                        if(rates[[k]]$lumped == TRUE) {
+                        if(rates[[k]]$lumped) {
+                              
                                 rate_fcns[[k]]$lumped <- rate_fcns[[k]]$unlumped
                                 rate_fcns[[k]]["unlumped"] <- list(NULL)
 
                                 # save the unparsed rate
-                                rate_fcns[[k]]$unparsed <- rate_fcns$lumped
+                                rate_fcns[[k]]$unparsed <- rate_fcns[[k]]$lumped
 
                                 # make the substitutions for the parameter codes
                                 for(s in seq_along(param_codes)) {
@@ -653,7 +654,7 @@ stem_dynamics <-
                                         rate_fcns[[k]]$lumped <- gsub(paste0('\\<',code_name,'\\>'), paste0("state[",code,"]"), rate_fcns[[k]]$lumped)
                                 }
 
-                        } else if(rates[[k]]$lumped == FALSE) {
+                        } else {
 
                                 # construct and save the unparsed lumped rate
                                 rate_fcns[[k]]$unparsed <- paste0("(", rate_fcns[[k]]$unlumped, ") * ", rate_fcns[[k]]$from)

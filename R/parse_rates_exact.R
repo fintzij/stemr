@@ -35,7 +35,7 @@ parse_rates_exact <- function(rates, compile_rates, messages = TRUE) {
                 if(messages) {
                       exp_warning <- FALSE
                       for(r in seq_along(rates)) {
-                            exp_warning <- exp_warning || grepl("\\^", rates[[r]]$lumped) || grepl("\\^", rates[[r]]$unlumped)
+                            exp_warning <- exp_warning || grepl("\\^", rates[[r]]$lumped) || (!is.null(rates[[r]]$unlumped) && grepl("\\^", rates[[r]]$unlumped))
                             if(exp_warning) warning("If there is an exponentiated term in a rate, check that the base and exponent are both enclosed in parentheses, e.g., (base)^(exponent). Ignore this warning if rates are correctly specified.")
                             if(exp_warning) break
                       }
@@ -43,8 +43,8 @@ parse_rates_exact <- function(rates, compile_rates, messages = TRUE) {
 
                 # ensure powers are converted
                 for(r in seq_along(rates)) {
-                        if(!identical(rates[[r]]$unlumped, character(0))) rates[[r]]$unlumped <- sub_powers(rates[[r]]$unlumped)
-                        if(!identical(rates[[r]]$lumped, character(0)))   rates[[r]]$lumped   <- sub_powers(rates[[r]]$lumped)
+                        if(!is.null(rates[[r]]$unlumped)) rates[[r]]$unlumped <- sub_powers(rates[[r]]$unlumped)
+                        if(!is.null(rates[[r]]$lumped))   rates[[r]]$lumped   <- sub_powers(rates[[r]]$lumped)
                 }
 
                 arg_strings <- "Rcpp::NumericVector& rates, const Rcpp::LogicalVector& inds, const arma::rowvec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::rowvec& tcovar"
@@ -53,8 +53,8 @@ parse_rates_exact <- function(rates, compile_rates, messages = TRUE) {
                 fcns_unlumped <- vector("list", length = length(rates))
 
                 for(i in seq_along(rates)) {
-                        fcns_lumped[[i]] <- paste(paste0("if(inds[",i-1,"]) rates[",i-1,"] = ", rates[[i]]$lumped,";"), sep = "\n ")
-                        fcns_unlumped[[i]] <- paste(paste0("if(inds[",i-1,"]) rates[",i-1,"] = ", rates[[i]]$unlumped,";"), sep = "\n ")
+                        if(!is.null(rates[[i]]$lumped)) fcns_lumped[[i]] <- paste(paste0("if(inds[",i-1,"]) rates[",i-1,"] = ", rates[[i]]$lumped,";"), sep = "\n ")
+                        if(!is.null(rates[[i]]$unlumped)) fcns_unlumped[[i]] <- paste(paste0("if(inds[",i-1,"]) rates[",i-1,"] = ", rates[[i]]$unlumped,";"), sep = "\n ")
                 }
 
                 # generate lumped code
@@ -75,7 +75,7 @@ parse_rates_exact <- function(rates, compile_rates, messages = TRUE) {
                 exact_code <- code_lumped
 
                 # generate unlumped code
-                unlumped_inds <- sapply(rates, function(x) !identical(x$unlumped, character(0)))
+                unlumped_inds <- sapply(rates, function(x) !is.null(x$unlumped))
 
                 if(sum(unlumped_inds) == length(rates)) {
 

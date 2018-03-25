@@ -55,6 +55,7 @@ rate_fcns_4_lna <- function(rate_fcns, compartment_codes, flow_matrix) {
 
         # convert the rates
         for(r in seq_len(n_comps)) {
+              
                 # get the rates that feed in and the rates that feed out
                 rates_in  <- rate_names[which(flow_matrix[,r] == 1)]
                 rates_out <- rate_names[which(flow_matrix[,r] == -1)]

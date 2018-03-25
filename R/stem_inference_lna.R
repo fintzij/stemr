@@ -51,9 +51,26 @@ stem_inference_lna <- function(stem_object,
       if (is.function(stem_object$dynamics$parameters)) {
             par_init_fcn   <- stem_object$dynamics$parameters
             parameters     <- par_init_fcn()
+            
+            pd <- priors$prior_density(parameters, priors$to_estimation_scale(parameters))
+            par_init_attempt <- 1
+            while(pd == -Inf && par_init_attempt <= initialization_attempts) {
+                  parameters <- par_init_fcn()
+                  pd <- priors$prior_density(parameters, priors$to_estimation_scale(parameters))
+                  par_init_attempt <- par_init_attempt + 1
+            }
+            
+            if(pd == -Inf) {
+                  stop("Parameters have log prior density of negative infinity. Try another initialization.")
+            }
+            
       } else {
             par_init_fcn   <- NULL
             parameters     <- stem_object$dynamics$parameters
+            pd <- priors$prior_density(parameters, priors$to_estimation_scale(parameters))
+            if(pd == -Inf) {
+                  stop("Parameters have log prior density of negative infinity. Try another initialization.")
+            }
       }
       
       flow_matrix            <- stem_object$dynamics$flow_matrix_lna
@@ -209,18 +226,13 @@ stem_inference_lna <- function(stem_object,
       names(params_prop_est) <- names(params_prop_nat) <- param_names_nat
       
       # generate other derived objects
-      lna_times         <- sort(unique(
-            c(
-                  obstimes,
-                  stem_object$dynamics$tcovar[, 1],
-                  seq(
-                        stem_object$dynamics$t0,
-                        stem_object$dynamics$tmax,
-                        by = stem_object$dynamics$timestep
-                  ),
-                  stem_object$dynamics$tmax
-            )
-      ))
+      lna_times <- 
+            sort(unique(c(obstimes,
+                          stem_object$dynamics$tcovar[, 1],
+                          seq(stem_object$dynamics$t0,
+                              stem_object$dynamics$tmax,
+                              by = stem_object$dynamics$timestep),
+                          stem_object$dynamics$tmax)))
       
       n_times           <- length(lna_times)
       census_indices    <- unique(c(0, findInterval(obstimes, lna_times) - 1))
@@ -467,13 +479,11 @@ stem_inference_lna <- function(stem_object,
       if (!t0_fixed) {
             t0_name      <- names(stem_object$dynamics$t0)
             t0_prop      <- double(1)
-            t0_log_prior <-
-                  double(1 + floor(iterations / thin_params))
+            t0_log_prior <- double(1 + floor(iterations / thin_params))
             
             # set the truncation points for the t0 mcmc_kernel if not fixed
-            t0_kernel$upper <-
-                  min(t0_kernel$upper,
-                      min(stem_object$measurement_process$obstimes))
+            t0_kernel$upper <- min(t0_kernel$upper,
+                                   min(stem_object$measurement_process$obstimes))
             t0_kernel$lower <- max(t0_kernel$lower,-Inf)
             
       } else {
@@ -484,23 +494,21 @@ stem_inference_lna <- function(stem_object,
       }
       
       # matrix for storing the LNA parameters
-      lna_params_cur    <- matrix(
-            0.0,
-            nrow = length(lna_times),
-            ncol = length(stem_object$dynamics$lna_rates$lna_param_codes),
-            dimnames = list(
-                  NULL,
-                  names(stem_object$dynamics$lna_rates$lna_param_codes)
+      lna_params_cur <- 
+            matrix(0.0,
+                   nrow = length(lna_times),
+                   ncol = length(stem_object$dynamics$lna_rates$lna_param_codes),
+                   dimnames = list(NULL,
+                                   names(stem_object$dynamics$lna_rates$lna_param_codes)
             )
       )
       
-      lna_params_prop   <- matrix(
-            0.0,
-            nrow = length(lna_times),
-            ncol = length(stem_object$dynamics$lna_rates$lna_param_codes),
-            dimnames = list(
-                  NULL,
-                  names(stem_object$dynamics$lna_rates$lna_param_codes)
+      lna_params_prop <- 
+            matrix(0.0,
+                   nrow = length(lna_times),
+                   ncol = length(stem_object$dynamics$lna_rates$lna_param_codes),
+                   dimnames = list(NULL,
+                                   names(stem_object$dynamics$lna_rates$lna_param_codes)
             )
       )
       
@@ -513,13 +521,11 @@ stem_inference_lna <- function(stem_object,
       tcovar_inds <- (max(const_inds) + 1):ncol(lna_params_cur)
       
       # insert the constants
-      lna_params_cur[, const_inds]  <-
-            matrix(
-                  stem_object$dynamics$constants,
-                  nrow = nrow(lna_params_cur),
-                  ncol = length(const_inds),
-                  byrow = T
-            )
+      lna_params_cur[, const_inds] <- 
+            matrix(stem_object$dynamics$constants,
+                   nrow = nrow(lna_params_cur),
+                   ncol = length(const_inds),
+                   byrow = T)
       
       lna_params_prop[, const_inds] <-
             matrix(
@@ -535,10 +541,8 @@ stem_inference_lna <- function(stem_object,
                   findInterval(lna_times,
                                stem_object$dynamics$tcovar[, 1],
                                left.open = F)
-            lna_params_cur[tcovar_rowinds, tcovar_inds] <-
-                  stem_object$dynamics$tcovar[tcovar_rowinds, -1]
-            lna_params_prop[tcovar_rowinds, tcovar_inds] <-
-                  stem_object$dynamics$tcovar[tcovar_rowinds, -1]
+            lna_params_cur[tcovar_rowinds, tcovar_inds]  <- stem_object$dynamics$tcovar[tcovar_rowinds, -1]
+            lna_params_prop[tcovar_rowinds, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds, -1]
       }
       
       # get indices for time-varying parameters
@@ -748,17 +752,13 @@ stem_inference_lna <- function(stem_object,
       }
       
       lna_paths <-
-            array(0.0, dim = c(
-                  n_times,
-                  1 + n_rates,
-                  1 + floor(iterations / thin_latent_proc)
-            ))
+            array(0.0, dim = c(n_times,
+                               1 + n_rates,
+                               1 + floor(iterations / thin_latent_proc)))
       lna_draws <-
-            array(0.0, dim = c(
-                  n_rates,
-                  n_times - 1,
-                  1 + floor(iterations / thin_latent_proc)
-            ))
+            array(0.0, dim = c(n_rates,
+                               n_times - 1,
+                               1 + floor(iterations / thin_latent_proc)))
       
       colnames(lna_paths) <- c("time", rownames(flow_matrix))
       rownames(lna_draws) <- rownames(flow_matrix)
@@ -828,10 +828,8 @@ stem_inference_lna <- function(stem_object,
                   )
                   
                   # compute the data log likelihood
-                  data_log_lik_prop <-
-                        sum(emitmat[, -1][measproc_indmat])
-                  if (is.nan(data_log_lik_prop))
-                        data_log_lik_prop <- -Inf
+                  data_log_lik_prop <- sum(emitmat[, -1][measproc_indmat])
+                  if (is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
             }, silent = TRUE)
             
             if (is.null(data_log_lik_prop)) {
@@ -1197,8 +1195,7 @@ stem_inference_lna <- function(stem_object,
                               data_log_lik_prop <- -Inf
                   }, silent = TRUE)
                   
-                  if (is.null(data_log_lik_prop))
-                        data_log_lik_prop <- -Inf
+                  if (is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
 
                   ## Compute the acceptance probability
                   acceptance_prob <- 
@@ -1247,8 +1244,7 @@ stem_inference_lna <- function(stem_object,
                   }
                   
                   # Convert the proposed parameters to their natural scale
-                  params_prop_nat <-
-                        from_estimation_scale(params_prop_est)
+                  params_prop_nat <- from_estimation_scale(params_prop_est)
                   
                   # update time-varying parameters if necessary
                   if (!is.null(tparam)) {
@@ -1342,8 +1338,7 @@ stem_inference_lna <- function(stem_object,
                   if (acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
                         
                         ### ACCEPTANCE
-                        acceptances_g       <-
-                              acceptances_g + 1    # increment acceptances
+                        acceptances_g <- acceptances_g + 1    # increment acceptances
                         
                         copy_vec(path$data_log_lik, data_log_lik_prop)      # update the data log likelihood
                         copy_vec(params_logprior_cur, params_logprior_prop) # update the prior density
@@ -1754,7 +1749,10 @@ stem_inference_lna <- function(stem_object,
                   acceptance_prob <- data_log_lik_prop - path$data_log_lik
                   
                   # if t0 is not fixed, need to include the proposal probabilities in the MH ratio
-                  if (!t0_fixed) acceptance_prob <- acceptance_prob + t0_logprior_prop - t0_logprior_cur + t0_new2cur - t0_cur2new
+                  if (!t0_fixed) acceptance_prob <- 
+                        acceptance_prob + 
+                        t0_logprior_prop - t0_logprior_cur + 
+                        t0_new2cur - t0_cur2new
                   
                   # Accept/Reject via metropolis-hastings
                   if (acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
@@ -1960,12 +1958,9 @@ stem_inference_lna <- function(stem_object,
       )
       rownames(MCMC_results) <- seq(1, iterations + 1, by = thin_params) - 1
       
-      if (!fixed_inits)
-            MCMC_results <- cbind(MCMC_results, initdist_log_prior = initdist_log_prior)
-      if (!t0_fixed)
-            MCMC_results <- cbind(MCMC_results, t0_log_prior = t0_log_prior)
-      if (!is.null(tparam))
-            MCMC_results <- cbind(MCMC_results, tparam_log_lik)
+      if (!fixed_inits) MCMC_results <- cbind(MCMC_results, initdist_log_prior = initdist_log_prior)
+      if (!t0_fixed) MCMC_results <- cbind(MCMC_results, t0_log_prior = t0_log_prior)
+      if (!is.null(tparam)) MCMC_results <- cbind(MCMC_results, tparam_log_lik)
       
       # append the parameter samples on their natural and estimation scales
       MCMC_results <-
