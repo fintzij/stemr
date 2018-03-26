@@ -124,20 +124,22 @@ initialize_ode <-
                     attempt    <- attempt + 1
                     
                     # try new parameters
-                    pars2lnapars(ode_parameters, par_init_fcn())
-                    if(!is.null(tparam)) {
+                    if(keep_going) {
                           
-                          for(s in seq_along(tparam)) {
-                                
-                                # sample new draws
-                                draw_normals(tparam[[s]]$draws_cur)
-                                
-                                # get values
-                                insert_tparam(tcovar    = ode_parameters,
-                                              values    = tparam[[s]]$draws2par(parameters = ode_parameters[1,], draws = tparam[[s]]$draws_cur),
-                                              col_ind   = tparam[[s]]$col_ind,
-                                              tpar_inds = tparam[[s]]$tpar_inds)
-                          }
+                          pars2lnapars(ode_parameters, par_init_fcn())
+                          
+                          if(!is.null(tparam)) {
+                                for(s in seq_along(tparam)) {
+                                      # sample new draws
+                                      draw_normals(tparam[[s]]$draws_cur)
+                                      
+                                      # get values
+                                      insert_tparam(tcovar    = ode_parameters,
+                                                    values    = tparam[[s]]$draws2par(parameters = ode_parameters[1,], draws = tparam[[s]]$draws_cur),
+                                                    col_ind   = tparam[[s]]$col_ind,
+                                                    tpar_inds = tparam[[s]]$tpar_inds)
+                                }
+                          }      
                     }
               }
         }

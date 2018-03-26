@@ -70,6 +70,11 @@ stem_inference_ode <- function(stem_object,
               }
         }
         
+        # check that the ode pointer is compiled
+        if(is.null(stem_object$dynamics$ode_pointers)) {
+              stop("ODE code is not compiled.")
+        }
+        
         flow_matrix            <- stem_object$dynamics$flow_matrix_lna
         stoich_matrix          <- stem_object$dynamics$stoich_matrix_lna
         ode_pointer            <- stem_object$dynamics$ode_pointers$ode_ptr
@@ -398,9 +403,7 @@ stem_inference_ode <- function(stem_object,
               n_contractions_harss <- 0.5
               
               # should a harss update be attempted
-              do_harss_update <- 
-                    (n_afss_updates != n_model_params) |
-                    !is.null(target_prop_totsd)
+              do_harss_update <- (n_afss_updates != n_model_params) 
               
               # objects for saving the adaptation history
               kernel_cov_record <-
@@ -448,6 +451,14 @@ stem_inference_ode <- function(stem_object,
               # for adaptive the hit-and-run proposal
               n_expansions_harss   <- 0.5
               n_contractions_harss <- 0.5
+              
+              # empirical mean and covariance of the target
+              kernel_resid <- double(n_model_params) # already initialized to 0
+              kernel_mean  <- double(n_model_params)
+              copy_vec(kernel_mean, model_params_est)
+              
+              # kernel covariance
+              kernel_cov   <- diag(1, n_model_params)
         }
 
         # set up objects for sampling t0 if it is not fixed
@@ -654,7 +665,8 @@ stem_inference_ode <- function(stem_object,
                          ))
 
         pathmat_prop <- cbind(ode_times,
-                         matrix(0.0, nrow = length(ode_times), ncol = nrow(flow_matrix),
+                         matrix(0.0, nrow = length(ode_times), 
+                                ncol = nrow(flow_matrix),
                                 dimnames = list(NULL, c(rownames(flow_matrix)))
                          ))
 
@@ -789,6 +801,12 @@ stem_inference_ode <- function(stem_object,
                         step_size               = step_size,
                         par_init_fcn            = par_init_fcn
                 )
+                
+                # make sure that the model parameters are updated if new ones were proposed
+                if (!is.null(par_init_fcn)) {
+                      model_params_nat <- ode_params_cur[1, ode_param_inds + 1]
+                      model_params_est <- to_estimation_scale(model_params_nat)
+                }
         }
 
         # set the log posterior and prior log likelihood
@@ -953,13 +971,12 @@ stem_inference_ode <- function(stem_object,
         # begin the MCMC
         start.time <- Sys.time()
         for(iter in (seq_len(iterations) + 1)) {
-
+              
                 # Print the status if messages are enabled
                 if((messages) && k%%thin_latent_proc == 0) {
                         # print the iteration
                         cat(paste0("Iteration ", iter-1), file = status_file, sep = "\n \n", append = TRUE)
                 }
-
 
                  if(mcmc_kernel$method == "mvn_rw") {
 
@@ -1009,7 +1026,7 @@ stem_inference_ode <- function(stem_object,
                               )
                               
                               census_lna(
-                                    path                = path$ode_path,
+                                    path                = pathmat_prop,
                                     census_path         = censusmat,
                                     census_inds         = census_indices,
                                     lna_event_inds      = ode_event_inds,
@@ -1126,13 +1143,13 @@ stem_inference_ode <- function(stem_object,
                               )
                               
                               census_lna(
-                                    path                = path$ode_path,
+                                    path                = pathmat_prop,
                                     census_path         = censusmat,
                                     census_inds         = census_indices,
                                     lna_event_inds      = ode_event_inds,
                                     flow_matrix_lna     = flow_matrix,
                                     do_prevalence       = do_prevalence,
-                                    init_state          = ode_params_cur[1, ode_initdist_inds + 1],
+                                    init_state          = init_volumes_cur,
                                     forcing_matrix      = forcing_matrix
                               )
                               
@@ -1142,7 +1159,7 @@ stem_inference_ode <- function(stem_object,
                                     obsmat            = data,
                                     censusmat         = censusmat,
                                     measproc_indmat   = measproc_indmat,
-                                    lna_parameters    = ode_params_cur,
+                                    lna_parameters    = ode_params_prop,
                                     lna_param_inds    = ode_param_inds,
                                     lna_const_inds    = ode_const_inds,
                                     lna_tcovar_inds   = ode_tcovar_inds,
@@ -1337,6 +1354,28 @@ stem_inference_ode <- function(stem_object,
                             kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
                             kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
                             
+                            # update interval widths
+                            update_interval_widths(interval_widths     = interval_widths,
+                                                   n_expansions_afss   = n_expansions_afss,
+                                                   n_contractions_afss = n_contractions_afss,
+                                                   c_expansions_afss   = c_expansions_afss,
+                                                   c_contractions_afss = c_contractions_afss,
+                                                   slice_ratios        = slice_ratios,
+                                                   adaptation_factor   = adaptations[interval_update_ind],
+                                                   target_ratio        = afss_slice_ratio)
+                            
+                            # increment the interval adaptation index
+                            interval_update_ind <- interval_update_ind + 1
+                            
+                            # clamp the interval widths for safety
+                            # lower is the estimated standard deviation in each eigen direction
+                            # upper is the estimated standard deviation times 100
+                            kernel_log_sds <- 0.5 * log(slice_eigenvals)
+                            copy_vec(dest = interval_widths,
+                                     orig = exp(
+                                           pmax(kernel_log_sds,
+                                                pmin(log(interval_widths), kernel_log_sds + log(100)))))
+                            
                             if (((iter-1) >= first_factor_update) && 
                                 ((iter-1) %% factor_update_interval == 0)) {
                                   
@@ -1345,27 +1384,20 @@ stem_inference_ode <- function(stem_object,
                                                  slice_eigenvecs = slice_eigenvecs,
                                                  kernel_cov      = kernel_cov)
                                   
-                                  # upddate interval widths
-                                  update_interval_widths(interval_widths     = interval_widths,
-                                                         n_expansions_afss   = n_expansions_afss,
-                                                         n_contractions_afss = n_contractions_afss,
-                                                         c_expansions_afss   = c_expansions_afss,
-                                                         c_contractions_afss = c_contractions_afss,
-                                                         slice_ratios        = slice_ratios,
-                                                         adaptation_factor   = adaptations[interval_update_ind],
-                                                         target_ratio        = afss_slice_ratio)
-                                  
-                                  # increment the interval adaptation index
-                                  interval_update_ind <- interval_update_ind + 1
-                                  
-                                  # clamp the interval widths for safety
-                                  # lower is the estimated standard deviation in each eigen direction
-                                  # upper is the estimated standard deviation times 100
-                                  kernel_log_sds <- 0.5 * log(slice_eigenvals)
-                                  copy_vec(dest = interval_widths,
-                                           orig = exp(
-                                                 pmax(kernel_log_sds,
-                                                      pmin(log(interval_widths), kernel_log_sds + log(100)))))
+                                  # if this is the first factor update, reset the intervals
+                                  if((iter-1) == first_factor_update | factor_update_interval > 10) {
+                                        
+                                        interval_update_ind <- 2
+                                        n_expansions_afss   <- rep(0.5, n_model_params)
+                                        n_contractions_afss <- rep(0.5, n_model_params)
+                                        c_expansions_afss   <- rep(1, n_model_params)
+                                        c_contractions_afss <- rep(1, n_model_params)
+                                        slice_ratios        <- rep(0.5, n_model_params)
+                                        
+                                        if(factor_update_interval > 25) {
+                                              interval_widths <- sqrt(slice_eigenvals)
+                                        }
+                                  }
                                   
                                   # increment the factor update interval
                                   if(!is.null(factor_update_interval_fcn)) {
@@ -1442,6 +1474,12 @@ stem_inference_ode <- function(stem_object,
                       
                       # adapt the bracket width
                       if(iter < stop_adaptation) {
+                            
+                            # update the kernel covariance
+                            kernel_resid <- model_params_est - kernel_mean
+                            kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
+                            kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
+                            
                             harss_bracket_width <- exp(mean(0.5 * log(diag(kernel_cov)))) 
                       }
                 }
@@ -1496,7 +1534,16 @@ stem_inference_ode <- function(stem_object,
 
                         # Insert the proposed parameters into the parameter proposal matrix
                         pars2lnapars(ode_params_prop, c(model_params_nat, t0_prop, init_volumes_prop))
-
+                        
+                        # make sure the time--varying parameters are in there too
+                        if(!is.null(tparam)) {
+                              for(tpar_ind in seq_along(tparam)) {
+                                    copy_col(dest = lna_params_prop, 
+                                             orig = lna_params_cur,
+                                             ind = tparam[[tpar_ind]]$col_ind)
+                              }
+                        }
+                        
                         # set the data log likelihood for the proposal to NULL
                         data_log_lik_prop <- NULL
 
@@ -1516,13 +1563,13 @@ stem_inference_ode <- function(stem_object,
                               )
                               
                               census_lna(
-                                    path                = path$ode_path,
+                                    path                = pathmat_prop,
                                     census_path         = censusmat,
                                     census_inds         = census_indices,
                                     lna_event_inds      = ode_event_inds,
                                     flow_matrix_lna     = flow_matrix,
                                     do_prevalence       = do_prevalence,
-                                    init_state          = ode_params_cur[1, ode_initdist_inds + 1],
+                                    init_state          = init_volumes_prop,
                                     forcing_matrix      = forcing_matrix
                               )
                               
@@ -1532,7 +1579,7 @@ stem_inference_ode <- function(stem_object,
                                     obsmat            = data,
                                     censusmat         = censusmat,
                                     measproc_indmat   = measproc_indmat,
-                                    lna_parameters    = ode_params_cur,
+                                    lna_parameters    = ode_params_prop,
                                     lna_param_inds    = ode_param_inds,
                                     lna_const_inds    = ode_const_inds,
                                     lna_tcovar_inds   = ode_tcovar_inds,
@@ -1568,7 +1615,7 @@ stem_inference_ode <- function(stem_object,
                                 ### ACCEPTANCE
                                 acceptances_init  <- acceptances_init + 1      # increment acceptances
                                 copy_vec(path$data_log_lik, data_log_lik_prop) # update the data log likelihood
-                                copy_mat(ode_params_cur, ode_params_prop)      # update ode parameter matrix
+                                pars2lnapars(ode_params_cur, c(model_params_nat, t0_prop, init_volumes_prop))
 
                                 # Update the initial distribution parameters and log prior if not fixed
                                 if(!fixed_inits) {

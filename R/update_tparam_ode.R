@@ -79,7 +79,7 @@ update_tparam_ode <-
             map_pars_2_ode(
                   pathmat           = pathmat_prop,
                   ode_times         = ode_times,
-                  ode_pars          = ode_params_prop,
+                  ode_pars          = ode_parameters,
                   init_start        = ode_initdist_inds[1],
                   param_update_inds = param_update_inds,
                   stoich_matrix     = stoich_matrix,
@@ -161,7 +161,7 @@ update_tparam_ode <-
                     map_pars_2_ode(
                           pathmat           = pathmat_prop,
                           ode_times         = ode_times,
-                          ode_pars          = ode_params_prop,
+                          ode_pars          = ode_parameters,
                           init_start        = ode_initdist_inds[1],
                           param_update_inds = param_update_inds,
                           stoich_matrix     = stoich_matrix,

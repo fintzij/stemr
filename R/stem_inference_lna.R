@@ -73,6 +73,11 @@ stem_inference_lna <- function(stem_object,
             }
       }
       
+      # check that the ode pointer is compiled
+      if(is.null(stem_object$dynamics$lna_pointers)) {
+            stop("LNA code is not compiled.")
+      }
+      
       flow_matrix            <- stem_object$dynamics$flow_matrix_lna
       stoich_matrix          <- stem_object$dynamics$stoich_matrix_lna
       lna_pointer            <- stem_object$dynamics$lna_pointers$lna_ptr
@@ -473,6 +478,15 @@ stem_inference_lna <- function(stem_object,
             # for adaptive the hit-and-run proposal
             n_expansions_harss   <- 0.5
             n_contractions_harss <- 0.5
+            
+            # empirical mean and covariance of the target
+            kernel_resid <- double(n_model_params) # already initialized to 0
+            kernel_mean  <- double(n_model_params)
+            copy_vec(kernel_mean, model_params_est)
+            
+            # kernel covariance
+            kernel_cov   <- diag(1, n_model_params)
+            copy_mat(kernel_cov, mcmc_kernel$sigma)
       }
       
       # set up objects for sampling t0 if it is not fixed
@@ -1515,6 +1529,28 @@ stem_inference_lna <- function(stem_object,
                         kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
                         kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
                         
+                        # update interval widths
+                        update_interval_widths(interval_widths     = interval_widths,
+                                               n_expansions_afss   = n_expansions_afss,
+                                               n_contractions_afss = n_contractions_afss,
+                                               c_expansions_afss   = c_expansions_afss,
+                                               c_contractions_afss = c_contractions_afss,
+                                               slice_ratios        = slice_ratios,
+                                               adaptation_factor   = adaptations[interval_update_ind],
+                                               target_ratio        = afss_slice_ratio)
+                        
+                        # clamp the interval widths for safety
+                        # lower is the estimated standard deviation in each eigen direction
+                        # upper is the estimated standard deviation times 100
+                        kernel_log_sds <- 0.5 * log(slice_eigenvals)
+                        copy_vec(dest = interval_widths,
+                                 orig = exp(
+                                       pmax(kernel_log_sds,
+                                            pmin(log(interval_widths), kernel_log_sds + log(100)))))
+                        
+                        # increment the interval adaptation index
+                        interval_update_ind <- interval_update_ind + 1
+                        
                         if (((iter-1) >= first_factor_update) && 
                             ((iter-1) %% factor_update_interval == 0)) {
                               
@@ -1523,27 +1559,20 @@ stem_inference_lna <- function(stem_object,
                                              slice_eigenvecs = slice_eigenvecs,
                                              kernel_cov      = kernel_cov)
                         
-                              # upddate interval widths
-                              update_interval_widths(interval_widths     = interval_widths,
-                                                     n_expansions_afss   = n_expansions_afss,
-                                                     n_contractions_afss = n_contractions_afss,
-                                                     c_expansions_afss   = c_expansions_afss,
-                                                     c_contractions_afss = c_contractions_afss,
-                                                     slice_ratios        = slice_ratios,
-                                                     adaptation_factor   = adaptations[interval_update_ind],
-                                                     target_ratio        = afss_slice_ratio)
-                              
-                              # increment the interval adaptation index
-                              interval_update_ind <- interval_update_ind + 1
-                              
-                              # clamp the interval widths for safety
-                              # lower is the estimated standard deviation in each eigen direction
-                              # upper is the estimated standard deviation times 100
-                              kernel_log_sds <- 0.5 * log(slice_eigenvals)
-                              copy_vec(dest = interval_widths,
-                                       orig = exp(
-                                                pmax(kernel_log_sds,
-                                                     pmin(log(interval_widths), kernel_log_sds + log(100)))))
+                              # if this is the first factor update, reset the intervals
+                              if((iter-1) == first_factor_update | factor_update_interval > 10) {
+                                    
+                                    interval_update_ind <- 2
+                                    n_expansions_afss   <- rep(0.5, n_model_params)
+                                    n_contractions_afss <- rep(0.5, n_model_params)
+                                    c_expansions_afss   <- rep(1, n_model_params)
+                                    c_contractions_afss <- rep(1, n_model_params)
+                                    slice_ratios        <- rep(0.5, n_model_params)
+                                    
+                                    if(factor_update_interval > 25) {
+                                          interval_widths <- sqrt(slice_eigenvals)
+                                    }
+                              }
                               
                               # increment the factor update interval
                               if(!is.null(factor_update_interval_fcn)) {
@@ -1620,12 +1649,19 @@ stem_inference_lna <- function(stem_object,
             
                   # adapt the bracket width
                   if(iter < stop_adaptation) {
+                        
+                        # update the kernel covariance
+                        kernel_resid <- model_params_est - kernel_mean
+                        kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
+                        kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
+                        
                         harss_bracket_width <- exp(mean(0.5 * log(diag(kernel_cov)))) 
                   }
             }
             
             # Propose and Accept-reject initial state/time
             if (!fixed_inits || !t0_fixed) {
+                  
                   # if t0 is not fixed, sample a new value
                   if (!t0_fixed) {
                         # sample the new time from proposal centered at t0
@@ -1685,6 +1721,15 @@ stem_inference_lna <- function(stem_object,
                   
                   # Insert the proposed parameters into the parameter proposal matrix
                   pars2lnapars(lna_params_prop, c(model_params_nat, t0_prop, init_volumes_prop))
+                  
+                  # make sure the time--varying parameters are in there too
+                  if(!is.null(tparam)) {
+                        for(tpar_ind in seq_along(tparam)) {
+                              copy_col(dest = lna_params_prop, 
+                                       orig = lna_params_cur,
+                                       ind = tparam[[tpar_ind]]$col_ind)
+                        }
+                  }
                   
                   # set the data log likelihood for the proposal to NULL
                   data_log_lik_prop <- NULL

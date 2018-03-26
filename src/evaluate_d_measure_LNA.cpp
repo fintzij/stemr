@@ -37,18 +37,13 @@ void evaluate_d_measure_LNA(Rcpp::NumericMatrix& emitmat, const Rcpp::NumericMat
 
         // get constants
         int n_obstimes   = obsmat.nrow();
-        int n_lna_params = lna_param_inds.size();
         int n_tcovar     = lna_tcovar_inds.size();
 
         // initialize parameters and time-varying covariates/parameters
         std::copy(lna_parameters.row(0).begin(), 
-                  lna_parameters.row(0).begin() + n_lna_params, 
+                  lna_parameters.row(0).end(), 
                   lna_param_vec.begin());
         
-        std::copy(lna_parameters.row(0).end() - n_tcovar,
-                  lna_parameters.row(0).end(),
-                  lna_param_vec.end() - n_tcovar);
-              
         // evaluate the densities
         for(int j=0; j < n_obstimes; ++j) {
 
