@@ -59,6 +59,7 @@ hit_and_run_slice_sampler <-
                n_contractions_harss,
                n_harss_updates,
                path,
+               pathmat_prop,
                data,
                priors,
                params_logprior_cur,
@@ -142,7 +143,7 @@ hit_and_run_slice_sampler <-
                   # map the perturbations to an LNA path
                   try({
                         map_draws_2_lna(
-                              pathmat           = path$lna_path,
+                              pathmat           = pathmat_prop,
                               draws             = path$draws,
                               lna_times         = lna_times,
                               lna_pars          = lna_params_cur,
@@ -164,7 +165,7 @@ hit_and_run_slice_sampler <-
                         )
 
                         census_lna(
-                              path                = path$lna_path,
+                              path                = pathmat_prop,
                               census_path         = censusmat,
                               census_inds         = census_indices,
                               lna_event_inds      = lna_event_inds,
@@ -245,7 +246,7 @@ hit_and_run_slice_sampler <-
                   # map the perturbations to an LNA path
                   try({
                         map_draws_2_lna(
-                              pathmat           = path$lna_path,
+                              pathmat           = pathmat_prop,
                               draws             = path$draws,
                               lna_times         = lna_times,
                               lna_pars          = lna_params_cur,
@@ -267,7 +268,7 @@ hit_and_run_slice_sampler <-
                         )
 
                         census_lna(
-                              path                = path$lna_path,
+                              path                = pathmat_prop,
                               census_path         = censusmat,
                               census_inds         = census_indices,
                               lna_event_inds      = lna_event_inds,
@@ -351,7 +352,7 @@ hit_and_run_slice_sampler <-
                   # map the perturbations to an LNA path
                   try({
                         map_draws_2_lna(
-                              pathmat           = path$lna_path,
+                              pathmat           = pathmat_prop,
                               draws             = path$draws,
                               lna_times         = lna_times,
                               lna_pars          = lna_params_cur,
@@ -373,7 +374,7 @@ hit_and_run_slice_sampler <-
                         )
                         
                         census_lna(
-                              path                = path$lna_path,
+                              path                = pathmat_prop,
                               census_path         = censusmat,
                               census_inds         = census_indices,
                               lna_event_inds      = lna_event_inds,
@@ -433,6 +434,9 @@ hit_and_run_slice_sampler <-
                   # update the likelihood terms
                   copy_vec(dest = params_logprior_cur, orig = logprior_prop)
                   copy_vec(dest = path$data_log_lik,   orig = loglik_prop)
+                  
+                  # copy the path matrix
+                  copy_mat(path$lna_path, pathmat_prop)
                   
             } else {
                   

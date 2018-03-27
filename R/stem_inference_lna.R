@@ -996,6 +996,7 @@ stem_inference_lna <- function(stem_object,
                               n_contractions_harss = n_contractions_harss,
                               n_harss_updates      = n_harss_updates, 
                               path                 = path,
+                              pathmat_prop         = pathmat_prop,
                               data                 = data,
                               priors               = priors,
                               params_logprior_cur  = params_logprior_cur,
@@ -1433,10 +1434,11 @@ stem_inference_lna <- function(stem_object,
                                                       n_model_params,
                                                       n_afss_updates),
                         n_contractions_afss  = n_contractions_afss,
-                        n_expansions_afss    = n_contractions_afss,
                         c_contractions_afss  = c_contractions_afss,
-                        c_expansions_afss    = c_contractions_afss,
+                        n_expansions_afss    = n_expansions_afss,
+                        c_expansions_afss    = c_expansions_afss,
                         path                 = path,
+                        pathmat_prop         = pathmat_prop,
                         data                 = data,
                         priors               = priors,
                         params_logprior_cur  = params_logprior_cur,
@@ -1483,6 +1485,7 @@ stem_inference_lna <- function(stem_object,
                               n_contractions_harss = n_contractions_harss,
                               n_harss_updates      = n_harss_updates, 
                               path                 = path,
+                              pathmat_prop         = pathmat_prop,
                               data                 = data,
                               priors               = priors,
                               params_logprior_cur  = params_logprior_cur,
@@ -1532,8 +1535,8 @@ stem_inference_lna <- function(stem_object,
                         # update interval widths
                         update_interval_widths(interval_widths     = interval_widths,
                                                n_expansions_afss   = n_expansions_afss,
-                                               n_contractions_afss = n_contractions_afss,
                                                c_expansions_afss   = c_expansions_afss,
+                                               n_contractions_afss = n_contractions_afss,
                                                c_contractions_afss = c_contractions_afss,
                                                slice_ratios        = slice_ratios,
                                                adaptation_factor   = adaptations[interval_update_ind],
@@ -1564,8 +1567,8 @@ stem_inference_lna <- function(stem_object,
                                     
                                     interval_update_ind <- 2
                                     n_expansions_afss   <- rep(0.5, n_model_params)
-                                    n_contractions_afss <- rep(0.5, n_model_params)
                                     c_expansions_afss   <- rep(1, n_model_params)
+                                    n_contractions_afss <- rep(0.5, n_model_params)
                                     c_contractions_afss <- rep(1, n_model_params)
                                     slice_ratios        <- rep(0.5, n_model_params)
                                     
@@ -1615,6 +1618,7 @@ stem_inference_lna <- function(stem_object,
                         n_contractions_harss = n_contractions_harss,
                         n_harss_updates      = n_harss_updates, 
                         path                 = path,
+                        pathmat_prop         = pathmat_prop,
                         data                 = data,
                         priors               = priors,
                         params_logprior_cur  = params_logprior_cur,
@@ -1717,6 +1721,9 @@ stem_inference_lna <- function(stem_object,
                   if (!fixed_inits) {
                         initdist_params_prop <- initdist_sampler()
                         init_volumes_prop    <- concs2vols(initdist_params_prop)
+                        
+                        # still need to check that the initial distribution does not have loglik of -Inf
+                        initdist_lp_prop <- initdist_prior(initdist_params_prop)
                   }
                   
                   # Insert the proposed parameters into the parameter proposal matrix
@@ -1796,33 +1803,42 @@ stem_inference_lna <- function(stem_object,
                   # since those are updated via an independence sampler so they cancel out
                   acceptance_prob <- data_log_lik_prop - path$data_log_lik
                   
-                  # still need to check that the initial distribution does not have loglik of -Inf
-                  initdist_lp_prop <- initdist_prior(initdist_params_prop)
-                  
                   # if t0 is not fixed, need to include the proposal probabilities in the MH ratio
                   if (!t0_fixed) acceptance_prob <- 
                         acceptance_prob + 
                         t0_logprior_prop - t0_logprior_cur + 
                         t0_new2cur - t0_cur2new
                   
+                  # make sure no proposals with initdist_lp == -Inf are accepted
+                  if(!fixed_inits && initdist_lp_prop == -Inf) {
+                        acceptance_prob <- -Inf
+                  } 
+                  
                   # Accept/Reject via metropolis-hastings
-                  if((initdist_lp_prop != -Inf) && (acceptance_prob >= 0 || acceptance_prob >= log(runif(1)))) {
+                  if(acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
                         
                         ### ACCEPTANCE
                         acceptances_init  <- acceptances_init + 1      # increment acceptances
                         copy_vec(path$data_log_lik, data_log_lik_prop) # update the data log likelihood
-                        pars2lnapars(lna_params_cur, c(model_params_nat, t0_prop, init_volumes_prop))
                         
                         # Update the initial distribution parameters and log prior if not fixed
                         if (!fixed_inits) {
                               copy_vec(initdist_params_cur, initdist_params_prop)
                               copy_vec(init_volumes_cur, init_volumes_prop)
+                              
+                              # copy the initial compartment volumes
+                              for(s in seq_along(init_volumes_cur)) {
+                                    copy_col(dest = lna_params_cur, orig = lna_params_prop, ind = lna_initdist_inds[s])
+                              }
                         }
                         
                         # update t0 and its log prior if it is not fixed
                         if (!t0_fixed) {
                               t0              <- t0_prop              # update t0
                               t0_logprior_cur <- t0_logprior_prop     # update the log prior for t0
+                              
+                              # copy t0 into the parameter matrix
+                              copy_col(dest = lna_params_cur, orig = lna_params_prop, ind = length(lna_param_inds))
                         }
                         
                         # update the initial distribution log likelihood

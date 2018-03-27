@@ -65,6 +65,7 @@ factor_slice_sampler_ode <-
             slice_probs,
             n_afss_updates,
             path,
+            pathmat_prop,
             data,
             priors,
             params_logprior_cur,
@@ -145,7 +146,7 @@ factor_slice_sampler_ode <-
                   # map the perturbations to an LNA path
                   try({
                         map_pars_2_ode(
-                              pathmat           = path$ode_path,
+                              pathmat           = pathmat_prop,
                               ode_times         = ode_times,
                               ode_pars          = ode_params_cur,
                               init_start        = ode_initdist_inds[1],
@@ -159,7 +160,7 @@ factor_slice_sampler_ode <-
                         )
                         
                         census_lna(
-                              path                = path$ode_path,
+                              path                = pathmat_prop,
                               census_path         = censusmat,
                               census_inds         = census_indices,
                               lna_event_inds      = ode_event_inds,
@@ -241,7 +242,7 @@ factor_slice_sampler_ode <-
                   # map the perturbations to an LNA path
                   try({
                         map_pars_2_ode(
-                              pathmat           = path$ode_path,
+                              pathmat           = pathmat_prop,
                               ode_times         = ode_times,
                               ode_pars          = ode_params_cur,
                               init_start        = ode_initdist_inds[1],
@@ -255,7 +256,7 @@ factor_slice_sampler_ode <-
                         )
                         
                         census_lna(
-                              path                = path$ode_path,
+                              path                = pathmat_prop,
                               census_path         = censusmat,
                               census_inds         = census_indices,
                               lna_event_inds      = ode_event_inds,
@@ -343,7 +344,7 @@ factor_slice_sampler_ode <-
                   # map the perturbations to an LNA path
                   try({
                         map_pars_2_ode(
-                              pathmat           = path$ode_path,
+                              pathmat           = pathmat_prop,
                               ode_times         = ode_times,
                               ode_pars          = ode_params_cur,
                               init_start        = ode_initdist_inds[1],
@@ -357,7 +358,7 @@ factor_slice_sampler_ode <-
                         )
                         
                         census_lna(
-                              path                = path$ode_path,
+                              path                = pathmat_prop,
                               census_path         = censusmat,
                               census_inds         = census_indices,
                               lna_event_inds      = ode_event_inds,
@@ -418,6 +419,9 @@ factor_slice_sampler_ode <-
                   # update the likelihood terms
                   copy_vec(dest = params_logprior_cur, orig = logprior_prop)
                   copy_vec(dest = path$data_log_lik,   orig = loglik_prop)
+                  
+                  # copy the path matrix
+                  copy_mat(path$ode_path, pathmat_prop)
                   
             } else {
                   

@@ -73,6 +73,84 @@ initialize_lna <-
                 data_log_lik <- NaN
                 attempt      <- 0
                 keep_going   <- TRUE
+                
+                while(keep_going && (attempt <= initialization_attempts)) {
+                      try({
+                            # propose another LNA path
+                            path_init <- propose_lna(
+                                  lna_times         = lna_times,
+                                  lna_pars          = lna_parameters,
+                                  init_start        = lna_initdist_inds[1],
+                                  param_update_inds = param_update_inds,
+                                  stoich_matrix     = stoich_matrix,
+                                  forcing_inds      = forcing_inds,
+                                  forcing_matrix    = forcing_matrix,
+                                  max_attempts      = initialization_attempts,
+                                  step_size         = step_size, 
+                                  lna_pointer       = lna_pointer,
+                                  set_pars_pointer  = lna_set_pars_pointer,
+                                  reject_negatives  = TRUE
+                            )
+                            
+                            path <- list(draws    = path_init$draws,
+                                         lna_path = path_init$lna_path)
+                            
+                            census_lna(
+                                  path                = path$lna_path,
+                                  census_path         = censusmat,
+                                  census_inds         = census_indices,
+                                  lna_event_inds      = lna_event_inds,
+                                  flow_matrix_lna     = t(stoich_matrix),
+                                  do_prevalence       = do_prevalence,
+                                  init_state          = init_state,
+                                  forcing_matrix      = forcing_matrix
+                            )
+                            
+                            # evaluate the density of the incidence counts
+                            evaluate_d_measure_LNA(
+                                  emitmat           = emitmat,
+                                  obsmat            = data,
+                                  censusmat         = censusmat,
+                                  measproc_indmat   = measproc_indmat,
+                                  lna_parameters    = lna_parameters,
+                                  lna_param_inds    = lna_param_inds,
+                                  lna_const_inds    = lna_const_inds,
+                                  lna_tcovar_inds   = lna_tcovar_inds,
+                                  param_update_inds = param_update_inds,
+                                  census_indices    = census_indices,
+                                  lna_param_vec     = lna_param_vec,
+                                  d_meas_ptr        = d_meas_pointer
+                            )
+                            
+                            # compute the data log likelihood
+                            data_log_lik <- sum(emitmat[,-1][measproc_indmat])
+                            if(is.nan(data_log_lik)) data_log_lik <- -Inf
+                      }, silent = TRUE)
+                      
+                      keep_going <- is.nan(data_log_lik) || data_log_lik == -Inf
+                      attempt    <- attempt + 1
+                      
+                      if(keep_going && !is.null(par_init_fcn)) {
+                            pars2lnapars(lna_parameters, par_init_fcn())
+                      }
+                      
+                      if(keep_going && !is.null(tparam)) {
+                            
+                            for(s in seq_along(tparam)) {
+                                  
+                                  # sample new draws
+                                  draw_normals(tparam[[s]]$draws_cur)
+                                  
+                                  # get values
+                                  insert_tparam(tcovar    = lna_parameters,
+                                                values    = tparam[[s]]$draws2par(parameters = lna_parameters[1,], draws = tparam[[s]]$draws_cur),
+                                                col_ind   = tparam[[s]]$col_ind,
+                                                tpar_inds = tparam[[s]]$tpar_inds)
+                            }
+                      }
+                }
+                
+                if(keep_going) attept <- 1
 
                 while(keep_going && (attempt <= initialization_attempts)) {
                         try({
