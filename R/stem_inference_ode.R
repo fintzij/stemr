@@ -1534,6 +1534,9 @@ stem_inference_ode <- function(stem_object,
                         if(!fixed_inits) {
                                 initdist_params_prop <- initdist_sampler()
                                 init_volumes_prop    <- concs2vols(initdist_params_prop)
+                                
+                                # still need to check that the initial distribution does not have loglik of -Inf
+                                initdist_lp_prop <- initdist_prior(initdist_params_prop)
                         }
 
                         # Insert the proposed parameters into the parameter proposal matrix
@@ -1605,26 +1608,32 @@ stem_inference_ode <- function(stem_object,
                         # since those are updated via an independence sampler so they cancel out
                         acceptance_prob <- data_log_lik_prop - path$data_log_lik
                         
-                        # still need to check that the initial distribution does not have loglik of -Inf
-                        initdist_lp_prop <- initdist_prior(initdist_params_prop)
-
                         # if t0 is not fixed, need to include the proposal probabilities in the MH ratio
                         if(!t0_fixed) acceptance_prob <- acceptance_prob +
                                 t0_logprior_prop - t0_logprior_cur +
                                 t0_new2cur - t0_cur2new
+                        
+                        # make sure no proposals with initdist_lp == -Inf are accepted
+                        if(!fixed_inits && initdist_lp_prop == -Inf) {
+                              acceptance_prob <- -Inf
+                        } 
 
                         # Accept/Reject via metropolis-hastings
-                        if((initdist_lp_prop != -Inf) && (acceptance_prob >= 0 || acceptance_prob >= log(runif(1)))) {
+                        if(acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
 
                                 ### ACCEPTANCE
                                 acceptances_init  <- acceptances_init + 1      # increment acceptances
                                 copy_vec(path$data_log_lik, data_log_lik_prop) # update the data log likelihood
-                                pars2lnapars(ode_params_cur, c(model_params_nat, t0_prop, init_volumes_prop))
-
+                                
                                 # Update the initial distribution parameters and log prior if not fixed
-                                if(!fixed_inits) {
-                                        copy_vec(initdist_params_cur, initdist_params_prop)
-                                        copy_vec(init_volumes_cur, init_volumes_prop)
+                                if (!fixed_inits) {
+                                      copy_vec(initdist_params_cur, initdist_params_prop)
+                                      copy_vec(init_volumes_cur, init_volumes_prop)
+                                      
+                                      # copy the initial compartment volumes
+                                      for(s in seq_along(init_volumes_cur)) {
+                                            copy_col(dest = ode_params_cur, orig = ode_params_prop, ind = ode_initdist_inds[s])
+                                      }
                                 }
 
                                 # update t0 and its log prior if it is not fixed

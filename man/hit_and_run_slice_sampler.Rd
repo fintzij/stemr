@@ -6,7 +6,7 @@
 \usage{
 hit_and_run_slice_sampler(model_params_est, model_params_nat, params_prop_est,
   params_prop_nat, har_direction, harss_bracket_width, n_expansions_harss,
-  n_contractions_harss, n_harss_updates, path, data, priors,
+  n_contractions_harss, n_harss_updates, path, pathmat_prop, data, priors,
   params_logprior_cur, lna_params_cur, lna_param_vec, tparam, censusmat,
   emitmat, flow_matrix, stoich_matrix, lna_times, forcing_inds, forcing_matrix,
   lna_param_inds, lna_const_inds, lna_tcovar_inds, lna_initdist_inds,

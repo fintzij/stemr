@@ -7,12 +7,13 @@
 factor_slice_sampler_ode(model_params_est, model_params_nat, params_prop_est,
   params_prop_nat, interval_widths, n_contractions_afss, n_expansions_afss,
   c_contractions_afss, c_expansions_afss, slice_eigenvecs, slice_probs,
-  n_afss_updates, path, data, priors, params_logprior_cur, ode_params_cur,
-  ode_param_vec, tparam, censusmat, emitmat, flow_matrix, stoich_matrix,
-  ode_times, forcing_inds, forcing_matrix, ode_param_inds, ode_const_inds,
-  ode_tcovar_inds, ode_initdist_inds, param_update_inds, ode_event_inds,
-  census_indices, measproc_indmat, svd_sqrt, svd_d, svd_U, svd_V, ode_pointer,
-  ode_set_pars_pointer, d_meas_pointer, do_prevalence, step_size)
+  n_afss_updates, path, pathmat_prop, data, priors, params_logprior_cur,
+  ode_params_cur, ode_param_vec, tparam, censusmat, emitmat, flow_matrix,
+  stoich_matrix, ode_times, forcing_inds, forcing_matrix, ode_param_inds,
+  ode_const_inds, ode_tcovar_inds, ode_initdist_inds, param_update_inds,
+  ode_event_inds, census_indices, measproc_indmat, svd_sqrt, svd_d, svd_U,
+  svd_V, ode_pointer, ode_set_pars_pointer, d_meas_pointer, do_prevalence,
+  step_size)
 }
 \arguments{
 \item{model_params_est}{vector of model parameters on the estimation scale}
