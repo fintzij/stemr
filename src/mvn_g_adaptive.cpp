@@ -23,7 +23,7 @@ void mvn_g_adaptive(arma::rowvec& params_prop,
 
         int par_dim = params_cur.n_elem;
 
-        params_prop = params_cur + nugget * arma::randn(1, par_dim) +
-                (1 - nugget) * arma::randn(1, par_dim) * arma::chol(proposal_scaling * kernel_cov, "upper");
+        params_prop = params_cur + nugget * Rcpp::as<arma::rowvec>(Rcpp::rnorm(par_dim)) +
+                (1 - nugget) * Rcpp::as<arma::rowvec>(Rcpp::rnorm(par_dim)) * arma::chol(proposal_scaling * kernel_cov, "upper");
 
 }

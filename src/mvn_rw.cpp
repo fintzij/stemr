@@ -17,6 +17,6 @@ using namespace arma;
 void mvn_rw(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& sigma_chol) {
 
         int par_dim = params_cur.n_elem;
-        params_prop = params_cur + arma::randn(1, par_dim) * sigma_chol;
+        params_prop = params_cur + Rcpp::as<arma::rowvec>(Rcpp::rnorm(par_dim)) * sigma_chol;
 
 }

@@ -22,7 +22,8 @@ arma::mat rmvtn(int n, const arma::rowvec& mu, const arma::mat& sigma) {
         int p = mu.n_elem;
 
         // generate independent standard normal RVs
-        arma::mat X = arma::randn(n, p);
+        Rcpp::NumericVector draws = Rcpp::rnorm(n*p);
+        arma::mat X(draws.begin(), n, p, false, true);
 
         // add the mean and multiply by the upper triangular portion of the cholesky
         return arma::repmat(mu, n, 1) + X * arma::chol(sigma, "upper");
