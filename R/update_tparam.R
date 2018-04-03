@@ -3,7 +3,7 @@
 #' @param tparam list containing the time-varying parameters
 #' @param path_cur list with the current LNA path along with its ODE paths
 #' @param n_ess_updates number of elliptical slice sampling updates
-#' @param svd_sqrt,svd_d,svd_U,svd_V objects for computing the SVD of LNA
+#' @param svd_d,svd_U,svd_V objects for computing the SVD of LNA
 #'   diffusion matrics
 #' @inheritParams initialize_lna
 #'
@@ -31,7 +31,6 @@ update_tparam <-
                  census_indices,
                  lna_event_inds,
                  measproc_indmat,
-                 svd_sqrt,
                  svd_d,
                  svd_U,
                  svd_V,
@@ -89,7 +88,6 @@ update_tparam <-
                       stoich_matrix     = stoich_matrix,
                       forcing_inds      = forcing_inds,
                       forcing_matrix    = forcing_matrix,
-                      svd_sqrt          = svd_sqrt,
                       svd_d             = svd_d,
                       svd_U             = svd_U,
                       svd_V             = svd_V,
@@ -179,7 +177,6 @@ update_tparam <-
                           stoich_matrix     = stoich_matrix,
                           forcing_inds      = forcing_inds,
                           forcing_matrix    = forcing_matrix,
-                          svd_sqrt          = svd_sqrt,
                           svd_d             = svd_d,
                           svd_U             = svd_U,
                           svd_V             = svd_V,

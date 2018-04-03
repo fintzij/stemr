@@ -22,8 +22,6 @@ using namespace arma;
 //' @param forcing_inds logical vector of indicating at which times in the
 //'   time-varying covariance matrix a forcing is applied.
 //' @param forcing_matrix matrix containing the forcings.
-//' @param svd_sqrt matrix in which to compute the matrix square root of the LNA
-//'   covariance matrices
 //' @param svd_d vector in which to store SVD singular values
 //' @param svd_U matrix in which to store the U matrix of the SVD
 //' @param svd_V matrix in which to store the V matrix of the SVD
@@ -50,7 +48,6 @@ void map_draws_2_lna(arma::mat& pathmat,
                      const arma::mat& stoich_matrix,
                      const Rcpp::LogicalVector& forcing_inds,
                      const arma::mat& forcing_matrix,
-                     arma::mat& svd_sqrt,
                      arma::vec& svd_d,
                      arma::mat& svd_U,
                      arma::mat& svd_V,
@@ -149,7 +146,8 @@ void map_draws_2_lna(arma::mat& pathmat,
                 }
 
                 // compute the LNA increment
-                nat_lna = arma::exp(log_lna) - 1;
+                nat_lna = arma::vec(expm1(Rcpp::NumericVector(log_lna.begin(), log_lna.end())));
+                      // arma::exp(log_lna) - 1;
 
                 // save the LNA increment
                 pathmat(j+1, arma::span(1, n_events)) = nat_lna.t();

@@ -6,8 +6,8 @@
 \usage{
 map_draws_2_lna(pathmat, draws, lna_times, lna_pars, lna_param_vec,
   lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix,
-  forcing_inds, forcing_matrix, svd_sqrt, svd_d, svd_U, svd_V, step_size,
-  lna_pointer, set_pars_pointer)
+  forcing_inds, forcing_matrix, svd_d, svd_U, svd_V, step_size, lna_pointer,
+  set_pars_pointer)
 }
 \arguments{
 \item{pathmat}{matrix where the LNA path should be stored}
@@ -32,9 +32,6 @@ from each reaction}
 time-varying covariance matrix a forcing is applied.}
 
 \item{forcing_matrix}{matrix containing the forcings.}
-
-\item{svd_sqrt}{matrix in which to compute the matrix square root of the LNA
-covariance matrices}
 
 \item{svd_d}{vector in which to store SVD singular values}
 

@@ -150,7 +150,7 @@ initialize_lna <-
                       }
                 }
                 
-                if(keep_going) attept <- 1
+                if(keep_going) attempt <- 1
 
                 while(keep_going && (attempt <= initialization_attempts)) {
                         try({

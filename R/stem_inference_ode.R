@@ -51,13 +51,13 @@ stem_inference_ode <- function(stem_object,
               
               pd <- priors$prior_density(parameters, priors$to_estimation_scale(parameters))
               par_init_attempt <- 1
-              while(pd == -Inf && par_init_attempt <= initialization_attempts) {
+              while(is.infinite(pd) && par_init_attempt <= initialization_attempts) {
                     parameters <- par_init_fcn()
                     pd <- priors$prior_density(parameters, priors$to_estimation_scale(parameters))
                     par_init_attempt <- par_init_attempt + 1
               }
               
-              if(pd == -Inf) {
+              if(is.infinite(pd)) {
                     stop("Parameters have log prior density of negative infinity. Try another initialization.")
               }
               
@@ -65,7 +65,7 @@ stem_inference_ode <- function(stem_object,
               par_init_fcn   <- NULL
               parameters     <- stem_object$dynamics$parameters
               pd <- priors$prior_density(parameters, priors$to_estimation_scale(parameters))
-              if(pd == -Inf) {
+              if(is.infinite(pd)) {
                     stop("Parameters have log prior density of negative infinity. Try another initialization.")
               }
         }
@@ -202,8 +202,8 @@ stem_inference_ode <- function(stem_object,
         model_params_est <- to_estimation_scale(model_params_nat)
         
         # check that the functions to and from the estimation scale are 1:1
-        if(!all.equal(model_params_nat,
-                      from_estimation_scale(to_estimation_scale(model_params_nat)))) {
+        if(!all.equal(unname(model_params_nat),
+                      unname(from_estimation_scale(to_estimation_scale(model_params_nat))))) {
               stop("The functions that transform parameters to and from their estimation scales must be inverses of one another.")
         }
 
@@ -1614,7 +1614,7 @@ stem_inference_ode <- function(stem_object,
                                 t0_new2cur - t0_cur2new
                         
                         # make sure no proposals with initdist_lp == -Inf are accepted
-                        if(!fixed_inits && initdist_lp_prop == -Inf) {
+                        if(!fixed_inits && is.infinite(initdist_lp_prop)) {
                               acceptance_prob <- -Inf
                         } 
 

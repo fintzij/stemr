@@ -426,8 +426,6 @@ lna_incid2prev <- function(path, flow_matrix, init_state, forcing_inds, forcing_
 #' @param forcing_inds logical vector of indicating at which times in the
 #'   time-varying covariance matrix a forcing is applied.
 #' @param forcing_matrix matrix containing the forcings.
-#' @param svd_sqrt matrix in which to compute the matrix square root of the LNA
-#'   covariance matrices
 #' @param svd_d vector in which to store SVD singular values
 #' @param svd_U matrix in which to store the U matrix of the SVD
 #' @param svd_V matrix in which to store the V matrix of the SVD
@@ -441,8 +439,8 @@ lna_incid2prev <- function(path, flow_matrix, init_state, forcing_inds, forcing_
 #'   perturbations.
 #'
 #' @export
-map_draws_2_lna <- function(pathmat, draws, lna_times, lna_pars, lna_param_vec, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, svd_sqrt, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer) {
-    invisible(.Call(`_stemr_map_draws_2_lna`, pathmat, draws, lna_times, lna_pars, lna_param_vec, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, svd_sqrt, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer))
+map_draws_2_lna <- function(pathmat, draws, lna_times, lna_pars, lna_param_vec, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer) {
+    invisible(.Call(`_stemr_map_draws_2_lna`, pathmat, draws, lna_times, lna_pars, lna_param_vec, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer))
 }
 
 #' Map parameters to the deterministic mean incidence increments for a stochastic

@@ -94,8 +94,9 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                 init_volumes_prop += forcing_matrix.col(0);
         }
 
-        // sample the stochastic perturbations
-        arma::mat draws(n_events, n_times-1, arma::fill::randn);
+        // sample the stochastic perturbations - use Rcpp RNG for safety
+        Rcpp::NumericVector draws_rcpp = Rcpp::rnorm(n_events * (n_times-1));
+        arma::mat draws(draws_rcpp.begin(), n_events, n_times-1, false, true);
         
         // integer for the attempt number
         int attempt = 0;
@@ -106,7 +107,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
 
         // iterate over the time sequence, solving the LNA over each interval
         for(int j=0; j < (n_times-1); ++j) {
-
+              
                 // set the times of the interval endpoints
                 t_L = lna_times[j];
                 t_R = lna_times[j+1];
@@ -118,13 +119,6 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                 // transfer the elements of the lna_state_vec to the process objects
                 std::copy(lna_state_vec.begin(), lna_state_vec.begin() + n_events, lna_drift.begin());
                 std::copy(lna_state_vec.begin() + n_events, lna_state_vec.end(), lna_diffusion.begin());
-
-                // ensure symmetry of the diffusion matrix
-                // lna_diffusion = arma::symmatu(lna_diffusion);
-
-                // cache the moments
-                // drift_vecs.col(j) = lna_drift;
-                // diff_mats.slice(j) = lna_diffusion;
 
                 // map the stochastic perturbation to the LNA path on its natural scale
                 try{
@@ -165,7 +159,8 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                 if(reject_negatives) {
                       
                       // compute the LNA increment
-                      nat_lna = arma::exp(log_lna) - 1;
+                      nat_lna = arma::vec(expm1(Rcpp::NumericVector(log_lna.begin(), log_lna.end())));
+                      // arma::exp(log_lna) - 1;
                       
                       // update the compartment volumes
                       init_volumes_prop = init_volumes + stoich_matrix * nat_lna;
@@ -216,7 +211,8 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                       
                       // If Initializing, draws leading to negative compartments or volumes are resampled.
                       // compute the LNA increment
-                      nat_lna = arma::exp(log_lna) - 1;
+                      nat_lna = arma::vec(expm1(Rcpp::NumericVector(log_lna.begin(), log_lna.end())));
+                      // arma::exp(log_lna) - 1;
                       
                       // update the compartment volumes
                       init_volumes_prop = init_volumes + stoich_matrix * nat_lna;
@@ -226,9 +222,9 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                       attempt = 0;
                       while((any(nat_lna < 0) || any(init_volumes_prop < 0)) && (attempt <= max_attempts)) {
                             attempt     += 1;
-                            draws.col(j) = arma::randn(n_events);                          // draw a new vector of N(0,1)
-                            log_lna      = lna_drift + svd_U * draws.col(j);               // map the new draws to
-                            nat_lna      = arma::exp(log_lna) - 1;                         // compute the LNA increment
+                            draws.col(j) = Rcpp::as<arma::vec>(Rcpp::rnorm(n_events));                            // draw a new vector of N(0,1)
+                            log_lna      = lna_drift + svd_U * draws.col(j);                                      // map the new draws to log LNA 
+                            nat_lna      = arma::vec(expm1(Rcpp::NumericVector(log_lna.begin(), log_lna.end()))); // compute the LNA increment
                             init_volumes_prop = init_volumes + stoich_matrix * nat_lna;    // compute new initial volumes
                       }
                       

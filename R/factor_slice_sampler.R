@@ -29,7 +29,6 @@
 #' @param census_indices indices for when the LNA path should be censused
 #' @param measproc_indmat matrix giving the indices for data likelihood
 #'   contributions
-#' @param svd_sqrt matrix for computing the matrix square root for the LNA
 #' @param svd_d vector for LNA singular values
 #' @param svd_U matrix for LNA left singular vectors
 #' @param svd_V matrix for LNA right singular vectors
@@ -87,7 +86,6 @@ factor_slice_sampler <-
             lna_event_inds,
             census_indices,
             measproc_indmat,
-            svd_sqrt,
             svd_d,
             svd_U,
             svd_V,
@@ -158,7 +156,6 @@ factor_slice_sampler <-
                               stoich_matrix     = stoich_matrix,
                               forcing_inds      = forcing_inds,
                               forcing_matrix    = forcing_matrix,
-                              svd_sqrt          = svd_sqrt,
                               svd_d             = svd_d,
                               svd_U             = svd_U,
                               svd_V             = svd_V,
@@ -262,7 +259,6 @@ factor_slice_sampler <-
                               stoich_matrix     = stoich_matrix,
                               forcing_inds      = forcing_inds,
                               forcing_matrix    = forcing_matrix,
-                              svd_sqrt          = svd_sqrt,
                               svd_d             = svd_d,
                               svd_U             = svd_U,
                               svd_V             = svd_V,
@@ -372,7 +368,6 @@ factor_slice_sampler <-
                               stoich_matrix     = stoich_matrix,
                               forcing_inds      = forcing_inds,
                               forcing_matrix    = forcing_matrix,
-                              svd_sqrt          = svd_sqrt,
                               svd_d             = svd_d,
                               svd_U             = svd_U,
                               svd_V             = svd_V,

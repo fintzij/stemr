@@ -386,8 +386,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // map_draws_2_lna
-void map_draws_2_lna(arma::mat& pathmat, const arma::mat& draws, const arma::rowvec& lna_times, const Rcpp::NumericMatrix& lna_pars, Rcpp::NumericVector& lna_param_vec, const Rcpp::IntegerVector& lna_param_inds, const Rcpp::IntegerVector& lna_tcovar_inds, const int init_start, const Rcpp::LogicalVector& param_update_inds, const arma::mat& stoich_matrix, const Rcpp::LogicalVector& forcing_inds, const arma::mat& forcing_matrix, arma::mat& svd_sqrt, arma::vec& svd_d, arma::mat& svd_U, arma::mat& svd_V, double step_size, SEXP lna_pointer, SEXP set_pars_pointer);
-RcppExport SEXP _stemr_map_draws_2_lna(SEXP pathmatSEXP, SEXP drawsSEXP, SEXP lna_timesSEXP, SEXP lna_parsSEXP, SEXP lna_param_vecSEXP, SEXP lna_param_indsSEXP, SEXP lna_tcovar_indsSEXP, SEXP init_startSEXP, SEXP param_update_indsSEXP, SEXP stoich_matrixSEXP, SEXP forcing_indsSEXP, SEXP forcing_matrixSEXP, SEXP svd_sqrtSEXP, SEXP svd_dSEXP, SEXP svd_USEXP, SEXP svd_VSEXP, SEXP step_sizeSEXP, SEXP lna_pointerSEXP, SEXP set_pars_pointerSEXP) {
+void map_draws_2_lna(arma::mat& pathmat, const arma::mat& draws, const arma::rowvec& lna_times, const Rcpp::NumericMatrix& lna_pars, Rcpp::NumericVector& lna_param_vec, const Rcpp::IntegerVector& lna_param_inds, const Rcpp::IntegerVector& lna_tcovar_inds, const int init_start, const Rcpp::LogicalVector& param_update_inds, const arma::mat& stoich_matrix, const Rcpp::LogicalVector& forcing_inds, const arma::mat& forcing_matrix, arma::vec& svd_d, arma::mat& svd_U, arma::mat& svd_V, double step_size, SEXP lna_pointer, SEXP set_pars_pointer);
+RcppExport SEXP _stemr_map_draws_2_lna(SEXP pathmatSEXP, SEXP drawsSEXP, SEXP lna_timesSEXP, SEXP lna_parsSEXP, SEXP lna_param_vecSEXP, SEXP lna_param_indsSEXP, SEXP lna_tcovar_indsSEXP, SEXP init_startSEXP, SEXP param_update_indsSEXP, SEXP stoich_matrixSEXP, SEXP forcing_indsSEXP, SEXP forcing_matrixSEXP, SEXP svd_dSEXP, SEXP svd_USEXP, SEXP svd_VSEXP, SEXP step_sizeSEXP, SEXP lna_pointerSEXP, SEXP set_pars_pointerSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::mat& >::type pathmat(pathmatSEXP);
@@ -402,14 +402,13 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type stoich_matrix(stoich_matrixSEXP);
     Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type forcing_inds(forcing_indsSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type forcing_matrix(forcing_matrixSEXP);
-    Rcpp::traits::input_parameter< arma::mat& >::type svd_sqrt(svd_sqrtSEXP);
     Rcpp::traits::input_parameter< arma::vec& >::type svd_d(svd_dSEXP);
     Rcpp::traits::input_parameter< arma::mat& >::type svd_U(svd_USEXP);
     Rcpp::traits::input_parameter< arma::mat& >::type svd_V(svd_VSEXP);
     Rcpp::traits::input_parameter< double >::type step_size(step_sizeSEXP);
     Rcpp::traits::input_parameter< SEXP >::type lna_pointer(lna_pointerSEXP);
     Rcpp::traits::input_parameter< SEXP >::type set_pars_pointer(set_pars_pointerSEXP);
-    map_draws_2_lna(pathmat, draws, lna_times, lna_pars, lna_param_vec, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, svd_sqrt, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer);
+    map_draws_2_lna(pathmat, draws, lna_times, lna_pars, lna_param_vec, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer);
     return R_NilValue;
 END_RCPP
 }
@@ -691,7 +690,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_insert_tparam", (DL_FUNC) &_stemr_insert_tparam, 4},
     {"_stemr_integrate_odes", (DL_FUNC) &_stemr_integrate_odes, 10},
     {"_stemr_lna_incid2prev", (DL_FUNC) &_stemr_lna_incid2prev, 5},
-    {"_stemr_map_draws_2_lna", (DL_FUNC) &_stemr_map_draws_2_lna, 19},
+    {"_stemr_map_draws_2_lna", (DL_FUNC) &_stemr_map_draws_2_lna, 18},
     {"_stemr_map_pars_2_ode", (DL_FUNC) &_stemr_map_pars_2_ode, 11},
     {"_stemr_rmvtn", (DL_FUNC) &_stemr_rmvtn, 3},
     {"_stemr_dmvtn", (DL_FUNC) &_stemr_dmvtn, 4},

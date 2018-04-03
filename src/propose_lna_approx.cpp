@@ -103,9 +103,13 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
         }
 
         // sample the stochastic perturbations
-        arma::mat draws_cur(n_events, n_times-1, arma::fill::randn);
-        arma::mat draws_prop(n_events, n_times-1, arma::fill::randn);
-        arma::mat draws_temp(n_events, n_times-1, arma::fill::randn);
+        int n_draws = n_events * (n_times-1);
+        Rcpp::NumericVector draws_cur_rcpp  = Rcpp::rnorm(n_draws);
+        Rcpp::NumericVector draws_prop_rcpp = Rcpp::rnorm(n_draws);
+
+        arma::mat draws_cur(draws_cur_rcpp.begin(), n_events, n_times-1, false, true);
+        arma::mat draws_prop(draws_prop_rcpp.begin(), n_events, n_times-1, false, true);
+        arma::mat draws_temp(n_events, n_times-1, arma::fill::zeros);
         
         // integer for the attempt number
         int attempt = 0;
@@ -181,7 +185,7 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
                 attempt = 0;
                 while((any(nat_lna < 0) || any(init_volumes_prop < 0)) && (attempt <= max_attempts)) {
                       attempt          += 1;
-                      draws_cur.col(j)  = arma::randn(n_events);                          // draw a new vector of N(0,1)
+                      draws_cur.col(j)  = Rcpp::as<arma::vec>(Rcpp::rnorm(n_events));                          // draw a new vector of N(0,1)
                       log_lna           = lna_drift + svd_U * draws_cur.col(j);               // map the new draws to
                       nat_lna           = arma::exp(log_lna) - 1;                         // compute the LNA increment
                       init_volumes_prop = init_volumes + stoich_matrix * nat_lna;    // compute new initial volumes
@@ -257,7 +261,7 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
               }
               
               // sample new perturbations
-              draws_prop.randn();
+              draws_prop_rcpp[Rcpp::Range(0, n_draws)] = Rcpp::rnorm(n_draws);
               
               // center the bracket
               theta = runif(1, 0, 2*arma::datum::pi)[0];
@@ -518,7 +522,7 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
                     }
                     
                     // sample new perturbations
-                    draws_prop.randn();
+                    draws_prop_rcpp[Rcpp::Range(0, n_draws)] = Rcpp::rnorm(n_draws);
                     
                     // center the bracket
                     theta = runif(1, 0, 2*arma::datum::pi)[0];

@@ -12,8 +12,7 @@ using namespace arma;
 //' @export
 // [[Rcpp::export]]
 void draw_normals(arma::vec& v) {
-      
-      v.randn();
+      std::copy_n(Rcpp::rnorm(v.n_elem).begin(), v.n_elem, v.begin());
 }
 
 //' Draw new N(0,1) values and fill a matrix.
@@ -24,8 +23,7 @@ void draw_normals(arma::vec& v) {
 //' @export
 // [[Rcpp::export]]
 void draw_normals2(arma::mat& M) {
-      
-      M.randn();
+      std::copy_n(Rcpp::rnorm(M.n_elem).begin(), M.n_elem, M.begin());
 }
 
 //' Sample the unit sphere.
@@ -36,6 +34,6 @@ void draw_normals2(arma::mat& M) {
 //' @export
 // [[Rcpp::export]]
 void sample_unit_sphere(arma::vec& v) {
-      v.randn();
+      std::copy_n(Rcpp::rnorm(v.n_elem).begin(), v.n_elem, v.begin());
       v = arma::normalise(v, 2);
 }

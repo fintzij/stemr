@@ -2,7 +2,7 @@
 #'
 #' @param path_cur list with the current LNA path along with its ODE paths
 #' @param n_ess_updates number of elliptical slice sampling updates
-#' @param svd_sqrt,svd_d,svd_U,svd_V objects for computing the SVD of LNA
+#' @param svd_d,svd_U,svd_V objects for computing the SVD of LNA
 #'   diffusion matrics
 #' @param tparam_update if TRUE then time-varying parameters are updated jointly
 #'   along with the LNA path
@@ -37,7 +37,6 @@ update_lna_path <-
                  census_indices,
                  lna_event_inds,
                  measproc_indmat,
-                 svd_sqrt,
                  svd_d,
                  svd_U,
                  svd_V,
@@ -65,7 +64,7 @@ update_lna_path <-
             lower <- theta - 2*pi; upper <- theta
             
             # construct the first proposal
-            copy_mat(dest = draws_prop, orig = cos(theta)*path_cur$draws + sin(theta)*ess_draws_prop)
+            copy_mat(dest = draws_prop, orig = cos(theta) * path_cur$draws + sin(theta) * ess_draws_prop)
             
             # propose time-varying parameter values if called for
             if(!is.null(tparam) && tparam_update) {
@@ -107,7 +106,6 @@ update_lna_path <-
                             stoich_matrix     = stoich_matrix,
                             forcing_inds      = forcing_inds,
                             forcing_matrix    = forcing_matrix,
-                            svd_sqrt          = svd_sqrt,
                             svd_d             = svd_d,
                             svd_U             = svd_U,
                             svd_V             = svd_V,
@@ -203,7 +201,6 @@ update_lna_path <-
                                 stoich_matrix     = stoich_matrix,
                                 forcing_inds      = forcing_inds,
                                 forcing_matrix    = forcing_matrix,
-                                svd_sqrt          = svd_sqrt,
                                 svd_d             = svd_d,
                                 svd_U             = svd_U,
                                 svd_V             = svd_V,

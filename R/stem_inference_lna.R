@@ -54,13 +54,13 @@ stem_inference_lna <- function(stem_object,
             
             pd <- priors$prior_density(parameters, priors$to_estimation_scale(parameters))
             par_init_attempt <- 1
-            while(pd == -Inf && par_init_attempt <= initialization_attempts) {
+            while(is.infinite(pd) && par_init_attempt <= initialization_attempts) {
                   parameters <- par_init_fcn()
                   pd <- priors$prior_density(parameters, priors$to_estimation_scale(parameters))
                   par_init_attempt <- par_init_attempt + 1
             }
             
-            if(pd == -Inf) {
+            if(is.infinite(pd)) {
                   stop("Parameters have log prior density of negative infinity. Try another initialization.")
             }
             
@@ -68,7 +68,7 @@ stem_inference_lna <- function(stem_object,
             par_init_fcn   <- NULL
             parameters     <- stem_object$dynamics$parameters
             pd <- priors$prior_density(parameters, priors$to_estimation_scale(parameters))
-            if(pd == -Inf) {
+            if(is.infinite(pd)) {
                   stop("Parameters have log prior density of negative infinity. Try another initialization.")
             }
       }
@@ -216,8 +216,8 @@ stem_inference_lna <- function(stem_object,
       model_params_est <- to_estimation_scale(model_params_nat)
       
       # check that the functions to and from the estimation scale are 1:1
-      if(!all.equal(model_params_nat,
-               from_estimation_scale(to_estimation_scale(model_params_nat)))) {
+      if(!all.equal(unname(model_params_nat),
+               unname(from_estimation_scale(to_estimation_scale(model_params_nat))))) {
             stop("The functions that transform parameters to and from their estimation scales must be inverses of one another.")
       }
       
@@ -243,7 +243,6 @@ stem_inference_lna <- function(stem_object,
       census_indices    <- unique(c(0, findInterval(obstimes, lna_times) - 1))
       
       # objects for computing the SVD of the LNA diffusion matrix
-      svd_sqrt <- diag(0.0, n_rates)
       svd_U    <- diag(0.0, n_rates)
       svd_V    <- diag(0.0, n_rates)
       svd_d    <- rep(0.0, n_rates)
@@ -879,7 +878,7 @@ stem_inference_lna <- function(stem_object,
                   initialization_attempts = initialization_attempts,
                   step_size               = step_size,
                   par_init_fcn            = par_init_fcn,
-                  ess_warmup              = 10
+                  ess_warmup              = 100
             )
             
             # make sure that the model parameters are updated if new ones were proposed
@@ -934,7 +933,6 @@ stem_inference_lna <- function(stem_object,
                         lna_event_inds          = lna_event_inds,
                         census_indices          = census_indices,
                         measproc_indmat         = measproc_indmat,
-                        svd_sqrt                = svd_sqrt,
                         svd_d                   = svd_d,
                         svd_U                   = svd_U,
                         svd_V                   = svd_V,
@@ -970,7 +968,6 @@ stem_inference_lna <- function(stem_object,
                               census_indices       = census_indices,
                               lna_event_inds       = lna_event_inds,
                               measproc_indmat      = measproc_indmat,
-                              svd_sqrt             = svd_sqrt,
                               svd_d                = svd_d,
                               svd_U                = svd_U,
                               svd_V                = svd_V,
@@ -1018,7 +1015,6 @@ stem_inference_lna <- function(stem_object,
                               lna_event_inds       = lna_event_inds,
                               census_indices       = census_indices,
                               measproc_indmat      = measproc_indmat,
-                              svd_sqrt             = svd_sqrt,
                               svd_d                = svd_d,
                               svd_U                = svd_U,
                               svd_V                = svd_V,
@@ -1170,7 +1166,6 @@ stem_inference_lna <- function(stem_object,
                               stoich_matrix     = stoich_matrix,
                               forcing_inds      = forcing_inds,
                               forcing_matrix    = forcing_matrix,
-                              svd_sqrt          = svd_sqrt,
                               svd_d             = svd_d,
                               svd_U             = svd_U,
                               svd_V             = svd_V,
@@ -1304,7 +1299,6 @@ stem_inference_lna <- function(stem_object,
                               stoich_matrix     = stoich_matrix,
                               forcing_inds      = forcing_inds,
                               forcing_matrix    = forcing_matrix,
-                              svd_sqrt          = svd_sqrt,
                               svd_d             = svd_d,
                               svd_U             = svd_U,
                               svd_V             = svd_V,
@@ -1460,7 +1454,6 @@ stem_inference_lna <- function(stem_object,
                         lna_event_inds       = lna_event_inds,
                         census_indices       = census_indices,
                         measproc_indmat      = measproc_indmat,
-                        svd_sqrt             = svd_sqrt,
                         svd_d                = svd_d,
                         svd_U                = svd_U,
                         svd_V                = svd_V,
@@ -1507,7 +1500,6 @@ stem_inference_lna <- function(stem_object,
                               lna_event_inds       = lna_event_inds,
                               census_indices       = census_indices,
                               measproc_indmat      = measproc_indmat,
-                              svd_sqrt             = svd_sqrt,
                               svd_d                = svd_d,
                               svd_U                = svd_U,
                               svd_V                = svd_V,
@@ -1640,7 +1632,6 @@ stem_inference_lna <- function(stem_object,
                         lna_event_inds       = lna_event_inds,
                         census_indices       = census_indices,
                         measproc_indmat      = measproc_indmat,
-                        svd_sqrt             = svd_sqrt,
                         svd_d                = svd_d,
                         svd_U                = svd_U,
                         svd_V                = svd_V,
@@ -1755,7 +1746,6 @@ stem_inference_lna <- function(stem_object,
                               stoich_matrix     = stoich_matrix,
                               forcing_inds      = forcing_inds,
                               forcing_matrix    = forcing_matrix,
-                              svd_sqrt          = svd_sqrt,
                               svd_d             = svd_d,
                               svd_U             = svd_U,
                               svd_V             = svd_V,
@@ -1810,7 +1800,7 @@ stem_inference_lna <- function(stem_object,
                         t0_new2cur - t0_cur2new
                   
                   # make sure no proposals with initdist_lp == -Inf are accepted
-                  if(!fixed_inits && initdist_lp_prop == -Inf) {
+                  if(!fixed_inits && is.infinite(initdist_lp_prop)) {
                         acceptance_prob <- -Inf
                   } 
                   
@@ -1878,7 +1868,6 @@ stem_inference_lna <- function(stem_object,
                         census_indices       = census_indices,
                         lna_event_inds       = lna_event_inds,
                         measproc_indmat      = measproc_indmat,
-                        svd_sqrt             = svd_sqrt,
                         svd_d                = svd_d,
                         svd_U                = svd_U,
                         svd_V                = svd_V,
@@ -1916,7 +1905,6 @@ stem_inference_lna <- function(stem_object,
                   lna_event_inds          = lna_event_inds,
                   census_indices          = census_indices,
                   measproc_indmat         = measproc_indmat,
-                  svd_sqrt                = svd_sqrt,
                   svd_d                   = svd_d,
                   svd_U                   = svd_U,
                   svd_V                   = svd_V,
