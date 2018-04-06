@@ -306,6 +306,10 @@ stem_inference_lna <- function(stem_object,
                   mcmc_kernel$kernel_settings$scale_constant *
                   (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
             
+            warmup_adaptations <- 
+                  mcmc_kernel$kernel_settings$scale_constant *
+                  (seq(0, ess_warmup) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+            
             # slice interval width update interval
             interval_update_ind <- 2
             
@@ -1027,8 +1031,8 @@ stem_inference_lna <- function(stem_object,
                         
                         # adapt the kernel covariance
                         kernel_resid <- model_params_est - kernel_mean
-                        kernel_cov   <- kernel_cov + (kernel_resid %*% t(kernel_resid) - kernel_cov) * adaptations[warmup]
-                        kernel_mean  <- kernel_mean + kernel_resid * adaptations[warmup]
+                        kernel_cov   <- kernel_cov + (kernel_resid %*% t(kernel_resid) - kernel_cov) * warmup_adaptations[warmup]
+                        kernel_mean  <- kernel_mean + kernel_resid * warmup_adaptations[warmup]
                         
                         # adapt the bracket width
                         harss_bracket_width <- exp(mean(0.5 * log(diag(kernel_cov)))) 
@@ -1509,7 +1513,7 @@ stem_inference_lna <- function(stem_object,
                               do_prevalence        = do_prevalence,
                               step_size            = step_size
                         )
-                        
+                      
                         # adapt the bracket width
                         if(iter < stop_adaptation) {
                               harss_bracket_width <- exp(mean(0.5 * log(diag(kernel_cov)))) 
