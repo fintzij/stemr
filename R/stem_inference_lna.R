@@ -260,9 +260,13 @@ stem_inference_lna <- function(stem_object,
             nugget           <- mcmc_kernel$kernel_settings$nugget[1]
             max_scaling      <- mcmc_kernel$kernel_settings$max_scaling
             target_g         <- mcmc_kernel$kernel_settings$target_g
-            adaptations      <- mcmc_kernel$kernel_settings$scale_constant *
-                  (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^
-                  -mcmc_kernel$kernel_settings$scale_cooling
+            adaptations      <- 
+                  mcmc_kernel$kernel_settings$scale_constant *
+                  (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+            
+            warmup_adaptations <- 
+                  mcmc_kernel$kernel_settings$scale_constant *
+                  (seq(0, ess_warmup) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
             
             if (is.null(mcmc_kernel$kernel_settings$stop_adaptation)) {
                   stop_adaptation <- iterations + 1
@@ -460,6 +464,10 @@ stem_inference_lna <- function(stem_object,
             adaptations      <-
                   mcmc_kernel$kernel_settings$scale_constant *
                   (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+            
+            warmup_adaptations <- 
+                  mcmc_kernel$kernel_settings$scale_constant *
+                  (seq(0, ess_warmup) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
             
             # interval widths, expansions, and contractions
             if(is.null(mcmc_kernel$kernel_settings$harss_setting_list)) {
