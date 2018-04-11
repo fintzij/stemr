@@ -532,8 +532,10 @@ stem_dynamics <-
                         for(t in seq_along(compartment_codes)) {
                                 code_name <- names(compartment_codes)[t]
                                 code      <- compartment_codes[t]
-                                rate_fcns[[k]]$lumped <- gsub(paste0('\\<',code_name,'\\>'), paste0("state[",code,"]"), rate_fcns[[k]]$lumped)
-                                rate_fcns[[k]]$unlumped <- gsub(paste0('\\<',code_name,'\\>'), paste0("state[",code,"]"), rate_fcns[[k]]$unlumped)
+                                if(!is.null(rate_fcns[[k]]$lumped)) 
+                                      rate_fcns[[k]]$lumped <- gsub(paste0('\\<',code_name,'\\>'), paste0("state[",code,"]"), rate_fcns[[k]]$lumped)
+                                if(!is.null(rate_fcns[[k]]$unlumped))
+                                      rate_fcns[[k]]$unlumped <- gsub(paste0('\\<',code_name,'\\>'), paste0("state[",code,"]"), rate_fcns[[k]]$unlumped)
                         }
                 }
 

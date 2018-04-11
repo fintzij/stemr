@@ -35,7 +35,7 @@ parse_rates_exact <- function(rates, compile_rates, messages = TRUE) {
                 if(messages) {
                       exp_warning <- FALSE
                       for(r in seq_along(rates)) {
-                            exp_warning <- exp_warning || grepl("\\^", rates[[r]]$lumped) || (!is.null(rates[[r]]$unlumped) && grepl("\\^", rates[[r]]$unlumped))
+                            exp_warning <- exp_warning || grepl("\\^", rates[[r]]$lumped)
                             if(exp_warning) warning("If there is an exponentiated term in a rate, check that the base and exponent are both enclosed in parentheses, e.g., (base)^(exponent). Ignore this warning if rates are correctly specified.")
                             if(exp_warning) break
                       }
@@ -71,54 +71,54 @@ parse_rates_exact <- function(rates, compile_rates, messages = TRUE) {
                                      "Rcpp::XPtr<ratefcn_ptr> LUMPED_XPtr() {",
                                      "return(Rcpp::XPtr<ratefcn_ptr>(new ratefcn_ptr(&RATES_LUMPED)));",
                                      "}", sep = "\n")
-
+                
                 exact_code <- code_lumped
-
+                
                 # generate unlumped code
                 unlumped_inds <- sapply(rates, function(x) !is.null(x$unlumped))
-
+                
                 if(sum(unlumped_inds) == length(rates)) {
-
-                        fcns_unlumped <- paste(unlist(fcns_unlumped), collapse = "\n")
-
-                        code_unlumped <- paste("// [[Rcpp::depends(RcppArmadillo)]]",
-                                               "#include <RcppArmadillo.h>",
-                                               "using namespace arma;",
-                                               "using namespace Rcpp;",
-                                               paste0("void RATES_UNLUMPED(",arg_strings,") {"),
-                                               fcns_unlumped,
-                                               "}\n",
-                                               paste0("typedef void(*ratefcn_ptr)(", arg_strings,");"),
-                                               "// [[Rcpp::export]]",
-                                               "Rcpp::XPtr<ratefcn_ptr> UNLUMPED_XPtr() {",
-                                               "return(Rcpp::XPtr<ratefcn_ptr>(new ratefcn_ptr(&RATES_UNLUMPED)));",
-                                               "}", sep = "\n")
-
-                        exact_code <- paste(exact_code, code_unlumped, sep = "\n\n")
+                      
+                      fcns_unlumped <- paste(unlist(fcns_unlumped), collapse = "\n")
+                      
+                      code_unlumped <- paste("// [[Rcpp::depends(RcppArmadillo)]]",
+                                             "#include <RcppArmadillo.h>",
+                                             "using namespace arma;",
+                                             "using namespace Rcpp;",
+                                             paste0("void RATES_UNLUMPED(",arg_strings,") {"),
+                                             fcns_unlumped,
+                                             "}\n",
+                                             paste0("typedef void(*ratefcn_ptr)(", arg_strings,");"),
+                                             "// [[Rcpp::export]]",
+                                             "Rcpp::XPtr<ratefcn_ptr> UNLUMPED_XPtr() {",
+                                             "return(Rcpp::XPtr<ratefcn_ptr>(new ratefcn_ptr(&RATES_UNLUMPED)));",
+                                             "}", sep = "\n")
+                      
+                      exact_code <- paste(exact_code, code_unlumped, sep = "\n\n")
                 }
-
+                
                 if(is.character(compile_rates)) {
-                        filename <- ifelse(substr(compile_rates, nchar(compile_rates)-3, nchar(compile_rates)) != ".txt",
-                                           paste0(compile_rates,".txt"), compile_rates)
-                        cat(exact_code, file = filename)
+                      filename <- ifelse(substr(compile_rates, nchar(compile_rates)-3, nchar(compile_rates)) != ".txt",
+                                         paste0(compile_rates,".txt"), compile_rates)
+                      cat(exact_code, file = filename)
                 }
         }
-
+        
         if(load_file) {
-                exact_code <- readChar(compile_rates, nchars = 1e6)
+              exact_code <- readChar(compile_rates, nchars = 1e6)
         }
-
+        
         if(compile_code) {
-                if(messages) {
-                        print("Compiling rate functions.")
-                }
-
-                Rcpp::sourceCpp(code = exact_code, env = globalenv(), verbose = FALSE, rebuild = TRUE)
-
-                rate_pointers <- c(lumped_ptr = LUMPED_XPtr())
-
-                if(sum(unlumped_inds) == length(rates)) rate_pointers <- c(rate_pointers, unlumped_ptr = UNLUMPED_XPtr())
-
-                return(rate_pointers)
+              if(messages) {
+                    print("Compiling rate functions.")
+              }
+              
+              Rcpp::sourceCpp(code = exact_code, env = globalenv(), verbose = FALSE, rebuild = TRUE)
+              
+              rate_pointers <- c(lumped_ptr = LUMPED_XPtr())
+              
+              if(sum(unlumped_inds) == length(rates)) rate_pointers <- c(rate_pointers, unlumped_ptr = UNLUMPED_XPtr())
+              
+              return(rate_pointers)
         }
 }
