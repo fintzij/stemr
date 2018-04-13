@@ -153,6 +153,7 @@ initialize_lna <-
                 if(keep_going) attempt <- 1
 
                 while(keep_going && (attempt <= initialization_attempts)) {
+                      
                         try({
                                 # propose another LNA path
                                 path_init <- propose_lna_approx(
@@ -163,7 +164,7 @@ initialize_lna <-
                                         stoich_matrix     = stoich_matrix,
                                         forcing_inds      = forcing_inds,
                                         forcing_matrix    = forcing_matrix,
-                                        max_attempts      = initialization_attempts,
+                                        max_attempts      = 1,
                                         step_size         = step_size, 
                                         nsim              = 1, 
                                         ess_updates       = 1, 
