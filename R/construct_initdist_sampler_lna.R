@@ -38,7 +38,7 @@ construct_initdist_sampler_lna <- function(state_initializer, n_strata, constant
                   } else {
                         initdist_sampler_body[s] <- 
                               paste0("as.numeric(c(",
-                                     paste0(state_initializer[[s]]$init_states, collapse = ", "),
+                                     paste0(state_initializer[[s]]$init_states / sum(state_initializer[[s]]$init_states), collapse = ", "),
                                      "))")
                   }
             }
