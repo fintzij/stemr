@@ -36,10 +36,18 @@ construct_initdist_sampler_lna <- function(state_initializer, n_strata, constant
                                      paste0(state_initializer[[s]]$prior, collapse = ", "),
                                      ")))")
                   } else {
-                        initdist_sampler_body[s] <- 
-                              paste0("as.numeric(c(",
-                                     paste0(state_initializer[[s]]$init_states / sum(state_initializer[[s]]$init_states), collapse = ", "),
-                                     "))")
+                        
+                        if(sum(state_initializer[[s]]$init_states) != 0) {
+                              initdist_sampler_body[s] <- 
+                                    paste0("as.numeric(c(",
+                                           paste0(state_initializer[[s]]$init_states / sum(state_initializer[[s]]$init_states), collapse = ", "),
+                                           "))")      
+                        } else {
+                              initdist_sampler_body[s] <- 
+                                    paste0("as.numeric(c(",
+                                           paste0(rep(0, length(state_initializer[[s]]$init_states)), collapse = ", "),
+                                           "))")
+                        }
                   }
             }
             
