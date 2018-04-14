@@ -654,7 +654,6 @@ simulate_stem <-
                                                               forcing_matrix    = forcing_matrix,
                                                               step_size         = stem_object$dynamics$dynamics_args$step_size,
                                                               max_attempts      = max_attempts,
-                                                              reject_negatives  = TRUE,
                                                               lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
                                                               set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
                                           

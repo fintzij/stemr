@@ -6,8 +6,8 @@
 log-transformed counting process LNA.}
 \usage{
 propose_lna(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix,
-  forcing_inds, forcing_matrix, reject_negatives, max_attempts, step_size,
-  lna_pointer, set_pars_pointer)
+  forcing_inds, forcing_matrix, max_attempts, step_size, lna_pointer,
+  set_pars_pointer)
 }
 \arguments{
 \item{lna_times}{vector of interval endpoint times}
@@ -29,15 +29,7 @@ time-varying covariance matrix a forcing is applied.}
 
 \item{forcing_matrix}{matrix containing the forcings.}
 
-\item{reject_negatives}{logical for whether negative increments or compartment 
-volumes should lead to rejection of the sampled path. If false, draws that lead 
-to either are re-sampled in place instead of throwing an error. N.B. Resampling 
-targets the WRONG distribution and should only be used when initializing an LNA 
-path with the understanding that further warm-up under the correct distribution 
-is required.}
-
-\item{max_attempts}{maximum number of tries to restart negative increments if 
-reject_negatives is false.}
+\item{max_attempts}{maximum number of tries if the first increment is rejected}
 
 \item{step_size}{initial step size for the ODE solver (adapted internally,
 but too large of an initial step can lead to failure in stiff systems).}

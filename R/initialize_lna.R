@@ -88,8 +88,7 @@ initialize_lna <-
                                   max_attempts      = initialization_attempts,
                                   step_size         = step_size, 
                                   lna_pointer       = lna_pointer,
-                                  set_pars_pointer  = lna_set_pars_pointer,
-                                  reject_negatives  = TRUE
+                                  set_pars_pointer  = lna_set_pars_pointer
                             )
                             
                             path <- list(draws    = path_init$draws,
@@ -155,7 +154,7 @@ initialize_lna <-
                 while(keep_going && (attempt <= initialization_attempts)) {
                       
                         try({
-                                # propose another LNA path
+                                # propose another LNA path - includes ESS warmup
                                 path_init <- propose_lna_approx(
                                         lna_times         = lna_times,
                                         lna_pars          = lna_parameters,
@@ -164,7 +163,7 @@ initialize_lna <-
                                         stoich_matrix     = stoich_matrix,
                                         forcing_inds      = forcing_inds,
                                         forcing_matrix    = forcing_matrix,
-                                        max_attempts      = 1,
+                                        max_attempts      = initialization_attempts,
                                         step_size         = step_size, 
                                         nsim              = 1, 
                                         ess_updates       = 1, 

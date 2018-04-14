@@ -812,8 +812,8 @@ stem_inference_ode <- function(stem_object,
                 
                 # make sure that the model parameters are updated if new ones were proposed
                 if (!is.null(par_init_fcn)) {
-                      model_params_nat <- ode_params_cur[1, ode_param_inds + 1]
-                      model_params_est <- to_estimation_scale(model_params_nat)
+                      model_params_est <- to_estimation_scale(ode_params_cur[1, ode_param_inds + 1])
+                      model_params_nat <- from_estimation_scale(model_params_est)
                 }
         }
 

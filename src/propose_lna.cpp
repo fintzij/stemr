@@ -20,14 +20,7 @@ using namespace arma;
 //' @param forcing_inds logical vector of indicating at which times in the
 //'   time-varying covariance matrix a forcing is applied.
 //' @param forcing_matrix matrix containing the forcings.
-//' @param reject_negatives logical for whether negative increments or compartment 
-//' volumes should lead to rejection of the sampled path. If false, draws that lead 
-//' to either are re-sampled in place instead of throwing an error. N.B. Resampling 
-//' targets the WRONG distribution and should only be used when initializing an LNA 
-//' path with the understanding that further warm-up under the correct distribution 
-//' is required.
-//' @param max_attempts maximum number of tries to restart negative increments if 
-//' reject_negatives is false.
+//' @param max_attempts maximum number of tries if the first increment is rejected
 //' @param step_size initial step size for the ODE solver (adapted internally,
 //' but too large of an initial step can lead to failure in stiff systems).
 //' @param lna_pointer external pointer to the compiled LNA integration function.
@@ -44,7 +37,6 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                        const arma::mat& stoich_matrix,
                        const Rcpp::LogicalVector& forcing_inds,
                        const arma::mat& forcing_matrix,
-                       bool reject_negatives,
                        int max_attempts,
                        double step_size,
                        SEXP lna_pointer,
@@ -100,11 +92,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
         
         // integer for the attempt number
         int attempt = 0;
-
-        // array for lna moments
-        // arma::mat drift_vecs(n_events, n_times-1, arma::fill::zeros);
-        // arma::cube diff_mats(n_events, n_events, n_times - 1, arma::fill::zeros);
-
+        
         // iterate over the time sequence, solving the LNA over each interval
         for(int j=0; j < (n_times-1); ++j) {
               
@@ -155,16 +143,24 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                         ::Rf_error("c++ exception (unknown reason)");
                 }
                 
-                // If simulating, negative increments or volumes are rejected. 
-                if(reject_negatives) {
+                // compute the LNA increment
+                nat_lna = arma::vec(expm1(Rcpp::NumericVector(log_lna.begin(), log_lna.end())));
+
+                // update the compartment volumes
+                init_volumes_prop = init_volumes + stoich_matrix * nat_lna;
+                
+                // ensure monotonicity of the first increment and positivity of volumes
+                if(j == 0) {
+                      attempt = 0;
+                      while((any(nat_lna < 0) || any(init_volumes_prop < 0)) && (attempt <= max_attempts)) {
+                            attempt     += 1;
+                            draws_rcpp   = Rcpp::rnorm(n_events * (n_times-1));                                   // draw a new vector of N(0,1)
+                            log_lna      = lna_drift + svd_U * draws.col(j);                                      // map the new draws to log LNA 
+                            nat_lna      = arma::vec(expm1(Rcpp::NumericVector(log_lna.begin(), log_lna.end()))); // compute the LNA increment
+                            init_volumes_prop = init_volumes + stoich_matrix * nat_lna;                           // compute new initial volumes
+                      }
                       
-                      // compute the LNA increment
-                      nat_lna = arma::vec(expm1(Rcpp::NumericVector(log_lna.begin(), log_lna.end())));
-                      // arma::exp(log_lna) - 1;
-                      
-                      // update the compartment volumes
-                      init_volumes_prop = init_volumes + stoich_matrix * nat_lna;
-                      
+                } else {
                       // throw errors for negative increments or negative volumes
                       try{
                             if(any(nat_lna < 0)) {
@@ -181,62 +177,22 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                             
                       } catch(...) {
                             ::Rf_error("c++ exception (unknown reason)");
-                      }
+                      }      
+                }
+                
+                // save the increment and the prevalence
+                init_volumes = init_volumes_prop; 
+                lna_path(arma::span(1,n_events), j+1) = nat_lna;
+                prev_path(arma::span(1,n_comps), j+1) = init_volumes;
+                
+                // apply forcings if called for - applied after censusing the path
+                if(forcing_inds[j+1]) {
+                      init_volumes += forcing_matrix.col(j+1);
                       
-                      // save the increment and the prevalence
-                      init_volumes = init_volumes_prop; 
-                      lna_path(arma::span(1,n_events), j+1) = nat_lna;
-                      prev_path(arma::span(1,n_comps), j+1) = init_volumes;
-                      
-                      // apply forcings if called for - applied after censusing the path
-                      if(forcing_inds[j+1]) {
-                            init_volumes += forcing_matrix.col(j+1);
-                            
-                            // throw errors for negative negative volumes
-                            try{
-                                  if(any(init_volumes < 0)) {
-                                        throw std::runtime_error("Negative compartment volumes.");
-                                  }
-                                  
-                            } catch(std::exception &err) {
-                                  
-                                  forward_exception_to_r(err);
-                                  
-                            } catch(...) {
-                                  ::Rf_error("c++ exception (unknown reason)");
-                            }
-                      }
-                      
-                } else { 
-                      
-                      // If Initializing, draws leading to negative compartments or volumes are resampled.
-                      // compute the LNA increment
-                      nat_lna = arma::vec(expm1(Rcpp::NumericVector(log_lna.begin(), log_lna.end())));
-                      // arma::exp(log_lna) - 1;
-                      
-                      // update the compartment volumes
-                      init_volumes_prop = init_volumes + stoich_matrix * nat_lna;
-                      
-                      // ensure monotonicity of the increment, compartment volumes, 
-                      // and compartment volumes with forcings
-                      attempt = 0;
-                      while((any(nat_lna < 0) || any(init_volumes_prop < 0)) && (attempt <= max_attempts)) {
-                            attempt     += 1;
-                            draws.col(j) = Rcpp::as<arma::vec>(Rcpp::rnorm(n_events));                            // draw a new vector of N(0,1)
-                            log_lna      = lna_drift + svd_U * draws.col(j);                                      // map the new draws to log LNA 
-                            nat_lna      = arma::vec(expm1(Rcpp::NumericVector(log_lna.begin(), log_lna.end()))); // compute the LNA increment
-                            init_volumes_prop = init_volumes + stoich_matrix * nat_lna;    // compute new initial volumes
-                      }
-                      
+                      // throw errors for negative negative volumes
                       try{
-                            if(attempt > max_attempts) {
-                                  if(any(nat_lna < 0)) {
-                                        throw std::runtime_error("Negative increment.");
-                                  }
-                                  
-                                  if(any(init_volumes < 0)) {
-                                        throw std::runtime_error("Negative compartment volumes.");
-                                  }
+                            if(any(init_volumes < 0)) {
+                                  throw std::runtime_error("Negative compartment volumes.");
                             }
                             
                       } catch(std::exception &err) {
@@ -245,31 +201,6 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                             
                       } catch(...) {
                             ::Rf_error("c++ exception (unknown reason)");
-                      }
-                      
-                      // set the initial volumes to the proposed values
-                      init_volumes = init_volumes_prop;
-                      
-                      // save the increment and the prevalence
-                      lna_path(arma::span(1,n_events), j+1) = nat_lna;
-                      prev_path(arma::span(1,n_comps), j+1) = init_volumes;
-                      
-                      // apply forcings if called for - applied after censusing the path
-                      if(forcing_inds[j+1]) {
-                            init_volumes += forcing_matrix.col(j+1);
-                            
-                            // throw errors for negative increments or negative volumes
-                            try{
-                                  if(any(init_volumes < 0)) {
-                                        throw std::runtime_error("Negative compartment volumes after forcings.");
-                                  }
-                                  
-                            } catch(std::exception &err) {
-                                  forward_exception_to_r(err);
-                                  
-                            } catch(...) {
-                                  ::Rf_error("c++ exception (unknown reason)");
-                            }
                       }
                 }
 
@@ -289,7 +220,4 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
         return Rcpp::List::create(Rcpp::Named("draws")     = draws,
                                   Rcpp::Named("lna_path")  = lna_path.t(),
                                   Rcpp::Named("prev_path") = prev_path.t());
-
-                                  // Rcpp::Named("drift_vecs") = drift_vecs,
-                                  // Rcpp::Named("diff_mats") = diff_mats);
 }

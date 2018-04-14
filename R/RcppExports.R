@@ -587,14 +587,7 @@ propose_lna_approx <- function(lna_times, lna_pars, init_start, param_update_ind
 #' @param forcing_inds logical vector of indicating at which times in the
 #'   time-varying covariance matrix a forcing is applied.
 #' @param forcing_matrix matrix containing the forcings.
-#' @param reject_negatives logical for whether negative increments or compartment 
-#' volumes should lead to rejection of the sampled path. If false, draws that lead 
-#' to either are re-sampled in place instead of throwing an error. N.B. Resampling 
-#' targets the WRONG distribution and should only be used when initializing an LNA 
-#' path with the understanding that further warm-up under the correct distribution 
-#' is required.
-#' @param max_attempts maximum number of tries to restart negative increments if 
-#' reject_negatives is false.
+#' @param max_attempts maximum number of tries if the first increment is rejected
 #' @param step_size initial step size for the ODE solver (adapted internally,
 #' but too large of an initial step can lead to failure in stiff systems).
 #' @param lna_pointer external pointer to the compiled LNA integration function.
@@ -603,8 +596,8 @@ propose_lna_approx <- function(lna_times, lna_pars, init_start, param_update_ind
 #' the LNA path on its natural scale which is determined by the perturbations.
 #'
 #' @export
-propose_lna <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, reject_negatives, max_attempts, step_size, lna_pointer, set_pars_pointer) {
-    .Call(`_stemr_propose_lna`, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, reject_negatives, max_attempts, step_size, lna_pointer, set_pars_pointer)
+propose_lna <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, step_size, lna_pointer, set_pars_pointer) {
+    .Call(`_stemr_propose_lna`, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, step_size, lna_pointer, set_pars_pointer)
 }
 
 #' Identify which rates to update when a state transition event occurs.

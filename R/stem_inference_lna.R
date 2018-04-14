@@ -895,8 +895,8 @@ stem_inference_lna <- function(stem_object,
             
             # make sure that the model parameters are updated if new ones were proposed
             if (!is.null(par_init_fcn)) {
-                  model_params_nat <- lna_params_cur[1, lna_param_inds + 1]
-                  model_params_est <- to_estimation_scale(model_params_nat)
+                  model_params_est <- to_estimation_scale(lna_params_cur[1, lna_param_inds + 1])
+                  model_params_nat <- from_estimation_scale(model_params_est)
             }
       }
       
