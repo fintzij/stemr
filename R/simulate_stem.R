@@ -881,8 +881,9 @@ simulate_stem <-
 
                   forcing_matrix <- t(forcing_matrix)
 
-                  sim_pars  <- stem_object$dynamics$parameters
+                  sim_pars  <- stem_object$dynamics$parameters[parameter_inds+1]
                   init_vols <- init_states[1,]
+                  prev_inds <- match(round(census_times, digits = 8), round(ode_times, digits = 8))
 
                   for(k in seq_along(census_paths)) {
 
