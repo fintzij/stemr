@@ -2117,6 +2117,7 @@ stem_inference_lna <- function(stem_object,
                   prior_density    = prior_density,
                   mcmc_kernel      = mcmc_kernel,
                   t0_kernel        = t0_kernel,
+                  initdist_prior   = initdist_prior,
                   initdist_sampler = initdist_sampler,
                   path_for_restart = path,
                   tparam_for_restart = tparam
