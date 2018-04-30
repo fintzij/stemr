@@ -9,8 +9,30 @@
 #' @return list with an updated LNA path along with its ODEs, the observed data
 #'   log-likelihood, and the lna log-likelihood.
 #' @export
-compute_lna_logliks <- function(path, data, params_prop_nat, lna_params_prop, censusmat, emitmat, flow_matrix, lna_times, lna_initdist_inds, param_update_inds, incidence_codes, census_incidence_codes, census_indices, measproc_indmat, obstime_inds, constants, tcovar_censmat, do_prevalence, do_incidence, lna_pointer, lna_set_pars_pointer, d_meas_pointer) {
-
+compute_lna_logliks <-
+      function(path,
+               data,
+               params_prop_nat,
+               lna_params_prop,
+               censusmat,
+               emitmat,
+               flow_matrix,
+               lna_times,
+               lna_initdist_inds,
+               param_update_inds,
+               incidence_codes,
+               census_incidence_codes,
+               census_indices,
+               measproc_indmat,
+               obstime_inds,
+               constants,
+               tcovar_censmat,
+               do_prevalence,
+               do_incidence,
+               lna_pointer,
+               lna_set_pars_pointer,
+               d_meas_pointer) {
+            
         # Reintegrate the LNA ODEs and compute the LNA log likelihood
         path <- lna_density(
                 path              = path,
@@ -27,15 +49,16 @@ compute_lna_logliks <- function(path, data, params_prop_nat, lna_params_prop, ce
 
         # census the LNA
         census_lna(
-                path                = path$lna_path,
-                census_path         = censusmat,
-                census_inds         = census_indices,
-                flow_matrix_lna     = flow_matrix,
-                do_prevalence       = do_prevalence,
-                init_state          = init_state,
-                incidence_codes_lna = incidence_codes
+              path                = path$lna_path,
+              census_path         = censusmat,
+              census_inds         = census_indices,
+              lna_event_inds      = lna_event_inds,
+              flow_matrix_lna     = flow_matrix,
+              do_prevalence       = do_prevalence,
+              init_state          = init_state,
+              forcing_matrix      = forcing_matrix
         )
-
+        
         # either compute the incidence, or compute the compartment counts if the data are prevalence counts
         if(do_incidence) {
                 # compute the incidence

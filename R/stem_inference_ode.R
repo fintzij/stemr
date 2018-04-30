@@ -766,7 +766,7 @@ stem_inference_ode <- function(stem_object,
                                 lna_tcovar_inds   = ode_tcovar_inds,
                                 param_update_inds = param_update_inds,
                                 census_indices    = census_indices,
-                                ode_param_vec     = ode_param_vec,
+                                lna_param_vec     = ode_param_vec,
                                 d_meas_ptr        = d_meas_pointer
                         )
 
