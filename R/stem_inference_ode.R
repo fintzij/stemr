@@ -104,6 +104,7 @@ stem_inference_ode <- function(stem_object,
         if (is.null(ess_args)) {
               n_ess_updates <- 1
               ess_warmup    <- 50
+              tparam_ess_update <- TRUE
               
         } else {
               n_ess_updates <- ess_args$n_ess_updates
@@ -980,7 +981,7 @@ stem_inference_ode <- function(stem_object,
         # begin the MCMC
         start.time <- Sys.time()
         for(iter in (seq_len(iterations) + 1)) {
-              
+
                 # Print the status if messages are enabled
                 if((messages) && k%%thin_latent_proc == 0) {
                         # print the iteration
@@ -1553,8 +1554,8 @@ stem_inference_ode <- function(stem_object,
                         # make sure the time--varying parameters are in there too
                         if(!is.null(tparam)) {
                               for(tpar_ind in seq_along(tparam)) {
-                                    copy_col(dest = lna_params_prop, 
-                                             orig = lna_params_cur,
+                                    copy_col(dest = ode_params_prop, 
+                                             orig = ode_params_cur,
                                              ind = tparam[[tpar_ind]]$col_ind)
                               }
                         }
@@ -1796,7 +1797,6 @@ stem_inference_ode <- function(stem_object,
         if(!t0_fixed)    MCMC_results <- cbind(MCMC_results, t0_log_prior = t0_log_prior)
         if (!is.null(tparam)) MCMC_results <- cbind(MCMC_results, tparam_log_lik)
         
-
         # append the parameter samples on their natural and estimation scales
         MCMC_results <-
               cbind(MCMC_results, parameter_samples_nat, parameter_samples_est)

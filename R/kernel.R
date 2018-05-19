@@ -79,6 +79,10 @@ kernel <-
                   nugget <- 0.001 * min(diag(sigma))
             }
       }
+              
+      if(method == "afss" & is.null(afss_setting_list)) {
+            afss_setting_list <- afss_settings()
+      }
         
       kernel_settings <- list(scale_constant = scale_constant,
                           scale_cooling = scale_cooling,

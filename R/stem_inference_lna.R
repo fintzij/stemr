@@ -352,6 +352,8 @@ stem_inference_lna <- function(stem_object,
                   
                   afss_setting_list <- mcmc_kernel$kernel_settings$afss_setting_list
                   
+                  if(is.null(afss_setting_list)) afss_setting_list <- afss_settings()
+                  
                   # afss settings
                   first_factor_update  <- afss_setting_list$first_factor_update + 1
                   first_prob_update    <- afss_setting_list$first_prob_update + 1

@@ -88,16 +88,16 @@ parse_meas_procs <- function(meas_procs, compile_moments = FALSE, messages = TRU
                 print("Compiling measurement process functions.")
         }
 
-        Rcpp::sourceCpp(code = code_r_measure, env = globalenv())
-        Rcpp::sourceCpp(code = code_d_measure, env = globalenv())
+        Rcpp::sourceCpp(code = code_r_measure, env = globalenv(), rebuild = TRUE)
+        Rcpp::sourceCpp(code = code_d_measure, env = globalenv(), rebuild = TRUE)
 
         measproc_pointers <- c(r_measure_ptr = R_MEASURE_XPtr(),
                                d_measure_ptr = D_MEASURE_XPtr(),
                                meas_proc_code = paste(code_r_measure, code_d_measure, sep = "\n\n"))
 
         if(compile_moments) {
-                Rcpp::sourceCpp(code = code_m_measure, env = globalenv())
-                Rcpp::sourceCpp(code = code_v_measure, env = globalenv())
+                Rcpp::sourceCpp(code = code_m_measure, env = globalenv(), rebuild = TRUE)
+                Rcpp::sourceCpp(code = code_v_measure, env = globalenv(), rebuild = TRUE)
 
                 measproc_pointers <- c(measproc_pointers,
                                        m_measure_ptr = MEAS_MEAN_XPtr(),
