@@ -3,8 +3,6 @@
 #' @param tparam list containing the time-varying parameters
 #' @param path_cur list with the current ode
 #' @param n_ess_updates number of elliptical slice sampling updates
-#' @param svd_sqrt,svd_d,svd_U,svd_V objects for computing the SVD of LNA
-#'   diffusion matrics
 #' @inheritParams initialize_lna
 #'
 #' @return updated time-varying parameter values and lna path
@@ -31,10 +29,6 @@ update_tparam_ode <-
                  census_indices,
                  ode_event_inds,
                  measproc_indmat,
-                 svd_sqrt,
-                 svd_d,
-                 svd_U,
-                 svd_V,
                  ode_pointer,
                  ode_set_pars_pointer,
                  d_meas_pointer,

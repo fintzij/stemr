@@ -45,6 +45,21 @@ CALL_INTEGRATE_STEM_ODE <- function(init, start, end, step_size, stem_ode_ptr) {
     invisible(.Call(`_stemr_CALL_INTEGRATE_STEM_ODE`, init, start, end, step_size, stem_ode_ptr))
 }
 
+#' Update rates by calling rate functions via Xptr.
+#'
+#' @param rates vector of rates to be modified
+#' @param inds logical vector of indices of rates to be modified
+#' @param state numeric vector of comaprtment counts
+#' @param parameters numeric vector of parameter values
+#' @param constants numeric vector of constants
+#' @param tcovar numeric vector of time-varying covariate values
+#' @param rate_ptr external pointer to rate function
+#'
+#' @export
+CALL_RATE_FCN <- function(rates, inds, state, parameters, constants, tcovar, rate_ptr) {
+    invisible(.Call(`_stemr_CALL_RATE_FCN`, rates, inds, state, parameters, constants, tcovar, rate_ptr))
+}
+
 #' Simulate from the measurement process by calling measurement process
 #' functions via external Xptr.
 #'
@@ -60,21 +75,6 @@ CALL_INTEGRATE_STEM_ODE <- function(init, start, end, step_size, stem_ode_ptr) {
 #' @export
 CALL_R_MEASURE <- function(obsmat, emit_inds, record_ind, state, parameters, constants, tcovar, r_meas_ptr) {
     invisible(.Call(`_stemr_CALL_R_MEASURE`, obsmat, emit_inds, record_ind, state, parameters, constants, tcovar, r_meas_ptr))
-}
-
-#' Update rates by calling rate functions via Xptr.
-#'
-#' @param rates vector of rates to be modified
-#' @param inds logical vector of indices of rates to be modified
-#' @param state numeric vector of comaprtment counts
-#' @param parameters numeric vector of parameter values
-#' @param constants numeric vector of constants
-#' @param tcovar numeric vector of time-varying covariate values
-#' @param rate_ptr external pointer to rate function
-#'
-#' @export
-CALL_RATE_FCN <- function(rates, inds, state, parameters, constants, tcovar, rate_ptr) {
-    invisible(.Call(`_stemr_CALL_RATE_FCN`, rates, inds, state, parameters, constants, tcovar, rate_ptr))
 }
 
 #' Set the parameters for a system of ODEs via XPtr.
@@ -472,6 +472,29 @@ map_pars_2_ode <- function(pathmat, ode_times, ode_pars, init_start, param_updat
     invisible(.Call(`_stemr_map_pars_2_ode`, pathmat, ode_times, ode_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer))
 }
 
+#' matrix square root
+#'
+#' @param S square root matrix to be filled out
+#' @param M symmetric positive definite matrix for which square root is to be computed
+#' 
+#' @return set S equal to the matrix square root of M 
+#' @export
+comp_sqrtmat <- function(S, M) {
+    invisible(.Call(`_stemr_comp_sqrtmat`, S, M))
+}
+
+#' Cholesky decomposition
+#'
+#' @param C matrix to be filled out with the cholesky of M
+#' @param M symmetric positive definite matrix for which the upper triangle of the cholesky 
+#'   is to be computed
+#' 
+#' @return set C equal to the matrix square root of M 
+#' @export
+comp_chol <- function(C, M) {
+    invisible(.Call(`_stemr_comp_chol`, C, M))
+}
+
 #' Produce samples from a multivariate normal density using the Cholesky
 #' decomposition
 #'
@@ -538,32 +561,15 @@ normalise <- function(v, p) {
     invisible(.Call(`_stemr_normalise`, v, p))
 }
 
-#' Simulate an LNA path using a non-centered parameterization for the
-#' log-transformed counting process LNA.
+#' return a normalised vector
 #'
-#' @param lna_times vector of interval endpoint times
-#' @param lna_pars numeric matrix of parameters, constants, and time-varying
-#'   covariates at each of the lna_times
-#' @param init_start index in the parameter vector where the initial compartment
-#'   volumes start
-#' @param param_update_inds logical vector indicating at which of the times the
-#'   LNA parameters need to be updated.
-#' @param stoich_matrix stoichiometry matrix giving the changes to compartments
-#'   from each reaction
-#' @param forcing_inds logical vector of indicating at which times in the
-#'   time-varying covariance matrix a forcing is applied.
-#' @param forcing_matrix matrix containing the forcings.
-#' @param max_attempts maximum number of tries if the first increment is rejected
-#' @param step_size initial step size for the ODE solver (adapted internally,
-#' but too large of an initial step can lead to failure in stiff systems).
-#' @param lna_pointer external pointer to the compiled LNA integration function.
-#' @param set_pars_pointer external pointer to the function for setting LNA pars.
-#' @return list containing the stochastic perturbations (i.i.d. N(0,1) draws) and
-#' the LNA path on its natural scale which is determined by the perturbations.
-#'
+#' @param v vector to be normalised
+#' @param p norm
+#' 
+#' @return normalised vector 
 #' @export
-propose_lna <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, step_size, lna_pointer, set_pars_pointer) {
-    .Call(`_stemr_propose_lna`, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, step_size, lna_pointer, set_pars_pointer)
+normalise2 <- function(v, p) {
+    .Call(`_stemr_normalise2`, v, p)
 }
 
 #' Simulate an approximate LNA path using a non-centered parameterization for the
@@ -598,6 +604,34 @@ propose_lna <- function(lna_times, lna_pars, init_start, param_update_inds, stoi
 #' @export
 propose_lna_approx <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, nsim, ess_updates, ess_warmup, step_size, lna_pointer, set_pars_pointer) {
     .Call(`_stemr_propose_lna_approx`, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, nsim, ess_updates, ess_warmup, step_size, lna_pointer, set_pars_pointer)
+}
+
+#' Simulate an LNA path using a non-centered parameterization for the
+#' log-transformed counting process LNA.
+#'
+#' @param lna_times vector of interval endpoint times
+#' @param lna_pars numeric matrix of parameters, constants, and time-varying
+#'   covariates at each of the lna_times
+#' @param init_start index in the parameter vector where the initial compartment
+#'   volumes start
+#' @param param_update_inds logical vector indicating at which of the times the
+#'   LNA parameters need to be updated.
+#' @param stoich_matrix stoichiometry matrix giving the changes to compartments
+#'   from each reaction
+#' @param forcing_inds logical vector of indicating at which times in the
+#'   time-varying covariance matrix a forcing is applied.
+#' @param forcing_matrix matrix containing the forcings.
+#' @param max_attempts maximum number of tries if the first increment is rejected
+#' @param step_size initial step size for the ODE solver (adapted internally,
+#' but too large of an initial step can lead to failure in stiff systems).
+#' @param lna_pointer external pointer to the compiled LNA integration function.
+#' @param set_pars_pointer external pointer to the function for setting LNA pars.
+#' @return list containing the stochastic perturbations (i.i.d. N(0,1) draws) and
+#' the LNA path on its natural scale which is determined by the perturbations.
+#'
+#' @export
+propose_lna <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, step_size, lna_pointer, set_pars_pointer) {
+    .Call(`_stemr_propose_lna`, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, step_size, lna_pointer, set_pars_pointer)
 }
 
 #' Identify which rates to update when a state transition event occurs.

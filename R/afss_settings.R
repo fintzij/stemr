@@ -30,8 +30,6 @@
 #' @param sample_all_initially should all factor directions be sampled until the
 #'   first slice probability update? defaults to TRUE
 #' @param harss_prob probability of a hit and run update at each iteration
-#' @param harss_warmup should a hit and run update be performed along with the
-#'   elliptical slice sampling warm up? defaults to TRUE
 #' @param initial_widths vector of initial slice widths, defaults to a vector of
 #' @param afss_slice_ratio target ratio of expansions / (expansions +
 #'   contractions) ones.
@@ -48,8 +46,7 @@ afss_settings <-
                sample_all_initially = TRUE,
                afss_slice_ratio = 0.5,
                target_prop_totsd = NULL,
-               harss_prob = 0.05,
-               harss_warmup = TRUE) {
+               harss_prob = 0.05) {
                
       # test if the factor and prob update interval functions have defaults if they are specified via functions   
       if(is.function(factor_update_interval)) {
@@ -80,6 +77,5 @@ afss_settings <-
            sample_all_initially    = sample_all_initially,
            afss_slice_ratio        = afss_slice_ratio,
            target_prop_totsd       = target_prop_totsd,
-           harss_prob              = harss_prob,
-           harss_warmup            = harss_warmup)
+           harss_prob              = harss_prob)
       }

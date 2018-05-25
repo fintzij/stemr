@@ -29,10 +29,6 @@
 #' @param census_indices indices for when the ode path should be censused
 #' @param measproc_indmat matrix giving the indices for data likelihood
 #'   contributions
-#' @param svd_sqrt matrix for computing the matrix square root for the ode
-#' @param svd_d vector for ode singular values
-#' @param svd_U matrix for ode left singular vectors
-#' @param svd_V matrix for ode right singular vectors
 #' @param ode_pointer external pointer for ode
 #' @param ode_set_pars_pointer external pointer for setting ode parameters
 #' @param d_meas_pointer external pointer for computing emission probabilities
@@ -81,10 +77,6 @@ hit_and_run_slice_sampler_ode <-
                ode_event_inds,
                census_indices,
                measproc_indmat,
-               svd_sqrt,
-               svd_d,
-               svd_U,
-               svd_V,
                ode_pointer,
                ode_set_pars_pointer,
                d_meas_pointer,

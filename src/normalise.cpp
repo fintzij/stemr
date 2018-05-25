@@ -16,3 +16,14 @@ void normalise(arma::vec& v, int p) {
       v = arma::normalise(v, p);
 }
 
+//' return a normalised vector
+//'
+//' @param v vector to be normalised
+//' @param p norm
+//' 
+//' @return normalised vector 
+//' @export
+// [[Rcpp::export]]
+arma::vec normalise2(arma::vec& v, int p) {
+      return arma::normalise(v, p);
+}

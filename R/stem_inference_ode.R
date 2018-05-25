@@ -109,6 +109,7 @@ stem_inference_ode <- function(stem_object,
         } else {
               n_ess_updates <- ess_args$n_ess_updates
               ess_warmup    <- ess_args$ess_warmup
+              tparam_ess_update <- ess_args$tparam_update
         }
         
         # indices of parameters, constants, and time-varying covariates in the ode_params_* matrices
@@ -147,6 +148,7 @@ stem_inference_ode <- function(stem_object,
         vols2concs <- function(volumes, size_vec = comp_size_vec) {
               ifelse(size_vec != 0, volumes / size_vec, 0)
         } 
+        
         initdist_names <- names(stem_object$dynamics$initdist_params)
         convrec_initprob_names  <- paste0("p_", initdist_names)
         convrec_initvol_names   <- initdist_names
@@ -157,13 +159,17 @@ stem_inference_ode <- function(stem_object,
                 acceptances_init <- 0
 
                 # function for sampling the initial compartment counts (independence sampling from prior)
-                initdist_sampler <- construct_initdist_sampler_lna(state_initializer   = state_initializer,
-                                                                   n_strata            = n_strata,
-                                                                   constants           = constants)
+                initdist_sampler <- 
+                      construct_initdist_sampler_lna(
+                            state_initializer   = state_initializer,
+                            n_strata            = n_strata,
+                            constants           = constants)
 
-                initdist_prior   <- construct_initdist_prior_lna(state_initializer = state_initializer,
-                                                                   n_strata          = n_strata,
-                                                                   constants         = constants)
+                initdist_prior <- 
+                      construct_initdist_prior_lna(
+                            state_initializer = state_initializer,
+                            n_strata          = n_strata,
+                            constants         = constants)
 
                 # initdist params come in as volumes, convert to concentrations
                 initdist_log_prior   <- double(1 + floor(iterations / thin_params))
@@ -214,14 +220,30 @@ stem_inference_ode <- function(stem_object,
         names(params_prop_est) <- names(params_prop_nat) <- param_names_nat
 
         # generate other derived objects
-        ode_times         <- sort(unique(c(obstimes,
-                                           stem_object$dynamics$tcovar[, 1],
-                                           seq(stem_object$dynamics$t0,
-                                               stem_object$dynamics$tmax,
-                                               by = stem_object$dynamics$timestep),
-                                           stem_object$dynamics$tmax)))
+        ode_times <-
+              sort(unique(c(obstimes,
+                            stem_object$dynamics$tcovar[, 1],
+                            seq(stem_object$dynamics$t0,
+                                stem_object$dynamics$tmax,
+                                by = stem_object$dynamics$timestep),
+                            stem_object$dynamics$tmax)))
+        
         n_times           <- length(ode_times)
         census_indices    <- unique(c(0, findInterval(obstimes, ode_times) - 1))
+        
+        # harss warmup
+        harss_warmup <- as.logical(mcmc_kernel$kernel_settings$harss_warmup > 0)
+        
+        # number of ess/harss warmup iterations
+        warmup_iterations <- max(c(0, ess_warmup, mcmc_kernel$kernel_settings$harss_warmup))
+        
+        # set up harss warmup objects
+        if(harss_warmup) {
+              har_direction_warmup        <- rep(0.0, n_model_params)
+              harss_bracket_width_warmup  <- 1.0
+              n_expansions_harss_warmup   <- 0.5
+              n_contractions_harss_warmup <- 0.5
+        }
 
         # set up the MCMC kernel
         if(mcmc_kernel$method == "mvn_rw") {
@@ -237,9 +259,14 @@ stem_inference_ode <- function(stem_object,
               nugget           <- mcmc_kernel$kernel_settings$nugget[1]
               max_scaling      <- mcmc_kernel$kernel_settings$max_scaling
               target_g         <- mcmc_kernel$kernel_settings$target_g
+              
               adaptations      <- 
                     mcmc_kernel$kernel_settings$scale_constant *
                     (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+              
+              warmup_adaptations <- 
+                    mcmc_kernel$kernel_settings$scale_constant *
+                    (seq(0, warmup_iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
               
               if (is.null(mcmc_kernel$kernel_settings$stop_adaptation)) {
                     stop_adaptation <- iterations + 1
@@ -307,14 +334,13 @@ stem_inference_ode <- function(stem_object,
                     first_factor_update    <- 100
                     first_prob_update      <- 100
                     n_afss_updates         <- n_model_params
-                    target_prop_totsd        <- NULL
+                    target_prop_totsd      <- NULL
                     slice_probs            <- rep(1.0, n_model_params) # sample all factors initially
                     factor_update_interval_fcn <- prob_update_interval_fcn <- NULL
                     sample_all_initially   <- TRUE
                     interval_widths        <- rep(1.0, n_model_params)
                     harss_prob             <- 0.05
                     harss_warmup           <- TRUE
-                    target_contraction_rate <- 0.5
                     n_contractions_afss    <- rep(0.5, n_model_params)
                     n_expansions_afss      <- rep(0.5, n_model_params)
                     c_contractions_afss    <- rep(0.5, n_model_params)
@@ -408,7 +434,9 @@ stem_inference_ode <- function(stem_object,
               n_contractions_harss <- 0.5
               
               # should a harss update be attempted
-              do_harss_update <- (n_afss_updates != n_model_params) 
+              do_harss_update <- 
+                    (n_afss_updates != n_model_params) |
+                    !is.null(target_prop_totsd)
               
               # objects for saving the adaptation history
               kernel_cov_record <-
@@ -468,6 +496,75 @@ stem_inference_ode <- function(stem_object,
               
               # kernel covariance
               kernel_cov   <- diag(1, n_model_params)
+              
+        } else if (mcmc_kernel$method == "mvnss") {
+              
+              # adaptation schedule
+              if (is.null(mcmc_kernel$kernel_settings$stop_adaptation)) {
+                    stop_adaptation <- iterations + 1
+              } else {
+                    stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 1
+              }
+              
+              # sequence for adaptation factors
+              adaptations      <-
+                    mcmc_kernel$kernel_settings$scale_constant *
+                    (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+              
+              warmup_adaptations <- 
+                    mcmc_kernel$kernel_settings$scale_constant *
+                    (seq(0, warmup_iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+              
+              # interval widths, expansions, and contractions
+              if(is.null(mcmc_kernel$kernel_settings$mvnss_setting_list)) {
+                    mvnss_setting_list <- mvnss_settings()
+                    
+              } else {
+                    mvnss_setting_list <- mcmc_kernel$kernel_settings$mvnss_setting_list
+              }
+              
+              # extract list settings
+              n_mvnss_updates         <- mvnss_setting_list$n_mvnss_updates
+              cov_update_interval     <- mvnss_setting_list$cov_update_interval
+              
+              # nugget
+              nugget <- mcmc_kernel$kernel_settings$nugget
+              
+              # vector for direction proposal
+              har_direction <- rep(0.0, n_model_params)
+              mvn_direction <- rep(0.0, n_model_params)
+              mvnss_propvec <- rep(0.0, n_model_params)
+              
+              # initial bracket width
+              mvnss_bracket_width <- 1.0
+              
+              # for adaptive the hit-and-run proposal
+              n_expansions_mvnss   <- 0.5
+              n_contractions_mvnss <- 0.5
+              
+              # empirical mean and covariance of the target
+              kernel_resid <- double(n_model_params) # already initialized to 0
+              kernel_mean  <- double(n_model_params)
+              copy_vec(kernel_mean, model_params_est)
+              
+              # kernel covariance
+              kernel_cov <- diag(1, n_model_params)
+              copy_mat(kernel_cov, mcmc_kernel$sigma)
+              
+              # cholesky decomposition of the covariance
+              kernel_cov_sqrtmat <- chol(kernel_cov)
+              
+              # objects for saving the adaptation history
+              kernel_cov_record <-
+                    array(0.0,
+                          dim = c(
+                                n_model_params,
+                                n_model_params,
+                                floor(iterations / thin_params) + 1
+                          ))
+              
+              # save initial values for factors, weight
+              kernel_cov_record[,,1]   <- kernel_cov
         }
 
         # set up objects for sampling t0 if it is not fixed
@@ -515,10 +612,7 @@ stem_inference_ode <- function(stem_object,
 
         # insert time varying covariates
         if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
-                tcovar_rowinds <- 
-                      findInterval(ode_times,
-                                   stem_object$dynamics$tcovar[, 1],
-                                   left.open = F)
+                tcovar_rowinds <- findInterval(ode_times, stem_object$dynamics$tcovar[, 1], left.open = F)
                 ode_params_cur[tcovar_rowinds, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
                 ode_params_prop[tcovar_rowinds,tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
         }
@@ -531,13 +625,18 @@ stem_inference_ode <- function(stem_object,
                     stem_object$dynamics$ode_rates$ode_param_codes[sapply(tparam, function(x) x$tparam_name)]
               
               # for recording the number of ESS updates for tparams
-              tparam_ess  <- 1
+              if (!tparam_ess_update) {
+                    tparam_ess  <- 1
+              } else {
+                    tparam_ess <- NULL
+              }
               
               # verify whether the mcmc is being restarted
               if (!mcmc_restart) {
                     
                     # generate the indices for updating the time-varying parameter and initialize the values
                     for (s in seq_along(tparam)) {
+                          
                           # can get rid of the values slot
                           tparam[[s]]$values <- NULL
                           
@@ -555,15 +654,12 @@ stem_inference_ode <- function(stem_object,
                           tparam[[s]]$log_lik    <- sum(dnorm(tparam[[s]]$draws_cur, log = TRUE))
                           
                           # get values
-                          insert_tparam(
-                                tcovar    = ode_params_cur,
-                                values    = tparam[[s]]$draws2par(
-                                      parameters = model_params_nat,
-                                      draws = tparam[[s]]$draws_cur
-                                ),
-                                col_ind   = tparam[[s]]$col_ind,
-                                tpar_inds = tparam[[s]]$tpar_inds
-                          )
+                          insert_tparam(tcovar    = ode_params_cur,
+                                        values    = tparam[[s]]$draws2par(
+                                              parameters = model_params_nat,
+                                              draws = tparam[[s]]$draws_cur),
+                                        col_ind   = tparam[[s]]$col_ind,
+                                        tpar_inds = tparam[[s]]$tpar_inds)
                           
                           # copy into ode_params_prop
                           copy_col(
@@ -576,23 +672,19 @@ stem_inference_ode <- function(stem_object,
                     
                     # if restarting, just copy the values into the parameter matrices
                     for (s in seq_along(tparam)) {
+                          
                           # get values
-                          insert_tparam(
-                                tcovar    = ode_params_cur,
-                                values    = tparam[[s]]$draws2par(
-                                      parameters = model_params_nat,
-                                      draws = tparam[[s]]$draws_cur
-                                ),
-                                col_ind   = tparam[[s]]$col_ind,
-                                tpar_inds = tparam[[s]]$tpar_inds
-                          )
+                          insert_tparam(tcovar    = ode_params_cur,
+                                        values    = tparam[[s]]$draws2par(
+                                              parameters = model_params_nat,
+                                              draws = tparam[[s]]$draws_cur),
+                                        col_ind   = tparam[[s]]$col_ind,
+                                        tpar_inds = tparam[[s]]$tpar_inds)
                           
                           # copy into ode_params_prop
-                          copy_col(
-                                dest = ode_params_prop,
-                                orig = ode_params_cur,
-                                ind  = tparam[[s]]$col_ind
-                          )
+                          copy_col(dest = ode_params_prop,
+                                   orig = ode_params_cur,
+                                   ind  = tparam[[s]]$col_ind)
                     }
               }
         } else {
@@ -653,10 +745,11 @@ stem_inference_ode <- function(stem_object,
                         affected_rates <- rep(FALSE, nrow(stem_object$dynamics$tcovar_adjmat))
 
                         for(n in seq_along(stem_object$dynamics$rates)) {
-                                affected_rates[n] = grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$from,
-                                                          stem_object$dynamics$rates[[n]]$unparsed) |
-                                        grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$to,
-                                              stem_object$dynamics$rates[[n]]$unparsed)
+                                affected_rates[n] = 
+                                      grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$from,
+                                            stem_object$dynamics$rates[[n]]$unparsed) |
+                                      grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$to,
+                                            stem_object$dynamics$rates[[n]]$unparsed)
                         }
 
                         stem_object$dynamics$tcovar_adjmat[,stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] <-
@@ -669,45 +762,40 @@ stem_inference_ode <- function(stem_object,
 
         # matrix in which to store the emission probabilities
         emitmat <- cbind(data[, 1, drop = F],
-                         matrix(0.0, nrow = nrow(measproc_indmat), ncol = ncol(measproc_indmat),
-                                 dimnames = list(NULL, colnames(measproc_indmat))
+                         matrix(0.0, 
+                                nrow = nrow(measproc_indmat),
+                                ncol = ncol(measproc_indmat),
+                                dimnames = list(NULL, colnames(measproc_indmat))
                          ))
 
         pathmat_prop <- cbind(ode_times,
-                         matrix(0.0, nrow = length(ode_times), 
+                         matrix(0.0, 
+                                nrow = length(ode_times), 
                                 ncol = nrow(flow_matrix),
-                                dimnames = list(NULL, c(rownames(flow_matrix)))
-                         ))
+                                dimnames = list(NULL, c(rownames(flow_matrix)))))
 
         # set up MCMC objects
         parameter_samples_nat <-
-                matrix(
-                        0.0,
-                        nrow = 1 + floor(iterations / thin_params),
-                        ncol = n_model_params + as.numeric(!t0_fixed) + n_compartments,
-                        dimnames = list(NULL, c(names(model_params_nat), t0_name, convrec_initprob_names))
-                )
+                matrix(0.0,
+                       nrow = 1 + floor(iterations / thin_params),
+                       ncol = n_model_params + as.numeric(!t0_fixed) + n_compartments,
+                       dimnames = list(NULL, c(names(model_params_nat), t0_name, convrec_initprob_names)))
 
         parameter_samples_est <-
-                matrix(
-                        0.0,
-                        nrow = 1 + floor(iterations / thin_params),
-                        ncol = n_model_params + as.numeric(!t0_fixed) + n_compartments,
-                        dimnames = list(NULL, c(param_names_est, t0_name, convrec_initvol_names))
-                )
+                matrix(0.0,
+                       nrow = 1 + floor(iterations / thin_params),
+                       ncol = n_model_params + as.numeric(!t0_fixed) + n_compartments,
+                       dimnames = list(NULL, c(param_names_est, t0_name, convrec_initvol_names)))
         
         if (!is.null(tparam)) {
               tparam_samples <-
-                    array(0.0, dim = c(
-                          n_times,
-                          length(tparam),
-                          1 + floor(iterations / thin_params)
-                    ))
+                    array(0.0, 
+                          dim = c(n_times, length(tparam), 1 + floor(iterations / thin_params)))
         } else {
               tparam_samples <- NULL
         }
 
-        ode_paths <-
+        ode_paths <- 
               array(0.0, dim = c(n_times, 1 + n_rates, 1 + floor(iterations / thin_latent_proc)))
         
         colnames(ode_paths) <- c("time", rownames(flow_matrix))
@@ -717,12 +805,10 @@ stem_inference_ode <- function(stem_object,
         
         if (!is.null(tparam)) {
               tparam_log_lik <-
-                    matrix(
-                          0.0,
-                          nrow = 1 + floor(iterations / thin_params),
-                          ncol = length(tparam),
-                          dimnames = list(NULL, paste0(sapply(tparam, function(x) x$tparam_name),"_loglik"))
-                    )
+                    matrix(0.0,
+                           nrow = 1 + floor(iterations / thin_params),
+                           ncol = length(tparam),
+                           dimnames = list(NULL, paste0(sapply(tparam, function(x) x$tparam_name),"_loglik")))
               
               tparam_ess_record <- rep(1, floor(iterations / thin_params))
               
@@ -823,7 +909,9 @@ stem_inference_ode <- function(stem_object,
         
         # warmup the latent path
         if (!mcmc_restart) {
-              for (warmup in seq_len(ess_warmup)) {
+              for (warmup in seq_len(warmup_iterations)) {
+                    
+                    # update time varying parameters via elliptical slice sampling
                     if (!is.null(tparam)) {
                           update_tparam_ode(
                                 tparam               = tparam,
@@ -847,10 +935,6 @@ stem_inference_ode <- function(stem_object,
                                 census_indices       = census_indices,
                                 ode_event_inds       = ode_event_inds,
                                 measproc_indmat      = measproc_indmat,
-                                svd_sqrt             = svd_sqrt,
-                                svd_d                = svd_d,
-                                svd_U                = svd_U,
-                                svd_V                = svd_V,
                                 ode_pointer          = ode_pointer,
                                 ode_set_pars_pointer = ode_set_pars_pointer,
                                 d_meas_pointer       = d_meas_pointer,
@@ -867,11 +951,11 @@ stem_inference_ode <- function(stem_object,
                                 model_params_nat     = model_params_nat,
                                 params_prop_est      = params_prop_est,
                                 params_prop_nat      = params_prop_nat,
-                                har_direction        = har_direction,
-                                harss_bracket_width  = harss_bracket_width, 
-                                n_expansions_harss   = n_expansions_harss,
-                                n_contractions_harss = n_contractions_harss,
-                                n_harss_updates      = n_harss_updates, 
+                                har_direction        = har_direction_warmup,
+                                harss_bracket_width  = harss_bracket_width_warmup, 
+                                n_expansions_harss   = n_expansions_harss_warmup,
+                                n_contractions_harss = n_contractions_harss_warmup,
+                                n_harss_updates      = 1, 
                                 path                 = path,
                                 pathmat_prop         = pathmat_prop,
                                 data                 = data,
@@ -895,10 +979,6 @@ stem_inference_ode <- function(stem_object,
                                 ode_event_inds       = ode_event_inds,
                                 census_indices       = census_indices,
                                 measproc_indmat      = measproc_indmat,
-                                svd_sqrt             = svd_sqrt,
-                                svd_d                = svd_d,
-                                svd_U                = svd_U,
-                                svd_V                = svd_V,
                                 ode_pointer          = ode_pointer,
                                 ode_set_pars_pointer = ode_set_pars_pointer,
                                 d_meas_pointer       = d_meas_pointer,
@@ -906,25 +986,11 @@ stem_inference_ode <- function(stem_object,
                                 step_size            = step_size
                           )
                           
-                          # adapt the kernel covariance
-                          kernel_resid <- model_params_est - kernel_mean
-                          kernel_cov   <- kernel_cov + (kernel_resid %*% t(kernel_resid) - kernel_cov) * warmup_adaptations[warmup]
-                          kernel_mean  <- kernel_mean + kernel_resid * warmup_adaptations[warmup]
-                          
-                          # adapt the bracket width
-                          harss_bracket_width <- exp(mean(0.5 * log(diag(kernel_cov)))) 
+                          # adapt the harss bracket width
+                          harss_bracket_width_warmup <- 
+                                exp(log(harss_bracket_width_warmup) + 
+                                          warmup_adaptations[warmup] * (n_expansions_harss_warmup / (n_expansions_harss_warmup + n_contractions_harss_warmup) - 0.5))
                     }
-              }
-              
-              # reset the numbers of harss expansions and contractions and update the factors
-              if(mcmc_kernel$method == "afss" && harss_warmup) {
-                    
-                    n_expansions_harss   <- c(0.5)
-                    n_contractions_harss <- c(0.5)
-                    
-                    update_factors(slice_eigenvals = slice_eigenvals,
-                                   slice_eigenvecs = slice_eigenvecs,
-                                   kernel_cov      = kernel_cov)
               }
         }
         
@@ -935,12 +1001,15 @@ stem_inference_ode <- function(stem_object,
               params_logprior_prop <- prior_density(model_params_nat, model_params_est)
         
         if(!t0_fixed) {
-                t0_logprior_cur <- extraDistr:::cpp_dtnorm(x        = t0,
-                                                           mu       = t0_kernel$mean,
-                                                           sigma    = t0_kernel$sd,
-                                                           lower    = t0_kernel$lower,
-                                                           upper    = t0_kernel$upper,
-                                                           log_prob = TRUE)
+                t0_logprior_cur <- 
+                      extraDistr:::cpp_dtnorm(
+                            x        = t0,
+                            mu       = t0_kernel$mean,
+                            sigma    = t0_kernel$sd,
+                            lower    = t0_kernel$lower,
+                            upper    = t0_kernel$upper,
+                            log_prob = TRUE)
+                
                 t0_log_prior[1] <- t0_logprior_cur
         }
 
@@ -983,8 +1052,7 @@ stem_inference_ode <- function(stem_object,
         for(iter in (seq_len(iterations) + 1)) {
 
                 # Print the status if messages are enabled
-                if((messages) && k%%thin_latent_proc == 0) {
-                        # print the iteration
+                if((messages) && iter %% thin_latent_proc == 0) {
                         cat(paste0("Iteration ", iter-1), file = status_file, sep = "\n \n", append = TRUE)
                 }
 
@@ -1009,11 +1077,9 @@ stem_inference_ode <- function(stem_object,
                                           tcovar    = ode_params_prop,
                                           values    = tparam[[p]]$draws2par(
                                                 parameters = params_prop_nat,
-                                                draws = tparam[[p]]$draws_cur
-                                          ),
+                                                draws = tparam[[p]]$draws_cur),
                                           col_ind   = tparam[[p]]$col_ind,
-                                          tpar_inds = tparam[[p]]$tpar_inds
-                                    )
+                                          tpar_inds = tparam[[p]]$tpar_inds)
                               }
                         }
                         
@@ -1065,6 +1131,7 @@ stem_inference_ode <- function(stem_object,
                                 # compute the data log likelihood
                                 data_log_lik_prop <- sum(emitmat[,-1][measproc_indmat])
                                 if(is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
+                                
                         }, silent = TRUE)
 
                         if(is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
@@ -1078,7 +1145,7 @@ stem_inference_ode <- function(stem_object,
                         if(acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
 
                                 ### ACCEPTANCE
-                                acceptances_g       <- acceptances_g + 1    # increment acceptances
+                                acceptances_g <- acceptances_g + 1    # increment acceptances
 
                                 copy_vec(path$data_log_lik, data_log_lik_prop)      # update the data log likelihood
                                 copy_vec(params_logprior_cur, params_logprior_prop) # update the prior density
@@ -1090,9 +1157,9 @@ stem_inference_ode <- function(stem_object,
 
                 } else if(mcmc_kernel$method == "mvn_g_adaptive") {
 
-                        if(iter == stop_adaptation) {
-                                sigma_chol = chol(sqrt(proposal_scaling) * kernel_cov)
-                                mcmc_kernel$sigma = proposal_scaling * kernel_cov
+                        if (iter == stop_adaptation) {
+                              mcmc_kernel$sigma = proposal_scaling * kernel_cov
+                              sigma_chol        = chol(mcmc_kernel$sigma)
                         }
 
                         # propose new parameters
@@ -1120,11 +1187,9 @@ stem_inference_ode <- function(stem_object,
                                           tcovar    = ode_params_prop,
                                           values    = tparam[[p]]$draws2par(
                                                 parameters = params_prop_nat,
-                                                draws = tparam[[p]]$draws_cur
-                                          ),
+                                                draws = tparam[[p]]$draws_cur),
                                           col_ind   = tparam[[p]]$col_ind,
-                                          tpar_inds = tparam[[p]]$tpar_inds
-                                    )
+                                          tpar_inds = tparam[[p]]$tpar_inds)
                               }
                         }
 
@@ -1206,11 +1271,13 @@ stem_inference_ode <- function(stem_object,
                         }
 
                         if(iter < stop_adaptation) {
+                              
                                 # Adapt the proposal kernel
-                                proposal_scaling <- min(proposal_scaling *
-                                                                exp(adaptations[iter] *
-                                                                            (min(exp(acceptance_prob), 1) - target_g)),
-                                                        max_scaling)
+                              proposal_scaling <-
+                                    min(exp(log(proposal_scaling) +
+                                                  adaptations[iter] * (min(exp(acceptance_prob), 1) - target_g)
+                                    ),
+                                    max_scaling)
 
                                 kernel_resid <- model_params_est - kernel_mean
                                 kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid%*%t(kernel_resid) - kernel_cov)
@@ -1234,8 +1301,7 @@ stem_inference_ode <- function(stem_object,
                                         sample_all_initially    = FALSE,
                                         afss_slice_ratio        = afss_slice_ratio,
                                         target_prop_totsd       = target_prop_totsd,
-                                        harss_prob              = harss_prob,
-                                        harss_warmup            = harss_warmup
+                                        harss_prob              = harss_prob
                                   )
                             
                             if(n_model_params != n_afss_updates) {
@@ -1294,10 +1360,6 @@ stem_inference_ode <- function(stem_object,
                             ode_event_inds       = ode_event_inds,
                             census_indices       = census_indices,
                             measproc_indmat      = measproc_indmat,
-                            svd_sqrt             = svd_sqrt,
-                            svd_d                = svd_d,
-                            svd_U                = svd_U,
-                            svd_V                = svd_V,
                             ode_pointer          = ode_pointer,
                             ode_set_pars_pointer = ode_set_pars_pointer,
                             d_meas_pointer       = d_meas_pointer,
@@ -1341,10 +1403,6 @@ stem_inference_ode <- function(stem_object,
                                   ode_event_inds       = ode_event_inds,
                                   census_indices       = census_indices,
                                   measproc_indmat      = measproc_indmat,
-                                  svd_sqrt             = svd_sqrt,
-                                  svd_d                = svd_d,
-                                  svd_U                = svd_U,
-                                  svd_V                = svd_V,
                                   ode_pointer          = ode_pointer,
                                   ode_set_pars_pointer = ode_set_pars_pointer,
                                   d_meas_pointer       = d_meas_pointer,
@@ -1474,10 +1532,6 @@ stem_inference_ode <- function(stem_object,
                             ode_event_inds       = ode_event_inds,
                             census_indices       = census_indices,
                             measproc_indmat      = measproc_indmat,
-                            svd_sqrt             = svd_sqrt,
-                            svd_d                = svd_d,
-                            svd_U                = svd_U,
-                            svd_V                = svd_V,
                             ode_pointer          = ode_pointer,
                             ode_set_pars_pointer = ode_set_pars_pointer,
                             d_meas_pointer       = d_meas_pointer,
@@ -1493,7 +1547,78 @@ stem_inference_ode <- function(stem_object,
                             kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
                             kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
                             
-                            harss_bracket_width <- exp(mean(0.5 * log(diag(kernel_cov)))) 
+                            # adapt the harss bracket width
+                            harss_bracket_width <- 
+                                  exp(log(harss_bracket_width) + 
+                                            adaptations[iter] * (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5)) 
+                      }
+                } else if (mcmc_kernel$method == "mvnss") {
+                      
+                      if (iter == stop_adaptation) {
+                            mcmc_kernel$sigma = kernel_cov
+                      }
+                      
+                      # sample new parameter values
+                      mvn_slice_sampler_ode(
+                            model_params_est     = model_params_est,
+                            model_params_nat     = model_params_nat,
+                            params_prop_est      = params_prop_est,
+                            params_prop_nat      = params_prop_nat,
+                            mvn_direction        = mvn_direction,
+                            har_direction        = har_direction,
+                            mvnss_propvec        = mvnss_propvec,
+                            kernel_cov_sqrtmat   = kernel_cov_sqrtmat,
+                            nugget               = ifelse(iter < stop_adaptation, nugget, 0),
+                            mvnss_bracket_width  = mvnss_bracket_width, 
+                            n_expansions_mvnss   = n_expansions_mvnss,
+                            n_contractions_mvnss = n_contractions_mvnss,
+                            n_mvnss_updates      = n_mvnss_updates, 
+                            path                 = path,
+                            pathmat_prop         = pathmat_prop,
+                            data                 = data,
+                            priors               = priors,
+                            params_logprior_cur  = params_logprior_cur,
+                            ode_params_cur       = ode_params_cur,
+                            ode_param_vec        = ode_param_vec,
+                            tparam               = tparam,
+                            censusmat            = censusmat,
+                            emitmat              = emitmat,
+                            flow_matrix          = flow_matrix,
+                            stoich_matrix        = stoich_matrix,
+                            ode_times            = ode_times,
+                            forcing_inds         = forcing_inds,
+                            forcing_matrix       = forcing_matrix,
+                            ode_param_inds       = ode_param_inds,
+                            ode_const_inds       = ode_const_inds,
+                            ode_tcovar_inds      = ode_tcovar_inds,
+                            ode_initdist_inds    = ode_initdist_inds,
+                            param_update_inds    = param_update_inds,
+                            ode_event_inds       = ode_event_inds,
+                            census_indices       = census_indices,
+                            measproc_indmat      = measproc_indmat,
+                            ode_pointer          = ode_pointer,
+                            ode_set_pars_pointer = ode_set_pars_pointer,
+                            d_meas_pointer       = d_meas_pointer,
+                            do_prevalence        = do_prevalence,
+                            step_size            = step_size
+                      )
+                      
+                      # adapt the bracket width
+                      if(iter < stop_adaptation) {
+                            
+                            # update the kernel covariance
+                            kernel_resid <- model_params_est - kernel_mean
+                            kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
+                            kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
+                            
+                            if((iter-1) %% cov_update_interval == 0) {
+                                  comp_chol(kernel_cov_sqrtmat, kernel_cov)
+                            }
+                            
+                            # adapt the harss bracket width
+                            mvnss_bracket_width <- 
+                                  exp(log(mvnss_bracket_width) + 
+                                            adaptations[iter] * (n_expansions_mvnss / (n_expansions_mvnss + n_contractions_mvnss) - 0.5))
                       }
                 }
 
@@ -1687,10 +1812,6 @@ stem_inference_ode <- function(stem_object,
                             census_indices       = census_indices,
                             ode_event_inds       = ode_event_inds,
                             measproc_indmat      = measproc_indmat,
-                            svd_sqrt             = svd_sqrt,
-                            svd_d                = svd_d,
-                            svd_U                = svd_U,
-                            svd_V                = svd_V,
                             ode_pointer          = ode_pointer,
                             ode_set_pars_pointer = ode_set_pars_pointer,
                             d_meas_pointer       = d_meas_pointer,
@@ -1780,7 +1901,18 @@ stem_inference_ode <- function(stem_object,
                                         sep = "\n",
                                         append = T)
                               }
+                        } else if(mcmc_kernel$method == "mvnss") {
+                              
+                              if(messages) {
+                                    cat(paste0("Iteration: ", iter),
+                                        file = status_file,
+                                        sep = "\n",
+                                        append = T)
+                              }
+                              
+                              kernel_cov_record[, , param_rec_ind]   <- kernel_cov
                         }
+                        
                         # Increment the parameter record index
                         param_rec_ind <- param_rec_ind + 1
                 }
@@ -1798,8 +1930,7 @@ stem_inference_ode <- function(stem_object,
         if (!is.null(tparam)) MCMC_results <- cbind(MCMC_results, tparam_log_lik)
         
         # append the parameter samples on their natural and estimation scales
-        MCMC_results <-
-              cbind(MCMC_results, parameter_samples_nat, parameter_samples_est)
+        MCMC_results <- cbind(MCMC_results, parameter_samples_nat, parameter_samples_est)
         
         # set the parameters (for restart) and save the results
         stem_object$dynamics$parameters         <- model_params_nat
@@ -1852,6 +1983,14 @@ stem_inference_ode <- function(stem_object,
                     list(
                           n_expansions_harss    = n_expansions_harss,
                           n_contractions_harss  = n_contractions_harss
+                    )
+              
+        } else if (mcmc_kernel$method == "mvnss") {
+              
+              stem_object$results$adaptation_record = 
+                    list(
+                          n_expansions_mvnss    = n_expansions_mvnss,
+                          n_contractions_mvnss  = n_contractions_mvnss
                     )
         }
 
