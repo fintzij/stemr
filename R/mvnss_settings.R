@@ -7,8 +7,10 @@
 #' @export
 mvnss_settings <-
       function(n_mvnss_updates = 1,
+               initial_bracket_width = 1,
                cov_update_interval = 1) {
       
       list(n_mvnss_updates         = n_mvnss_updates,
+           initial_bracket_width   = initial_bracket_width,
            cov_update_interval     = cov_update_interval)
 }

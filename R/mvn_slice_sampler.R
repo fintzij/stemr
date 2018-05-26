@@ -47,7 +47,7 @@
 #' @param params_prop_nat vector for proposed parameters on their natural scale
 #' @param har_direction vector for the isotropic nugget
 #' @param mvnss_propvec vector for the mvnss_component
-#' @param kernel_cov_sqrtmat matrix square root of the kernel covariance
+#' @param kernel_cov_chol cholesky of the kernel covariance
 #' @param pathmat_prop matrix for the proposed LNA path
 #' @param nugget nugget variance, 0 if not adapting
 #'
@@ -61,7 +61,7 @@ mvn_slice_sampler <-
                mvn_direction,
                har_direction,
                mvnss_propvec,
-               kernel_cov_sqrtmat,
+               kernel_cov_chol,
                nugget,
                mvnss_bracket_width,
                n_expansions_mvnss,
@@ -111,12 +111,12 @@ mvn_slice_sampler <-
                   
                   # compute the proposal
                   copy_vec(dest = mvnss_propvec, 
-                           orig = normalise2((1 - nugget) * normalise2(mvn_direction %*% kernel_cov_sqrtmat, 2) + nugget * har_direction, 2))
+                           orig = normalise2((1 - nugget) * normalise2(mvn_direction %*% kernel_cov_chol, 2) + nugget * har_direction, 2))
                   
             } else {
                   draw_normals(mvn_direction)
                   copy_vec(dest = mvnss_propvec, 
-                           orig = normalise2(mvn_direction %*% kernel_cov_sqrtmat, 2))
+                           orig = normalise2(mvn_direction %*% kernel_cov_chol, 2))
             }
             
             # construct the approximate bracket

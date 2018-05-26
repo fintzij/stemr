@@ -52,22 +52,6 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// CALL_RATE_FCN
-void CALL_RATE_FCN(Rcpp::NumericVector& rates, const Rcpp::LogicalVector& inds, const arma::rowvec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::rowvec& tcovar, SEXP rate_ptr);
-RcppExport SEXP _stemr_CALL_RATE_FCN(SEXP ratesSEXP, SEXP indsSEXP, SEXP stateSEXP, SEXP parametersSEXP, SEXP constantsSEXP, SEXP tcovarSEXP, SEXP rate_ptrSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type rates(ratesSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type inds(indsSEXP);
-    Rcpp::traits::input_parameter< const arma::rowvec& >::type state(stateSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type parameters(parametersSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type constants(constantsSEXP);
-    Rcpp::traits::input_parameter< const arma::rowvec& >::type tcovar(tcovarSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type rate_ptr(rate_ptrSEXP);
-    CALL_RATE_FCN(rates, inds, state, parameters, constants, tcovar, rate_ptr);
-    return R_NilValue;
-END_RCPP
-}
 // CALL_R_MEASURE
 void CALL_R_MEASURE(Rcpp::NumericMatrix& obsmat, const Rcpp::LogicalVector& emit_inds, const int record_ind, const Rcpp::NumericVector& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar, SEXP r_meas_ptr);
 RcppExport SEXP _stemr_CALL_R_MEASURE(SEXP obsmatSEXP, SEXP emit_indsSEXP, SEXP record_indSEXP, SEXP stateSEXP, SEXP parametersSEXP, SEXP constantsSEXP, SEXP tcovarSEXP, SEXP r_meas_ptrSEXP) {
@@ -82,6 +66,22 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type tcovar(tcovarSEXP);
     Rcpp::traits::input_parameter< SEXP >::type r_meas_ptr(r_meas_ptrSEXP);
     CALL_R_MEASURE(obsmat, emit_inds, record_ind, state, parameters, constants, tcovar, r_meas_ptr);
+    return R_NilValue;
+END_RCPP
+}
+// CALL_RATE_FCN
+void CALL_RATE_FCN(Rcpp::NumericVector& rates, const Rcpp::LogicalVector& inds, const arma::rowvec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::rowvec& tcovar, SEXP rate_ptr);
+RcppExport SEXP _stemr_CALL_RATE_FCN(SEXP ratesSEXP, SEXP indsSEXP, SEXP stateSEXP, SEXP parametersSEXP, SEXP constantsSEXP, SEXP tcovarSEXP, SEXP rate_ptrSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type rates(ratesSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type inds(indsSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type state(stateSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type parameters(parametersSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type constants(constantsSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type tcovar(tcovarSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type rate_ptr(rate_ptrSEXP);
+    CALL_RATE_FCN(rates, inds, state, parameters, constants, tcovar, rate_ptr);
     return R_NilValue;
 END_RCPP
 }
@@ -273,23 +273,6 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// evaluate_d_measure
-void evaluate_d_measure(Rcpp::NumericMatrix& emitmat, const Rcpp::NumericMatrix& obsmat, const Rcpp::NumericMatrix& statemat, const Rcpp::LogicalMatrix& measproc_indmat, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericMatrix& tcovar_censusmat, SEXP d_meas_ptr);
-RcppExport SEXP _stemr_evaluate_d_measure(SEXP emitmatSEXP, SEXP obsmatSEXP, SEXP statematSEXP, SEXP measproc_indmatSEXP, SEXP parametersSEXP, SEXP constantsSEXP, SEXP tcovar_censusmatSEXP, SEXP d_meas_ptrSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::NumericMatrix& >::type emitmat(emitmatSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type obsmat(obsmatSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type statemat(statematSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::LogicalMatrix& >::type measproc_indmat(measproc_indmatSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type parameters(parametersSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type constants(constantsSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type tcovar_censusmat(tcovar_censusmatSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type d_meas_ptr(d_meas_ptrSEXP);
-    evaluate_d_measure(emitmat, obsmat, statemat, measproc_indmat, parameters, constants, tcovar_censusmat, d_meas_ptr);
-    return R_NilValue;
-END_RCPP
-}
 // evaluate_d_measure_LNA
 void evaluate_d_measure_LNA(Rcpp::NumericMatrix& emitmat, const Rcpp::NumericMatrix& obsmat, const Rcpp::NumericMatrix& censusmat, const Rcpp::LogicalMatrix& measproc_indmat, const Rcpp::NumericMatrix& lna_parameters, const Rcpp::IntegerVector& lna_param_inds, const Rcpp::IntegerVector& lna_const_inds, const Rcpp::IntegerVector& lna_tcovar_inds, const Rcpp::LogicalVector& param_update_inds, const Rcpp::IntegerVector& census_indices, Rcpp::NumericVector& lna_param_vec, SEXP d_meas_ptr);
 RcppExport SEXP _stemr_evaluate_d_measure_LNA(SEXP emitmatSEXP, SEXP obsmatSEXP, SEXP censusmatSEXP, SEXP measproc_indmatSEXP, SEXP lna_parametersSEXP, SEXP lna_param_indsSEXP, SEXP lna_const_indsSEXP, SEXP lna_tcovar_indsSEXP, SEXP param_update_indsSEXP, SEXP census_indicesSEXP, SEXP lna_param_vecSEXP, SEXP d_meas_ptrSEXP) {
@@ -308,6 +291,23 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type lna_param_vec(lna_param_vecSEXP);
     Rcpp::traits::input_parameter< SEXP >::type d_meas_ptr(d_meas_ptrSEXP);
     evaluate_d_measure_LNA(emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, lna_param_vec, d_meas_ptr);
+    return R_NilValue;
+END_RCPP
+}
+// evaluate_d_measure
+void evaluate_d_measure(Rcpp::NumericMatrix& emitmat, const Rcpp::NumericMatrix& obsmat, const Rcpp::NumericMatrix& statemat, const Rcpp::LogicalMatrix& measproc_indmat, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericMatrix& tcovar_censusmat, SEXP d_meas_ptr);
+RcppExport SEXP _stemr_evaluate_d_measure(SEXP emitmatSEXP, SEXP obsmatSEXP, SEXP statematSEXP, SEXP measproc_indmatSEXP, SEXP parametersSEXP, SEXP constantsSEXP, SEXP tcovar_censusmatSEXP, SEXP d_meas_ptrSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix& >::type emitmat(emitmatSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type obsmat(obsmatSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type statemat(statematSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::LogicalMatrix& >::type measproc_indmat(measproc_indmatSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type parameters(parametersSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type constants(constantsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type tcovar_censusmat(tcovar_censusmatSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type d_meas_ptr(d_meas_ptrSEXP);
+    evaluate_d_measure(emitmat, obsmat, statemat, measproc_indmat, parameters, constants, tcovar_censusmat, d_meas_ptr);
     return R_NilValue;
 END_RCPP
 }
@@ -433,24 +433,26 @@ BEGIN_RCPP
 END_RCPP
 }
 // comp_sqrtmat
-void comp_sqrtmat(arma::mat& S, const arma::mat& M);
-RcppExport SEXP _stemr_comp_sqrtmat(SEXP SSEXP, SEXP MSEXP) {
+void comp_sqrtmat(arma::mat& S, const arma::mat& M, double nugget);
+RcppExport SEXP _stemr_comp_sqrtmat(SEXP SSEXP, SEXP MSEXP, SEXP nuggetSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::mat& >::type S(SSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type M(MSEXP);
-    comp_sqrtmat(S, M);
+    Rcpp::traits::input_parameter< double >::type nugget(nuggetSEXP);
+    comp_sqrtmat(S, M, nugget);
     return R_NilValue;
 END_RCPP
 }
 // comp_chol
-void comp_chol(arma::mat& C, const arma::mat& M);
-RcppExport SEXP _stemr_comp_chol(SEXP CSEXP, SEXP MSEXP) {
+void comp_chol(arma::mat& C, const arma::mat& M, double nugget);
+RcppExport SEXP _stemr_comp_chol(SEXP CSEXP, SEXP MSEXP, SEXP nuggetSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::mat& >::type C(CSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type M(MSEXP);
-    comp_chol(C, M);
+    Rcpp::traits::input_parameter< double >::type nugget(nuggetSEXP);
+    comp_chol(C, M, nugget);
     return R_NilValue;
 END_RCPP
 }
@@ -482,16 +484,15 @@ BEGIN_RCPP
 END_RCPP
 }
 // mvn_g_adaptive
-void mvn_g_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& kernel_cov, double proposal_scaling, double nugget);
-RcppExport SEXP _stemr_mvn_g_adaptive(SEXP params_propSEXP, SEXP params_curSEXP, SEXP kernel_covSEXP, SEXP proposal_scalingSEXP, SEXP nuggetSEXP) {
+void mvn_g_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& kernel_cov_chol, double nugget);
+RcppExport SEXP _stemr_mvn_g_adaptive(SEXP params_propSEXP, SEXP params_curSEXP, SEXP kernel_cov_cholSEXP, SEXP nuggetSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::rowvec& >::type params_prop(params_propSEXP);
     Rcpp::traits::input_parameter< const arma::rowvec& >::type params_cur(params_curSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type kernel_cov(kernel_covSEXP);
-    Rcpp::traits::input_parameter< double >::type proposal_scaling(proposal_scalingSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type kernel_cov_chol(kernel_cov_cholSEXP);
     Rcpp::traits::input_parameter< double >::type nugget(nuggetSEXP);
-    mvn_g_adaptive(params_prop, params_cur, kernel_cov, proposal_scaling, nugget);
+    mvn_g_adaptive(params_prop, params_cur, kernel_cov_chol, nugget);
     return R_NilValue;
 END_RCPP
 }
@@ -698,8 +699,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_build_census_path", (DL_FUNC) &_stemr_build_census_path, 3},
     {"_stemr_CALL_D_MEASURE", (DL_FUNC) &_stemr_CALL_D_MEASURE, 9},
     {"_stemr_CALL_INTEGRATE_STEM_ODE", (DL_FUNC) &_stemr_CALL_INTEGRATE_STEM_ODE, 5},
-    {"_stemr_CALL_RATE_FCN", (DL_FUNC) &_stemr_CALL_RATE_FCN, 7},
     {"_stemr_CALL_R_MEASURE", (DL_FUNC) &_stemr_CALL_R_MEASURE, 8},
+    {"_stemr_CALL_RATE_FCN", (DL_FUNC) &_stemr_CALL_RATE_FCN, 7},
     {"_stemr_CALL_SET_ODE_PARAMS", (DL_FUNC) &_stemr_CALL_SET_ODE_PARAMS, 2},
     {"_stemr_census_incidence", (DL_FUNC) &_stemr_census_incidence, 3},
     {"_stemr_census_lna", (DL_FUNC) &_stemr_census_lna, 8},
@@ -716,8 +717,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_draw_normals", (DL_FUNC) &_stemr_draw_normals, 1},
     {"_stemr_draw_normals2", (DL_FUNC) &_stemr_draw_normals2, 1},
     {"_stemr_sample_unit_sphere", (DL_FUNC) &_stemr_sample_unit_sphere, 1},
-    {"_stemr_evaluate_d_measure", (DL_FUNC) &_stemr_evaluate_d_measure, 8},
     {"_stemr_evaluate_d_measure_LNA", (DL_FUNC) &_stemr_evaluate_d_measure_LNA, 12},
+    {"_stemr_evaluate_d_measure", (DL_FUNC) &_stemr_evaluate_d_measure, 8},
     {"_stemr_find_interval", (DL_FUNC) &_stemr_find_interval, 4},
     {"_stemr_g_prop2c_prop", (DL_FUNC) &_stemr_g_prop2c_prop, 3},
     {"_stemr_insert_tparam", (DL_FUNC) &_stemr_insert_tparam, 4},
@@ -725,11 +726,11 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_lna_incid2prev", (DL_FUNC) &_stemr_lna_incid2prev, 5},
     {"_stemr_map_draws_2_lna", (DL_FUNC) &_stemr_map_draws_2_lna, 18},
     {"_stemr_map_pars_2_ode", (DL_FUNC) &_stemr_map_pars_2_ode, 11},
-    {"_stemr_comp_sqrtmat", (DL_FUNC) &_stemr_comp_sqrtmat, 2},
-    {"_stemr_comp_chol", (DL_FUNC) &_stemr_comp_chol, 2},
+    {"_stemr_comp_sqrtmat", (DL_FUNC) &_stemr_comp_sqrtmat, 3},
+    {"_stemr_comp_chol", (DL_FUNC) &_stemr_comp_chol, 3},
     {"_stemr_rmvtn", (DL_FUNC) &_stemr_rmvtn, 3},
     {"_stemr_dmvtn", (DL_FUNC) &_stemr_dmvtn, 4},
-    {"_stemr_mvn_g_adaptive", (DL_FUNC) &_stemr_mvn_g_adaptive, 5},
+    {"_stemr_mvn_g_adaptive", (DL_FUNC) &_stemr_mvn_g_adaptive, 4},
     {"_stemr_mvn_rw", (DL_FUNC) &_stemr_mvn_rw, 3},
     {"_stemr_normalise", (DL_FUNC) &_stemr_normalise, 2},
     {"_stemr_normalise2", (DL_FUNC) &_stemr_normalise2, 2},

@@ -8,8 +8,8 @@ update_tparam_ode(tparam, path_cur, data, ode_parameters, ode_param_vec,
   pathmat_prop, censusmat, emitmat, flow_matrix, stoich_matrix, ode_times,
   forcing_inds, forcing_matrix, ode_param_inds, ode_const_inds, ode_tcovar_inds,
   ode_initdist_inds, param_update_inds, census_indices, ode_event_inds,
-  measproc_indmat, svd_sqrt, svd_d, svd_U, svd_V, ode_pointer,
-  ode_set_pars_pointer, d_meas_pointer, do_prevalence, step_size, tparam_ess)
+  measproc_indmat, ode_pointer, ode_set_pars_pointer, d_meas_pointer,
+  do_prevalence, step_size, tparam_ess)
 }
 \arguments{
 \item{tparam}{list containing the time-varying parameters}
@@ -37,9 +37,6 @@ parameters}
 censused}
 
 \item{measproc_indmat}{logical matrix for evaluating the measuement process}
-
-\item{svd_sqrt, svd_d, svd_U, svd_V}{objects for computing the SVD of LNA
-diffusion matrics}
 
 \item{d_meas_pointer}{external pointer for the measurement process function}
 

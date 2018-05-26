@@ -6,8 +6,8 @@
 \usage{
 kernel(method, sigma, scale_constant = 0.5, scale_cooling = 0.5 + 1e-05,
   step_size = 1, max_scaling = Inf, target_g = 0.234, nugget = NULL,
-  stop_adaptation = NULL, afss_setting_list = NULL,
-  harss_setting_list = NULL, messages = TRUE)
+  harss_warmup = 0, stop_adaptation = NULL, afss_setting_list = NULL,
+  harss_setting_list = NULL, mvnss_setting_list = NULL, messages = TRUE)
 }
 \arguments{
 \item{method}{algorithm to be used in generating parameter updates, see
@@ -33,6 +33,11 @@ scale_constant/(iteration/step_size+1)^scale_cooling. The
 
 \item{nugget}{fixed nugget contribution, defaults to 0.5 for afss and 0.01
 otherwise.}
+
+\item{harss_warmup}{Number of hit-and-run warmup iterations, possibly
+interleaved with elliptical slice sampling warmup updates if ess_warmup =
+TRUE in the ess_settings list, performed prior to beginning the MCMC run.
+Defaults to 0.}
 
 \item{stop_adaptation}{iteration at which to stop adapting the proposal
 distribution.}

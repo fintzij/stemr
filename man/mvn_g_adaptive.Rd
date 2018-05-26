@@ -4,16 +4,14 @@
 \alias{mvn_g_adaptive}
 \title{Global Metropolis random walk with global adaptive scaling}
 \usage{
-mvn_g_adaptive(params_prop, params_cur, kernel_cov, proposal_scaling, nugget)
+mvn_g_adaptive(params_prop, params_cur, kernel_cov_chol, nugget)
 }
 \arguments{
 \item{params_prop}{vector in which the proposed parameters should be stored}
 
 \item{params_cur}{vector containing the current parameter vector}
 
-\item{kernel_cov}{vector of component proposal standard deviations}
-
-\item{proposal_scaling}{scaling parameter for the proposal}
+\item{kernel_cov_chol}{cholesky of the kernel covariance}
 
 \item{nugget}{fixed covariance nugget contribution}
 }

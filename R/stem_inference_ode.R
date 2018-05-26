@@ -278,8 +278,11 @@ stem_inference_ode <- function(stem_object,
               kernel_resid <- double(n_model_params) # already initialized to 0
               kernel_mean  <- double(n_model_params)
               copy_vec(kernel_mean, model_params_est)
-              kernel_cov   <- diag(1, n_model_params)
+              
+              kernel_cov      <- diag(1, n_model_params)
+              kernel_cov_chol <- diag(1,n_model_params)
               copy_mat(kernel_cov, mcmc_kernel$sigma)
+              comp_chol(kernel_cov_chol, kernel_cov, nugget / 100)
               
               # Adaptation record objects
               adaptation_scale_record <-
@@ -448,7 +451,7 @@ stem_inference_ode <- function(stem_object,
                           ))
               
               # save initial values for factors, weight
-              kernel_cov_record[,,1]   <- kernel_cov
+              kernel_cov_record[,,1] <- kernel_cov
               
         } else if (mcmc_kernel$method == "harss") {
               
@@ -495,7 +498,7 @@ stem_inference_ode <- function(stem_object,
               copy_vec(kernel_mean, model_params_est)
               
               # kernel covariance
-              kernel_cov   <- diag(1, n_model_params)
+              kernel_cov <- diag(1, n_model_params)
               
         } else if (mcmc_kernel$method == "mvnss") {
               
@@ -524,8 +527,9 @@ stem_inference_ode <- function(stem_object,
               }
               
               # extract list settings
-              n_mvnss_updates         <- mvnss_setting_list$n_mvnss_updates
-              cov_update_interval     <- mvnss_setting_list$cov_update_interval
+              n_mvnss_updates     <- mvnss_setting_list$n_mvnss_updates
+              cov_update_interval <- mvnss_setting_list$cov_update_interval
+              mvnss_bracket_width <- mvnss_setting_list$initial_bracket_width
               
               # nugget
               nugget <- mcmc_kernel$kernel_settings$nugget
@@ -534,9 +538,6 @@ stem_inference_ode <- function(stem_object,
               har_direction <- rep(0.0, n_model_params)
               mvn_direction <- rep(0.0, n_model_params)
               mvnss_propvec <- rep(0.0, n_model_params)
-              
-              # initial bracket width
-              mvnss_bracket_width <- 1.0
               
               # for adaptive the hit-and-run proposal
               n_expansions_mvnss   <- 0.5
@@ -552,7 +553,7 @@ stem_inference_ode <- function(stem_object,
               copy_mat(kernel_cov, mcmc_kernel$sigma)
               
               # cholesky decomposition of the covariance
-              kernel_cov_sqrtmat <- chol(kernel_cov)
+              kernel_cov_chol <- chol(kernel_cov)
               
               # objects for saving the adaptation history
               kernel_cov_record <-
@@ -564,7 +565,7 @@ stem_inference_ode <- function(stem_object,
                           ))
               
               # save initial values for factors, weight
-              kernel_cov_record[,,1]   <- kernel_cov
+              kernel_cov_record[,,1] <- kernel_cov
         }
 
         # set up objects for sampling t0 if it is not fixed
@@ -944,7 +945,7 @@ stem_inference_ode <- function(stem_object,
                           )
                     }
                     
-                    if(mcmc_kernel$method == "afss" && harss_warmup) {
+                    if(harss_warmup) {
                           
                           hit_and_run_slice_sampler_ode(
                                 model_params_est     = model_params_est,
@@ -1158,23 +1159,24 @@ stem_inference_ode <- function(stem_object,
                 } else if(mcmc_kernel$method == "mvn_g_adaptive") {
 
                         if (iter == stop_adaptation) {
-                              mcmc_kernel$sigma = proposal_scaling * kernel_cov
-                              sigma_chol        = chol(mcmc_kernel$sigma)
+                              mcmc_kernel$sigma = proposal_scaling * (kernel_cov + diag(nugget / 100, n_model_params))
+                              comp_chol(kernel_cov_chol, mcmc_kernel$sigma, 0)
                         }
 
                         # propose new parameters
                         if(iter < stop_adaptation) {
-                                # propose new parameters
-                                mvn_g_adaptive(params_prop = params_prop_est,
-                                               params_cur = model_params_est,
-                                               kernel_cov =  kernel_cov,
-                                               proposal_scaling = proposal_scaling,
-                                               nugget = nugget)
+                                
+                              mvn_g_adaptive(
+                                    params_prop = params_prop_est,
+                                    params_cur = model_params_est,
+                                    kernel_cov_chol =  kernel_cov_chol,
+                                    nugget = nugget
+                              )
 
                         } else {
                                 mvn_rw(params_prop = params_prop_est,
                                        params_cur = model_params_est,
-                                       sigma_chol = sigma_chol)
+                                       sigma_chol = kernel_cov_chol)
                         }
 
                         # Convert the proposed parameters to their natural scale
@@ -1282,6 +1284,9 @@ stem_inference_ode <- function(stem_object,
                                 kernel_resid <- model_params_est - kernel_mean
                                 kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid%*%t(kernel_resid) - kernel_cov)
                                 kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
+                                
+                                # compute the cholesky
+                                comp_chol(kernel_cov_chol, proposal_scaling * (kernel_cov + diag(nugget / 100, n_model_params)), 0)
                         }
                         
                 } else if (mcmc_kernel$method == "afss") {
@@ -1412,7 +1417,9 @@ stem_inference_ode <- function(stem_object,
                             
                             # adapt the bracket width
                             if(iter < stop_adaptation) {
-                                  harss_bracket_width <- exp(mean(0.5 * log(diag(kernel_cov)))) 
+                                  harss_bracket_width <- 
+                                        exp(log(harss_bracket_width) + 
+                                                  adaptations[warmup] * (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5)) 
                             }
                       }
                       
@@ -1552,10 +1559,16 @@ stem_inference_ode <- function(stem_object,
                                   exp(log(harss_bracket_width) + 
                                             adaptations[iter] * (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5)) 
                       }
+                      
                 } else if (mcmc_kernel$method == "mvnss") {
                       
                       if (iter == stop_adaptation) {
-                            mcmc_kernel$sigma = kernel_cov
+                            mcmc_kernel$sigma = kernel_cov + diag(nugget / 100, n_model_params)
+                            
+                            mcmc_kernel$kernel_settings$mvnss_setting_list <- 
+                                  mvnss_settings(n_mvnss_updates = n_mvnss_updates,
+                                                 cov_update_interval = cov_update_interval,
+                                                 initial_bracket_width = mvnss_bracket_width)
                       }
                       
                       # sample new parameter values
@@ -1567,7 +1580,7 @@ stem_inference_ode <- function(stem_object,
                             mvn_direction        = mvn_direction,
                             har_direction        = har_direction,
                             mvnss_propvec        = mvnss_propvec,
-                            kernel_cov_sqrtmat   = kernel_cov_sqrtmat,
+                            kernel_cov_chol      = kernel_cov_chol,
                             nugget               = ifelse(iter < stop_adaptation, nugget, 0),
                             mvnss_bracket_width  = mvnss_bracket_width, 
                             n_expansions_mvnss   = n_expansions_mvnss,
@@ -1612,7 +1625,7 @@ stem_inference_ode <- function(stem_object,
                             kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
                             
                             if((iter-1) %% cov_update_interval == 0) {
-                                  comp_chol(kernel_cov_sqrtmat, kernel_cov)
+                                  comp_chol(kernel_cov_chol, kernel_cov, nugget / 100)
                             }
                             
                             # adapt the harss bracket width
@@ -1853,8 +1866,9 @@ stem_inference_ode <- function(stem_object,
 
                         # Store the proposal covariance matrix if monitoring is requested
                         if (mcmc_kernel$method == "mvn_g_adaptive") {
+                              
                               adaptation_scale_record[param_rec_ind] <- proposal_scaling
-                              kernel_cov_record[, , param_rec_ind]   <- kernel_cov
+                              kernel_cov_record[, , param_rec_ind]   <- kernel_cov + diag(nugget/100, n_model_params)
                               
                               if (messages &&
                                   iter < stop_adaptation)
@@ -1910,7 +1924,8 @@ stem_inference_ode <- function(stem_object,
                                         append = T)
                               }
                               
-                              kernel_cov_record[, , param_rec_ind]   <- kernel_cov
+                              kernel_cov_record[, , param_rec_ind] <- 
+                                    kernel_cov + diag(nugget/100, n_model_params)
                         }
                         
                         # Increment the parameter record index
@@ -1989,6 +2004,7 @@ stem_inference_ode <- function(stem_object,
               
               stem_object$results$adaptation_record = 
                     list(
+                          proposal_covariance   = kernel_cov,
                           n_expansions_mvnss    = n_expansions_mvnss,
                           n_contractions_mvnss  = n_contractions_mvnss
                     )

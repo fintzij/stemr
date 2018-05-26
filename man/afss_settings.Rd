@@ -8,8 +8,7 @@ afss_settings(factor_update_interval = NULL, prob_update_interval = NULL,
   first_factor_update = 100, first_prob_update = 100,
   initial_slice_probs = NULL, initial_widths = NULL,
   n_afss_updates = NULL, sample_all_initially = TRUE,
-  afss_slice_ratio = 0.5, target_prop_totsd = NULL, harss_prob = 0.05,
-  harss_warmup = TRUE)
+  afss_slice_ratio = 0.5, target_prop_totsd = NULL, harss_prob = 0.05)
 }
 \arguments{
 \item{factor_update_interval}{number of iterations between factor and
@@ -55,9 +54,6 @@ posterior. If not equal to the number of parameters, a hit and run update
 is carried out to ensure ergodicity.}
 
 \item{harss_prob}{probability of a hit and run update at each iteration}
-
-\item{harss_warmup}{should a hit and run update be performed along with the
-elliptical slice sampling warm up? defaults to TRUE}
 }
 \value{
 list with additional settings for automated factor slice sampling

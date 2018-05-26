@@ -11,9 +11,8 @@ factor_slice_sampler_ode(model_params_est, model_params_nat, params_prop_est,
   ode_params_cur, ode_param_vec, tparam, censusmat, emitmat, flow_matrix,
   stoich_matrix, ode_times, forcing_inds, forcing_matrix, ode_param_inds,
   ode_const_inds, ode_tcovar_inds, ode_initdist_inds, param_update_inds,
-  ode_event_inds, census_indices, measproc_indmat, svd_sqrt, svd_d, svd_U,
-  svd_V, ode_pointer, ode_set_pars_pointer, d_meas_pointer, do_prevalence,
-  step_size)
+  ode_event_inds, census_indices, measproc_indmat, ode_pointer,
+  ode_set_pars_pointer, d_meas_pointer, do_prevalence, step_size)
 }
 \arguments{
 \item{model_params_est}{vector of model parameters on the estimation scale}
@@ -87,14 +86,6 @@ begin}
 
 \item{measproc_indmat}{matrix giving the indices for data likelihood
 contributions}
-
-\item{svd_sqrt}{matrix for computing the matrix square root for the ode}
-
-\item{svd_d}{vector for ode singular values}
-
-\item{svd_U}{matrix for ode left singular vectors}
-
-\item{svd_V}{matrix for ode right singular vectors}
 
 \item{ode_pointer}{external pointer for ode}
 

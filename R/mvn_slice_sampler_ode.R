@@ -39,7 +39,7 @@
 #' @param params_prop_nat vector for proposed parameters on their natural scale
 #' @param mvn_direction 
 #' @param mvnss_propvec 
-#' @param kernel_cov_sqrtmat 
+#' @param kernel_cov_chol 
 #' @param nugget 
 #' @param mvnss_bracket_width 
 #' @param n_expansions_mvnss 
@@ -57,7 +57,7 @@ mvn_slice_sampler_ode <-
                mvn_direction,
                har_direction,
                mvnss_propvec,
-               kernel_cov_sqrtmat,
+               kernel_cov_chol,
                nugget,
                mvnss_bracket_width,
                n_expansions_mvnss,
@@ -104,12 +104,12 @@ mvn_slice_sampler_ode <-
                   
                   # compute the proposal
                   copy_vec(dest = mvnss_propvec, 
-                           orig = normalise2((1 - nugget) * normalise2(mvn_direction %*% kernel_cov_sqrtmat, 2) + nugget * har_direction, 2))
+                           orig = normalise2((1 - nugget) * normalise2(mvn_direction %*% kernel_cov_chol, 2) + nugget * har_direction, 2))
                   
             } else {
                   draw_normals(mvn_direction)
                   copy_vec(dest = mvnss_propvec, 
-                           orig = normalise2(mvn_direction %*% kernel_cov_sqrtmat, 2))
+                           orig = normalise2(mvn_direction %*% kernel_cov_chol, 2))
             }
             
             # construct the approximate bracket

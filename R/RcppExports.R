@@ -45,21 +45,6 @@ CALL_INTEGRATE_STEM_ODE <- function(init, start, end, step_size, stem_ode_ptr) {
     invisible(.Call(`_stemr_CALL_INTEGRATE_STEM_ODE`, init, start, end, step_size, stem_ode_ptr))
 }
 
-#' Update rates by calling rate functions via Xptr.
-#'
-#' @param rates vector of rates to be modified
-#' @param inds logical vector of indices of rates to be modified
-#' @param state numeric vector of comaprtment counts
-#' @param parameters numeric vector of parameter values
-#' @param constants numeric vector of constants
-#' @param tcovar numeric vector of time-varying covariate values
-#' @param rate_ptr external pointer to rate function
-#'
-#' @export
-CALL_RATE_FCN <- function(rates, inds, state, parameters, constants, tcovar, rate_ptr) {
-    invisible(.Call(`_stemr_CALL_RATE_FCN`, rates, inds, state, parameters, constants, tcovar, rate_ptr))
-}
-
 #' Simulate from the measurement process by calling measurement process
 #' functions via external Xptr.
 #'
@@ -75,6 +60,21 @@ CALL_RATE_FCN <- function(rates, inds, state, parameters, constants, tcovar, rat
 #' @export
 CALL_R_MEASURE <- function(obsmat, emit_inds, record_ind, state, parameters, constants, tcovar, r_meas_ptr) {
     invisible(.Call(`_stemr_CALL_R_MEASURE`, obsmat, emit_inds, record_ind, state, parameters, constants, tcovar, r_meas_ptr))
+}
+
+#' Update rates by calling rate functions via Xptr.
+#'
+#' @param rates vector of rates to be modified
+#' @param inds logical vector of indices of rates to be modified
+#' @param state numeric vector of comaprtment counts
+#' @param parameters numeric vector of parameter values
+#' @param constants numeric vector of constants
+#' @param tcovar numeric vector of time-varying covariate values
+#' @param rate_ptr external pointer to rate function
+#'
+#' @export
+CALL_RATE_FCN <- function(rates, inds, state, parameters, constants, tcovar, rate_ptr) {
+    invisible(.Call(`_stemr_CALL_RATE_FCN`, rates, inds, state, parameters, constants, tcovar, rate_ptr))
 }
 
 #' Set the parameters for a system of ODEs via XPtr.
@@ -272,25 +272,6 @@ sample_unit_sphere <- function(v) {
     invisible(.Call(`_stemr_sample_unit_sphere`, v))
 }
 
-#' Evaluate the log-density of the measurement process by calling measurement
-#' process density functions via external Xptr.
-#'
-#' @param emitmat matrix of emission probabilities
-#' @param obsmat matrix containing the data
-#' @param statemat matrix containing the compartment counts at the observation
-#'   times
-#' @param measproc_indmat logical matrix indicating which compartments are
-#'   observed at every observation time
-#' @param parameters numeric vector of parameter values
-#' @param constants numeric vector of constants
-#' @param tcovar_censusmat numeric vector of time-varying covariate values
-#' @param d_meas_ptr external pointer to measurement process density function
-#'
-#' @export
-evaluate_d_measure <- function(emitmat, obsmat, statemat, measproc_indmat, parameters, constants, tcovar_censusmat, d_meas_ptr) {
-    invisible(.Call(`_stemr_evaluate_d_measure`, emitmat, obsmat, statemat, measproc_indmat, parameters, constants, tcovar_censusmat, d_meas_ptr))
-}
-
 #' Evaluate the log-density of a possibly time-verying measurement process
 #' by calling measurement process density functions via external Xptr.
 #'
@@ -316,6 +297,25 @@ evaluate_d_measure <- function(emitmat, obsmat, statemat, measproc_indmat, param
 #' @export
 evaluate_d_measure_LNA <- function(emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, lna_param_vec, d_meas_ptr) {
     invisible(.Call(`_stemr_evaluate_d_measure_LNA`, emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, lna_param_vec, d_meas_ptr))
+}
+
+#' Evaluate the log-density of the measurement process by calling measurement
+#' process density functions via external Xptr.
+#'
+#' @param emitmat matrix of emission probabilities
+#' @param obsmat matrix containing the data
+#' @param statemat matrix containing the compartment counts at the observation
+#'   times
+#' @param measproc_indmat logical matrix indicating which compartments are
+#'   observed at every observation time
+#' @param parameters numeric vector of parameter values
+#' @param constants numeric vector of constants
+#' @param tcovar_censusmat numeric vector of time-varying covariate values
+#' @param d_meas_ptr external pointer to measurement process density function
+#'
+#' @export
+evaluate_d_measure <- function(emitmat, obsmat, statemat, measproc_indmat, parameters, constants, tcovar_censusmat, d_meas_ptr) {
+    invisible(.Call(`_stemr_evaluate_d_measure`, emitmat, obsmat, statemat, measproc_indmat, parameters, constants, tcovar_censusmat, d_meas_ptr))
 }
 
 #' Given a vector of interval endpoints \code{breaks}, determine in which
@@ -476,11 +476,12 @@ map_pars_2_ode <- function(pathmat, ode_times, ode_pars, init_start, param_updat
 #'
 #' @param S square root matrix to be filled out
 #' @param M symmetric positive definite matrix for which square root is to be computed
+#' @param nugget small positive constant to be added to the diagonal for numerical stability
 #' 
 #' @return set S equal to the matrix square root of M 
 #' @export
-comp_sqrtmat <- function(S, M) {
-    invisible(.Call(`_stemr_comp_sqrtmat`, S, M))
+comp_sqrtmat <- function(S, M, nugget) {
+    invisible(.Call(`_stemr_comp_sqrtmat`, S, M, nugget))
 }
 
 #' Cholesky decomposition
@@ -488,11 +489,12 @@ comp_sqrtmat <- function(S, M) {
 #' @param C matrix to be filled out with the cholesky of M
 #' @param M symmetric positive definite matrix for which the upper triangle of the cholesky 
 #'   is to be computed
+#' @param nugget small positive constant to be added to the diagonal for numerical stability
 #' 
 #' @return set C equal to the matrix square root of M 
 #' @export
-comp_chol <- function(C, M) {
-    invisible(.Call(`_stemr_comp_chol`, C, M))
+comp_chol <- function(C, M, nugget) {
+    invisible(.Call(`_stemr_comp_chol`, C, M, nugget))
 }
 
 #' Produce samples from a multivariate normal density using the Cholesky
@@ -527,14 +529,13 @@ dmvtn <- function(x, mu, sigma, logd = FALSE) {
 #'
 #' @param params_prop vector in which the proposed parameters should be stored
 #' @param params_cur vector containing the current parameter vector
-#' @param kernel_cov vector of component proposal standard deviations
-#' @param proposal_scaling scaling parameter for the proposal
+#' @param kernel_cov_chol cholesky of the kernel covariance
 #' @param nugget fixed covariance nugget contribution
 #'
 #' @return propose new parameter values in place
 #' @export
-mvn_g_adaptive <- function(params_prop, params_cur, kernel_cov, proposal_scaling, nugget) {
-    invisible(.Call(`_stemr_mvn_g_adaptive`, params_prop, params_cur, kernel_cov, proposal_scaling, nugget))
+mvn_g_adaptive <- function(params_prop, params_cur, kernel_cov_chol, nugget) {
+    invisible(.Call(`_stemr_mvn_g_adaptive`, params_prop, params_cur, kernel_cov_chol, nugget))
 }
 
 #' Random walk Metropolis-Hastings transition kernel.
