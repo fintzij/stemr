@@ -1546,19 +1546,18 @@ stem_inference_ode <- function(stem_object,
                             step_size            = step_size
                       )
                       
-                      # adapt the bracket width
+                      # update the kernel covariance
                       if(iter < stop_adaptation) {
                             
-                            # update the kernel covariance
                             kernel_resid <- model_params_est - kernel_mean
                             kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
                             kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
-                            
-                            # adapt the harss bracket width
-                            harss_bracket_width <- 
-                                  exp(log(harss_bracket_width) + 
-                                            adaptations[iter] * (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5)) 
                       }
+                      
+                      # adapt the harss bracket width
+                      harss_bracket_width <- 
+                            exp(log(harss_bracket_width) + 
+                                      adaptations[min(iter,stop_adaptation)] * (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5))
                       
                 } else if (mcmc_kernel$method == "mvnss") {
                       
@@ -1625,14 +1624,14 @@ stem_inference_ode <- function(stem_object,
                             kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
                             
                             if((iter-1) %% cov_update_interval == 0) {
-                                  comp_chol(kernel_cov_chol, kernel_cov, nugget / 100)
+                                  comp_chol(kernel_cov_chol, kernel_cov, nugget * adaptations[iter] / 100)
                             }
-                            
-                            # adapt the harss bracket width
-                            mvnss_bracket_width <- 
-                                  exp(log(mvnss_bracket_width) + 
-                                            adaptations[iter] * (n_expansions_mvnss / (n_expansions_mvnss + n_contractions_mvnss) - 0.5))
                       }
+                      
+                      # adapt the harss bracket width
+                      mvnss_bracket_width <- 
+                            exp(log(mvnss_bracket_width) + 
+                                      adaptations[min(iter, stop_adaptation)] * (n_expansions_mvnss / (n_expansions_mvnss + n_contractions_mvnss) - 0.5))
                 }
 
                 # Propose and Accept-reject initial state/time
