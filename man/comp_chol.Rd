@@ -4,7 +4,7 @@
 \alias{comp_chol}
 \title{Cholesky decomposition}
 \usage{
-comp_chol(C, M, nugget)
+comp_chol(C, M)
 }
 \arguments{
 \item{C}{matrix to be filled out with the cholesky of M}

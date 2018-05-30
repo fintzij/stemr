@@ -472,18 +472,6 @@ map_pars_2_ode <- function(pathmat, ode_times, ode_pars, init_start, param_updat
     invisible(.Call(`_stemr_map_pars_2_ode`, pathmat, ode_times, ode_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer))
 }
 
-#' matrix square root
-#'
-#' @param S square root matrix to be filled out
-#' @param M symmetric positive definite matrix for which square root is to be computed
-#' @param nugget small positive constant to be added to the diagonal for numerical stability
-#' 
-#' @return set S equal to the matrix square root of M 
-#' @export
-comp_sqrtmat <- function(S, M, nugget) {
-    invisible(.Call(`_stemr_comp_sqrtmat`, S, M, nugget))
-}
-
 #' Cholesky decomposition
 #'
 #' @param C matrix to be filled out with the cholesky of M
@@ -493,8 +481,8 @@ comp_sqrtmat <- function(S, M, nugget) {
 #' 
 #' @return set C equal to the matrix square root of M 
 #' @export
-comp_chol <- function(C, M, nugget) {
-    invisible(.Call(`_stemr_comp_chol`, C, M, nugget))
+comp_chol <- function(C, M) {
+    invisible(.Call(`_stemr_comp_chol`, C, M))
 }
 
 #' Produce samples from a multivariate normal density using the Cholesky

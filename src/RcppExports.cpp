@@ -432,27 +432,14 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// comp_sqrtmat
-void comp_sqrtmat(arma::mat& S, const arma::mat& M, double nugget);
-RcppExport SEXP _stemr_comp_sqrtmat(SEXP SSEXP, SEXP MSEXP, SEXP nuggetSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::mat& >::type S(SSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type M(MSEXP);
-    Rcpp::traits::input_parameter< double >::type nugget(nuggetSEXP);
-    comp_sqrtmat(S, M, nugget);
-    return R_NilValue;
-END_RCPP
-}
 // comp_chol
-void comp_chol(arma::mat& C, const arma::mat& M, double nugget);
-RcppExport SEXP _stemr_comp_chol(SEXP CSEXP, SEXP MSEXP, SEXP nuggetSEXP) {
+void comp_chol(arma::mat& C, arma::mat& M);
+RcppExport SEXP _stemr_comp_chol(SEXP CSEXP, SEXP MSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::mat& >::type C(CSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type M(MSEXP);
-    Rcpp::traits::input_parameter< double >::type nugget(nuggetSEXP);
-    comp_chol(C, M, nugget);
+    Rcpp::traits::input_parameter< arma::mat& >::type M(MSEXP);
+    comp_chol(C, M);
     return R_NilValue;
 END_RCPP
 }
@@ -726,8 +713,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_lna_incid2prev", (DL_FUNC) &_stemr_lna_incid2prev, 5},
     {"_stemr_map_draws_2_lna", (DL_FUNC) &_stemr_map_draws_2_lna, 18},
     {"_stemr_map_pars_2_ode", (DL_FUNC) &_stemr_map_pars_2_ode, 11},
-    {"_stemr_comp_sqrtmat", (DL_FUNC) &_stemr_comp_sqrtmat, 3},
-    {"_stemr_comp_chol", (DL_FUNC) &_stemr_comp_chol, 3},
+    {"_stemr_comp_chol", (DL_FUNC) &_stemr_comp_chol, 2},
     {"_stemr_rmvtn", (DL_FUNC) &_stemr_rmvtn, 3},
     {"_stemr_dmvtn", (DL_FUNC) &_stemr_dmvtn, 4},
     {"_stemr_mvn_g_adaptive", (DL_FUNC) &_stemr_mvn_g_adaptive, 4},

@@ -289,7 +289,7 @@ stem_inference_lna <- function(stem_object,
             kernel_cov   <- diag(1, n_model_params)
             kernel_cov_chol <- diag(1,n_model_params)
             copy_mat(kernel_cov, mcmc_kernel$sigma)
-            comp_chol(kernel_cov_chol, kernel_cov, nugget / 100)
+            comp_chol(kernel_cov_chol, kernel_cov)
             
             # Adaptation record objects
             adaptation_scale_record <-
@@ -316,6 +316,10 @@ stem_inference_lna <- function(stem_object,
             }
             
             # sequence for adaptation factors
+            bracket_step  <- mcmc_kernel$kernel_settings$step_size
+            bracket_cool  <- mcmc_kernel$kernel_settings$scale_cooling
+            bracket_scale <- mcmc_kernel$kernel_settings$scale_constant
+            
             adaptations      <-
                   mcmc_kernel$kernel_settings$scale_constant *
                   (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
@@ -470,6 +474,10 @@ stem_inference_lna <- function(stem_object,
             }
             
             # sequence for adaptation factors
+            bracket_step  <- mcmc_kernel$kernel_settings$step_size
+            bracket_cool  <- mcmc_kernel$kernel_settings$scale_cooling
+            bracket_scale <- mcmc_kernel$kernel_settings$scale_constant
+            
             adaptations      <-
                   mcmc_kernel$kernel_settings$scale_constant *
                   (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
@@ -518,6 +526,10 @@ stem_inference_lna <- function(stem_object,
             }
             
             # sequence for adaptation factors
+            bracket_step  <- mcmc_kernel$kernel_settings$step_size
+            bracket_cool  <- mcmc_kernel$kernel_settings$scale_cooling
+            bracket_scale <- mcmc_kernel$kernel_settings$scale_constant
+            
             adaptations      <-
                   mcmc_kernel$kernel_settings$scale_constant *
                   (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
@@ -1248,8 +1260,8 @@ stem_inference_lna <- function(stem_object,
             } else if (mcmc_kernel$method == "mvn_g_adaptive") {
                   
                   if (iter == stop_adaptation) {
-                        mcmc_kernel$sigma = proposal_scaling * (kernel_cov + diag(nugget / 100, n_model_params))
-                        comp_chol(kernel_cov_chol, mcmc_kernel$sigma, 0)
+                        mcmc_kernel$sigma = proposal_scaling * kernel_cov
+                        comp_chol(kernel_cov_chol, mcmc_kernel$sigma)
                   }
                   
                   # propose new parameters
@@ -1259,7 +1271,7 @@ stem_inference_lna <- function(stem_object,
                               params_prop = params_prop_est,
                               params_cur = model_params_est,
                               kernel_cov_chol =  kernel_cov_chol,
-                              nugget = nugget
+                              nugget = nugget * adaptations[iter]
                         )
                         
                   } else {
@@ -1385,7 +1397,7 @@ stem_inference_lna <- function(stem_object,
                         kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
                         
                         # compute the cholesky
-                        comp_chol(kernel_cov_chol, proposal_scaling * (kernel_cov + diag(nugget / 100, n_model_params)), 0)
+                        comp_chol(kernel_cov_chol, proposal_scaling * kernel_cov)
                   }
                   
             } else if (mcmc_kernel$method == "afss") {
@@ -1521,11 +1533,10 @@ stem_inference_lna <- function(stem_object,
                         )
                       
                         # adapt the bracket width
-                        if(iter < stop_adaptation) {
-                              harss_bracket_width <- 
-                                    exp(log(harss_bracket_width) + 
-                                              adaptations[warmup] * (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5)) 
-                        }
+                        harss_bracket_width <- 
+                              exp(log(harss_bracket_width) + 
+                                        (bracket_scale * (iter * bracket_step + 1)^-bracket_cool) * (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5))
+                        
                   }
                   
                   # update the covariance matrix for the proposal kernel
@@ -1592,8 +1603,7 @@ stem_inference_lna <- function(stem_object,
                                     ((iter-1) %% prob_update_interval == 0)) {
                               
                               copy_vec(dest = slice_probs, 
-                                       orig = pmax(slice_eigenvals^0.5 / sum(slice_eigenvals^0.5),
-                                                   nugget))
+                                       orig = pmax(slice_eigenvals^0.5 / sum(slice_eigenvals^0.5), nugget))
                               
                               if(!is.null(target_prop_totsd)) {
                                     n_afss_updates <- 
@@ -1664,12 +1674,12 @@ stem_inference_lna <- function(stem_object,
                   # adapt the harss bracket width
                   harss_bracket_width <- 
                         exp(log(harss_bracket_width) + 
-                                  adaptations[min(iter, stop_adaptation)] * (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5))
+                                  (bracket_scale * (iter * bracket_step + 1)^-bracket_cool) * (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5))
                   
             } else if (mcmc_kernel$method == "mvnss") {
                   
                   if (iter == stop_adaptation) {
-                        mcmc_kernel$sigma = kernel_cov + diag(nugget / 100, n_model_params)
+                        mcmc_kernel$sigma = kernel_cov
                         
                         mcmc_kernel$kernel_settings$mvnss_setting_list <- 
                               mvnss_settings(n_mvnss_updates = n_mvnss_updates,
@@ -1687,7 +1697,7 @@ stem_inference_lna <- function(stem_object,
                         har_direction        = har_direction,
                         mvnss_propvec        = mvnss_propvec,
                         kernel_cov_chol      = kernel_cov_chol,
-                        nugget               = ifelse(iter < stop_adaptation, nugget, 0),
+                        nugget               = ifelse(iter < stop_adaptation, nugget * adaptations[iter], 0),
                         mvnss_bracket_width  = mvnss_bracket_width, 
                         n_expansions_mvnss   = n_expansions_mvnss,
                         n_contractions_mvnss = n_contractions_mvnss,
@@ -1734,14 +1744,14 @@ stem_inference_lna <- function(stem_object,
                         kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
                         
                         if((iter-1) %% cov_update_interval == 0) {
-                              comp_chol(kernel_cov_chol, kernel_cov, nugget * adaptations[iter] / 100)
+                              comp_chol(kernel_cov_chol, kernel_cov)
                         }
                   }
                   
                   # adapt the harss bracket width
                   mvnss_bracket_width <- 
                         exp(log(mvnss_bracket_width) + 
-                                  adaptations[min(iter, stop_adaptation)] * (n_expansions_mvnss / (n_expansions_mvnss + n_contractions_mvnss) - 0.5))
+                                  (bracket_scale * (iter * bracket_step + 1)^-bracket_cool) * (n_expansions_mvnss / (n_expansions_mvnss + n_contractions_mvnss) - 0.5))
             }
             
             # Propose and Accept-reject initial state/time
@@ -2044,7 +2054,7 @@ stem_inference_lna <- function(stem_object,
                   if (mcmc_kernel$method == "mvn_g_adaptive") {
                         
                         adaptation_scale_record[param_rec_ind] <- proposal_scaling
-                        kernel_cov_record[, , param_rec_ind]   <- kernel_cov + diag(nugget / 100, n_model_params)
+                        kernel_cov_record[, , param_rec_ind]   <- kernel_cov 
                         
                         if (messages &&
                             iter < stop_adaptation)
@@ -2100,8 +2110,7 @@ stem_inference_lna <- function(stem_object,
                                   append = T)
                         }
                         
-                        kernel_cov_record[, , param_rec_ind] <- 
-                              kernel_cov + diag(nugget / 100, n_model_params)
+                        kernel_cov_record[, , param_rec_ind] <- kernel_cov 
                   }
                   
                   # Increment the parameter record index
@@ -2165,7 +2174,7 @@ stem_inference_lna <- function(stem_object,
                   list(
                         adaptation_scale_record  = adaptation_scale_record,
                         kernel_cov_record        = kernel_cov_record,
-                        proposal_covariance      = proposal_scaling * kernel_cov + diag(nugget / 100, nrow(kernel_cov))
+                        proposal_covariance      = proposal_scaling * kernel_cov
                   )
             
       } else if (mcmc_kernel$method == "afss") {

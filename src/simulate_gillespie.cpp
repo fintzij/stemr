@@ -190,8 +190,8 @@ arma::mat simulate_gillespie(const arma::mat& flow,
       if(path(path.n_rows-1, 0) != t_max) {
             arma::rowvec last_row = path.row(path.n_rows - 1);
             last_row(0) = t_max;
-                last_row(1) = -1;
-                path.insert_rows(path.n_rows, last_row);
+            last_row(1) = -1;
+            path.insert_rows(path.n_rows, last_row);
         }
 
         return path;
