@@ -243,6 +243,16 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// reset_vec
+void reset_vec(arma::vec& v);
+RcppExport SEXP _stemr_reset_vec(SEXP vSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec& >::type v(vSEXP);
+    reset_vec(v);
+    return R_NilValue;
+END_RCPP
+}
 // draw_normals
 void draw_normals(arma::vec& v);
 RcppExport SEXP _stemr_draw_normals(SEXP vSEXP) {
@@ -701,6 +711,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_copy_col", (DL_FUNC) &_stemr_copy_col, 3},
     {"_stemr_copy_2_rows", (DL_FUNC) &_stemr_copy_2_rows, 3},
     {"_stemr_mat_2_arr", (DL_FUNC) &_stemr_mat_2_arr, 3},
+    {"_stemr_reset_vec", (DL_FUNC) &_stemr_reset_vec, 1},
     {"_stemr_draw_normals", (DL_FUNC) &_stemr_draw_normals, 1},
     {"_stemr_draw_normals2", (DL_FUNC) &_stemr_draw_normals2, 1},
     {"_stemr_sample_unit_sphere", (DL_FUNC) &_stemr_sample_unit_sphere, 1},

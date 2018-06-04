@@ -18,6 +18,8 @@
 #' @param messages should status messages be generated in an external text file?
 #'   If so, the iteration number is printed whenever the latent process is
 #'   saved.
+#' @param print_progress prints progress every n iterations, defaults to 0 for
+#'   no printing
 #' @param priors a list of named functions for computing the prior density as
 #'   well as transforming parameters to and from their estimation scales. The
 #'   functions should have the following names: "prior_density",
@@ -42,6 +44,7 @@ stem_inference_lna <- function(stem_object,
                                thin_latent_proc,
                                initialization_attempts = 500,
                                ess_args = NULL,
+                               print_progress = 0,
                                messages) {
       
       # if the MCMC is being restarted, save the existing results
@@ -76,6 +79,15 @@ stem_inference_lna <- function(stem_object,
       # check that the ode pointer is compiled
       if(is.null(stem_object$dynamics$lna_pointers)) {
             stop("LNA code is not compiled.")
+      }
+      
+      # progress printing interval
+      if(print_progress != 0) {
+            progress_interval <- print_progress
+            print_progress <- TRUE
+      } else {
+            progress_interval <- NULL
+            print_progress <- FALSE
       }
       
       flow_matrix            <- stem_object$dynamics$flow_matrix_lna
@@ -252,6 +264,8 @@ stem_inference_lna <- function(stem_object,
             harss_bracket_width_warmup  <- 1.0
             n_expansions_harss_warmup   <- 0.5
             n_contractions_harss_warmup <- 0.5
+            warmup_bracket_min          <- 0.01 * mcmc_kernel$kernel_settings$nugget[1]
+            warmup_bracket_max          <- Inf
       }
       
       # set up the MCMC kernel
@@ -316,10 +330,6 @@ stem_inference_lna <- function(stem_object,
             }
             
             # sequence for adaptation factors
-            bracket_step  <- mcmc_kernel$kernel_settings$step_size
-            bracket_cool  <- mcmc_kernel$kernel_settings$scale_cooling
-            bracket_scale <- mcmc_kernel$kernel_settings$scale_constant
-            
             adaptations      <-
                   mcmc_kernel$kernel_settings$scale_constant *
                   (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
@@ -452,6 +462,12 @@ stem_inference_lna <- function(stem_object,
                   (n_afss_updates != n_model_params) |
                   !is.null(target_prop_totsd)
             
+            # harss bracket limits
+            harss_bracket_min  <- afss_setting_list$harss_bracket_limits[1]
+            harss_bracket_max  <- afss_setting_list$harss_bracket_limits[2]
+            warmup_bracket_min <- afss_setting_list$harss_bracket_limits[1]
+            warmup_bracket_max <- afss_setting_list$harss_bracket_limits[2]
+            
             # objects for saving the adaptation history
             kernel_cov_record <-
                         array(0.0,
@@ -474,10 +490,6 @@ stem_inference_lna <- function(stem_object,
             }
             
             # sequence for adaptation factors
-            bracket_step  <- mcmc_kernel$kernel_settings$step_size
-            bracket_cool  <- mcmc_kernel$kernel_settings$scale_cooling
-            bracket_scale <- mcmc_kernel$kernel_settings$scale_constant
-            
             adaptations      <-
                   mcmc_kernel$kernel_settings$scale_constant *
                   (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
@@ -502,6 +514,10 @@ stem_inference_lna <- function(stem_object,
             
             # initial bracket width
             harss_bracket_width <- 1.0
+            harss_bracket_min   <- harss_setting_list$bracket_limits[1]
+            harss_bracket_max   <- harss_setting_list$bracket_limits[2]
+            warmup_bracket_min  <- harss_setting_list$bracket_limits[1]
+            warmup_bracket_max  <- harss_setting_list$bracket_limits[2]
             
             # for adaptive the hit-and-run proposal
             n_expansions_harss   <- 0.5
@@ -526,10 +542,6 @@ stem_inference_lna <- function(stem_object,
             }
             
             # sequence for adaptation factors
-            bracket_step  <- mcmc_kernel$kernel_settings$step_size
-            bracket_cool  <- mcmc_kernel$kernel_settings$scale_cooling
-            bracket_scale <- mcmc_kernel$kernel_settings$scale_constant
-            
             adaptations      <-
                   mcmc_kernel$kernel_settings$scale_constant *
                   (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
@@ -547,8 +559,13 @@ stem_inference_lna <- function(stem_object,
             }
             
             # extract list settings
-            n_mvnss_updates         <- mvnss_setting_list$n_mvnss_updates
-            cov_update_interval     <- mvnss_setting_list$cov_update_interval
+            n_mvnss_updates     <- mvnss_setting_list$n_mvnss_updates
+            cov_update_interval <- mvnss_setting_list$cov_update_interval
+            mvnss_bracket_width <- mvnss_setting_list$initial_bracket_width
+            mvnss_bracket_min   <- mvnss_setting_list$bracket_limits[1]
+            mvnss_bracket_max   <- mvnss_setting_list$bracket_limits[2]
+            warmup_bracket_min  <- mvnss_setting_list$bracket_limits[1]
+            warmup_bracket_max  <- mvnss_setting_list$bracket_limits[2]
             
             # nugget
             nugget <- mcmc_kernel$kernel_settings$nugget
@@ -557,9 +574,6 @@ stem_inference_lna <- function(stem_object,
             har_direction <- rep(0.0, n_model_params)
             mvn_direction <- rep(0.0, n_model_params)
             mvnss_propvec <- rep(0.0, n_model_params)
-            
-            # initial bracket width
-            mvnss_bracket_width <- 1.0
             
             # for adaptive the hit-and-run proposal
             n_expansions_mvnss   <- 0.5
@@ -1080,8 +1094,11 @@ stem_inference_lna <- function(stem_object,
                         
                         # adapt the harss bracket width
                         harss_bracket_width_warmup <- 
-                              exp(log(harss_bracket_width_warmup) + 
-                                        warmup_adaptations[warmup] * (n_expansions_harss_warmup / (n_expansions_harss_warmup + n_contractions_harss_warmup) - 0.5))
+                              max(warmup_bracket_min,
+                                  min(warmup_bracket_max,
+                                      exp(log(harss_bracket_width_warmup) + 
+                                                sqrt(warmup_adaptations[warmup]) * (n_expansions_harss_warmup / (n_expansions_harss_warmup + n_contractions_harss_warmup) - 0.5))
+                                  ))
                   }
             }
       }
@@ -1128,7 +1145,7 @@ stem_inference_lna <- function(stem_object,
       }
       
       # initialize the status file if status updates are required
-      if (messages) {
+      if (messages | print_progress) {
             status_file <-
                   paste0("LNA_inference_status_",
                          as.numeric(Sys.time()),
@@ -1144,11 +1161,6 @@ stem_inference_lna <- function(stem_object,
       # begin the MCMC
       start.time <- Sys.time()
       for (iter in (seq_len(iterations) + 1)) {
-            
-            # Print the status if messages are enabled
-            if (messages && iter %% thin_latent_proc == 0) {
-                  cat(paste0("Iteration ", iter), file = status_file, sep = "\n \n",append = TRUE)
-            }
             
             # Sample new parameter values
             if (mcmc_kernel$method == "mvn_rw") {
@@ -1534,8 +1546,11 @@ stem_inference_lna <- function(stem_object,
                       
                         # adapt the bracket width
                         harss_bracket_width <- 
-                              exp(log(harss_bracket_width) + 
-                                        (bracket_scale * (iter * bracket_step + 1)^-bracket_cool) * (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5))
+                              max(harss_bracket_min,
+                                  min(harss_bracket_max,
+                                      exp(log(harss_bracket_width) + 
+                                                sqrt(adaptations[iter]) * (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5))
+                                  ))
                         
                   }
                   
@@ -1673,18 +1688,21 @@ stem_inference_lna <- function(stem_object,
                   
                   # adapt the harss bracket width
                   harss_bracket_width <- 
-                        exp(log(harss_bracket_width) + 
-                                  (bracket_scale * (iter * bracket_step + 1)^-bracket_cool) * (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5))
+                        max(harss_bracket_min,
+                            min(harss_bracket_max,
+                                exp(log(harss_bracket_width) +
+                                          sqrt(adaptations[iter]) * (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5))
+                                ))
                   
             } else if (mcmc_kernel$method == "mvnss") {
                   
                   if (iter == stop_adaptation) {
                         mcmc_kernel$sigma = kernel_cov
-                        
                         mcmc_kernel$kernel_settings$mvnss_setting_list <- 
                               mvnss_settings(n_mvnss_updates = n_mvnss_updates,
                                              cov_update_interval = cov_update_interval,
-                                             initial_bracket_width = mvnss_bracket_width)
+                                             initial_bracket_width = mvnss_bracket_width,
+                                             bracket_limits = c(mvnss_bracket_min, mvnss_bracket_max))
                   }
                   
                   # sample new parameter values
@@ -1748,10 +1766,13 @@ stem_inference_lna <- function(stem_object,
                         }
                   }
                   
-                  # adapt the harss bracket width
+                  # adapt the mvnss bracket width
                   mvnss_bracket_width <- 
-                        exp(log(mvnss_bracket_width) + 
-                                  (bracket_scale * (iter * bracket_step + 1)^-bracket_cool) * (n_expansions_mvnss / (n_expansions_mvnss + n_contractions_mvnss) - 0.5))
+                        max(mvnss_bracket_min,
+                            min(mvnss_bracket_max,
+                                exp(log(mvnss_bracket_width) +
+                                          sqrt(adaptations[iter]) * (n_expansions_mvnss / (n_expansions_mvnss + n_contractions_mvnss) - 0.5))
+                            ))
             }
             
             # Propose and Accept-reject initial state/time
@@ -2054,12 +2075,29 @@ stem_inference_lna <- function(stem_object,
                   if (mcmc_kernel$method == "mvn_g_adaptive") {
                         
                         adaptation_scale_record[param_rec_ind] <- proposal_scaling
-                        kernel_cov_record[, , param_rec_ind]   <- kernel_cov 
+                        kernel_cov_record[, , param_rec_ind]   <- kernel_cov
                         
-                        if (messages &&
-                            iter < stop_adaptation)
+                  } else if(mcmc_kernel$method == "afss") {
+                        
+                        kernel_cov_record[, , param_rec_ind] <- kernel_cov
+                        
+                  } else if(mcmc_kernel$method == "mvnss") {
+                        
+                        kernel_cov_record[, , param_rec_ind] <- kernel_cov
+                  }
+                  
+                  # Increment the parameter record index
+                  param_rec_ind <- param_rec_ind + 1
+            }
+            
+            # print status messages if called for
+            if(print_progress && (iter-1) %% progress_interval == 0) {
+                  
+                  if(mcmc_kernel$method == "mvn_g_adaptive") {
+                        
+                        if (iter < stop_adaptation) {
                               cat(
-                                    paste0("Iteration: ", iter),
+                                    paste0("Iteration: ", iter-1),
                                     paste0("Global acceptances: ", acceptances_g),
                                     paste0(
                                           "Global acceptance rate: ",
@@ -2069,54 +2107,46 @@ stem_inference_lna <- function(stem_object,
                                     sep = "\n",
                                     append = TRUE
                               )
-                        
-                  } else if(mcmc_kernel$method == "afss") {
-                        
-                        if(n_afss_updates != n_model_params) {
                               
-                              if (messages &&
-                                  iter < stop_adaptation)
-                                    cat(
-                                          paste0("Iteration: ", iter),
-                                          file = status_file,
-                                          sep = "\n",
-                                          append = TRUE
-                                    )
                         } else {
-                              if(messages) {
-                                    cat(paste0("Iteration: ", iter),
-                                        file = status_file,
-                                        sep = "\n",
-                                        append = T)
-                              }
+                              cat(
+                                    paste0("Iteration: ", iter-1),
+                                    file = status_file,
+                                    sep = "\n",
+                                    append = TRUE
+                              )
                         }
+                  } else if(mcmc_kernel$method %in% c("afss", "mvn_rw")) {
                         
-                        kernel_cov_record[, , param_rec_ind] <- kernel_cov
+                        cat(
+                              paste0("Iteration: ", iter-1),
+                              file = status_file,
+                              sep = "\n",
+                              append = TRUE
+                        )
                         
                   } else if(mcmc_kernel$method == "harss") {
                         
-                        if(messages) {
-                              cat(paste0("Iteration: ", iter),
-                                  file = status_file,
-                                  sep = "\n",
-                                  append = T)
-                        }
+                        cat(paste0("Iteration: ", iter-1),
+                            paste0("n_contractions = ", n_contractions_harss - 0.5,
+                                   "; n_expansions = ",n_expansions_harss - 0.5),
+                            file = status_file,
+                            sep = "\n",
+                            append = T)
+                        
                   } else if(mcmc_kernel$method == "mvnss") {
                         
-                        if(messages) {
-                              cat(paste0("Iteration: ", iter),
-                                  file = status_file,
-                                  sep = "\n",
-                                  append = T)
-                        }
-                        
-                        kernel_cov_record[, , param_rec_ind] <- kernel_cov 
+                        cat(paste0("Iteration: ", iter-1),
+                            paste0("n_contractions = ", n_contractions_mvnss - 0.5,
+                                   "; n_expansions = ", n_expansions_mvnss - 0.5),
+                            file = status_file,
+                            sep = "\n",
+                            append = T)
                   }
-                  
-                  # Increment the parameter record index
-                  param_rec_ind <- param_rec_ind + 1
             }
       }
+      
+      # store the end time
       end.time <- Sys.time()
       
       # compile the results
@@ -2188,16 +2218,16 @@ stem_inference_lna <- function(stem_object,
                   )
             
             if(n_afss_updates != n_model_params) {
-                  stem_object$results$adaptation_record$n_expansions_harss = n_expansions_harss
-                  stem_object$results$adaptation_record$n_contractions_harss = n_contractions_harss
+                  stem_object$results$adaptation_record$n_expansions_harss = n_expansions_harss - 0.5
+                  stem_object$results$adaptation_record$n_contractions_harss = n_contractions_harss - 0.5
             }
             
       } else if (mcmc_kernel$method == "harss") {
             
             stem_object$results$adaptation_record = 
                   list(
-                        n_expansions_harss    = n_expansions_harss,
-                        n_contractions_harss  = n_contractions_harss
+                        n_expansions_harss    = n_expansions_harss - 0.5,
+                        n_contractions_harss  = n_contractions_harss - 0.5
                   )
             
       } else if (mcmc_kernel$method == "mvnss") {
@@ -2205,8 +2235,8 @@ stem_inference_lna <- function(stem_object,
             stem_object$results$adaptation_record = 
                   list(
                         proposal_covariance   = kernel_cov,
-                        n_expansions_mvnss    = n_expansions_mvnss,
-                        n_contractions_mvnss  = n_contractions_mvnss
+                        n_expansions_mvnss    = n_expansions_mvnss - 0.5,
+                        n_contractions_mvnss  = n_contractions_mvnss - 0.5
                   )
       }
       

@@ -149,7 +149,7 @@ update_lna_path <-
             if(is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
             
             # continue proposing if not accepted
-            while(!isTRUE(all.equal(lower, upper)) && (data_log_lik_prop < threshold)) {
+            while((upper - lower) > sqrt(.Machine$double.eps) && (data_log_lik_prop < threshold)) {
             
                     # increment the number of ESS proposals for the current iteration
                     increment_elem(path_cur$ess_record, k-1)
@@ -245,7 +245,7 @@ update_lna_path <-
             }
             
             # if the bracket width is not equal to zero, update the draws, path, and data log likelihood
-            if(!isTRUE(all.equal(lower, upper))) {
+            if((upper - lower) > sqrt(.Machine$double.eps)) {
             
                   # transfer the new path and residual path into the* sin(theta) path_prop list
                   copy_mat(dest = path_cur$draws, orig = draws_prop)

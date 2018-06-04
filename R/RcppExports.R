@@ -242,6 +242,16 @@ mat_2_arr <- function(dest, orig, ind) {
     invisible(.Call(`_stemr_mat_2_arr`, dest, orig, ind))
 }
 
+#' Reset a vector by filling it with zeros
+#'
+#' @param v vector to fill with zeros
+#'
+#' @return reset vector in place
+#' @export
+reset_vec <- function(v) {
+    invisible(.Call(`_stemr_reset_vec`, v))
+}
+
 #' Draw new N(0,1) values and fill a vector.
 #'
 #' @param v vector to fill with new N(0,1) draws

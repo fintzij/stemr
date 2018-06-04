@@ -81,6 +81,10 @@ kernel <-
         
             if(method %in% c("afss", "harss")) {
                   nugget <- 0.05
+                  
+            } else if(method == "mvnss") {
+                  nugget <- 0.1
+                  
             } else {
                   nugget <- 0.001 * min(diag(sigma))
             }

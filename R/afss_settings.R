@@ -46,6 +46,7 @@ afss_settings <-
                sample_all_initially = TRUE,
                afss_slice_ratio = 0.5,
                target_prop_totsd = NULL,
+               harss_bracket_limits = c(0, Inf),
                harss_prob = 0.05) {
                
       # test if the factor and prob update interval functions have defaults if they are specified via functions   
@@ -77,5 +78,6 @@ afss_settings <-
            sample_all_initially    = sample_all_initially,
            afss_slice_ratio        = afss_slice_ratio,
            target_prop_totsd       = target_prop_totsd,
+           harss_bracket_limits    = harss_bracket_limits,
            harss_prob              = harss_prob)
       }

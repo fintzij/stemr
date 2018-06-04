@@ -7,7 +7,7 @@ deterministic trajectory matching.}
 \usage{
 stem_inference_ode(stem_object, iterations, priors, mcmc_kernel, t0_kernel,
   thin_params, thin_latent_proc, initialization_attempts = 500,
-  ess_args = NULL, messages)
+  ess_args = NULL, print_progress = 0, messages)
 }
 \arguments{
 \item{stem_object}{stochastic epidemic model object with model dynamics, the
@@ -30,8 +30,8 @@ a transformed vector (the function call has the form:
 covariance matrix, and an external pointer for the compiled mcmc_kernel
 function}
 
-\item{t0_kernel}{output of \code{t0_kernel}, specifying the RWMH
-transition mcmc_kernel for t0 and the truncated normal distribution prior.}
+\item{t0_kernel}{output of \code{t0_kernel}, specifying the RWMH transition
+mcmc_kernel for t0 and the truncated normal distribution prior.}
 
 \item{thin_params}{thinning interval for posterior parameter samples,
 defaults to 1}
@@ -39,9 +39,10 @@ defaults to 1}
 \item{thin_latent_proc}{thinning interval for latent paths, defaults to
 ceiling(iterations/100)}
 
-\item{messages}{should status messages be generated in an external text file?
-If so, the iteration number is printed whenever the latent process is
-saved.}
+\item{print_progress}{prints progress every n iterations, defaults to 0 for
+no printing}
+
+\item{messages}{should status messages be generated in an external text file?}
 }
 \value{
 list with parameter posterior samples and MCMC diagnostics

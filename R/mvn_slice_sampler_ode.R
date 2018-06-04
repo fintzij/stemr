@@ -134,74 +134,81 @@ mvn_slice_sampler_ode <-
                   # compute the prior density
                   logprior_lower <- priors$prior_density(params_nat = params_prop_nat,
                                                          params_est = params_prop_est)
-
-                  # insert the parameters into the ode_parameters matrix
-                  pars2lnapars(ode_params_cur, params_prop_nat)
-
-                  # compute the time-varying parameters if necessary
-                  if(!is.null(tparam)) {
-                        for(p in seq_along(tparam)) {
-                              insert_tparam(tcovar    = ode_params_cur,
-                                            values    = tparam[[p]]$draws2par(
-                                                            parameters = params_prop_nat,
-                                                            draws      = tparam[[p]]$draws_cur),
-                                            col_ind   = tparam[[p]]$col_ind,
-                                            tpar_inds = tparam[[p]]$tpar_inds)
+                  
+                  # if the log prior is not -Inf, find the path
+                  if(logprior_lower != -Inf) {
+                        
+                        # insert the parameters into the ode_parameters matrix
+                        pars2lnapars(ode_params_cur, params_prop_nat)
+                        
+                        # compute the time-varying parameters if necessary
+                        if(!is.null(tparam)) {
+                              for(p in seq_along(tparam)) {
+                                    insert_tparam(tcovar    = ode_params_cur,
+                                                  values    = tparam[[p]]$draws2par(
+                                                        parameters = params_prop_nat,
+                                                        draws      = tparam[[p]]$draws_cur),
+                                                  col_ind   = tparam[[p]]$col_ind,
+                                                  tpar_inds = tparam[[p]]$tpar_inds)
+                              }
                         }
+                        
+                        # initialize data log likelihood
+                        loglik_lower <- NULL
+                        
+                        # map the perturbations to an ode path
+                        try({
+                              map_pars_2_ode(
+                                    pathmat           = pathmat_prop,
+                                    ode_times         = ode_times,
+                                    ode_pars          = ode_params_cur,
+                                    init_start        = ode_initdist_inds[1],
+                                    param_update_inds = param_update_inds,
+                                    stoich_matrix     = stoich_matrix,
+                                    forcing_inds      = forcing_inds,
+                                    forcing_matrix    = forcing_matrix,
+                                    ode_pointer       = ode_pointer,
+                                    set_pars_pointer  = ode_set_pars_pointer,
+                                    step_size         = step_size
+                              )
+                              
+                              census_lna(
+                                    path                = pathmat_prop,
+                                    census_path         = censusmat,
+                                    census_inds         = census_indices,
+                                    lna_event_inds      = ode_event_inds,
+                                    flow_matrix_lna     = flow_matrix,
+                                    do_prevalence       = do_prevalence,
+                                    init_state          = ode_params_cur[1, ode_initdist_inds + 1],
+                                    forcing_matrix      = forcing_matrix
+                              )
+                              
+                              # evaluate the density of the incidence counts
+                              evaluate_d_measure_LNA(
+                                    emitmat           = emitmat,
+                                    obsmat            = data,
+                                    censusmat         = censusmat,
+                                    measproc_indmat   = measproc_indmat,
+                                    lna_parameters    = ode_params_cur,
+                                    lna_param_inds    = ode_param_inds,
+                                    lna_const_inds    = ode_const_inds,
+                                    lna_tcovar_inds   = ode_tcovar_inds,
+                                    param_update_inds = param_update_inds,
+                                    census_indices    = census_indices,
+                                    lna_param_vec     = ode_param_vec,
+                                    d_meas_ptr        = d_meas_pointer
+                              )
+                              
+                              # compute the data log likelihood
+                              loglik_lower <- sum(emitmat[,-1][measproc_indmat])
+                              if(is.nan(loglik_lower)) loglik_lower <- -Inf
+                        }, silent = TRUE)
+                        
+                        if(is.null(loglik_lower)) loglik_lower <- -Inf
+                        
+                  } else {
+                        loglik_lower <- -Inf
                   }
-
-                  # initialize data log likelihood
-                  loglik_lower <- NULL
-
-                  # map the perturbations to an ode path
-                  try({
-                        map_pars_2_ode(
-                              pathmat           = pathmat_prop,
-                              ode_times         = ode_times,
-                              ode_pars          = ode_params_cur,
-                              init_start        = ode_initdist_inds[1],
-                              param_update_inds = param_update_inds,
-                              stoich_matrix     = stoich_matrix,
-                              forcing_inds      = forcing_inds,
-                              forcing_matrix    = forcing_matrix,
-                              ode_pointer       = ode_pointer,
-                              set_pars_pointer  = ode_set_pars_pointer,
-                              step_size         = step_size
-                        )
-
-                        census_lna(
-                              path                = pathmat_prop,
-                              census_path         = censusmat,
-                              census_inds         = census_indices,
-                              lna_event_inds      = ode_event_inds,
-                              flow_matrix_lna     = flow_matrix,
-                              do_prevalence       = do_prevalence,
-                              init_state          = ode_params_cur[1, ode_initdist_inds + 1],
-                              forcing_matrix      = forcing_matrix
-                        )
-
-                        # evaluate the density of the incidence counts
-                        evaluate_d_measure_LNA(
-                              emitmat           = emitmat,
-                              obsmat            = data,
-                              censusmat         = censusmat,
-                              measproc_indmat   = measproc_indmat,
-                              lna_parameters    = ode_params_cur,
-                              lna_param_inds    = ode_param_inds,
-                              lna_const_inds    = ode_const_inds,
-                              lna_tcovar_inds   = ode_tcovar_inds,
-                              param_update_inds = param_update_inds,
-                              census_indices    = census_indices,
-                              lna_param_vec     = ode_param_vec,
-                              d_meas_ptr        = d_meas_pointer
-                        )
-
-                        # compute the data log likelihood
-                        loglik_lower <- sum(emitmat[,-1][measproc_indmat])
-                        if(is.nan(loglik_lower)) loglik_lower <- -Inf
-                  }, silent = TRUE)
-
-                  if(is.null(loglik_lower)) loglik_lower <- -Inf
 
                   # compute log-posterior
                   logpost_lower <- loglik_lower + logprior_lower
@@ -229,74 +236,81 @@ mvn_slice_sampler_ode <-
                   # compute the prior density
                   logprior_upper <- priors$prior_density(params_nat = params_prop_nat,
                                                          params_est = params_prop_est)
-
-                  # insert the parameters into the ode_parameters matrix
-                  pars2lnapars(ode_params_cur, params_prop_nat)
-
-                  # compute the time-varying parameters if necessary
-                  if(!is.null(tparam)) {
-                        for(p in seq_along(tparam)) {
-                              insert_tparam(tcovar    = ode_params_cur,
-                                            values    = tparam[[p]]$draws2par(
-                                                             parameters = params_prop_nat,
-                                                             draws      = tparam[[p]]$draws_cur),
-                                            col_ind   = tparam[[p]]$col_ind,
-                                            tpar_inds = tparam[[p]]$tpar_inds)
+                  
+                  # if the log prior density is not -Inf, find the path
+                  if(logprior_upper != -Inf) {
+                        
+                        # insert the parameters into the ode_parameters matrix
+                        pars2lnapars(ode_params_cur, params_prop_nat)
+                        
+                        # compute the time-varying parameters if necessary
+                        if(!is.null(tparam)) {
+                              for(p in seq_along(tparam)) {
+                                    insert_tparam(tcovar    = ode_params_cur,
+                                                  values    = tparam[[p]]$draws2par(
+                                                        parameters = params_prop_nat,
+                                                        draws      = tparam[[p]]$draws_cur),
+                                                  col_ind   = tparam[[p]]$col_ind,
+                                                  tpar_inds = tparam[[p]]$tpar_inds)
+                              }
                         }
+                        
+                        # initialize data log likelihood
+                        loglik_upper <- NULL
+                        
+                        # map the perturbations to an ode path
+                        try({
+                              map_pars_2_ode(
+                                    pathmat           = pathmat_prop,
+                                    ode_times         = ode_times,
+                                    ode_pars          = ode_params_cur,
+                                    init_start        = ode_initdist_inds[1],
+                                    param_update_inds = param_update_inds,
+                                    stoich_matrix     = stoich_matrix,
+                                    forcing_inds      = forcing_inds,
+                                    forcing_matrix    = forcing_matrix,
+                                    ode_pointer       = ode_pointer,
+                                    set_pars_pointer  = ode_set_pars_pointer,
+                                    step_size         = step_size
+                              )
+                              
+                              census_lna(
+                                    path                = pathmat_prop,
+                                    census_path         = censusmat,
+                                    census_inds         = census_indices,
+                                    lna_event_inds      = ode_event_inds,
+                                    flow_matrix_lna     = flow_matrix,
+                                    do_prevalence       = do_prevalence,
+                                    init_state          = ode_params_cur[1, ode_initdist_inds + 1],
+                                    forcing_matrix      = forcing_matrix
+                              )
+                              
+                              # evaluate the density of the incidence counts
+                              evaluate_d_measure_LNA(
+                                    emitmat           = emitmat,
+                                    obsmat            = data,
+                                    censusmat         = censusmat,
+                                    measproc_indmat   = measproc_indmat,
+                                    lna_parameters    = ode_params_cur,
+                                    lna_param_inds    = ode_param_inds,
+                                    lna_const_inds    = ode_const_inds,
+                                    lna_tcovar_inds   = ode_tcovar_inds,
+                                    param_update_inds = param_update_inds,
+                                    census_indices    = census_indices,
+                                    lna_param_vec     = ode_param_vec,
+                                    d_meas_ptr        = d_meas_pointer
+                              )
+                              
+                              # compute the data log likelihood
+                              loglik_upper <- sum(emitmat[,-1][measproc_indmat])
+                              if(is.nan(loglik_upper)) loglik_upper <- -Inf
+                        }, silent = TRUE)
+                        
+                        if(is.null(loglik_upper)) loglik_upper <- -Inf  
+                        
+                  } else {
+                        loglik_upper <- -Inf
                   }
-
-                  # initialize data log likelihood
-                  loglik_upper <- NULL
-
-                  # map the perturbations to an ode path
-                  try({
-                        map_pars_2_ode(
-                              pathmat           = pathmat_prop,
-                              ode_times         = ode_times,
-                              ode_pars          = ode_params_cur,
-                              init_start        = ode_initdist_inds[1],
-                              param_update_inds = param_update_inds,
-                              stoich_matrix     = stoich_matrix,
-                              forcing_inds      = forcing_inds,
-                              forcing_matrix    = forcing_matrix,
-                              ode_pointer       = ode_pointer,
-                              set_pars_pointer  = ode_set_pars_pointer,
-                              step_size         = step_size
-                        )
-                        
-                        census_lna(
-                              path                = pathmat_prop,
-                              census_path         = censusmat,
-                              census_inds         = census_indices,
-                              lna_event_inds      = ode_event_inds,
-                              flow_matrix_lna     = flow_matrix,
-                              do_prevalence       = do_prevalence,
-                              init_state          = ode_params_cur[1, ode_initdist_inds + 1],
-                              forcing_matrix      = forcing_matrix
-                        )
-                        
-                        # evaluate the density of the incidence counts
-                        evaluate_d_measure_LNA(
-                              emitmat           = emitmat,
-                              obsmat            = data,
-                              censusmat         = censusmat,
-                              measproc_indmat   = measproc_indmat,
-                              lna_parameters    = ode_params_cur,
-                              lna_param_inds    = ode_param_inds,
-                              lna_const_inds    = ode_const_inds,
-                              lna_tcovar_inds   = ode_tcovar_inds,
-                              param_update_inds = param_update_inds,
-                              census_indices    = census_indices,
-                              lna_param_vec     = ode_param_vec,
-                              d_meas_ptr        = d_meas_pointer
-                        )
-
-                        # compute the data log likelihood
-                        loglik_upper <- sum(emitmat[,-1][measproc_indmat])
-                        if(is.nan(loglik_upper)) loglik_upper <- -Inf
-                  }, silent = TRUE)
-
-                  if(is.null(loglik_upper)) loglik_upper <- -Inf
 
                   # compute log-posterior
                   logpost_upper <- loglik_upper + logprior_upper
@@ -313,7 +327,7 @@ mvn_slice_sampler_ode <-
             }
 
             # sample from the bracket
-            while((logpost_prop < threshold) && !isTRUE(all.equal(lower, upper))) {
+            while((upper - lower) > sqrt(.Machine$double.eps) && (logpost_prop < threshold)) {
                   
                   # sample uniformly in the bracket
                   prop <- runif(1, lower, upper)
@@ -328,73 +342,81 @@ mvn_slice_sampler_ode <-
                   logprior_prop <- priors$prior_density(params_nat = params_prop_nat,
                                                         params_est = params_prop_est)
                   
-                  # insert the parameters into the lna_parameters matrix
-                  pars2lnapars(ode_params_cur, params_prop_nat)
                   
-                  # compute the time-varying parameters if necessary
-                  if(!is.null(tparam)) {
-                        for(p in seq_along(tparam)) {
-                              insert_tparam(tcovar    = ode_params_cur,
-                                            values    = tparam[[p]]$draws2par(
-                                                      parameters = params_prop_nat,
-                                                      draws      = tparam[[p]]$draws_cur),
-                                            col_ind   = tparam[[p]]$col_ind,
-                                            tpar_inds = tparam[[p]]$tpar_inds)
+                  # if the log prior is not -Inf, find the path
+                  if(logprior_prop != -Inf) {
+                        
+                        # insert the parameters into the lna_parameters matrix
+                        pars2lnapars(ode_params_cur, params_prop_nat)
+                        
+                        # compute the time-varying parameters if necessary
+                        if(!is.null(tparam)) {
+                              for(p in seq_along(tparam)) {
+                                    insert_tparam(tcovar    = ode_params_cur,
+                                                  values    = tparam[[p]]$draws2par(
+                                                        parameters = params_prop_nat,
+                                                        draws      = tparam[[p]]$draws_cur),
+                                                  col_ind   = tparam[[p]]$col_ind,
+                                                  tpar_inds = tparam[[p]]$tpar_inds)
+                              }
                         }
+                        
+                        # initialize data log likelihood
+                        loglik_prop <- NULL
+                        
+                        # map the perturbations to an ode path
+                        try({
+                              map_pars_2_ode(
+                                    pathmat           = pathmat_prop,
+                                    ode_times         = ode_times,
+                                    ode_pars          = ode_params_cur,
+                                    init_start        = ode_initdist_inds[1],
+                                    param_update_inds = param_update_inds,
+                                    stoich_matrix     = stoich_matrix,
+                                    forcing_inds      = forcing_inds,
+                                    forcing_matrix    = forcing_matrix,
+                                    ode_pointer       = ode_pointer,
+                                    set_pars_pointer  = ode_set_pars_pointer,
+                                    step_size         = step_size
+                              )
+                              
+                              census_lna(
+                                    path                = pathmat_prop,
+                                    census_path         = censusmat,
+                                    census_inds         = census_indices,
+                                    lna_event_inds      = ode_event_inds,
+                                    flow_matrix_lna     = flow_matrix,
+                                    do_prevalence       = do_prevalence,
+                                    init_state          = ode_params_cur[1, ode_initdist_inds + 1],
+                                    forcing_matrix      = forcing_matrix
+                              )
+                              
+                              # evaluate the density of the incidence counts
+                              evaluate_d_measure_LNA(
+                                    emitmat           = emitmat,
+                                    obsmat            = data,
+                                    censusmat         = censusmat,
+                                    measproc_indmat   = measproc_indmat,
+                                    lna_parameters    = ode_params_cur,
+                                    lna_param_inds    = ode_param_inds,
+                                    lna_const_inds    = ode_const_inds,
+                                    lna_tcovar_inds   = ode_tcovar_inds,
+                                    param_update_inds = param_update_inds,
+                                    census_indices    = census_indices,
+                                    lna_param_vec     = ode_param_vec,
+                                    d_meas_ptr        = d_meas_pointer
+                              )
+                              
+                              # compute the data log likelihood
+                              loglik_prop <- sum(emitmat[,-1][measproc_indmat])
+                              if(is.nan(loglik_prop)) loglik_prop <- -Inf
+                        }, silent = TRUE)
+                        
+                        if(is.null(loglik_prop)) loglik_prop <- -Inf
+                        
+                  } else {
+                        loglik_prop <- -Inf
                   }
-                  
-                  # initialize data log likelihood
-                  loglik_prop <- NULL
-                  
-                  # map the perturbations to an ode path
-                  try({
-                        map_pars_2_ode(
-                              pathmat           = pathmat_prop,
-                              ode_times         = ode_times,
-                              ode_pars          = ode_params_cur,
-                              init_start        = ode_initdist_inds[1],
-                              param_update_inds = param_update_inds,
-                              stoich_matrix     = stoich_matrix,
-                              forcing_inds      = forcing_inds,
-                              forcing_matrix    = forcing_matrix,
-                              ode_pointer       = ode_pointer,
-                              set_pars_pointer  = ode_set_pars_pointer,
-                              step_size         = step_size
-                        )
-                        
-                        census_lna(
-                              path                = pathmat_prop,
-                              census_path         = censusmat,
-                              census_inds         = census_indices,
-                              lna_event_inds      = ode_event_inds,
-                              flow_matrix_lna     = flow_matrix,
-                              do_prevalence       = do_prevalence,
-                              init_state          = ode_params_cur[1, ode_initdist_inds + 1],
-                              forcing_matrix      = forcing_matrix
-                        )
-                        
-                        # evaluate the density of the incidence counts
-                        evaluate_d_measure_LNA(
-                              emitmat           = emitmat,
-                              obsmat            = data,
-                              censusmat         = censusmat,
-                              measproc_indmat   = measproc_indmat,
-                              lna_parameters    = ode_params_cur,
-                              lna_param_inds    = ode_param_inds,
-                              lna_const_inds    = ode_const_inds,
-                              lna_tcovar_inds   = ode_tcovar_inds,
-                              param_update_inds = param_update_inds,
-                              census_indices    = census_indices,
-                              lna_param_vec     = ode_param_vec,
-                              d_meas_ptr        = d_meas_pointer
-                        )
-                        
-                        # compute the data log likelihood
-                        loglik_prop <- sum(emitmat[,-1][measproc_indmat])
-                        if(is.nan(loglik_prop)) loglik_prop <- -Inf
-                  }, silent = TRUE)
-                  
-                  if(is.null(loglik_prop)) loglik_prop <- -Inf
                   
                   # compute log-posterior
                   logpost_prop <- loglik_prop + logprior_prop
@@ -414,7 +436,7 @@ mvn_slice_sampler_ode <-
                   }
             }
             
-            if(!isTRUE(all.equal(lower, upper))) {
+            if((upper - lower) > sqrt(.Machine$double.eps)) {
                   
                   # update vectors of model parameters
                   copy_vec(dest = model_params_est, orig = params_prop_est)

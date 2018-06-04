@@ -7,15 +7,15 @@
 #' @param mcmc_kernel list containing the mcmc_kernel method, proposal
 #'   covariance matrix, and an external pointer for the compiled mcmc_kernel
 #'   function
-#' @param t0_kernel output of \code{t0_kernel}, specifying the RWMH
-#'   transition mcmc_kernel for t0 and the truncated normal distribution prior.
+#' @param t0_kernel output of \code{t0_kernel}, specifying the RWMH transition
+#'   mcmc_kernel for t0 and the truncated normal distribution prior.
 #' @param thin_params thinning interval for posterior parameter samples,
 #'   defaults to 1
 #' @param thin_latent_proc thinning interval for latent paths, defaults to
 #'   ceiling(iterations/100)
 #' @param messages should status messages be generated in an external text file?
-#'   If so, the iteration number is printed whenever the latent process is
-#'   saved.
+#' @param print_progress prints progress every n iterations, defaults to 0 for
+#'   no printing
 #' @param priors a list of named functions for computing the prior density as
 #'   well as transforming parameters to and from their estimation scales. The
 #'   functions should have the following names: "prior_density",
@@ -39,2000 +39,2031 @@ stem_inference_ode <- function(stem_object,
                                thin_latent_proc,
                                initialization_attempts = 500,
                                ess_args = NULL,
+                               print_progress = 0,
                                messages) {
-
-        # if the MCMC is being restarted, save the existing results
-        mcmc_restart <- !is.null(stem_object$results)
-
-        # extract the model objects from the stem_object
-        if (is.function(stem_object$dynamics$parameters)) {
-              par_init_fcn   <- stem_object$dynamics$parameters
-              parameters     <- par_init_fcn()
-              
-              pd <- priors$prior_density(parameters, priors$to_estimation_scale(parameters))
-              par_init_attempt <- 1
-              while(is.infinite(pd) && par_init_attempt <= initialization_attempts) {
-                    parameters <- par_init_fcn()
-                    pd <- priors$prior_density(parameters, priors$to_estimation_scale(parameters))
-                    par_init_attempt <- par_init_attempt + 1
-              }
-              
-              if(is.infinite(pd)) {
-                    stop("Parameters have log prior density of negative infinity. Try another initialization.")
-              }
-              
-        } else {
-              par_init_fcn   <- NULL
-              parameters     <- stem_object$dynamics$parameters
-              pd <- priors$prior_density(parameters, priors$to_estimation_scale(parameters))
-              if(is.infinite(pd)) {
-                    stop("Parameters have log prior density of negative infinity. Try another initialization.")
-              }
-        }
-        
-        # check that the ode pointer is compiled
-        if(is.null(stem_object$dynamics$ode_pointers)) {
-              stop("ODE code is not compiled.")
-        }
-        
-        flow_matrix            <- stem_object$dynamics$flow_matrix_lna
-        stoich_matrix          <- stem_object$dynamics$stoich_matrix_lna
-        ode_pointer            <- stem_object$dynamics$ode_pointers$ode_ptr
-        ode_set_pars_pointer   <- stem_object$dynamics$ode_pointers$set_ode_params_ptr
-        censusmat              <- stem_object$measurement_process$censusmat
-        constants              <- stem_object$dynamics$constants
-        n_compartments         <- ncol(flow_matrix)
-        n_rates                <- nrow(flow_matrix)
-        do_prevalence          <- stem_object$measurement_process$ode_prevalence
-        ode_event_inds         <- stem_object$measurement_process$incidence_codes_ode
-        state_initializer      <- stem_object$dynamics$state_initializer
-        fixed_inits            <- stem_object$dynamics$fixed_inits
-        n_strata               <- stem_object$dynamics$n_strata
-        ode_initdist_inds      <- stem_object$dynamics$ode_initdist_inds
-        initdist_params_cur    <- stem_object$dynamics$initdist_params
-        t0                     <- stem_object$dynamics$t0
-        t0_fixed               <- stem_object$dynamics$t0_fixed
-        step_size              <- stem_object$dynamics$dynamics_args$step_size
-
-        if(mcmc_restart) {
-              tparam <- stem_object$stem_settings$tparam_for_restart
-        } else {
-              tparam <- stem_object$dynamics$tparam
-        }
-        
-        # elliptical slice sampling settings
-        if (is.null(ess_args)) {
-              n_ess_updates <- 1
-              ess_warmup    <- 50
-              tparam_ess_update <- TRUE
-              
-        } else {
-              n_ess_updates <- ess_args$n_ess_updates
-              ess_warmup    <- ess_args$ess_warmup
-              tparam_ess_update <- ess_args$tparam_update
-        }
-        
-        # indices of parameters, constants, and time-varying covariates in the ode_params_* matrices
-        ode_param_inds  <- setdiff(stem_object$dynamics$param_codes, stem_object$dynamics$ode_initdist_inds)
-        ode_const_inds  <- length(stem_object$dynamics$param_codes) + 
-              seq_along(stem_object$dynamics$const_codes) - 1
-        ode_tcovar_inds <- length(stem_object$dynamics$param_codes) + 
-              length(ode_const_inds) + 
-              seq_along(stem_object$dynamics$tcovar_codes) - 1
-
-        # measurement process objects
-        data            <- stem_object$measurement_process$data
-        measproc_indmat <- stem_object$measurement_process$measproc_indmat
-        d_meas_pointer  <- stem_object$measurement_process$meas_pointers_lna$d_measure_ptr
-        obstimes        <- data[, 1]
-
-        # construct prior density functions
-        prior_density         <- priors$prior_density
-        to_estimation_scale   <- priors$to_estimation_scale
-        from_estimation_scale <- priors$from_estimation_scale
-
-        # function for converting concentrations to volumes
-        if(n_strata == 1) {
-                comp_size_vec <- rep(constants["popsize"], n_compartments)
-        } else {
-                strata_sizes  <- constants[paste0("popsize_", sapply(state_initializer,"[[","strata"))]
-                comp_size_vec <- rep(0.0, n_compartments)
-                for(t in seq_len(n_strata)) {
-                        comp_size_vec[state_initializer[[t]]$codes] <- strata_sizes[t]
-                }
-        }
-
-        concs2vols <- function(concentrations, size_vec = comp_size_vec) {
-              ifelse(size_vec != 0, concentrations * size_vec, 0)
-        }
-        vols2concs <- function(volumes, size_vec = comp_size_vec) {
-              ifelse(size_vec != 0, volumes / size_vec, 0)
-        } 
-        
-        initdist_names <- names(stem_object$dynamics$initdist_params)
-        convrec_initprob_names  <- paste0("p_", initdist_names)
-        convrec_initvol_names   <- initdist_names
-
-        # if the initial counts are not fixed, construct the initial distribution prior
-        if(!fixed_inits) {
-
-                acceptances_init <- 0
-
-                # function for sampling the initial compartment counts (independence sampling from prior)
-                initdist_sampler <- 
-                      construct_initdist_sampler_lna(
-                            state_initializer   = state_initializer,
-                            n_strata            = n_strata,
-                            constants           = constants)
-
-                initdist_prior <- 
-                      construct_initdist_prior_lna(
-                            state_initializer = state_initializer,
-                            n_strata          = n_strata,
-                            constants         = constants)
-
-                # initdist params come in as volumes, convert to concentrations
-                initdist_log_prior   <- double(1 + floor(iterations / thin_params))
-                init_volumes_cur     <- initdist_params_cur
-                init_volumes_prop    <- initdist_params_cur
-                initdist_params_cur  <- vols2concs(initdist_params_cur)
-                initdist_params_prop <- initdist_params_cur
-                
-                names(init_volumes_cur) <- 
-                      names(init_volumes_prop) <- convrec_initvol_names
-                
-                names(initdist_params_cur) <- 
-                      names(initdist_params_prop) <- convrec_initprob_names
-        } else {
-
-                acceptances_init         <- NULL
-                initdist_prior           <- NULL
-                initdist_log_prior       <- NULL
-                init_volumes_cur         <- initdist_params_cur # vector of initial compartment volumes
-                initdist_params_cur      <- vols2concs(initdist_params_cur) # vector of initial distribution parameters
-                names(init_volumes_cur)  <- initdist_names
-                initdist_params_prop     <- NULL # vector for storing the proposed compartment counts
-                init_volumes_prop        <- NULL # vector of initial compartment volumes
-                initdist_sampler         <- NULL # function for sampling new values
-        }
-
-        # grab the names of parameters on their natural and estimation scales
-        param_names_nat <- names(parameters)[!names(parameters) %in% c(names(ode_initdist_inds), "t0")]
-        param_names_est <- colnames(mcmc_kernel$sigma)
-        n_model_params  <- length(param_names_est)
-
-        # vectors for storing the model parameters on their natural and estimation scales
-        # model_params_nat -- model parameters on their natural scales
-        # model_params_est -- model parameters on their estimation scales
-        # ode_params_cur   -- matrix containing all model parameters (including initial count params) for all ODE times
-        model_params_nat <- parameters[param_names_nat]
-        model_params_est <- to_estimation_scale(model_params_nat)
-        
-        # check that the functions to and from the estimation scale are 1:1
-        if(!all.equal(unname(model_params_nat),
-                      unname(from_estimation_scale(to_estimation_scale(model_params_nat))))) {
-              stop("The functions that transform parameters to and from their estimation scales must be inverses of one another.")
-        }
-
-        # create analogous vectors for storing the proposed parameter values
-        params_prop_nat  <- double(length(param_names_nat)); copy_vec(params_prop_nat, model_params_nat)
-        params_prop_est  <- double(length(param_names_nat)); copy_vec(params_prop_est, model_params_est)
-        names(params_prop_est) <- names(params_prop_nat) <- param_names_nat
-
-        # generate other derived objects
-        ode_times <-
-              sort(unique(c(obstimes,
-                            stem_object$dynamics$tcovar[, 1],
-                            seq(stem_object$dynamics$t0,
-                                stem_object$dynamics$tmax,
-                                by = stem_object$dynamics$timestep),
-                            stem_object$dynamics$tmax)))
-        
-        n_times           <- length(ode_times)
-        census_indices    <- unique(c(0, findInterval(obstimes, ode_times) - 1))
-        
-        # harss warmup
-        harss_warmup <- as.logical(mcmc_kernel$kernel_settings$harss_warmup > 0)
-        
-        # number of ess/harss warmup iterations
-        warmup_iterations <- max(c(0, ess_warmup, mcmc_kernel$kernel_settings$harss_warmup))
-        
-        # set up harss warmup objects
-        if(harss_warmup) {
-              har_direction_warmup        <- rep(0.0, n_model_params)
-              harss_bracket_width_warmup  <- 1.0
-              n_expansions_harss_warmup   <- 0.5
-              n_contractions_harss_warmup <- 0.5
-        }
-
-        # set up the MCMC kernel
-        if(mcmc_kernel$method == "mvn_rw") {
-
-                acceptances_g <- 0.0
-                sigma_chol    <- chol(mcmc_kernel$sigma)
-
-        } else if(mcmc_kernel$method == "mvn_g_adaptive") {
-
-              # MCMC objects
-              acceptances_g    <- 0.0
-              proposal_scaling <- 1
-              nugget           <- mcmc_kernel$kernel_settings$nugget[1]
-              max_scaling      <- mcmc_kernel$kernel_settings$max_scaling
-              target_g         <- mcmc_kernel$kernel_settings$target_g
-              
-              adaptations      <- 
-                    mcmc_kernel$kernel_settings$scale_constant *
-                    (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
-              
-              warmup_adaptations <- 
-                    mcmc_kernel$kernel_settings$scale_constant *
-                    (seq(0, warmup_iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
-              
-              if (is.null(mcmc_kernel$kernel_settings$stop_adaptation)) {
-                    stop_adaptation <- iterations + 1
-              } else {
-                    stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 1
-              }
-              
-              # empirical mean and covariance of the adaptive kernel
-              kernel_resid <- double(n_model_params) # already initialized to 0
-              kernel_mean  <- double(n_model_params)
-              copy_vec(kernel_mean, model_params_est)
-              
-              kernel_cov      <- diag(1, n_model_params)
-              kernel_cov_chol <- diag(1,n_model_params)
-              copy_mat(kernel_cov, mcmc_kernel$sigma)
-              comp_chol(kernel_cov_chol, kernel_cov)
-              
-              # Adaptation record objects
-              adaptation_scale_record <-
-                    rep(1.0, nrow = floor(iterations / thin_params) + 1)
-              
-              kernel_cov_record <-
-                    array(0.0,
-                          dim = c(
-                                n_model_params,
-                                n_model_params,
-                                floor(iterations / thin_params) + 1
-                          ))
-              
-              adaptation_scale_record[1] <- proposal_scaling
-              kernel_cov_record[, , 1]   <- kernel_cov
-              
-        } else if (mcmc_kernel$method == "afss") {
-              
-              # adaptation schedule
-              if (is.null(mcmc_kernel$kernel_settings$stop_adaptation)) {
-                    stop_adaptation <- iterations + 1
-              } else {
-                    stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 1
-              }
-              
-              # sequence for adaptation factors
-              bracket_step  <- mcmc_kernel$kernel_settings$step_size
-              bracket_cool  <- mcmc_kernel$kernel_settings$scale_cooling
-              bracket_scale <- mcmc_kernel$kernel_settings$scale_constant
-              
-              adaptations      <-
-                    mcmc_kernel$kernel_settings$scale_constant *
-                    (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
-              
-              warmup_adaptations <- 
-                    mcmc_kernel$kernel_settings$scale_constant *
-                    (seq(0, ess_warmup) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
-              
-              # slice interval width update interval
-              interval_update_ind <- 2
-              
-              # empirical mean and covariance of the target
-              kernel_resid <- double(n_model_params) # already initialized to 0
-              kernel_mean  <- double(n_model_params)
-              copy_vec(kernel_mean, model_params_est)
-              
-              # kernel covariance
-              kernel_cov   <- diag(1, n_model_params)
-              copy_mat(kernel_cov, mcmc_kernel$sigma)
-              
-              # interval widths, expansions, and contractions
-              if(is.null(mcmc_kernel$kernel_settings$afss_setting_list)) {
-                    
-                    factor_update_interval <- n_model_params
-                    prob_update_interval   <- n_model_params
-                    first_factor_update    <- 100
-                    first_prob_update      <- 100
-                    n_afss_updates         <- n_model_params
-                    target_prop_totsd      <- NULL
-                    slice_probs            <- rep(1.0, n_model_params) # sample all factors initially
-                    factor_update_interval_fcn <- prob_update_interval_fcn <- NULL
-                    sample_all_initially   <- TRUE
-                    interval_widths        <- rep(1.0, n_model_params)
-                    harss_prob             <- 0.05
-                    harss_warmup           <- TRUE
-                    n_contractions_afss    <- rep(0.5, n_model_params)
-                    n_expansions_afss      <- rep(0.5, n_model_params)
-                    c_contractions_afss    <- rep(0.5, n_model_params)
-                    c_expansions_afss      <- rep(0.5, n_model_params)
-                    slice_ratios           <- rep(0.5, n_model_params)
-                    
-              } else {
-                    
-                    afss_setting_list <- mcmc_kernel$kernel_settings$afss_setting_list
-                    
-                    # afss settings
-                    first_factor_update  <- afss_setting_list$first_factor_update + 1
-                    first_prob_update    <- afss_setting_list$first_prob_update + 1
-                    initial_slice_probs  <- afss_setting_list$initial_slice_probs
-                    sample_all_initially <- afss_setting_list$sample_all_initially
-                    harss_prob           <- afss_setting_list$harss_prob
-                    harss_warmup         <- afss_setting_list$harss_warmup
-                    interval_widths      <- afss_setting_list$initial_widths
-                    target_prop_totsd    <- afss_setting_list$target_prop_totsd
-                    afss_slice_ratio     <- afss_setting_list$afss_slice_ratio
-                    n_contractions_afss  <- rep(0.5, n_model_params)
-                    n_expansions_afss    <- rep(0.5, n_model_params)
-                    c_contractions_afss  <- rep(0.5, n_model_params)
-                    c_expansions_afss    <- rep(0.5, n_model_params)
-                    slice_ratios         <- rep(0.5, n_model_params)
-                    
-                    if(is.null(interval_widths)) interval_widths <- rep(1.0, n_model_params)
-                    
-                    if(is.null(afss_setting_list$n_afss_updates)) {
-                          afss_setting_list$n_afss_updates <- n_model_params
-                          n_afss_updates <- afss_setting_list$n_afss_updates
-                    } else {
-                          n_afss_updates <- afss_setting_list$n_afss_updates
-                    }
-                    
-                    if(is.null(afss_setting_list$factor_update_interval)) {
-                          
-                          afss_setting_list$factor_update_interval <-  n_model_params
-                          factor_update_interval     <- afss_setting_list$factor_update_interval
-                          factor_update_interval_fcn <- NULL
-                          
-                    } else if(!is.function(afss_setting_list$factor_update_interval)) {
-                          
-                          factor_update_interval <- afss_setting_list$factor_update_interval
-                          factor_update_interval_fcn <- NULL
-                          
-                    } else {
-                          factor_update_interval_fcn <-
-                                afss_setting_list$factor_update_interval
-                          factor_update_interval <- factor_update_interval_fcn()
-                    }
-                    
-                    if(is.null(afss_setting_list$prob_update_interval)) {
-                          afss_setting_list$prob_update_interval <- n_model_params
-                          prob_update_interval     <- afss_setting_list$prob_update_interval
-                          prob_update_interval_fcn <- NULL
-                          
-                    } else if(!is.function(afss_setting_list$prob_update_interval)) {
-                          prob_update_interval <- afss_setting_list$prob_update_interval
-                          prob_update_interval_fcn <- NULL
-                    } else {
-                          prob_update_interval_fcn <-
-                                afss_setting_list$prob_update_interval
-                          prob_update_interval <- prob_update_interval_fcn()
-                    }
-                    
-                    # set defaults for the initial widths, slice directions, and sampling weights
-                    if(is.null(initial_slice_probs)) {
-                          afss_setting_list$initial_slice_probs <- rep(1.0, n_model_params)
-                          slice_probs <- rep(1.0, n_model_params)
-                    } else {
-                          slice_probs <- initial_slice_probs
-                    }
-              }
-              
-              # kernel nugget
-              nugget <- mcmc_kernel$kernel_settings$nugget
-              
-              # singular value decomposition of the initial covariance matrix
-              e               <- eigen(kernel_cov)
-              slice_eigenvals <- e$values
-              slice_eigenvecs <- e$vectors
-              
-              # set up hit and run slice sampler settings
-              n_harss_updates     <- 1
-              har_direction       <- rep(0.0, n_model_params)
-              harss_bracket_width <- exp(mean(log(interval_widths)))
-              
-              # for adaptive the hit-and-run proposal
-              n_expansions_harss   <- 0.5
-              n_contractions_harss <- 0.5
-              
-              # should a harss update be attempted
-              do_harss_update <- 
-                    (n_afss_updates != n_model_params) |
-                    !is.null(target_prop_totsd)
-              
-              # objects for saving the adaptation history
-              kernel_cov_record <-
-                    array(0.0,
-                          dim = c(
-                                n_model_params,
-                                n_model_params,
-                                floor(iterations / thin_params) + 1
-                          ))
-              
-              # save initial values for factors, weight
-              kernel_cov_record[,,1] <- kernel_cov
-              
-        } else if (mcmc_kernel$method == "harss") {
-              
-              # adaptation schedule
-              if (is.null(mcmc_kernel$kernel_settings$stop_adaptation)) {
-                    stop_adaptation <- iterations + 1
-              } else {
-                    stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 1
-              }
-              
-              # sequence for adaptation factors
-              bracket_step  <- mcmc_kernel$kernel_settings$step_size
-              bracket_cool  <- mcmc_kernel$kernel_settings$scale_cooling
-              bracket_scale <- mcmc_kernel$kernel_settings$scale_constant 
-              
-              adaptations      <-
-                    mcmc_kernel$kernel_settings$scale_constant *
-                    (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
-              
-              warmup_adaptations <- 
-                    mcmc_kernel$kernel_settings$scale_constant *
-                    (seq(0, ess_warmup) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
-              
-              # interval widths, expansions, and contractions
-              if(is.null(mcmc_kernel$kernel_settings$harss_setting_list)) {
-                    harss_setting_list <- harss_settings()
-                    
-              } else {
-                    harss_setting_list <- mcmc_kernel$kernel_settings$harss_setting_list
-              }
-              
-              # extract list settings
-              n_harss_updates <- harss_setting_list$n_harss_updates
-              
-              # vector for direction proposal
-              har_direction <- rep(0.0, n_model_params)
-              
-              # initial bracket width
-              harss_bracket_width <- 1.0
-              
-              # for adaptive the hit-and-run proposal
-              n_expansions_harss   <- 0.5
-              n_contractions_harss <- 0.5
-              
-              # empirical mean and covariance of the target
-              kernel_resid <- double(n_model_params) # already initialized to 0
-              kernel_mean  <- double(n_model_params)
-              copy_vec(kernel_mean, model_params_est)
-              
-              # kernel covariance
-              kernel_cov <- diag(1, n_model_params)
-              
-        } else if (mcmc_kernel$method == "mvnss") {
-              
-              # adaptation schedule
-              if (is.null(mcmc_kernel$kernel_settings$stop_adaptation)) {
-                    stop_adaptation <- iterations + 1
-              } else {
-                    stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 1
-              }
-              
-              # sequence for adaptation factors
-              bracket_step  <- mcmc_kernel$kernel_settings$step_size
-              bracket_cool  <- mcmc_kernel$kernel_settings$scale_cooling
-              bracket_scale <- mcmc_kernel$kernel_settings$scale_constant
-              
-              adaptations      <-
-                    mcmc_kernel$kernel_settings$scale_constant *
-                    (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
-              
-              warmup_adaptations <- 
-                    mcmc_kernel$kernel_settings$scale_constant *
-                    (seq(0, warmup_iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
-              
-              # interval widths, expansions, and contractions
-              if(is.null(mcmc_kernel$kernel_settings$mvnss_setting_list)) {
-                    mvnss_setting_list <- mvnss_settings()
-                    
-              } else {
-                    mvnss_setting_list <- mcmc_kernel$kernel_settings$mvnss_setting_list
-              }
-              
-              # extract list settings
-              n_mvnss_updates     <- mvnss_setting_list$n_mvnss_updates
-              cov_update_interval <- mvnss_setting_list$cov_update_interval
-              mvnss_bracket_width <- mvnss_setting_list$initial_bracket_width
-              
-              # nugget
-              nugget <- mcmc_kernel$kernel_settings$nugget
-              
-              # vector for direction proposal
-              har_direction <- rep(0.0, n_model_params)
-              mvn_direction <- rep(0.0, n_model_params)
-              mvnss_propvec <- rep(0.0, n_model_params)
-              
-              # for adaptive the hit-and-run proposal
-              n_expansions_mvnss   <- 0.5
-              n_contractions_mvnss <- 0.5
-              
-              # empirical mean and covariance of the target
-              kernel_resid <- double(n_model_params) # already initialized to 0
-              kernel_mean  <- double(n_model_params)
-              copy_vec(kernel_mean, model_params_est)
-              
-              # kernel covariance
-              kernel_cov <- diag(1, n_model_params)
-              copy_mat(kernel_cov, mcmc_kernel$sigma)
-              
-              # cholesky decomposition of the covariance
-              kernel_cov_chol <- chol(kernel_cov)
-              
-              # objects for saving the adaptation history
-              kernel_cov_record <-
-                    array(0.0,
-                          dim = c(
-                                n_model_params,
-                                n_model_params,
-                                floor(iterations / thin_params) + 1
-                          ))
-              
-              # save initial values for factors, weight
-              kernel_cov_record[,,1] <- kernel_cov
-        }
-
-        # set up objects for sampling t0 if it is not fixed
-        if(!t0_fixed) {
-                t0_name      <- names(stem_object$dynamics$t0)
-                t0_prop      <- double(1)
-                t0_log_prior <- double(1 + floor(iterations / thin_params))
-
-                # set the truncation points for the t0 mcmc_kernel if not fixed
-                t0_kernel$upper <- min(t0_kernel$upper, min(stem_object$measurement_process$obstimes))
-                t0_kernel$lower <- max(t0_kernel$lower, -Inf)
-        } else {
-                t0           <- NULL
-                t0_prop      <- NULL
-                t0_log_prior <- NULL
-                t0_name      <- NULL
-        }
-
-        # matrix for storing the model parameters
-        ode_params_cur    <- matrix(0.0,
-                                    nrow = length(ode_times),
-                                    ncol = length(stem_object$dynamics$ode_rates$ode_param_codes),
-                                    dimnames = list(NULL, names(stem_object$dynamics$ode_rates$ode_param_codes)))
-        ode_params_prop   <- matrix(0.0,
-                                    nrow = length(ode_times),
-                                    ncol = length(stem_object$dynamics$ode_rates$ode_param_codes),
-                                    dimnames = list(NULL, names(stem_object$dynamics$ode_rates$ode_param_codes)))
-
-        # insert the ode parameters into the parameter matrix
-        pars2lnapars(ode_params_cur, c(model_params_nat, t0, init_volumes_cur))
-        pars2lnapars(ode_params_prop, c(params_prop_nat, t0_prop, init_volumes_prop))
-
-        # get column indices for constants and time-varying covariates
-        const_inds  <- seq_along(stem_object$dynamics$const_codes) + length(stem_object$dynamics$param_codes)
-        tcovar_inds <- (max(const_inds)+1):ncol(ode_params_cur)
-
-        # insert the constants
-        ode_params_cur[,const_inds]  <- matrix(stem_object$dynamics$constants,
-                                               nrow = nrow(ode_params_cur),
-                                               ncol = length(const_inds), byrow = T)
-
-        ode_params_prop[,const_inds] <- matrix(stem_object$dynamics$constants,
-                                               nrow = nrow(ode_params_cur),
-                                               ncol = length(const_inds), byrow = T)
-
-        # insert time varying covariates
-        if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
-                tcovar_rowinds <- findInterval(ode_times, stem_object$dynamics$tcovar[, 1], left.open = F)
-                ode_params_cur[tcovar_rowinds, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
-                ode_params_prop[tcovar_rowinds,tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
-        }
-        
-        # get indices for time-varying parameters
-        if (!is.null(tparam)) {
-              
-              # grab the indices and update scheme
-              tparam_inds <-
-                    stem_object$dynamics$ode_rates$ode_param_codes[sapply(tparam, function(x) x$tparam_name)]
-              
-              # for recording the number of ESS updates for tparams
-              if (!tparam_ess_update) {
-                    tparam_ess  <- 1
-              } else {
-                    tparam_ess <- NULL
-              }
-              
-              # verify whether the mcmc is being restarted
-              if (!mcmc_restart) {
-                    
-                    # generate the indices for updating the time-varying parameter and initialize the values
-                    for (s in seq_along(tparam)) {
-                          
-                          # can get rid of the values slot
-                          tparam[[s]]$values <- NULL
-                          
-                          # indices
-                          tparam[[s]]$col_ind   <-
-                                stem_object$dynamics$ode_rates$ode_param_codes[tparam[[s]]$tparam_name]
-                          tparam[[s]]$tpar_inds <-
-                                findInterval(ode_times, tparam[[s]]$times, left.open = F) - 1
-                          tparam[[s]]$tpar_inds[tparam[[s]]$tpar_inds == -1] <- 0
-                          
-                          # values
-                          tparam[[s]]$draws_cur  <- rep(0.0, length(tparam[[s]]$times))
-                          tparam[[s]]$draws_prop <- rep(0.0, length(tparam[[s]]$times))
-                          tparam[[s]]$draws_ess  <- rep(0.0, length(tparam[[s]]$times))
-                          tparam[[s]]$log_lik    <- sum(dnorm(tparam[[s]]$draws_cur, log = TRUE))
-                          
-                          # get values
-                          insert_tparam(tcovar    = ode_params_cur,
-                                        values    = tparam[[s]]$draws2par(
-                                              parameters = model_params_nat,
-                                              draws = tparam[[s]]$draws_cur),
-                                        col_ind   = tparam[[s]]$col_ind,
-                                        tpar_inds = tparam[[s]]$tpar_inds)
-                          
-                          # copy into ode_params_prop
-                          copy_col(
-                                dest = ode_params_prop,
-                                orig = ode_params_cur,
-                                ind  = tparam[[s]]$col_ind
-                          )
-                    }
-              } else {
-                    
-                    # if restarting, just copy the values into the parameter matrices
-                    for (s in seq_along(tparam)) {
-                          
-                          # get values
-                          insert_tparam(tcovar    = ode_params_cur,
-                                        values    = tparam[[s]]$draws2par(
-                                              parameters = model_params_nat,
-                                              draws = tparam[[s]]$draws_cur),
-                                        col_ind   = tparam[[s]]$col_ind,
-                                        tpar_inds = tparam[[s]]$tpar_inds)
-                          
-                          # copy into ode_params_prop
-                          copy_col(dest = ode_params_prop,
-                                   orig = ode_params_cur,
-                                   ind  = tparam[[s]]$col_ind)
-                    }
-              }
-        } else {
-              tparam <- NULL
-        }
-        
-        # indices for when to update the parameters
-        param_update_inds <- rep(FALSE, length(ode_times)); param_update_inds[1] <- TRUE
-        
-        if(!is.null(stem_object$dynamics$tcovar)) {
-              param_update_inds[ode_times %in% stem_object$dynamics$tcovar[,1]] <- TRUE
-        }
-        
-        if(!is.null(tparam)) {
-              for(s in seq_along(tparam)) {
-                    param_update_inds[ode_times %in% tparam[[s]]$times] <- TRUE
-              }      
-        }
-        
-        if(length(param_update_inds) == nrow(stem_object$dynamics$tcovar_changemat)) {
-              param_update_inds <- param_update_inds | apply(stem_object$dynamics$tcovar_changemat, 1, any)
-        }
-
-        # generate forcing indices and forcing matrix if required
-        forcing_matrix <- matrix(0.0,
-                                 nrow = length(ode_times),
-                                 ncol = length(stem_object$dynamics$comp_codes),
-                                 dimnames = list(NULL, names(stem_object$dynamics$comp_codes)))
-
-        forcing_inds   <- rep(FALSE, length(ode_times))
-
-        if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
-
-                # get the forcing indices (supplied in the original tcovar matrix)
-                forcing_inds <- as.logical(match(round(ode_times, digits = 8),
-                                                 round(stem_object$dynamics$dynamics_args$tcovar[,1], digits = 8),
-                                                 nomatch = FALSE))
-                zero_inds    <- !forcing_inds
-
-                # zero out the tcovar elements corresponding to times with no forcings
-                for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
-                        ode_params_cur[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]  = 0
-                        ode_params_prop[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] = 0
-                }
-
-                for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
-
-                        # insert the flow into the forcing matrix
-                        forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$from] <-
-                                forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$from] -
-                                stem_object$dynamics$dynamics_args$tcovar[, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]
-
-                        forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$to] <-
-                                forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$to] +
-                                stem_object$dynamics$dynamics_args$tcovar[, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]
-
-                        # update the adjacency matrix to indicate which rates need to be updated
-                        affected_rates <- rep(FALSE, nrow(stem_object$dynamics$tcovar_adjmat))
-
-                        for(n in seq_along(stem_object$dynamics$rates)) {
-                                affected_rates[n] = 
-                                      grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$from,
-                                            stem_object$dynamics$rates[[n]]$unparsed) |
-                                      grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$to,
-                                            stem_object$dynamics$rates[[n]]$unparsed)
-                        }
-
-                        stem_object$dynamics$tcovar_adjmat[,stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] <-
-                                xor(stem_object$dynamics$tcovar_adjmat[,stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name],
-                                    affected_rates)
-                }
-
-                forcing_matrix <- t(forcing_matrix)
-        }
-
-        # matrix in which to store the emission probabilities
-        emitmat <- cbind(data[, 1, drop = F],
-                         matrix(0.0, 
-                                nrow = nrow(measproc_indmat),
-                                ncol = ncol(measproc_indmat),
-                                dimnames = list(NULL, colnames(measproc_indmat))
-                         ))
-
-        pathmat_prop <- cbind(ode_times,
-                         matrix(0.0, 
-                                nrow = length(ode_times), 
-                                ncol = nrow(flow_matrix),
-                                dimnames = list(NULL, c(rownames(flow_matrix)))))
-
-        # set up MCMC objects
-        parameter_samples_nat <-
-                matrix(0.0,
-                       nrow = 1 + floor(iterations / thin_params),
-                       ncol = n_model_params + as.numeric(!t0_fixed) + n_compartments,
-                       dimnames = list(NULL, c(names(model_params_nat), t0_name, convrec_initprob_names)))
-
-        parameter_samples_est <-
-                matrix(0.0,
-                       nrow = 1 + floor(iterations / thin_params),
-                       ncol = n_model_params + as.numeric(!t0_fixed) + n_compartments,
-                       dimnames = list(NULL, c(param_names_est, t0_name, convrec_initvol_names)))
-        
-        if (!is.null(tparam)) {
-              tparam_samples <-
-                    array(0.0, 
-                          dim = c(n_times, length(tparam), 1 + floor(iterations / thin_params)))
-        } else {
-              tparam_samples <- NULL
-        }
-
-        ode_paths <- 
-              array(0.0, dim = c(n_times, 1 + n_rates, 1 + floor(iterations / thin_latent_proc)))
-        
-        colnames(ode_paths) <- c("time", rownames(flow_matrix))
-
-        data_log_lik      <- double(1 + floor(iterations / thin_params))
-        params_log_prior  <- double(1 + floor(iterations / thin_params))
-        
-        if (!is.null(tparam)) {
-              tparam_log_lik <-
-                    matrix(0.0,
-                           nrow = 1 + floor(iterations / thin_params),
-                           ncol = length(tparam),
-                           dimnames = list(NULL, paste0(sapply(tparam, function(x) x$tparam_name),"_loglik")))
-              
-              tparam_ess_record <- rep(1, floor(iterations / thin_params))
-              
-        } else {
-              tparam_log_lik <- NULL
-              tparam_ess_record <- NULL
-        }
-        
-        # initialize the lna_param_vec for the measurement process
-        ode_param_vec <- ode_params_cur[1,]
-
-        # initialize the latent path
-        path <- NULL
-        if(mcmc_restart) {
-
-                # extract the path
-                assign("path", stem_object$stem_settings$path_for_restart)
-                data_log_lik_prop <- NULL
-
-                # recompute the data log likelihood
-                try({
-                        census_lna(
-                                path                = path$ode_path,
-                                census_path         = censusmat,
-                                census_inds         = census_indices,
-                                lna_event_inds      = ode_event_inds,
-                                flow_matrix_lna     = t(stoich_matrix),
-                                do_prevalence       = do_prevalence,
-                                init_state          = init_volumes_cur,
-                                forcing_matrix      = forcing_matrix
+      
+      # if the MCMC is being restarted, save the existing results
+      mcmc_restart <- !is.null(stem_object$results)
+      
+      # extract the model objects from the stem_object
+      if (is.function(stem_object$dynamics$parameters)) {
+            par_init_fcn   <- stem_object$dynamics$parameters
+            parameters     <- par_init_fcn()
+            
+            pd <- priors$prior_density(parameters, priors$to_estimation_scale(parameters))
+            par_init_attempt <- 1
+            while(is.infinite(pd) && par_init_attempt <= initialization_attempts) {
+                  parameters <- par_init_fcn()
+                  pd <- priors$prior_density(parameters, priors$to_estimation_scale(parameters))
+                  par_init_attempt <- par_init_attempt + 1
+            }
+            
+            if(is.infinite(pd)) {
+                  stop("Parameters have log prior density of negative infinity. Try another initialization.")
+            }
+            
+      } else {
+            par_init_fcn   <- NULL
+            parameters     <- stem_object$dynamics$parameters
+            pd <- priors$prior_density(parameters, priors$to_estimation_scale(parameters))
+            if(is.infinite(pd)) {
+                  stop("Parameters have log prior density of negative infinity. Try another initialization.")
+            }
+      }
+      
+      # check that the ode pointer is compiled
+      if(is.null(stem_object$dynamics$ode_pointers)) {
+            stop("ODE code is not compiled.")
+      }
+      
+      # progress printing interval
+      if(print_progress != 0) {
+            progress_interval <- print_progress
+            print_progress <- TRUE
+      } else {
+            progress_interval <- NULL
+            print_progress <- FALSE
+      }
+      
+      flow_matrix            <- stem_object$dynamics$flow_matrix_lna
+      stoich_matrix          <- stem_object$dynamics$stoich_matrix_lna
+      ode_pointer            <- stem_object$dynamics$ode_pointers$ode_ptr
+      ode_set_pars_pointer   <- stem_object$dynamics$ode_pointers$set_ode_params_ptr
+      censusmat              <- stem_object$measurement_process$censusmat
+      constants              <- stem_object$dynamics$constants
+      n_compartments         <- ncol(flow_matrix)
+      n_rates                <- nrow(flow_matrix)
+      do_prevalence          <- stem_object$measurement_process$ode_prevalence
+      ode_event_inds         <- stem_object$measurement_process$incidence_codes_ode
+      state_initializer      <- stem_object$dynamics$state_initializer
+      fixed_inits            <- stem_object$dynamics$fixed_inits
+      n_strata               <- stem_object$dynamics$n_strata
+      ode_initdist_inds      <- stem_object$dynamics$ode_initdist_inds
+      initdist_params_cur    <- stem_object$dynamics$initdist_params
+      t0                     <- stem_object$dynamics$t0
+      t0_fixed               <- stem_object$dynamics$t0_fixed
+      step_size              <- stem_object$dynamics$dynamics_args$step_size
+      
+      if(mcmc_restart) {
+            tparam <- stem_object$stem_settings$tparam_for_restart
+      } else {
+            tparam <- stem_object$dynamics$tparam
+      }
+      
+      # elliptical slice sampling settings
+      if (is.null(ess_args)) {
+            n_ess_updates <- 1
+            ess_warmup    <- 50
+            tparam_ess_update <- TRUE
+            
+      } else {
+            n_ess_updates <- ess_args$n_ess_updates
+            ess_warmup    <- ess_args$ess_warmup
+            tparam_ess_update <- ess_args$tparam_update
+      }
+      
+      # indices of parameters, constants, and time-varying covariates in the ode_params_* matrices
+      ode_param_inds  <- setdiff(stem_object$dynamics$param_codes, stem_object$dynamics$ode_initdist_inds)
+      ode_const_inds  <- length(stem_object$dynamics$param_codes) + 
+            seq_along(stem_object$dynamics$const_codes) - 1
+      ode_tcovar_inds <- length(stem_object$dynamics$param_codes) + 
+            length(ode_const_inds) + 
+            seq_along(stem_object$dynamics$tcovar_codes) - 1
+      
+      # measurement process objects
+      data            <- stem_object$measurement_process$data
+      measproc_indmat <- stem_object$measurement_process$measproc_indmat
+      d_meas_pointer  <- stem_object$measurement_process$meas_pointers_lna$d_measure_ptr
+      obstimes        <- data[, 1]
+      
+      # construct prior density functions
+      prior_density         <- priors$prior_density
+      to_estimation_scale   <- priors$to_estimation_scale
+      from_estimation_scale <- priors$from_estimation_scale
+      
+      # function for converting concentrations to volumes
+      if(n_strata == 1) {
+            comp_size_vec <- rep(constants["popsize"], n_compartments)
+      } else {
+            strata_sizes  <- constants[paste0("popsize_", sapply(state_initializer,"[[","strata"))]
+            comp_size_vec <- rep(0.0, n_compartments)
+            for(t in seq_len(n_strata)) {
+                  comp_size_vec[state_initializer[[t]]$codes] <- strata_sizes[t]
+            }
+      }
+      
+      concs2vols <- function(concentrations, size_vec = comp_size_vec) {
+            ifelse(size_vec != 0, concentrations * size_vec, 0)
+      }
+      vols2concs <- function(volumes, size_vec = comp_size_vec) {
+            ifelse(size_vec != 0, volumes / size_vec, 0)
+      } 
+      
+      initdist_names <- names(stem_object$dynamics$initdist_params)
+      convrec_initprob_names  <- paste0("p_", initdist_names)
+      convrec_initvol_names   <- initdist_names
+      
+      # if the initial counts are not fixed, construct the initial distribution prior
+      if(!fixed_inits) {
+            
+            acceptances_init <- 0
+            
+            # function for sampling the initial compartment counts (independence sampling from prior)
+            initdist_sampler <- 
+                  construct_initdist_sampler_lna(
+                        state_initializer   = state_initializer,
+                        n_strata            = n_strata,
+                        constants           = constants)
+            
+            initdist_prior <- 
+                  construct_initdist_prior_lna(
+                        state_initializer = state_initializer,
+                        n_strata          = n_strata,
+                        constants         = constants)
+            
+            # initdist params come in as volumes, convert to concentrations
+            initdist_log_prior   <- double(1 + floor(iterations / thin_params))
+            init_volumes_cur     <- initdist_params_cur
+            init_volumes_prop    <- initdist_params_cur
+            initdist_params_cur  <- vols2concs(initdist_params_cur)
+            initdist_params_prop <- initdist_params_cur
+            
+            names(init_volumes_cur) <- 
+                  names(init_volumes_prop) <- convrec_initvol_names
+            
+            names(initdist_params_cur) <- 
+                  names(initdist_params_prop) <- convrec_initprob_names
+      } else {
+            
+            acceptances_init         <- NULL
+            initdist_prior           <- NULL
+            initdist_log_prior       <- NULL
+            init_volumes_cur         <- initdist_params_cur # vector of initial compartment volumes
+            initdist_params_cur      <- vols2concs(initdist_params_cur) # vector of initial distribution parameters
+            names(init_volumes_cur)  <- initdist_names
+            initdist_params_prop     <- NULL # vector for storing the proposed compartment counts
+            init_volumes_prop        <- NULL # vector of initial compartment volumes
+            initdist_sampler         <- NULL # function for sampling new values
+      }
+      
+      # grab the names of parameters on their natural and estimation scales
+      param_names_nat <- names(parameters)[!names(parameters) %in% c(names(ode_initdist_inds), "t0")]
+      param_names_est <- colnames(mcmc_kernel$sigma)
+      n_model_params  <- length(param_names_est)
+      
+      # vectors for storing the model parameters on their natural and estimation scales
+      # model_params_nat -- model parameters on their natural scales
+      # model_params_est -- model parameters on their estimation scales
+      # ode_params_cur   -- matrix containing all model parameters (including initial count params) for all ODE times
+      model_params_nat <- parameters[param_names_nat]
+      model_params_est <- to_estimation_scale(model_params_nat)
+      
+      # check that the functions to and from the estimation scale are 1:1
+      if(!all.equal(unname(model_params_nat),
+                    unname(from_estimation_scale(to_estimation_scale(model_params_nat))))) {
+            stop("The functions that transform parameters to and from their estimation scales must be inverses of one another.")
+      }
+      
+      # create analogous vectors for storing the proposed parameter values
+      params_prop_nat  <- double(length(param_names_nat)); copy_vec(params_prop_nat, model_params_nat)
+      params_prop_est  <- double(length(param_names_nat)); copy_vec(params_prop_est, model_params_est)
+      names(params_prop_est) <- names(params_prop_nat) <- param_names_nat
+      
+      # generate other derived objects
+      ode_times <-
+            sort(unique(c(obstimes,
+                          stem_object$dynamics$tcovar[, 1],
+                          seq(stem_object$dynamics$t0,
+                              stem_object$dynamics$tmax,
+                              by = stem_object$dynamics$timestep),
+                          stem_object$dynamics$tmax)))
+      
+      n_times           <- length(ode_times)
+      census_indices    <- unique(c(0, findInterval(obstimes, ode_times) - 1))
+      
+      # harss warmup
+      harss_warmup <- as.logical(mcmc_kernel$kernel_settings$harss_warmup > 0)
+      
+      # number of ess/harss warmup iterations
+      warmup_iterations <- max(c(0, ess_warmup, mcmc_kernel$kernel_settings$harss_warmup))
+      
+      # set up harss warmup objects
+      if(harss_warmup) {
+            har_direction_warmup        <- rep(0.0, n_model_params)
+            harss_bracket_width_warmup  <- 1.0
+            n_expansions_harss_warmup   <- 0.5
+            n_contractions_harss_warmup <- 0.5
+            warmup_bracket_min          <- 0.01 * mcmc_kernel$kernel_settings$nugget[1]
+            warmup_bracket_max          <- Inf
+      }
+      
+      # set up the MCMC kernel
+      if(mcmc_kernel$method == "mvn_rw") {
+            
+            acceptances_g <- 0.0
+            sigma_chol    <- chol(mcmc_kernel$sigma)
+            
+      } else if(mcmc_kernel$method == "mvn_g_adaptive") {
+            
+            # MCMC objects
+            acceptances_g    <- 0.0
+            proposal_scaling <- 1
+            nugget           <- mcmc_kernel$kernel_settings$nugget[1]
+            max_scaling      <- mcmc_kernel$kernel_settings$max_scaling
+            target_g         <- mcmc_kernel$kernel_settings$target_g
+            
+            adaptations      <- 
+                  mcmc_kernel$kernel_settings$scale_constant *
+                  (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+            
+            warmup_adaptations <- 
+                  mcmc_kernel$kernel_settings$scale_constant *
+                  (seq(0, warmup_iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+            
+            if (is.null(mcmc_kernel$kernel_settings$stop_adaptation)) {
+                  stop_adaptation <- iterations + 1
+            } else {
+                  stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 1
+            }
+            
+            # empirical mean and covariance of the adaptive kernel
+            kernel_resid <- double(n_model_params) # already initialized to 0
+            kernel_mean  <- double(n_model_params)
+            copy_vec(kernel_mean, model_params_est)
+            
+            kernel_cov      <- diag(1, n_model_params)
+            kernel_cov_chol <- diag(1,n_model_params)
+            copy_mat(kernel_cov, mcmc_kernel$sigma)
+            comp_chol(kernel_cov_chol, kernel_cov)
+            
+            # Adaptation record objects
+            adaptation_scale_record <-
+                  rep(1.0, nrow = floor(iterations / thin_params) + 1)
+            
+            kernel_cov_record <-
+                  array(0.0,
+                        dim = c(
+                              n_model_params,
+                              n_model_params,
+                              floor(iterations / thin_params) + 1
+                        ))
+            
+            adaptation_scale_record[1] <- proposal_scaling
+            kernel_cov_record[, , 1]   <- kernel_cov
+            
+      } else if (mcmc_kernel$method == "afss") {
+            
+            # adaptation schedule
+            if (is.null(mcmc_kernel$kernel_settings$stop_adaptation)) {
+                  stop_adaptation <- iterations + 1
+            } else {
+                  stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 1
+            }
+            
+            # sequence for adaptation factors
+            adaptations      <-
+                  mcmc_kernel$kernel_settings$scale_constant *
+                  (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+            
+            warmup_adaptations <- 
+                  mcmc_kernel$kernel_settings$scale_constant *
+                  (seq(0, ess_warmup) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+            
+            # slice interval width update interval
+            interval_update_ind <- 2
+            
+            # empirical mean and covariance of the target
+            kernel_resid <- double(n_model_params) # already initialized to 0
+            kernel_mean  <- double(n_model_params)
+            copy_vec(kernel_mean, model_params_est)
+            
+            # kernel covariance
+            kernel_cov   <- diag(1, n_model_params)
+            copy_mat(kernel_cov, mcmc_kernel$sigma)
+            
+            # interval widths, expansions, and contractions
+            if(is.null(mcmc_kernel$kernel_settings$afss_setting_list)) {
+                  
+                  factor_update_interval <- n_model_params
+                  prob_update_interval   <- n_model_params
+                  first_factor_update    <- 100
+                  first_prob_update      <- 100
+                  n_afss_updates         <- n_model_params
+                  target_prop_totsd      <- NULL
+                  slice_probs            <- rep(1.0, n_model_params) # sample all factors initially
+                  factor_update_interval_fcn <- prob_update_interval_fcn <- NULL
+                  sample_all_initially   <- TRUE
+                  interval_widths        <- rep(1.0, n_model_params)
+                  harss_prob             <- 0.05
+                  harss_warmup           <- TRUE
+                  n_contractions_afss    <- rep(0.5, n_model_params)
+                  n_expansions_afss      <- rep(0.5, n_model_params)
+                  c_contractions_afss    <- rep(0.5, n_model_params)
+                  c_expansions_afss      <- rep(0.5, n_model_params)
+                  slice_ratios           <- rep(0.5, n_model_params)
+                  
+            } else {
+                  
+                  afss_setting_list <- mcmc_kernel$kernel_settings$afss_setting_list
+                  
+                  # afss settings
+                  first_factor_update  <- afss_setting_list$first_factor_update + 1
+                  first_prob_update    <- afss_setting_list$first_prob_update + 1
+                  initial_slice_probs  <- afss_setting_list$initial_slice_probs
+                  sample_all_initially <- afss_setting_list$sample_all_initially
+                  harss_prob           <- afss_setting_list$harss_prob
+                  harss_warmup         <- afss_setting_list$harss_warmup
+                  interval_widths      <- afss_setting_list$initial_widths
+                  target_prop_totsd    <- afss_setting_list$target_prop_totsd
+                  afss_slice_ratio     <- afss_setting_list$afss_slice_ratio
+                  n_contractions_afss  <- rep(0.5, n_model_params)
+                  n_expansions_afss    <- rep(0.5, n_model_params)
+                  c_contractions_afss  <- rep(0.5, n_model_params)
+                  c_expansions_afss    <- rep(0.5, n_model_params)
+                  slice_ratios         <- rep(0.5, n_model_params)
+                  
+                  if(is.null(interval_widths)) interval_widths <- rep(1.0, n_model_params)
+                  
+                  if(is.null(afss_setting_list$n_afss_updates)) {
+                        afss_setting_list$n_afss_updates <- n_model_params
+                        n_afss_updates <- afss_setting_list$n_afss_updates
+                  } else {
+                        n_afss_updates <- afss_setting_list$n_afss_updates
+                  }
+                  
+                  if(is.null(afss_setting_list$factor_update_interval)) {
+                        
+                        afss_setting_list$factor_update_interval <-  n_model_params
+                        factor_update_interval     <- afss_setting_list$factor_update_interval
+                        factor_update_interval_fcn <- NULL
+                        
+                  } else if(!is.function(afss_setting_list$factor_update_interval)) {
+                        
+                        factor_update_interval <- afss_setting_list$factor_update_interval
+                        factor_update_interval_fcn <- NULL
+                        
+                  } else {
+                        factor_update_interval_fcn <-
+                              afss_setting_list$factor_update_interval
+                        factor_update_interval <- factor_update_interval_fcn()
+                  }
+                  
+                  if(is.null(afss_setting_list$prob_update_interval)) {
+                        afss_setting_list$prob_update_interval <- n_model_params
+                        prob_update_interval     <- afss_setting_list$prob_update_interval
+                        prob_update_interval_fcn <- NULL
+                        
+                  } else if(!is.function(afss_setting_list$prob_update_interval)) {
+                        prob_update_interval <- afss_setting_list$prob_update_interval
+                        prob_update_interval_fcn <- NULL
+                  } else {
+                        prob_update_interval_fcn <-
+                              afss_setting_list$prob_update_interval
+                        prob_update_interval <- prob_update_interval_fcn()
+                  }
+                  
+                  # set defaults for the initial widths, slice directions, and sampling weights
+                  if(is.null(initial_slice_probs)) {
+                        afss_setting_list$initial_slice_probs <- rep(1.0, n_model_params)
+                        slice_probs <- rep(1.0, n_model_params)
+                  } else {
+                        slice_probs <- initial_slice_probs
+                  }
+            }
+            
+            # kernel nugget
+            nugget <- mcmc_kernel$kernel_settings$nugget
+            
+            # singular value decomposition of the initial covariance matrix
+            e               <- eigen(kernel_cov)
+            slice_eigenvals <- e$values
+            slice_eigenvecs <- e$vectors
+            
+            # set up hit and run slice sampler settings
+            n_harss_updates     <- 1
+            har_direction       <- rep(0.0, n_model_params)
+            harss_bracket_width <- exp(mean(log(interval_widths)))
+            
+            # for adaptive the hit-and-run proposal
+            n_expansions_harss   <- 0.5
+            n_contractions_harss <- 0.5
+            
+            # should a harss update be attempted
+            do_harss_update <- 
+                  (n_afss_updates != n_model_params) |
+                  !is.null(target_prop_totsd)
+            
+            # harss bracket limits
+            harss_bracket_min  <- afss_setting_list$harss_bracket_limits[1]
+            harss_bracket_max  <- afss_setting_list$harss_bracket_limits[2]
+            warmup_bracket_min <- afss_setting_list$harss_bracket_limits[1]
+            warmup_bracket_max <- afss_setting_list$harss_bracket_limits[2]
+            
+            # objects for saving the adaptation history
+            kernel_cov_record <-
+                  array(0.0,
+                        dim = c(
+                              n_model_params,
+                              n_model_params,
+                              floor(iterations / thin_params) + 1
+                        ))
+            
+            # save initial values for factors, weight
+            kernel_cov_record[,,1] <- kernel_cov
+            
+      } else if (mcmc_kernel$method == "harss") {
+            
+            # adaptation schedule
+            if (is.null(mcmc_kernel$kernel_settings$stop_adaptation)) {
+                  stop_adaptation <- iterations + 1
+            } else {
+                  stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 1
+            }
+            
+            # sequence for adaptation factors
+            adaptations      <-
+                  mcmc_kernel$kernel_settings$scale_constant *
+                  (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+            
+            warmup_adaptations <- 
+                  mcmc_kernel$kernel_settings$scale_constant *
+                  (seq(0, ess_warmup) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+            
+            # interval widths, expansions, and contractions
+            if(is.null(mcmc_kernel$kernel_settings$harss_setting_list)) {
+                  harss_setting_list <- harss_settings()
+                  
+            } else {
+                  harss_setting_list <- mcmc_kernel$kernel_settings$harss_setting_list
+            }
+            
+            # extract list settings
+            n_harss_updates <- harss_setting_list$n_harss_updates
+            
+            # vector for direction proposal
+            har_direction <- rep(0.0, n_model_params)
+            
+            # initial bracket width
+            harss_bracket_width <- 1.0
+            harss_bracket_min   <- harss_setting_list$bracket_limits[1]
+            harss_bracket_max   <- harss_setting_list$bracket_limits[2]
+            warmup_bracket_min  <- harss_setting_list$bracket_limits[1]
+            warmup_bracket_max  <- harss_setting_list$bracket_limits[2]
+            
+            # for adaptive the hit-and-run proposal
+            n_expansions_harss   <- 0.5
+            n_contractions_harss <- 0.5
+            
+            # empirical mean and covariance of the target
+            kernel_resid <- double(n_model_params) # already initialized to 0
+            kernel_mean  <- double(n_model_params)
+            copy_vec(kernel_mean, model_params_est)
+            
+            # kernel covariance
+            kernel_cov <- diag(1, n_model_params)
+            
+      } else if (mcmc_kernel$method == "mvnss") {
+            
+            # adaptation schedule
+            if (is.null(mcmc_kernel$kernel_settings$stop_adaptation)) {
+                  stop_adaptation <- iterations + 1
+            } else {
+                  stop_adaptation <- mcmc_kernel$kernel_settings$stop_adaptation + 1
+            }
+            
+            # sequence for adaptation factors
+            adaptations      <-
+                  mcmc_kernel$kernel_settings$scale_constant *
+                  (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+            
+            warmup_adaptations <- 
+                  mcmc_kernel$kernel_settings$scale_constant *
+                  (seq(0, warmup_iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+            
+            # interval widths, expansions, and contractions
+            if(is.null(mcmc_kernel$kernel_settings$mvnss_setting_list)) {
+                  mvnss_setting_list <- mvnss_settings()
+                  
+            } else {
+                  mvnss_setting_list <- mcmc_kernel$kernel_settings$mvnss_setting_list
+            }
+            
+            # extract list settings
+            n_mvnss_updates     <- mvnss_setting_list$n_mvnss_updates
+            cov_update_interval <- mvnss_setting_list$cov_update_interval
+            mvnss_bracket_width <- mvnss_setting_list$initial_bracket_width
+            mvnss_bracket_min   <- mvnss_setting_list$bracket_limits[1]
+            mvnss_bracket_max   <- mvnss_setting_list$bracket_limits[2]
+            warmup_bracket_min  <- mvnss_setting_list$bracket_limits[1]
+            warmup_bracket_max  <- mvnss_setting_list$bracket_limits[2]
+            
+            # nugget
+            nugget <- mcmc_kernel$kernel_settings$nugget
+            
+            # vector for direction proposal
+            har_direction <- rep(0.0, n_model_params)
+            mvn_direction <- rep(0.0, n_model_params)
+            mvnss_propvec <- rep(0.0, n_model_params)
+            
+            # for adaptive the mvnss bracket
+            n_expansions_mvnss   <- 0.5  # incremented in the slice sampler
+            n_contractions_mvnss <- 0.5  # incremented in the slice sampler
+            
+            # empirical mean and covariance of the target
+            kernel_resid <- double(n_model_params) # already initialized to 0
+            kernel_mean  <- double(n_model_params)
+            copy_vec(kernel_mean, model_params_est)
+            
+            # kernel covariance
+            kernel_cov <- diag(1, n_model_params)
+            copy_mat(kernel_cov, mcmc_kernel$sigma)
+            
+            # cholesky decomposition of the covariance
+            kernel_cov_chol <- chol(kernel_cov)
+            
+            # objects for saving the adaptation history
+            kernel_cov_record <-
+                  array(0.0,
+                        dim = c(
+                              n_model_params,
+                              n_model_params,
+                              floor(iterations / thin_params) + 1
+                        ))
+            
+            # save initial values for factors, weight
+            kernel_cov_record[,,1] <- kernel_cov
+      }
+      
+      # set up objects for sampling t0 if it is not fixed
+      if(!t0_fixed) {
+            t0_name      <- names(stem_object$dynamics$t0)
+            t0_prop      <- double(1)
+            t0_log_prior <- double(1 + floor(iterations / thin_params))
+            
+            # set the truncation points for the t0 mcmc_kernel if not fixed
+            t0_kernel$upper <- min(t0_kernel$upper, min(stem_object$measurement_process$obstimes))
+            t0_kernel$lower <- max(t0_kernel$lower, -Inf)
+      } else {
+            t0           <- NULL
+            t0_prop      <- NULL
+            t0_log_prior <- NULL
+            t0_name      <- NULL
+      }
+      
+      # matrix for storing the model parameters
+      ode_params_cur    <- matrix(0.0,
+                                  nrow = length(ode_times),
+                                  ncol = length(stem_object$dynamics$ode_rates$ode_param_codes),
+                                  dimnames = list(NULL, names(stem_object$dynamics$ode_rates$ode_param_codes)))
+      ode_params_prop   <- matrix(0.0,
+                                  nrow = length(ode_times),
+                                  ncol = length(stem_object$dynamics$ode_rates$ode_param_codes),
+                                  dimnames = list(NULL, names(stem_object$dynamics$ode_rates$ode_param_codes)))
+      
+      # insert the ode parameters into the parameter matrix
+      pars2lnapars(ode_params_cur, c(model_params_nat, t0, init_volumes_cur))
+      pars2lnapars(ode_params_prop, c(params_prop_nat, t0_prop, init_volumes_prop))
+      
+      # get column indices for constants and time-varying covariates
+      const_inds  <- seq_along(stem_object$dynamics$const_codes) + length(stem_object$dynamics$param_codes)
+      tcovar_inds <- (max(const_inds)+1):ncol(ode_params_cur)
+      
+      # insert the constants
+      ode_params_cur[,const_inds]  <- matrix(stem_object$dynamics$constants,
+                                             nrow = nrow(ode_params_cur),
+                                             ncol = length(const_inds), byrow = T)
+      
+      ode_params_prop[,const_inds] <- matrix(stem_object$dynamics$constants,
+                                             nrow = nrow(ode_params_cur),
+                                             ncol = length(const_inds), byrow = T)
+      
+      # insert time varying covariates
+      if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
+            tcovar_rowinds <- findInterval(ode_times, stem_object$dynamics$tcovar[, 1], left.open = F)
+            ode_params_cur[tcovar_rowinds, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
+            ode_params_prop[tcovar_rowinds,tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
+      }
+      
+      # get indices for time-varying parameters
+      if (!is.null(tparam)) {
+            
+            # grab the indices and update scheme
+            tparam_inds <-
+                  stem_object$dynamics$ode_rates$ode_param_codes[sapply(tparam, function(x) x$tparam_name)]
+            
+            # for recording the number of ESS updates for tparams
+            if (!tparam_ess_update) {
+                  tparam_ess  <- 1
+            } else {
+                  tparam_ess <- NULL
+            }
+            
+            # verify whether the mcmc is being restarted
+            if (!mcmc_restart) {
+                  
+                  # generate the indices for updating the time-varying parameter and initialize the values
+                  for (s in seq_along(tparam)) {
+                        
+                        # can get rid of the values slot
+                        tparam[[s]]$values <- NULL
+                        
+                        # indices
+                        tparam[[s]]$col_ind   <-
+                              stem_object$dynamics$ode_rates$ode_param_codes[tparam[[s]]$tparam_name]
+                        tparam[[s]]$tpar_inds <-
+                              findInterval(ode_times, tparam[[s]]$times, left.open = F) - 1
+                        tparam[[s]]$tpar_inds[tparam[[s]]$tpar_inds == -1] <- 0
+                        
+                        # values
+                        tparam[[s]]$draws_cur  <- rep(0.0, length(tparam[[s]]$times))
+                        tparam[[s]]$draws_prop <- rep(0.0, length(tparam[[s]]$times))
+                        tparam[[s]]$draws_ess  <- rep(0.0, length(tparam[[s]]$times))
+                        tparam[[s]]$log_lik    <- sum(dnorm(tparam[[s]]$draws_cur, log = TRUE))
+                        
+                        # get values
+                        insert_tparam(tcovar    = ode_params_cur,
+                                      values    = tparam[[s]]$draws2par(
+                                            parameters = model_params_nat,
+                                            draws = tparam[[s]]$draws_cur),
+                                      col_ind   = tparam[[s]]$col_ind,
+                                      tpar_inds = tparam[[s]]$tpar_inds)
+                        
+                        # copy into ode_params_prop
+                        copy_col(
+                              dest = ode_params_prop,
+                              orig = ode_params_cur,
+                              ind  = tparam[[s]]$col_ind
                         )
-
+                  }
+            } else {
+                  
+                  # if restarting, just copy the values into the parameter matrices
+                  for (s in seq_along(tparam)) {
+                        
+                        # get values
+                        insert_tparam(tcovar    = ode_params_cur,
+                                      values    = tparam[[s]]$draws2par(
+                                            parameters = model_params_nat,
+                                            draws = tparam[[s]]$draws_cur),
+                                      col_ind   = tparam[[s]]$col_ind,
+                                      tpar_inds = tparam[[s]]$tpar_inds)
+                        
+                        # copy into ode_params_prop
+                        copy_col(dest = ode_params_prop,
+                                 orig = ode_params_cur,
+                                 ind  = tparam[[s]]$col_ind)
+                  }
+            }
+      } else {
+            tparam <- NULL
+      }
+      
+      # indices for when to update the parameters
+      param_update_inds <- rep(FALSE, length(ode_times)); param_update_inds[1] <- TRUE
+      
+      if(!is.null(stem_object$dynamics$tcovar)) {
+            param_update_inds[ode_times %in% stem_object$dynamics$tcovar[,1]] <- TRUE
+      }
+      
+      if(!is.null(tparam)) {
+            for(s in seq_along(tparam)) {
+                  param_update_inds[ode_times %in% tparam[[s]]$times] <- TRUE
+            }      
+      }
+      
+      if(length(param_update_inds) == nrow(stem_object$dynamics$tcovar_changemat)) {
+            param_update_inds <- param_update_inds | apply(stem_object$dynamics$tcovar_changemat, 1, any)
+      }
+      
+      # generate forcing indices and forcing matrix if required
+      forcing_matrix <- matrix(0.0,
+                               nrow = length(ode_times),
+                               ncol = length(stem_object$dynamics$comp_codes),
+                               dimnames = list(NULL, names(stem_object$dynamics$comp_codes)))
+      
+      forcing_inds   <- rep(FALSE, length(ode_times))
+      
+      if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
+            
+            # get the forcing indices (supplied in the original tcovar matrix)
+            forcing_inds <- as.logical(match(round(ode_times, digits = 8),
+                                             round(stem_object$dynamics$dynamics_args$tcovar[,1], digits = 8),
+                                             nomatch = FALSE))
+            zero_inds    <- !forcing_inds
+            
+            # zero out the tcovar elements corresponding to times with no forcings
+            for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
+                  ode_params_cur[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]  = 0
+                  ode_params_prop[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] = 0
+            }
+            
+            for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
+                  
+                  # insert the flow into the forcing matrix
+                  forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$from] <-
+                        forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$from] -
+                        stem_object$dynamics$dynamics_args$tcovar[, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]
+                  
+                  forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$to] <-
+                        forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$to] +
+                        stem_object$dynamics$dynamics_args$tcovar[, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]
+                  
+                  # update the adjacency matrix to indicate which rates need to be updated
+                  affected_rates <- rep(FALSE, nrow(stem_object$dynamics$tcovar_adjmat))
+                  
+                  for(n in seq_along(stem_object$dynamics$rates)) {
+                        affected_rates[n] = 
+                              grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$from,
+                                    stem_object$dynamics$rates[[n]]$unparsed) |
+                              grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$to,
+                                    stem_object$dynamics$rates[[n]]$unparsed)
+                  }
+                  
+                  stem_object$dynamics$tcovar_adjmat[,stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] <-
+                        xor(stem_object$dynamics$tcovar_adjmat[,stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name],
+                            affected_rates)
+            }
+            
+            forcing_matrix <- t(forcing_matrix)
+      }
+      
+      # matrix in which to store the emission probabilities
+      emitmat <- cbind(data[, 1, drop = F],
+                       matrix(0.0, 
+                              nrow = nrow(measproc_indmat),
+                              ncol = ncol(measproc_indmat),
+                              dimnames = list(NULL, colnames(measproc_indmat))
+                       ))
+      
+      pathmat_prop <- cbind(ode_times,
+                            matrix(0.0, 
+                                   nrow = length(ode_times), 
+                                   ncol = nrow(flow_matrix),
+                                   dimnames = list(NULL, c(rownames(flow_matrix)))))
+      
+      # set up MCMC objects
+      parameter_samples_nat <-
+            matrix(0.0,
+                   nrow = 1 + floor(iterations / thin_params),
+                   ncol = n_model_params + as.numeric(!t0_fixed) + n_compartments,
+                   dimnames = list(NULL, c(names(model_params_nat), t0_name, convrec_initprob_names)))
+      
+      parameter_samples_est <-
+            matrix(0.0,
+                   nrow = 1 + floor(iterations / thin_params),
+                   ncol = n_model_params + as.numeric(!t0_fixed) + n_compartments,
+                   dimnames = list(NULL, c(param_names_est, t0_name, convrec_initvol_names)))
+      
+      if (!is.null(tparam)) {
+            tparam_samples <-
+                  array(0.0, 
+                        dim = c(n_times, length(tparam), 1 + floor(iterations / thin_params)))
+      } else {
+            tparam_samples <- NULL
+      }
+      
+      ode_paths <- 
+            array(0.0, dim = c(n_times, 1 + n_rates, 1 + floor(iterations / thin_latent_proc)))
+      
+      colnames(ode_paths) <- c("time", rownames(flow_matrix))
+      
+      data_log_lik      <- double(1 + floor(iterations / thin_params))
+      params_log_prior  <- double(1 + floor(iterations / thin_params))
+      
+      if (!is.null(tparam)) {
+            tparam_log_lik <-
+                  matrix(0.0,
+                         nrow = 1 + floor(iterations / thin_params),
+                         ncol = length(tparam),
+                         dimnames = list(NULL, paste0(sapply(tparam, function(x) x$tparam_name),"_loglik")))
+            
+            tparam_ess_record <- rep(1, floor(iterations / thin_params))
+            
+      } else {
+            tparam_log_lik <- NULL
+            tparam_ess_record <- NULL
+      }
+      
+      # initialize the lna_param_vec for the measurement process
+      ode_param_vec <- ode_params_cur[1,]
+      
+      # initialize the latent path
+      path <- NULL
+      if(mcmc_restart) {
+            
+            # extract the path
+            assign("path", stem_object$stem_settings$path_for_restart)
+            data_log_lik_prop <- NULL
+            
+            # recompute the data log likelihood
+            try({
+                  census_lna(
+                        path                = path$ode_path,
+                        census_path         = censusmat,
+                        census_inds         = census_indices,
+                        lna_event_inds      = ode_event_inds,
+                        flow_matrix_lna     = t(stoich_matrix),
+                        do_prevalence       = do_prevalence,
+                        init_state          = init_volumes_cur,
+                        forcing_matrix      = forcing_matrix
+                  )
+                  
+                  # evaluate the density of the incidence counts
+                  evaluate_d_measure_LNA(
+                        emitmat           = emitmat,
+                        obsmat            = data,
+                        censusmat         = censusmat,
+                        measproc_indmat   = measproc_indmat,
+                        lna_parameters    = ode_params_cur,
+                        lna_param_inds    = ode_param_inds,
+                        lna_const_inds    = ode_const_inds,
+                        lna_tcovar_inds   = ode_tcovar_inds,
+                        param_update_inds = param_update_inds,
+                        census_indices    = census_indices,
+                        lna_param_vec     = ode_param_vec,
+                        d_meas_ptr        = d_meas_pointer
+                  )
+                  
+                  # compute the data log likelihood
+                  data_log_lik_prop <- sum(emitmat[,-1][measproc_indmat])
+                  if(is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
+            }, silent = TRUE)
+            
+            if(is.null(data_log_lik_prop)) {
+                  stop("Restart attempted with data log likelihood of negative infinity.")
+            } else {
+                  path$data_log_lik <- data_log_lik_prop
+            }
+            
+      } else {
+            path <- initialize_ode(
+                  data                    = data,
+                  ode_parameters          = ode_params_cur,
+                  tparam                  = tparam,
+                  censusmat               = censusmat,
+                  emitmat                 = emitmat,
+                  stoich_matrix           = stoich_matrix,
+                  ode_pointer             = ode_pointer,
+                  ode_set_pars_pointer    = ode_set_pars_pointer,
+                  ode_times               = ode_times,
+                  ode_param_vec           = ode_param_vec,
+                  ode_param_inds          = ode_param_inds,
+                  ode_const_inds          = ode_const_inds,
+                  ode_tcovar_inds         = ode_tcovar_inds,
+                  ode_initdist_inds       = ode_initdist_inds,
+                  param_update_inds       = param_update_inds,
+                  census_indices          = census_indices,
+                  ode_event_inds          = ode_event_inds,
+                  measproc_indmat         = measproc_indmat,
+                  d_meas_pointer          = d_meas_pointer,
+                  do_prevalence           = do_prevalence,
+                  forcing_inds            = forcing_inds,
+                  forcing_matrix          = forcing_matrix,
+                  initialization_attempts = initialization_attempts,
+                  step_size               = step_size,
+                  par_init_fcn            = par_init_fcn
+            )
+            
+            # make sure that the model parameters are updated if new ones were proposed
+            if (!is.null(par_init_fcn)) {
+                  model_params_est <- to_estimation_scale(ode_params_cur[1, ode_param_inds + 1])
+                  model_params_nat <- from_estimation_scale(model_params_est)
+            }
+      }
+      
+      # set the log posterior and prior log likelihood
+      params_logprior_cur <- prior_density(model_params_nat, model_params_est)
+      
+      # warmup the latent path
+      if (!mcmc_restart) {
+            for (warmup in seq_len(warmup_iterations)) {
+                  
+                  # update time varying parameters via elliptical slice sampling
+                  if (!is.null(tparam)) {
+                        update_tparam_ode(
+                              tparam               = tparam,
+                              path_cur             = path,
+                              data                 = data,
+                              ode_parameters       = ode_params_cur,
+                              ode_param_vec        = ode_param_vec,
+                              pathmat_prop         = pathmat_prop,
+                              censusmat            = censusmat,
+                              emitmat              = emitmat,
+                              flow_matrix          = flow_matrix,
+                              stoich_matrix        = stoich_matrix,
+                              ode_times            = ode_times,
+                              forcing_inds         = forcing_inds,
+                              forcing_matrix       = forcing_matrix,
+                              ode_param_inds       = ode_param_inds,
+                              ode_const_inds       = ode_const_inds,
+                              ode_tcovar_inds      = ode_tcovar_inds,
+                              ode_initdist_inds    = ode_initdist_inds,
+                              param_update_inds    = param_update_inds,
+                              census_indices       = census_indices,
+                              ode_event_inds       = ode_event_inds,
+                              measproc_indmat      = measproc_indmat,
+                              ode_pointer          = ode_pointer,
+                              ode_set_pars_pointer = ode_set_pars_pointer,
+                              d_meas_pointer       = d_meas_pointer,
+                              do_prevalence        = do_prevalence,
+                              step_size            = step_size,
+                              tparam_ess           = tparam_ess
+                        )
+                  }
+                  
+                  if(harss_warmup) {
+                        
+                        hit_and_run_slice_sampler_ode(
+                              model_params_est     = model_params_est,
+                              model_params_nat     = model_params_nat,
+                              params_prop_est      = params_prop_est,
+                              params_prop_nat      = params_prop_nat,
+                              har_direction        = har_direction_warmup,
+                              harss_bracket_width  = harss_bracket_width_warmup, 
+                              n_expansions_harss   = n_expansions_harss_warmup,
+                              n_contractions_harss = n_contractions_harss_warmup,
+                              n_harss_updates      = 1, 
+                              path                 = path,
+                              pathmat_prop         = pathmat_prop,
+                              data                 = data,
+                              priors               = priors,
+                              params_logprior_cur  = params_logprior_cur,
+                              ode_params_cur       = ode_params_cur,
+                              ode_param_vec        = ode_param_vec,
+                              tparam               = tparam,
+                              censusmat            = censusmat,
+                              emitmat              = emitmat,
+                              flow_matrix          = flow_matrix,
+                              stoich_matrix        = stoich_matrix,
+                              ode_times            = ode_times,
+                              forcing_inds         = forcing_inds,
+                              forcing_matrix       = forcing_matrix,
+                              ode_param_inds       = ode_param_inds,
+                              ode_const_inds       = ode_const_inds,
+                              ode_tcovar_inds      = ode_tcovar_inds,
+                              ode_initdist_inds    = ode_initdist_inds,
+                              param_update_inds    = param_update_inds,
+                              ode_event_inds       = ode_event_inds,
+                              census_indices       = census_indices,
+                              measproc_indmat      = measproc_indmat,
+                              ode_pointer          = ode_pointer,
+                              ode_set_pars_pointer = ode_set_pars_pointer,
+                              d_meas_pointer       = d_meas_pointer,
+                              do_prevalence        = do_prevalence,
+                              step_size            = step_size
+                        )
+                        
+                        # adapt the harss bracket width
+                        harss_bracket_width_warmup <- 
+                              max(warmup_bracket_min,
+                                  min(warmup_bracket_max,
+                                      exp(log(harss_bracket_width_warmup) + 
+                                                sqrt(warmup_adaptations[warmup]) * (n_expansions_harss_warmup / (n_expansions_harss_warmup + n_contractions_harss_warmup) - 0.5))
+                                      ))
+                  }
+            }
+      }
+      
+      # set the log posterior and prior log likelihood
+      params_logprior_cur  <- prior_density(model_params_nat, model_params_est)
+      
+      if(mcmc_kernel$method %in% c("mvn_rw", "mvn_g_adaptive"))
+            params_logprior_prop <- prior_density(model_params_nat, model_params_est)
+      
+      if(!t0_fixed) {
+            t0_logprior_cur <- 
+                  extraDistr:::cpp_dtnorm(
+                        x        = t0,
+                        mu       = t0_kernel$mean,
+                        sigma    = t0_kernel$sd,
+                        lower    = t0_kernel$lower,
+                        upper    = t0_kernel$upper,
+                        log_prob = TRUE)
+            
+            t0_log_prior[1] <- t0_logprior_cur
+      }
+      
+      # save the initial path, data log-likelihood, lna log-likelihood, and prior log-likelihood
+      path_rec_ind          <- 2 # index for recording the latent paths
+      param_rec_ind         <- 2 # index for recording the parameters
+      parameter_samples_nat[1, ] <- c(model_params_nat, t0, initdist_params_cur)
+      parameter_samples_est[1, ] <- c(model_params_est, t0, init_volumes_cur)
+      mat_2_arr(ode_paths, path$ode_path, 0)
+      data_log_lik[1]       <- path$data_log_lik
+      params_log_prior[1]   <- params_logprior_cur
+      
+      if (!fixed_inits) {
+            initdist_lp_cur <- initdist_prior(initdist_params_cur)
+            initdist_log_prior[1] <- initdist_lp_cur
+      }
+      
+      if (!is.null(tparam)) {
+            for (p in seq_along(tparam)) tparam[[p]]$log_lik <- sum(dnorm(tparam[[p]]$draws_cur, log = T))
+            tparam_log_lik[1, ] <- sapply(tparam, "[[", "log_lik")
+            mat_2_arr(tparam_samples, ode_params_cur[, tparam_inds + 1, drop = FALSE], 0)
+      }
+      
+      # initialize the status file if status updates are required
+      if(messages | print_progress) {
+            status_file <-
+                  paste0("ODE_inference_status_",
+                         as.numeric(Sys.time()),
+                         ".txt")
+            cat(
+                  "Beginning MCMC",
+                  file = status_file,
+                  sep = "\n",
+                  append = FALSE
+            )
+      }
+      
+      # begin the MCMC
+      start.time <- Sys.time()
+      for(iter in (seq_len(iterations) + 1)) {
+            
+            if(mcmc_kernel$method == "mvn_rw") {
+                  
+                  # propose new parameters
+                  mvn_rw(params_prop_est, model_params_est, sigma_chol)
+                  
+                  # Convert the proposed parameters to their natural scale
+                  params_prop_nat <- from_estimation_scale(params_prop_est)
+                  
+                  # Compute the log prior for the proposed parameters
+                  params_logprior_prop <- prior_density(params_prop_nat, params_prop_est)
+                  
+                  # Insert the proposed parameters into the parameter proposal matrix
+                  pars2lnapars(ode_params_prop, c(params_prop_nat, t0, init_volumes_cur))
+                  
+                  # update the time-varying parameters if necessary
+                  if (!is.null(tparam)) {
+                        for (p in seq_along(tparam)) {
+                              insert_tparam(
+                                    tcovar    = ode_params_prop,
+                                    values    = tparam[[p]]$draws2par(
+                                          parameters = params_prop_nat,
+                                          draws = tparam[[p]]$draws_cur),
+                                    col_ind   = tparam[[p]]$col_ind,
+                                    tpar_inds = tparam[[p]]$tpar_inds)
+                        }
+                  }
+                  
+                  # set the data log likelihood for the proposal to NULL
+                  data_log_lik_prop <- NULL
+                  
+                  try({
+                        map_pars_2_ode(
+                              pathmat           = pathmat_prop,
+                              ode_times         = ode_times,
+                              ode_pars          = ode_params_prop,
+                              init_start        = ode_initdist_inds[1],
+                              param_update_inds = param_update_inds,
+                              stoich_matrix     = stoich_matrix,
+                              forcing_inds      = forcing_inds,
+                              forcing_matrix    = forcing_matrix,
+                              ode_pointer       = ode_pointer,
+                              set_pars_pointer  = ode_set_pars_pointer,
+                              step_size         = step_size
+                        )
+                        
+                        census_lna(
+                              path                = pathmat_prop,
+                              census_path         = censusmat,
+                              census_inds         = census_indices,
+                              lna_event_inds      = ode_event_inds,
+                              flow_matrix_lna     = flow_matrix,
+                              do_prevalence       = do_prevalence,
+                              init_state          = ode_params_cur[1, ode_initdist_inds + 1],
+                              forcing_matrix      = forcing_matrix
+                        )
+                        
                         # evaluate the density of the incidence counts
                         evaluate_d_measure_LNA(
-                                emitmat           = emitmat,
-                                obsmat            = data,
-                                censusmat         = censusmat,
-                                measproc_indmat   = measproc_indmat,
-                                lna_parameters    = ode_params_cur,
-                                lna_param_inds    = ode_param_inds,
-                                lna_const_inds    = ode_const_inds,
-                                lna_tcovar_inds   = ode_tcovar_inds,
-                                param_update_inds = param_update_inds,
-                                census_indices    = census_indices,
-                                lna_param_vec     = ode_param_vec,
-                                d_meas_ptr        = d_meas_pointer
+                              emitmat           = emitmat,
+                              obsmat            = data,
+                              censusmat         = censusmat,
+                              measproc_indmat   = measproc_indmat,
+                              lna_parameters    = ode_params_cur,
+                              lna_param_inds    = ode_param_inds,
+                              lna_const_inds    = ode_const_inds,
+                              lna_tcovar_inds   = ode_tcovar_inds,
+                              param_update_inds = param_update_inds,
+                              census_indices    = census_indices,
+                              lna_param_vec     = ode_param_vec,
+                              d_meas_ptr        = d_meas_pointer
                         )
-
+                        
                         # compute the data log likelihood
                         data_log_lik_prop <- sum(emitmat[,-1][measproc_indmat])
                         if(is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
-                }, silent = TRUE)
-
-                if(is.null(data_log_lik_prop)) {
-                        stop("Restart attempted with data log likelihood of negative infinity.")
-                } else {
-                        path$data_log_lik <- data_log_lik_prop
-                }
-
-        } else {
-                path <- initialize_ode(
-                        data                    = data,
-                        ode_parameters          = ode_params_cur,
-                        tparam                  = tparam,
-                        censusmat               = censusmat,
-                        emitmat                 = emitmat,
-                        stoich_matrix           = stoich_matrix,
-                        ode_pointer             = ode_pointer,
-                        ode_set_pars_pointer    = ode_set_pars_pointer,
-                        ode_times               = ode_times,
-                        ode_param_vec           = ode_param_vec,
-                        ode_param_inds          = ode_param_inds,
-                        ode_const_inds          = ode_const_inds,
-                        ode_tcovar_inds         = ode_tcovar_inds,
-                        ode_initdist_inds       = ode_initdist_inds,
-                        param_update_inds       = param_update_inds,
-                        census_indices          = census_indices,
-                        ode_event_inds          = ode_event_inds,
-                        measproc_indmat         = measproc_indmat,
-                        d_meas_pointer          = d_meas_pointer,
-                        do_prevalence           = do_prevalence,
-                        forcing_inds            = forcing_inds,
-                        forcing_matrix          = forcing_matrix,
-                        initialization_attempts = initialization_attempts,
-                        step_size               = step_size,
-                        par_init_fcn            = par_init_fcn
-                )
-                
-                # make sure that the model parameters are updated if new ones were proposed
-                if (!is.null(par_init_fcn)) {
-                      model_params_est <- to_estimation_scale(ode_params_cur[1, ode_param_inds + 1])
-                      model_params_nat <- from_estimation_scale(model_params_est)
-                }
-        }
-
-        # set the log posterior and prior log likelihood
-        params_logprior_cur <- prior_density(model_params_nat, model_params_est)
-        
-        # warmup the latent path
-        if (!mcmc_restart) {
-              for (warmup in seq_len(warmup_iterations)) {
-                    
-                    # update time varying parameters via elliptical slice sampling
-                    if (!is.null(tparam)) {
-                          update_tparam_ode(
-                                tparam               = tparam,
-                                path_cur             = path,
-                                data                 = data,
-                                ode_parameters       = ode_params_cur,
-                                ode_param_vec        = ode_param_vec,
-                                pathmat_prop         = pathmat_prop,
-                                censusmat            = censusmat,
-                                emitmat              = emitmat,
-                                flow_matrix          = flow_matrix,
-                                stoich_matrix        = stoich_matrix,
-                                ode_times            = ode_times,
-                                forcing_inds         = forcing_inds,
-                                forcing_matrix       = forcing_matrix,
-                                ode_param_inds       = ode_param_inds,
-                                ode_const_inds       = ode_const_inds,
-                                ode_tcovar_inds      = ode_tcovar_inds,
-                                ode_initdist_inds    = ode_initdist_inds,
-                                param_update_inds    = param_update_inds,
-                                census_indices       = census_indices,
-                                ode_event_inds       = ode_event_inds,
-                                measproc_indmat      = measproc_indmat,
-                                ode_pointer          = ode_pointer,
-                                ode_set_pars_pointer = ode_set_pars_pointer,
-                                d_meas_pointer       = d_meas_pointer,
-                                do_prevalence        = do_prevalence,
-                                step_size            = step_size,
-                                tparam_ess           = tparam_ess
-                          )
-                    }
-                    
-                    if(harss_warmup) {
-                          
-                          hit_and_run_slice_sampler_ode(
-                                model_params_est     = model_params_est,
-                                model_params_nat     = model_params_nat,
-                                params_prop_est      = params_prop_est,
-                                params_prop_nat      = params_prop_nat,
-                                har_direction        = har_direction_warmup,
-                                harss_bracket_width  = harss_bracket_width_warmup, 
-                                n_expansions_harss   = n_expansions_harss_warmup,
-                                n_contractions_harss = n_contractions_harss_warmup,
-                                n_harss_updates      = 1, 
-                                path                 = path,
-                                pathmat_prop         = pathmat_prop,
-                                data                 = data,
-                                priors               = priors,
-                                params_logprior_cur  = params_logprior_cur,
-                                ode_params_cur       = ode_params_cur,
-                                ode_param_vec        = ode_param_vec,
-                                tparam               = tparam,
-                                censusmat            = censusmat,
-                                emitmat              = emitmat,
-                                flow_matrix          = flow_matrix,
-                                stoich_matrix        = stoich_matrix,
-                                ode_times            = ode_times,
-                                forcing_inds         = forcing_inds,
-                                forcing_matrix       = forcing_matrix,
-                                ode_param_inds       = ode_param_inds,
-                                ode_const_inds       = ode_const_inds,
-                                ode_tcovar_inds      = ode_tcovar_inds,
-                                ode_initdist_inds    = ode_initdist_inds,
-                                param_update_inds    = param_update_inds,
-                                ode_event_inds       = ode_event_inds,
-                                census_indices       = census_indices,
-                                measproc_indmat      = measproc_indmat,
-                                ode_pointer          = ode_pointer,
-                                ode_set_pars_pointer = ode_set_pars_pointer,
-                                d_meas_pointer       = d_meas_pointer,
-                                do_prevalence        = do_prevalence,
-                                step_size            = step_size
-                          )
-                          
-                          # adapt the harss bracket width
-                          harss_bracket_width_warmup <- 
-                                exp(log(harss_bracket_width_warmup) + 
-                                          warmup_adaptations[warmup] * (n_expansions_harss_warmup / (n_expansions_harss_warmup + n_contractions_harss_warmup) - 0.5))
-                    }
-              }
-        }
-        
-        # set the log posterior and prior log likelihood
-        params_logprior_cur  <- prior_density(model_params_nat, model_params_est)
-        
-        if(mcmc_kernel$method %in% c("mvn_rw", "mvn_g_adaptive"))
-              params_logprior_prop <- prior_density(model_params_nat, model_params_est)
-        
-        if(!t0_fixed) {
-                t0_logprior_cur <- 
-                      extraDistr:::cpp_dtnorm(
-                            x        = t0,
-                            mu       = t0_kernel$mean,
-                            sigma    = t0_kernel$sd,
-                            lower    = t0_kernel$lower,
-                            upper    = t0_kernel$upper,
-                            log_prob = TRUE)
-                
-                t0_log_prior[1] <- t0_logprior_cur
-        }
-
-        # save the initial path, data log-likelihood, lna log-likelihood, and prior log-likelihood
-        path_rec_ind          <- 2 # index for recording the latent paths
-        param_rec_ind         <- 2 # index for recording the parameters
-        parameter_samples_nat[1, ] <- c(model_params_nat, t0, initdist_params_cur)
-        parameter_samples_est[1, ] <- c(model_params_est, t0, init_volumes_cur)
-        mat_2_arr(ode_paths, path$ode_path, 0)
-        data_log_lik[1]       <- path$data_log_lik
-        params_log_prior[1]   <- params_logprior_cur
-        
-        if (!fixed_inits) {
-              initdist_lp_cur <- initdist_prior(initdist_params_cur)
-              initdist_log_prior[1] <- initdist_lp_cur
-        }
-        
-        if (!is.null(tparam)) {
-              for (p in seq_along(tparam)) tparam[[p]]$log_lik <- sum(dnorm(tparam[[p]]$draws_cur, log = T))
-              tparam_log_lik[1, ] <- sapply(tparam, "[[", "log_lik")
-              mat_2_arr(tparam_samples, ode_params_cur[, tparam_inds + 1, drop = FALSE], 0)
-        }
-        
-        # initialize the status file if status updates are required
-        if(messages) {
-                status_file <-
-                        paste0("ODE_inference_status_",
-                               as.numeric(Sys.time()),
-                               ".txt")
-                cat(
-                        "Beginning MCMC",
-                        file = status_file,
-                        sep = "\n",
-                        append = FALSE
-                )
-        }
-
-        # begin the MCMC
-        start.time <- Sys.time()
-        for(iter in (seq_len(iterations) + 1)) {
-
-                # Print the status if messages are enabled
-                if((messages) && iter %% thin_latent_proc == 0) {
-                        cat(paste0("Iteration ", iter-1), file = status_file, sep = "\n \n", append = TRUE)
-                }
-
-                 if(mcmc_kernel$method == "mvn_rw") {
-
-                        # propose new parameters
-                        mvn_rw(params_prop_est, model_params_est, sigma_chol)
-
-                        # Convert the proposed parameters to their natural scale
-                        params_prop_nat <- from_estimation_scale(params_prop_est)
-
-                        # Compute the log prior for the proposed parameters
-                        params_logprior_prop <- prior_density(params_prop_nat, params_prop_est)
-
-                        # Insert the proposed parameters into the parameter proposal matrix
-                        pars2lnapars(ode_params_prop, c(params_prop_nat, t0, init_volumes_cur))
-
-                        # update the time-varying parameters if necessary
-                        if (!is.null(tparam)) {
-                              for (p in seq_along(tparam)) {
-                                    insert_tparam(
-                                          tcovar    = ode_params_prop,
-                                          values    = tparam[[p]]$draws2par(
-                                                parameters = params_prop_nat,
-                                                draws = tparam[[p]]$draws_cur),
-                                          col_ind   = tparam[[p]]$col_ind,
-                                          tpar_inds = tparam[[p]]$tpar_inds)
-                              }
-                        }
                         
-                        # set the data log likelihood for the proposal to NULL
-                        data_log_lik_prop <- NULL
-
-                        try({
-                              map_pars_2_ode(
-                                    pathmat           = pathmat_prop,
-                                    ode_times         = ode_times,
-                                    ode_pars          = ode_params_prop,
-                                    init_start        = ode_initdist_inds[1],
-                                    param_update_inds = param_update_inds,
-                                    stoich_matrix     = stoich_matrix,
-                                    forcing_inds      = forcing_inds,
-                                    forcing_matrix    = forcing_matrix,
-                                    ode_pointer       = ode_pointer,
-                                    set_pars_pointer  = ode_set_pars_pointer,
-                                    step_size         = step_size
-                              )
-                              
-                              census_lna(
-                                    path                = pathmat_prop,
-                                    census_path         = censusmat,
-                                    census_inds         = census_indices,
-                                    lna_event_inds      = ode_event_inds,
-                                    flow_matrix_lna     = flow_matrix,
-                                    do_prevalence       = do_prevalence,
-                                    init_state          = ode_params_cur[1, ode_initdist_inds + 1],
-                                    forcing_matrix      = forcing_matrix
-                              )
-                              
-                              # evaluate the density of the incidence counts
-                              evaluate_d_measure_LNA(
-                                    emitmat           = emitmat,
-                                    obsmat            = data,
-                                    censusmat         = censusmat,
-                                    measproc_indmat   = measproc_indmat,
-                                    lna_parameters    = ode_params_cur,
-                                    lna_param_inds    = ode_param_inds,
-                                    lna_const_inds    = ode_const_inds,
-                                    lna_tcovar_inds   = ode_tcovar_inds,
-                                    param_update_inds = param_update_inds,
-                                    census_indices    = census_indices,
-                                    lna_param_vec     = ode_param_vec,
-                                    d_meas_ptr        = d_meas_pointer
-                              )
-
-                                # compute the data log likelihood
-                                data_log_lik_prop <- sum(emitmat[,-1][measproc_indmat])
-                                if(is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
-                                
-                        }, silent = TRUE)
-
-                        if(is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
-
-                        ## Compute the acceptance probability
-                        acceptance_prob <- 
-                              (data_log_lik_prop + params_logprior_prop) - 
-                              (path$data_log_lik + params_logprior_cur)
-
-                        # Accept/Reject via metropolis-hastings
-                        if(acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
-
-                                ### ACCEPTANCE
-                                acceptances_g <- acceptances_g + 1    # increment acceptances
-
-                                copy_vec(path$data_log_lik, data_log_lik_prop)      # update the data log likelihood
-                                copy_vec(params_logprior_cur, params_logprior_prop) # update the prior density
-
-                                copy_mat(ode_params_cur, ode_params_prop)   # update the model parameter
-                                copy_vec(model_params_nat, params_prop_nat) # update ode parameters on their natural scales
-                                copy_vec(model_params_est, params_prop_est) # update ode parameters on their estimation scales
-                        }
-
-                } else if(mcmc_kernel$method == "mvn_g_adaptive") {
-
-                        if (iter == stop_adaptation) {
-                              mcmc_kernel$sigma = proposal_scaling * kernel_cov
-                              comp_chol(kernel_cov_chol, mcmc_kernel$sigma)
-                        }
-
-                        # propose new parameters
-                        if(iter < stop_adaptation) {
-                                
-                              mvn_g_adaptive(
-                                    params_prop = params_prop_est,
-                                    params_cur = model_params_est,
-                                    kernel_cov_chol =  kernel_cov_chol,
-                                    nugget = nugget * adaptations[iter]
-                              )
-
-                        } else {
-                                mvn_rw(params_prop = params_prop_est,
-                                       params_cur = model_params_est,
-                                       sigma_chol = kernel_cov_chol)
-                        }
-
-                        # Convert the proposed parameters to their natural scale
-                        params_prop_nat <- from_estimation_scale(params_prop_est)
+                  }, silent = TRUE)
+                  
+                  if(is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
+                  
+                  ## Compute the acceptance probability
+                  acceptance_prob <- 
+                        (data_log_lik_prop + params_logprior_prop) - 
+                        (path$data_log_lik + params_logprior_cur)
+                  
+                  # Accept/Reject via metropolis-hastings
+                  if(acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
                         
-                        # update time-varying parameters if necessary
-                        if (!is.null(tparam)) {
-                              for (p in seq_along(tparam)) {
-                                    insert_tparam(
-                                          tcovar    = ode_params_prop,
-                                          values    = tparam[[p]]$draws2par(
-                                                parameters = params_prop_nat,
-                                                draws = tparam[[p]]$draws_cur),
-                                          col_ind   = tparam[[p]]$col_ind,
-                                          tpar_inds = tparam[[p]]$tpar_inds)
-                              }
-                        }
-
-                        # Compute the log prior for the proposed parameters
-                        params_logprior_prop <- prior_density(params_prop_nat, params_prop_est)
-
-                        # Insert the proposed parameters into the parameter proposal matrix
-                        pars2lnapars(ode_params_prop, c(params_prop_nat, t0, init_volumes_cur))
-
-                        # set the data log likelihood for the proposal to NULL
-                        data_log_lik_prop <- NULL
-
-                        try({
-                              map_pars_2_ode(
-                                    pathmat           = pathmat_prop,
-                                    ode_times         = ode_times,
-                                    ode_pars          = ode_params_prop,
-                                    init_start        = ode_initdist_inds[1],
-                                    param_update_inds = param_update_inds,
-                                    stoich_matrix     = stoich_matrix,
-                                    forcing_inds      = forcing_inds,
-                                    forcing_matrix    = forcing_matrix,
-                                    ode_pointer       = ode_pointer,
-                                    set_pars_pointer  = ode_set_pars_pointer,
-                                    step_size         = step_size
-                              )
-                              
-                              census_lna(
-                                    path                = pathmat_prop,
-                                    census_path         = censusmat,
-                                    census_inds         = census_indices,
-                                    lna_event_inds      = ode_event_inds,
-                                    flow_matrix_lna     = flow_matrix,
-                                    do_prevalence       = do_prevalence,
-                                    init_state          = init_volumes_cur,
-                                    forcing_matrix      = forcing_matrix
-                              )
-                              
-                              # evaluate the density of the incidence counts
-                              evaluate_d_measure_LNA(
-                                    emitmat           = emitmat,
-                                    obsmat            = data,
-                                    censusmat         = censusmat,
-                                    measproc_indmat   = measproc_indmat,
-                                    lna_parameters    = ode_params_prop,
-                                    lna_param_inds    = ode_param_inds,
-                                    lna_const_inds    = ode_const_inds,
-                                    lna_tcovar_inds   = ode_tcovar_inds,
-                                    param_update_inds = param_update_inds,
-                                    census_indices    = census_indices,
-                                    lna_param_vec     = ode_param_vec,
-                                    d_meas_ptr        = d_meas_pointer
-                              )
-
-                                # compute the data log likelihood
-                                data_log_lik_prop <- sum(emitmat[,-1][measproc_indmat])
-                                if(is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
-                        }, silent = TRUE)
-
-                        if(is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
-
-                        ## Compute the acceptance probability
-                        acceptance_prob <- 
-                              (data_log_lik_prop + params_logprior_prop) - 
-                              (path$data_log_lik + params_logprior_cur)
-
-                        # Accept/Reject via metropolis-hastings
-                        if(acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
-
-                                ### ACCEPTANCE
-                                acceptances_g <- acceptances_g + 1    # increment acceptances
-
-                                copy_vec(path$data_log_lik, data_log_lik_prop)      # update the data log likelihood
-                                copy_vec(params_logprior_cur, params_logprior_prop) # update the prior density
-
-                                copy_mat(ode_params_cur, ode_params_prop)   # update the model parameter
-                                copy_vec(model_params_nat, params_prop_nat) # update ode parameters on their natural scales
-                                copy_vec(model_params_est, params_prop_est) # update ode parameters on their estimation scales
-                        }
-
-                        if(iter < stop_adaptation) {
-                              
-                                # Adapt the proposal kernel
-                              proposal_scaling <-
-                                    min(exp(log(proposal_scaling) +
-                                                  adaptations[iter] * (min(exp(acceptance_prob), 1) - target_g)
-                                    ),
-                                    max_scaling)
-
-                                kernel_resid <- model_params_est - kernel_mean
-                                kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid%*%t(kernel_resid) - kernel_cov)
-                                kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
-                                
-                                # compute the cholesky
-                                comp_chol(kernel_cov_chol, proposal_scaling * kernel_cov)
-                        }
+                        ### ACCEPTANCE
+                        acceptances_g <- acceptances_g + 1    # increment acceptances
                         
-                } else if (mcmc_kernel$method == "afss") {
-                      
-                      if (iter == stop_adaptation) {
-                            mcmc_kernel$sigma = kernel_cov
-                            
-                            mcmc_kernel$kernel_settings$afss_setting_list = 
-                                  afss_settings(
-                                        factor_update_interval  = factor_update_interval,
-                                        prob_update_interval    = prob_update_interval,
-                                        first_factor_update     = first_factor_update,
-                                        first_prob_update       = first_prob_update,
-                                        initial_slice_probs     = slice_probs,
-                                        n_afss_updates          = n_afss_updates,
-                                        initial_widths          = interval_widths,
-                                        sample_all_initially    = FALSE,
-                                        afss_slice_ratio        = afss_slice_ratio,
-                                        target_prop_totsd       = target_prop_totsd,
-                                        harss_prob              = harss_prob
-                                  )
-                            
-                            if(n_model_params != n_afss_updates) {
-                                  mcmc_kernel$kernel_settings$harss_setting_list = 
-                                        harss_settings(
-                                              n_harss_updates = n_harss_updates,
-                                              bracket_update_interval = factor_update_interval
-                                        )
-                            }
-                            
-                            if(!is.null(factor_update_interval_fcn)) 
-                                  mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval = 
-                                  factor_update_interval_fcn()
-                            
-                            if(!is.null(prob_update_interval_fcn))
-                                  mcmc_kernel$kernel_settings$afss_setting_list$prob_update_interval = 
-                                  prob_update_interval_fcn()
-                      }
-                      
-                      # sample new parameter values
-                      factor_slice_sampler_ode(
-                            model_params_est     = model_params_est,
-                            model_params_nat     = model_params_nat,
-                            params_prop_est      = params_prop_est,
-                            params_prop_nat      = params_prop_nat,
-                            interval_widths      = interval_widths,
-                            slice_eigenvecs      = slice_eigenvecs,
-                            slice_probs          = slice_probs,
-                            n_afss_updates       = ifelse(iter <= first_prob_update && sample_all_initially, 
-                                                          n_model_params,
-                                                          n_afss_updates),
-                            n_contractions_afss  = n_contractions_afss,
-                            c_contractions_afss  = c_contractions_afss,
-                            n_expansions_afss    = n_expansions_afss,
-                            c_expansions_afss    = c_expansions_afss,
-                            path                 = path,
-                            pathmat_prop         = pathmat_prop,
-                            data                 = data,
-                            priors               = priors,
-                            params_logprior_cur  = params_logprior_cur,
-                            ode_params_cur       = ode_params_cur,
-                            ode_param_vec        = ode_param_vec,
-                            tparam               = tparam,
-                            censusmat            = censusmat,
-                            emitmat              = emitmat,
-                            flow_matrix          = flow_matrix,
-                            stoich_matrix        = stoich_matrix,
-                            ode_times            = ode_times,
-                            forcing_inds         = forcing_inds,
-                            forcing_matrix       = forcing_matrix,
-                            ode_param_inds       = ode_param_inds,
-                            ode_const_inds       = ode_const_inds,
-                            ode_tcovar_inds      = ode_tcovar_inds,
-                            ode_initdist_inds    = ode_initdist_inds,
-                            param_update_inds    = param_update_inds,
-                            ode_event_inds       = ode_event_inds,
-                            census_indices       = census_indices,
-                            measproc_indmat      = measproc_indmat,
-                            ode_pointer          = ode_pointer,
-                            ode_set_pars_pointer = ode_set_pars_pointer,
-                            d_meas_pointer       = d_meas_pointer,
-                            do_prevalence        = do_prevalence,
-                            step_size            = step_size
-                      )
-                      
-                      # Hit-and-run update if not sampling all slice directions
-                      if(do_harss_update || runif(1) < harss_prob) {
-                            
-                            hit_and_run_slice_sampler_ode(
-                                  model_params_est     = model_params_est,
-                                  model_params_nat     = model_params_nat,
-                                  params_prop_est      = params_prop_est,
-                                  params_prop_nat      = params_prop_nat,
-                                  har_direction        = har_direction,
-                                  harss_bracket_width  = harss_bracket_width, 
-                                  n_expansions_harss   = n_expansions_harss,
-                                  n_contractions_harss = n_contractions_harss,
-                                  n_harss_updates      = n_harss_updates, 
-                                  path                 = path,
-                                  pathmat_prop         = pathmat_prop,
-                                  data                 = data,
-                                  priors               = priors,
-                                  params_logprior_cur  = params_logprior_cur,
-                                  ode_params_cur       = ode_params_cur,
-                                  ode_param_vec        = ode_param_vec,
-                                  tparam               = tparam,
-                                  censusmat            = censusmat,
-                                  emitmat              = emitmat,
-                                  flow_matrix          = flow_matrix,
-                                  stoich_matrix        = stoich_matrix,
-                                  ode_times            = ode_times,
-                                  forcing_inds         = forcing_inds,
-                                  forcing_matrix       = forcing_matrix,
-                                  ode_param_inds       = ode_param_inds,
-                                  ode_const_inds       = ode_const_inds,
-                                  ode_tcovar_inds      = ode_tcovar_inds,
-                                  ode_initdist_inds    = ode_initdist_inds,
-                                  param_update_inds    = param_update_inds,
-                                  ode_event_inds       = ode_event_inds,
-                                  census_indices       = census_indices,
-                                  measproc_indmat      = measproc_indmat,
-                                  ode_pointer          = ode_pointer,
-                                  ode_set_pars_pointer = ode_set_pars_pointer,
-                                  d_meas_pointer       = d_meas_pointer,
-                                  do_prevalence        = do_prevalence,
-                                  step_size            = step_size
-                            )
-                            
-                            # adapt the bracket width
-                            harss_bracket_width <- 
-                                  exp(log(harss_bracket_width) + 
-                                            (bracket_scale * (iter * bracket_step + 1)^-bracket_cool) * (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5))
-                      }
-                      
-                      # update the covariance matrix for the proposal kernel
-                      if (iter < stop_adaptation) {
-                            
-                            # update the kernel covariance
-                            kernel_resid <- model_params_est - kernel_mean
-                            kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
-                            kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
-                            
-                            # update interval widths
-                            update_interval_widths(interval_widths     = interval_widths,
-                                                   n_expansions_afss   = n_expansions_afss,
-                                                   n_contractions_afss = n_contractions_afss,
-                                                   c_expansions_afss   = c_expansions_afss,
-                                                   c_contractions_afss = c_contractions_afss,
-                                                   slice_ratios        = slice_ratios,
-                                                   adaptation_factor   = adaptations[interval_update_ind],
-                                                   target_ratio        = afss_slice_ratio)
-                            
-                            # increment the interval adaptation index
-                            interval_update_ind <- interval_update_ind + 1
-                            
-                            # clamp the interval widths for safety
-                            # lower is the estimated standard deviation in each eigen direction
-                            # upper is the estimated standard deviation times 100
-                            kernel_log_sds <- 0.5 * log(slice_eigenvals)
-                            copy_vec(dest = interval_widths,
-                                     orig = exp(
-                                           pmax(kernel_log_sds,
-                                                pmin(log(interval_widths), kernel_log_sds + log(100)))))
-                            
-                            if (((iter-1) >= first_factor_update) && 
-                                ((iter-1) %% factor_update_interval == 0)) {
-                                  
-                                  # update the slice directions
-                                  update_factors(slice_eigenvals = slice_eigenvals,
-                                                 slice_eigenvecs = slice_eigenvecs,
-                                                 kernel_cov      = kernel_cov)
-                                  
-                                  # if this is the first factor update, reset the intervals
-                                  if((iter-1) == first_factor_update | factor_update_interval > 10) {
-                                        
-                                        interval_update_ind <- 2
-                                        n_expansions_afss   <- rep(0.5, n_model_params)
-                                        n_contractions_afss <- rep(0.5, n_model_params)
-                                        c_expansions_afss   <- rep(1, n_model_params)
-                                        c_contractions_afss <- rep(1, n_model_params)
-                                        slice_ratios        <- rep(0.5, n_model_params)
-                                        
-                                        if(factor_update_interval > 25) {
-                                              interval_widths <- sqrt(slice_eigenvals)
-                                        }
-                                  }
-                                  
-                                  # increment the factor update interval
-                                  if(!is.null(factor_update_interval_fcn)) {
-                                        factor_update_interval <- factor_update_interval_fcn(factor_update_interval)
-                                  }
-                            }
-                            
-                            # adapt the slice probabilities
-                            if (((iter-1) >= first_prob_update) && 
-                                ((iter-1) %% prob_update_interval == 0)) {
-                                  
-                                  copy_vec(dest = slice_probs, 
-                                           orig = pmax(slice_eigenvals^0.5 / sum(slice_eigenvals^0.5), nugget))
-                                  
-                                  if(!is.null(target_prop_totsd)) {
-                                        n_afss_updates <- 
-                                              max(n_afss_updates,
-                                                  Position(function(x) x > target_prop_totsd,
-                                                           cumsum(rev(sqrt(slice_eigenvals))/sum(sqrt(slice_eigenvals)))))
-                                  }
-                            }
-                      }
-                      
-                } else if (mcmc_kernel$method == "harss") {
-                      
-                      if (iter == stop_adaptation) {
-                            mcmc_kernel$sigma = kernel_cov
-                      }
-                      
-                      # sample new parameter values
-                      hit_and_run_slice_sampler_ode(
-                            model_params_est     = model_params_est,
-                            model_params_nat     = model_params_nat,
-                            params_prop_est      = params_prop_est,
-                            params_prop_nat      = params_prop_nat,
-                            har_direction        = har_direction,
-                            harss_bracket_width  = harss_bracket_width, 
-                            n_expansions_harss   = n_expansions_harss,
-                            n_contractions_harss = n_contractions_harss,
-                            n_harss_updates      = n_harss_updates, 
-                            path                 = path,
-                            pathmat_prop         = pathmat_prop,
-                            data                 = data,
-                            priors               = priors,
-                            params_logprior_cur  = params_logprior_cur,
-                            ode_params_cur       = ode_params_cur,
-                            ode_param_vec        = ode_param_vec,
-                            tparam               = tparam,
-                            censusmat            = censusmat,
-                            emitmat              = emitmat,
-                            flow_matrix          = flow_matrix,
-                            stoich_matrix        = stoich_matrix,
-                            ode_times            = ode_times,
-                            forcing_inds         = forcing_inds,
-                            forcing_matrix       = forcing_matrix,
-                            ode_param_inds       = ode_param_inds,
-                            ode_const_inds       = ode_const_inds,
-                            ode_tcovar_inds      = ode_tcovar_inds,
-                            ode_initdist_inds    = ode_initdist_inds,
-                            param_update_inds    = param_update_inds,
-                            ode_event_inds       = ode_event_inds,
-                            census_indices       = census_indices,
-                            measproc_indmat      = measproc_indmat,
-                            ode_pointer          = ode_pointer,
-                            ode_set_pars_pointer = ode_set_pars_pointer,
-                            d_meas_pointer       = d_meas_pointer,
-                            do_prevalence        = do_prevalence,
-                            step_size            = step_size
-                      )
-                      
-                      # update the kernel covariance
-                      if(iter < stop_adaptation) {
-                            
-                            kernel_resid <- model_params_est - kernel_mean
-                            kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
-                            kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
-                      }
-                      
-                      # adapt the harss bracket width
-                      harss_bracket_width <- 
-                            exp(log(harss_bracket_width) + 
-                                      (bracket_scale * (iter * bracket_step + 1)^-bracket_cool) * (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5))
-                      
-                } else if (mcmc_kernel$method == "mvnss") {
-                      
-                      if (iter == stop_adaptation) {
-                            mcmc_kernel$sigma = kernel_cov 
-                            mcmc_kernel$kernel_settings$mvnss_setting_list <- 
-                                  mvnss_settings(n_mvnss_updates = n_mvnss_updates,
-                                                 cov_update_interval = cov_update_interval,
-                                                 initial_bracket_width = mvnss_bracket_width)
-                      }
-                      
-                      # sample new parameter values
-                      mvn_slice_sampler_ode(
-                            model_params_est     = model_params_est,
-                            model_params_nat     = model_params_nat,
-                            params_prop_est      = params_prop_est,
-                            params_prop_nat      = params_prop_nat,
-                            mvn_direction        = mvn_direction,
-                            har_direction        = har_direction,
-                            mvnss_propvec        = mvnss_propvec,
-                            kernel_cov_chol      = kernel_cov_chol,
-                            nugget               = ifelse(iter < stop_adaptation, nugget * adaptations[iter], 0),
-                            mvnss_bracket_width  = mvnss_bracket_width, 
-                            n_expansions_mvnss   = n_expansions_mvnss,
-                            n_contractions_mvnss = n_contractions_mvnss,
-                            n_mvnss_updates      = n_mvnss_updates, 
-                            path                 = path,
-                            pathmat_prop         = pathmat_prop,
-                            data                 = data,
-                            priors               = priors,
-                            params_logprior_cur  = params_logprior_cur,
-                            ode_params_cur       = ode_params_cur,
-                            ode_param_vec        = ode_param_vec,
-                            tparam               = tparam,
-                            censusmat            = censusmat,
-                            emitmat              = emitmat,
-                            flow_matrix          = flow_matrix,
-                            stoich_matrix        = stoich_matrix,
-                            ode_times            = ode_times,
-                            forcing_inds         = forcing_inds,
-                            forcing_matrix       = forcing_matrix,
-                            ode_param_inds       = ode_param_inds,
-                            ode_const_inds       = ode_const_inds,
-                            ode_tcovar_inds      = ode_tcovar_inds,
-                            ode_initdist_inds    = ode_initdist_inds,
-                            param_update_inds    = param_update_inds,
-                            ode_event_inds       = ode_event_inds,
-                            census_indices       = census_indices,
-                            measproc_indmat      = measproc_indmat,
-                            ode_pointer          = ode_pointer,
-                            ode_set_pars_pointer = ode_set_pars_pointer,
-                            d_meas_pointer       = d_meas_pointer,
-                            do_prevalence        = do_prevalence,
-                            step_size            = step_size
-                      )
-                      
-                      # adapt the bracket width
-                      if(iter < stop_adaptation) {
-                            
-                            # update the kernel covariance
-                            kernel_resid <- model_params_est - kernel_mean
-                            kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
-                            kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
-                            
-                            if((iter-1) %% cov_update_interval == 0) {
-                                  comp_chol(kernel_cov_chol, kernel_cov)
-                            }
-                      }
-                      
-                      # adapt the harss bracket width
-                      mvnss_bracket_width <- 
-                            exp(log(mvnss_bracket_width) + 
-                                      (bracket_scale * (iter * bracket_step + 1)^-bracket_cool) * (n_expansions_mvnss / (n_expansions_mvnss + n_contractions_mvnss) - 0.5))
-                }
-
-                # Propose and Accept-reject initial state/time
-                if(!fixed_inits || !t0_fixed) {
-
-                        # if t0 is not fixed, sample a new value
-                        if(!t0_fixed) {
-                                # sample the new time from proposal centered at t0
-                                t0_prop <- extraDistr:::cpp_rtnorm(n     = 1,
-                                                                   mu    = t0,
-                                                                   sigma = t0_kernel$rw_sd,
-                                                                   lower = t0_kernel$lower,
-                                                                   upper = t0_kernel$upper)
-
-                                # log prior of the proposal
-                                t0_logprior_prop <- extraDistr:::cpp_dtnorm(x        = t0_prop,
-                                                                            mu       = t0_kernel$mean,
-                                                                            sigma    = t0_kernel$sd,
-                                                                            lower    = t0_kernel$lower,
-                                                                            upper    = t0_kernel$upper,
-                                                                            log_prob = TRUE)
-                                # insert the new time
-                                ode_times[1]       <- t0_prop
-                                path$ode_path[1,1] <- t0_prop
-                                pathmat_prop[1,1]  <- t0_prop
-
-                                ### compute the log proposal probabilities for the forward and reverse moves
-                                # prob of going from current to new t0
-                                t0_cur2new <- extraDistr:::cpp_dtnorm(x         = t0_prop,
-                                                                      mu        = t0,
-                                                                      sigma     = t0_kernel$rw_sd,
-                                                                      lower     = t0_kernel$lower,
-                                                                      upper     = t0_kernel$upper,
-                                                                      log_prob  = TRUE)
-
-                                # prob of going from new to current t0
-                                t0_new2cur <- extraDistr:::cpp_dtnorm(x        = t0,
-                                                                      mu       = t0_prop,
-                                                                      sigma    = t0_kernel$rw_sd,
-                                                                      lower    = t0_kernel$lower,
-                                                                      upper    = t0_kernel$upper,
-                                                                      log_prob = TRUE)
-                        }
-
-                        # If the initial compartment counts are not fixed, sample new values
-                        if(!fixed_inits) {
-                                initdist_params_prop <- initdist_sampler()
-                                init_volumes_prop    <- concs2vols(initdist_params_prop)
-                                
-                                # still need to check that the initial distribution does not have loglik of -Inf
-                                initdist_lp_prop <- initdist_prior(initdist_params_prop)
-                        }
-
-                        # Insert the proposed parameters into the parameter proposal matrix
-                        pars2lnapars(ode_params_prop, c(model_params_nat, t0_prop, init_volumes_prop))
+                        copy_vec(path$data_log_lik, data_log_lik_prop)      # update the data log likelihood
+                        copy_vec(params_logprior_cur, params_logprior_prop) # update the prior density
                         
-                        # make sure the time--varying parameters are in there too
-                        if(!is.null(tparam)) {
-                              for(tpar_ind in seq_along(tparam)) {
-                                    copy_col(dest = ode_params_prop, 
-                                             orig = ode_params_cur,
-                                             ind = tparam[[tpar_ind]]$col_ind)
-                              }
-                        }
+                        copy_mat(ode_params_cur, ode_params_prop)   # update the model parameter
+                        copy_vec(model_params_nat, params_prop_nat) # update ode parameters on their natural scales
+                        copy_vec(model_params_est, params_prop_est) # update ode parameters on their estimation scales
+                  }
+                  
+            } else if(mcmc_kernel$method == "mvn_g_adaptive") {
+                  
+                  if (iter == stop_adaptation) {
+                        mcmc_kernel$sigma = proposal_scaling * kernel_cov
+                        comp_chol(kernel_cov_chol, mcmc_kernel$sigma)
+                  }
+                  
+                  # propose new parameters
+                  if(iter < stop_adaptation) {
                         
-                        # set the data log likelihood for the proposal to NULL
-                        data_log_lik_prop <- NULL
-
-                        try({
-                              map_pars_2_ode(
-                                    pathmat           = pathmat_prop,
-                                    ode_times         = ode_times,
-                                    ode_pars          = ode_params_prop,
-                                    init_start        = ode_initdist_inds[1],
-                                    param_update_inds = param_update_inds,
-                                    stoich_matrix     = stoich_matrix,
-                                    forcing_inds      = forcing_inds,
-                                    forcing_matrix    = forcing_matrix,
-                                    ode_pointer       = ode_pointer,
-                                    set_pars_pointer  = ode_set_pars_pointer,
-                                    step_size         = step_size
+                        mvn_g_adaptive(
+                              params_prop = params_prop_est,
+                              params_cur = model_params_est,
+                              kernel_cov_chol =  kernel_cov_chol,
+                              nugget = nugget * adaptations[iter]
+                        )
+                        
+                  } else {
+                        mvn_rw(params_prop = params_prop_est,
+                               params_cur = model_params_est,
+                               sigma_chol = kernel_cov_chol)
+                  }
+                  
+                  # Convert the proposed parameters to their natural scale
+                  params_prop_nat <- from_estimation_scale(params_prop_est)
+                  
+                  # update time-varying parameters if necessary
+                  if (!is.null(tparam)) {
+                        for (p in seq_along(tparam)) {
+                              insert_tparam(
+                                    tcovar    = ode_params_prop,
+                                    values    = tparam[[p]]$draws2par(
+                                          parameters = params_prop_nat,
+                                          draws = tparam[[p]]$draws_cur),
+                                    col_ind   = tparam[[p]]$col_ind,
+                                    tpar_inds = tparam[[p]]$tpar_inds)
+                        }
+                  }
+                  
+                  # Compute the log prior for the proposed parameters
+                  params_logprior_prop <- prior_density(params_prop_nat, params_prop_est)
+                  
+                  # Insert the proposed parameters into the parameter proposal matrix
+                  pars2lnapars(ode_params_prop, c(params_prop_nat, t0, init_volumes_cur))
+                  
+                  # set the data log likelihood for the proposal to NULL
+                  data_log_lik_prop <- NULL
+                  
+                  try({
+                        map_pars_2_ode(
+                              pathmat           = pathmat_prop,
+                              ode_times         = ode_times,
+                              ode_pars          = ode_params_prop,
+                              init_start        = ode_initdist_inds[1],
+                              param_update_inds = param_update_inds,
+                              stoich_matrix     = stoich_matrix,
+                              forcing_inds      = forcing_inds,
+                              forcing_matrix    = forcing_matrix,
+                              ode_pointer       = ode_pointer,
+                              set_pars_pointer  = ode_set_pars_pointer,
+                              step_size         = step_size
+                        )
+                        
+                        census_lna(
+                              path                = pathmat_prop,
+                              census_path         = censusmat,
+                              census_inds         = census_indices,
+                              lna_event_inds      = ode_event_inds,
+                              flow_matrix_lna     = flow_matrix,
+                              do_prevalence       = do_prevalence,
+                              init_state          = init_volumes_cur,
+                              forcing_matrix      = forcing_matrix
+                        )
+                        
+                        # evaluate the density of the incidence counts
+                        evaluate_d_measure_LNA(
+                              emitmat           = emitmat,
+                              obsmat            = data,
+                              censusmat         = censusmat,
+                              measproc_indmat   = measproc_indmat,
+                              lna_parameters    = ode_params_prop,
+                              lna_param_inds    = ode_param_inds,
+                              lna_const_inds    = ode_const_inds,
+                              lna_tcovar_inds   = ode_tcovar_inds,
+                              param_update_inds = param_update_inds,
+                              census_indices    = census_indices,
+                              lna_param_vec     = ode_param_vec,
+                              d_meas_ptr        = d_meas_pointer
+                        )
+                        
+                        # compute the data log likelihood
+                        data_log_lik_prop <- sum(emitmat[,-1][measproc_indmat])
+                        if(is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
+                  }, silent = TRUE)
+                  
+                  if(is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
+                  
+                  ## Compute the acceptance probability
+                  acceptance_prob <- 
+                        (data_log_lik_prop + params_logprior_prop) - 
+                        (path$data_log_lik + params_logprior_cur)
+                  
+                  # Accept/Reject via metropolis-hastings
+                  if(acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
+                        
+                        ### ACCEPTANCE
+                        acceptances_g <- acceptances_g + 1    # increment acceptances
+                        
+                        copy_vec(path$data_log_lik, data_log_lik_prop)      # update the data log likelihood
+                        copy_vec(params_logprior_cur, params_logprior_prop) # update the prior density
+                        
+                        copy_mat(ode_params_cur, ode_params_prop)   # update the model parameter
+                        copy_vec(model_params_nat, params_prop_nat) # update ode parameters on their natural scales
+                        copy_vec(model_params_est, params_prop_est) # update ode parameters on their estimation scales
+                  }
+                  
+                  if(iter < stop_adaptation) {
+                        
+                        # Adapt the proposal kernel
+                        proposal_scaling <-
+                              min(exp(log(proposal_scaling) +
+                                            adaptations[iter] * (min(exp(acceptance_prob), 1) - target_g)
+                              ),
+                              max_scaling)
+                        
+                        kernel_resid <- model_params_est - kernel_mean
+                        kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid%*%t(kernel_resid) - kernel_cov)
+                        kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
+                        
+                        # compute the cholesky
+                        comp_chol(kernel_cov_chol, proposal_scaling * kernel_cov)
+                  }
+                  
+            } else if (mcmc_kernel$method == "afss") {
+                  
+                  if (iter == stop_adaptation) {
+                        mcmc_kernel$sigma = kernel_cov
+                        
+                        mcmc_kernel$kernel_settings$afss_setting_list = 
+                              afss_settings(
+                                    factor_update_interval  = factor_update_interval,
+                                    prob_update_interval    = prob_update_interval,
+                                    first_factor_update     = first_factor_update,
+                                    first_prob_update       = first_prob_update,
+                                    initial_slice_probs     = slice_probs,
+                                    n_afss_updates          = n_afss_updates,
+                                    initial_widths          = interval_widths,
+                                    sample_all_initially    = FALSE,
+                                    afss_slice_ratio        = afss_slice_ratio,
+                                    target_prop_totsd       = target_prop_totsd,
+                                    harss_prob              = harss_prob
                               )
-                              
-                              census_lna(
-                                    path                = pathmat_prop,
-                                    census_path         = censusmat,
-                                    census_inds         = census_indices,
-                                    lna_event_inds      = ode_event_inds,
-                                    flow_matrix_lna     = flow_matrix,
-                                    do_prevalence       = do_prevalence,
-                                    init_state          = init_volumes_prop,
-                                    forcing_matrix      = forcing_matrix
-                              )
-                              
-                              # evaluate the density of the incidence counts
-                              evaluate_d_measure_LNA(
-                                    emitmat           = emitmat,
-                                    obsmat            = data,
-                                    censusmat         = censusmat,
-                                    measproc_indmat   = measproc_indmat,
-                                    lna_parameters    = ode_params_prop,
-                                    lna_param_inds    = ode_param_inds,
-                                    lna_const_inds    = ode_const_inds,
-                                    lna_tcovar_inds   = ode_tcovar_inds,
-                                    param_update_inds = param_update_inds,
-                                    census_indices    = census_indices,
-                                    lna_param_vec     = ode_param_vec,
-                                    d_meas_ptr        = d_meas_pointer
-                              )
-
-                                # compute the data log likelihood
-                                data_log_lik_prop <- sum(emitmat[,-1][measproc_indmat])
-                                if(is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
-                        }, silent = TRUE)
-
-                        if(is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
-
-                        ## Compute the log posteriors
-                        # N.B. no need to include the initial distribution log likelihoods
-                        # since those are updated via an independence sampler so they cancel out
-                        acceptance_prob <- data_log_lik_prop - path$data_log_lik
                         
-                        # if t0 is not fixed, need to include the proposal probabilities in the MH ratio
-                        if(!t0_fixed) acceptance_prob <- acceptance_prob +
-                                t0_logprior_prop - t0_logprior_cur +
-                                t0_new2cur - t0_cur2new
-                        
-                        # make sure no proposals with initdist_lp == -Inf are accepted
-                        if(!fixed_inits && is.infinite(initdist_lp_prop)) {
-                              acceptance_prob <- -Inf
-                        } 
-
-                        # Accept/Reject via metropolis-hastings
-                        if(acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
-
-                                ### ACCEPTANCE
-                                acceptances_init  <- acceptances_init + 1      # increment acceptances
-                                copy_vec(path$data_log_lik, data_log_lik_prop) # update the data log likelihood
-                                
-                                # Update the initial distribution parameters and log prior if not fixed
-                                if (!fixed_inits) {
-                                      copy_vec(initdist_params_cur, initdist_params_prop)
-                                      copy_vec(init_volumes_cur, init_volumes_prop)
-                                      
-                                      # copy the initial compartment volumes
-                                      for(s in seq_along(init_volumes_cur)) {
-                                            copy_col(dest = ode_params_cur, orig = ode_params_prop, ind = ode_initdist_inds[s])
-                                      }
-                                }
-
-                                # update t0 and its log prior if it is not fixed
-                                if(!t0_fixed) {
-                                        t0              <- t0_prop              # update t0
-                                        t0_logprior_cur <- t0_logprior_prop     # update the log prior for t0
-                                }
-                                
-                                # update the initial distribution log likelihood
-                                initdist_lp_cur <- initdist_lp_prop
-
-                        } else {
-                                ### REJECTION - only need to reset t0 if it is not fixed
-                                if(!t0_fixed) {
-                                        ode_times[1] <- t0
-                                        path$ode_path[1,1] <- t0
-                                        pathmat_prop[1,1] <- t0
-                                }
-                        }
-                }
-              
-                if(!is.null(tparam)) {
-                      update_tparam_ode(
-                            tparam               = tparam,
-                            path_cur             = path,
-                            data                 = data,
-                            ode_parameters       = ode_params_cur,
-                            ode_param_vec        = ode_param_vec,
-                            pathmat_prop         = pathmat_prop,
-                            censusmat            = censusmat,
-                            emitmat              = emitmat,
-                            flow_matrix          = flow_matrix,
-                            stoich_matrix        = stoich_matrix,
-                            ode_times            = ode_times,
-                            forcing_inds         = forcing_inds,
-                            forcing_matrix       = forcing_matrix,
-                            ode_param_inds       = ode_param_inds,
-                            ode_const_inds       = ode_const_inds,
-                            ode_tcovar_inds      = ode_tcovar_inds,
-                            ode_initdist_inds    = ode_initdist_inds,
-                            param_update_inds    = param_update_inds,
-                            census_indices       = census_indices,
-                            ode_event_inds       = ode_event_inds,
-                            measproc_indmat      = measproc_indmat,
-                            ode_pointer          = ode_pointer,
-                            ode_set_pars_pointer = ode_set_pars_pointer,
-                            d_meas_pointer       = d_meas_pointer,
-                            do_prevalence        = do_prevalence,
-                            step_size            = step_size,
-                            tparam_ess           = tparam_ess
-                      )
-                }
-
-                # Save the latent process if called for in this iteration
-                if(iter %% thin_latent_proc == 0) {
-                        ode_paths[,,path_rec_ind]     <- path$ode_path    # save the path
-                        path_rec_ind                  <- path_rec_ind + 1 # increment the path record index
-                }
-
-                # Save the parameters if called for in this iteration
-                if(iter %% thin_params == 0) {
-
-                        # Save the ode log likelihood, data log likelihood, and log priors
-                        data_log_lik[param_rec_ind]     <- path$data_log_lik
-                        params_log_prior[param_rec_ind] <- params_logprior_cur
-
-                        if(!fixed_inits) initdist_log_prior[param_rec_ind] <- initdist_lp_cur
-                        if(!t0_fixed) t0_log_prior[param_rec_ind] <- t0_logprior_cur
-                        
-                        if (!is.null(tparam)) {
-                              
-                              if (!tparam_ess_update) tparam_ess_record[param_rec_ind] <- tparam_ess
-                              
-                              for (p in seq_along(tparam)) tparam[[p]]$log_lik <- sum(dnorm(tparam[[p]]$draws_cur, log = T))
-                              
-                              tparam_log_lik[param_rec_ind, ] <- sapply(tparam, "[[", "log_lik")
-                              mat_2_arr(tparam_samples, ode_params_cur[, tparam_inds + 1, drop = FALSE], param_rec_ind - 1)
-                        }
-
-                        # Store the parameter sample
-                        parameter_samples_nat[param_rec_ind, ] <- c(model_params_nat, t0, initdist_params_cur)
-                        parameter_samples_est[param_rec_ind, ] <- c(model_params_est, t0, init_volumes_cur)
-
-                        # Store the proposal covariance matrix if monitoring is requested
-                        if (mcmc_kernel$method == "mvn_g_adaptive") {
-                              
-                              adaptation_scale_record[param_rec_ind] <- proposal_scaling
-                              kernel_cov_record[, , param_rec_ind]   <- kernel_cov
-                              
-                              if (messages &&
-                                  iter < stop_adaptation)
-                                    cat(
-                                          paste0("Iteration: ", iter),
-                                          paste0("Global acceptances: ", acceptances_g),
-                                          paste0(
-                                                "Global acceptance rate: ",
-                                                acceptances_g / (iter - 1)
-                                          ),
-                                          file = status_file,
-                                          sep = "\n",
-                                          append = TRUE
+                        if(n_model_params != n_afss_updates) {
+                              mcmc_kernel$kernel_settings$harss_setting_list = 
+                                    harss_settings(
+                                          n_harss_updates = n_harss_updates,
+                                          bracket_update_interval = factor_update_interval
                                     )
+                        }
+                        
+                        if(!is.null(factor_update_interval_fcn)) 
+                              mcmc_kernel$kernel_settings$afss_setting_list$factor_update_interval = 
+                              factor_update_interval_fcn()
+                        
+                        if(!is.null(prob_update_interval_fcn))
+                              mcmc_kernel$kernel_settings$afss_setting_list$prob_update_interval = 
+                              prob_update_interval_fcn()
+                  }
+                  
+                  # sample new parameter values
+                  factor_slice_sampler_ode(
+                        model_params_est     = model_params_est,
+                        model_params_nat     = model_params_nat,
+                        params_prop_est      = params_prop_est,
+                        params_prop_nat      = params_prop_nat,
+                        interval_widths      = interval_widths,
+                        slice_eigenvecs      = slice_eigenvecs,
+                        slice_probs          = slice_probs,
+                        n_afss_updates       = ifelse(iter <= first_prob_update && sample_all_initially, 
+                                                      n_model_params,
+                                                      n_afss_updates),
+                        n_contractions_afss  = n_contractions_afss,
+                        c_contractions_afss  = c_contractions_afss,
+                        n_expansions_afss    = n_expansions_afss,
+                        c_expansions_afss    = c_expansions_afss,
+                        path                 = path,
+                        pathmat_prop         = pathmat_prop,
+                        data                 = data,
+                        priors               = priors,
+                        params_logprior_cur  = params_logprior_cur,
+                        ode_params_cur       = ode_params_cur,
+                        ode_param_vec        = ode_param_vec,
+                        tparam               = tparam,
+                        censusmat            = censusmat,
+                        emitmat              = emitmat,
+                        flow_matrix          = flow_matrix,
+                        stoich_matrix        = stoich_matrix,
+                        ode_times            = ode_times,
+                        forcing_inds         = forcing_inds,
+                        forcing_matrix       = forcing_matrix,
+                        ode_param_inds       = ode_param_inds,
+                        ode_const_inds       = ode_const_inds,
+                        ode_tcovar_inds      = ode_tcovar_inds,
+                        ode_initdist_inds    = ode_initdist_inds,
+                        param_update_inds    = param_update_inds,
+                        ode_event_inds       = ode_event_inds,
+                        census_indices       = census_indices,
+                        measproc_indmat      = measproc_indmat,
+                        ode_pointer          = ode_pointer,
+                        ode_set_pars_pointer = ode_set_pars_pointer,
+                        d_meas_pointer       = d_meas_pointer,
+                        do_prevalence        = do_prevalence,
+                        step_size            = step_size
+                  )
+                  
+                  # Hit-and-run update if not sampling all slice directions
+                  if(do_harss_update || runif(1) < harss_prob) {
+                        
+                        hit_and_run_slice_sampler_ode(
+                              model_params_est     = model_params_est,
+                              model_params_nat     = model_params_nat,
+                              params_prop_est      = params_prop_est,
+                              params_prop_nat      = params_prop_nat,
+                              har_direction        = har_direction,
+                              harss_bracket_width  = harss_bracket_width, 
+                              n_expansions_harss   = n_expansions_harss,
+                              n_contractions_harss = n_contractions_harss,
+                              n_harss_updates      = n_harss_updates, 
+                              path                 = path,
+                              pathmat_prop         = pathmat_prop,
+                              data                 = data,
+                              priors               = priors,
+                              params_logprior_cur  = params_logprior_cur,
+                              ode_params_cur       = ode_params_cur,
+                              ode_param_vec        = ode_param_vec,
+                              tparam               = tparam,
+                              censusmat            = censusmat,
+                              emitmat              = emitmat,
+                              flow_matrix          = flow_matrix,
+                              stoich_matrix        = stoich_matrix,
+                              ode_times            = ode_times,
+                              forcing_inds         = forcing_inds,
+                              forcing_matrix       = forcing_matrix,
+                              ode_param_inds       = ode_param_inds,
+                              ode_const_inds       = ode_const_inds,
+                              ode_tcovar_inds      = ode_tcovar_inds,
+                              ode_initdist_inds    = ode_initdist_inds,
+                              param_update_inds    = param_update_inds,
+                              ode_event_inds       = ode_event_inds,
+                              census_indices       = census_indices,
+                              measproc_indmat      = measproc_indmat,
+                              ode_pointer          = ode_pointer,
+                              ode_set_pars_pointer = ode_set_pars_pointer,
+                              d_meas_pointer       = d_meas_pointer,
+                              do_prevalence        = do_prevalence,
+                              step_size            = step_size
+                        )
+                        
+                        # adapt the bracket width
+                        harss_bracket_width <- 
+                              max(harss_bracket_min,
+                                  min(harss_bracket_max,
+                                      exp(log(harss_bracket_width) + 
+                                                sqrt(adaptations[iter]) * (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5))
+                                      ))
+                  }
+                  
+                  # update the covariance matrix for the proposal kernel
+                  if (iter < stop_adaptation) {
+                        
+                        # update the kernel covariance
+                        kernel_resid <- model_params_est - kernel_mean
+                        kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
+                        kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
+                        
+                        # update interval widths
+                        update_interval_widths(interval_widths     = interval_widths,
+                                               n_expansions_afss   = n_expansions_afss,
+                                               n_contractions_afss = n_contractions_afss,
+                                               c_expansions_afss   = c_expansions_afss,
+                                               c_contractions_afss = c_contractions_afss,
+                                               slice_ratios        = slice_ratios,
+                                               adaptation_factor   = adaptations[interval_update_ind],
+                                               target_ratio        = afss_slice_ratio)
+                        
+                        # increment the interval adaptation index
+                        interval_update_ind <- interval_update_ind + 1
+                        
+                        # clamp the interval widths for safety
+                        # lower is the estimated standard deviation in each eigen direction
+                        # upper is the estimated standard deviation times 100
+                        kernel_log_sds <- 0.5 * log(slice_eigenvals)
+                        copy_vec(dest = interval_widths,
+                                 orig = exp(
+                                       pmax(kernel_log_sds,
+                                            pmin(log(interval_widths), kernel_log_sds + log(100)))))
+                        
+                        if (((iter-1) >= first_factor_update) && 
+                            ((iter-1) %% factor_update_interval == 0)) {
                               
-                        } else if(mcmc_kernel$method == "afss") {
+                              # update the slice directions
+                              update_factors(slice_eigenvals = slice_eigenvals,
+                                             slice_eigenvecs = slice_eigenvecs,
+                                             kernel_cov      = kernel_cov)
                               
-                              if(n_afss_updates != n_model_params) {
+                              # if this is the first factor update, reset the intervals
+                              if((iter-1) == first_factor_update | factor_update_interval > 10) {
                                     
-                                    if (messages &&
-                                        iter < stop_adaptation)
-                                          cat(
-                                                paste0("Iteration: ", iter),
-                                                file = status_file,
-                                                sep = "\n",
-                                                append = TRUE
-                                          )
-                              } else {
-                                    if(messages) {
-                                          cat(paste0("Iteration: ", iter),
-                                              file = status_file,
-                                              sep = "\n",
-                                              append = T)
+                                    interval_update_ind <- 2
+                                    n_expansions_afss   <- rep(0.5, n_model_params)
+                                    n_contractions_afss <- rep(0.5, n_model_params)
+                                    c_expansions_afss   <- rep(1, n_model_params)
+                                    c_contractions_afss <- rep(1, n_model_params)
+                                    slice_ratios        <- rep(0.5, n_model_params)
+                                    
+                                    if(factor_update_interval > 25) {
+                                          interval_widths <- sqrt(slice_eigenvals)
                                     }
                               }
                               
-                              kernel_cov_record[, , param_rec_ind]   <- kernel_cov
-                              
-                        } else if(mcmc_kernel$method == "harss") {
-                              
-                              if(messages) {
-                                    cat(paste0("Iteration: ", iter),
-                                        file = status_file,
-                                        sep = "\n",
-                                        append = T)
+                              # increment the factor update interval
+                              if(!is.null(factor_update_interval_fcn)) {
+                                    factor_update_interval <- factor_update_interval_fcn(factor_update_interval)
                               }
-                        } else if(mcmc_kernel$method == "mvnss") {
-                              
-                              if(messages) {
-                                    cat(paste0("Iteration: ", iter),
-                                        file = status_file,
-                                        sep = "\n",
-                                        append = T)
-                              }
-                              
-                              kernel_cov_record[, , param_rec_ind] <- kernel_cov
                         }
                         
-                        # Increment the parameter record index
-                        param_rec_ind <- param_rec_ind + 1
-                }
-        }
-        end.time <- Sys.time()
-
-        # compile the results
-        MCMC_results <- data.frame(
-                data_log_lik       = data_log_lik,
-                params_log_prior   = params_log_prior,
-                row.names          = seq(1, iterations+1, by=thin_params)-1)
-
-        if(!fixed_inits) MCMC_results <- cbind(MCMC_results, initdist_log_prior = initdist_log_prior)
-        if(!t0_fixed)    MCMC_results <- cbind(MCMC_results, t0_log_prior = t0_log_prior)
-        if (!is.null(tparam)) MCMC_results <- cbind(MCMC_results, tparam_log_lik)
-        
-        # append the parameter samples on their natural and estimation scales
-        MCMC_results <- cbind(MCMC_results, parameter_samples_nat, parameter_samples_est)
-        
-        # set the parameters (for restart) and save the results
-        stem_object$dynamics$parameters         <- model_params_nat
-        if(!t0_fixed) stem_object$dynamics$t0   <- t0
-        if(!fixed_inits) {
-                stem_object$dynamics$initdist_params <- init_volumes_cur
-                names(stem_object$dynamics$initdist_params) <- initdist_names
-        }
-
-        stem_object$results <- list(time         = difftime(end.time, start.time, units = "hours"),
-                                    ode_paths    = ode_paths,
-                                    MCMC_results = MCMC_results)
-        
-        if (!is.null(tparam)) {
-              stem_object$results$tparam_samples <- tparam_samples
-              if (!tparam_ess_update) stem_object$results$tparam_ess_record <- tparam_ess_record
-        }
-
-        if (mcmc_kernel$method == "mvn_rw") {
-              stem_object$results$acceptances_g = acceptances_g
-              
-        } else if (mcmc_kernel$method == "mvn_g_adaptive") {
-              
-              stem_object$results$acceptances_g     = acceptances_g
-              stem_object$results$adaptation_record =
-                    list(
-                          adaptation_scale_record  = adaptation_scale_record,
-                          kernel_cov_record        = kernel_cov_record,
-                          proposal_covariance      = proposal_scaling * kernel_cov
-                    )
-              
-        } else if (mcmc_kernel$method == "afss") {
-              
-              stem_object$results$adaptation_record = 
-                    list(
-                          kernel_cov_record     = kernel_cov_record,
-                          proposal_covariance   = kernel_cov,
-                          c_expansions_afss     = c_expansions_afss,
-                          c_contractions_afss   = c_contractions_afss
-                    )
-              
-              if(n_afss_updates != n_model_params) {
-                    stem_object$results$adaptation_record$n_expansions_harss = n_expansions_harss
-                    stem_object$results$adaptation_record$n_contractions_harss = n_contractions_harss
-              }
-              
-        } else if (mcmc_kernel$method == "harss") {
-              
-              stem_object$results$adaptation_record = 
-                    list(
-                          n_expansions_harss    = n_expansions_harss,
-                          n_contractions_harss  = n_contractions_harss
-                    )
-              
-        } else if (mcmc_kernel$method == "mvnss") {
-              
-              stem_object$results$adaptation_record = 
-                    list(
-                          proposal_covariance   = kernel_cov,
-                          n_expansions_mvnss    = n_expansions_mvnss,
-                          n_contractions_mvnss  = n_contractions_mvnss
-                    )
-        }
-
-        if(!fixed_inits || !t0_fixed) {
-                stem_object$results$acceptances_init = acceptances_init
-        }
-
-        # save the settings
-        stem_object$stem_settings <- list(iterations       = iterations,
-                                          thin_params      = thin_params,
-                                          thin_latent_proc = thin_latent_proc,
-                                          n_ess_updates    = n_ess_updates,
-                                          priors           = priors,
-                                          prior_density    = prior_density,
-                                          mcmc_kernel      = mcmc_kernel,
-                                          t0_kernel        = t0_kernel,
-                                          initdist_prior   = initdist_prior,
-                                          initdist_sampler = initdist_sampler,
-                                          path_for_restart = path,
-                                          tparam_for_restart = tparam)
-
-        return(stem_object)
+                        # adapt the slice probabilities
+                        if (((iter-1) >= first_prob_update) && 
+                            ((iter-1) %% prob_update_interval == 0)) {
+                              
+                              copy_vec(dest = slice_probs, 
+                                       orig = pmax(slice_eigenvals^0.5 / sum(slice_eigenvals^0.5), nugget))
+                              
+                              if(!is.null(target_prop_totsd)) {
+                                    n_afss_updates <- 
+                                          max(n_afss_updates,
+                                              Position(function(x) x > target_prop_totsd,
+                                                       cumsum(rev(sqrt(slice_eigenvals))/sum(sqrt(slice_eigenvals)))))
+                              }
+                        }
+                  }
+                  
+            } else if (mcmc_kernel$method == "harss") {
+                  
+                  if (iter == stop_adaptation) {
+                        mcmc_kernel$sigma = kernel_cov
+                  }
+                  
+                  # sample new parameter values
+                  hit_and_run_slice_sampler_ode(
+                        model_params_est     = model_params_est,
+                        model_params_nat     = model_params_nat,
+                        params_prop_est      = params_prop_est,
+                        params_prop_nat      = params_prop_nat,
+                        har_direction        = har_direction,
+                        harss_bracket_width  = harss_bracket_width, 
+                        n_expansions_harss   = n_expansions_harss,
+                        n_contractions_harss = n_contractions_harss,
+                        n_harss_updates      = n_harss_updates, 
+                        path                 = path,
+                        pathmat_prop         = pathmat_prop,
+                        data                 = data,
+                        priors               = priors,
+                        params_logprior_cur  = params_logprior_cur,
+                        ode_params_cur       = ode_params_cur,
+                        ode_param_vec        = ode_param_vec,
+                        tparam               = tparam,
+                        censusmat            = censusmat,
+                        emitmat              = emitmat,
+                        flow_matrix          = flow_matrix,
+                        stoich_matrix        = stoich_matrix,
+                        ode_times            = ode_times,
+                        forcing_inds         = forcing_inds,
+                        forcing_matrix       = forcing_matrix,
+                        ode_param_inds       = ode_param_inds,
+                        ode_const_inds       = ode_const_inds,
+                        ode_tcovar_inds      = ode_tcovar_inds,
+                        ode_initdist_inds    = ode_initdist_inds,
+                        param_update_inds    = param_update_inds,
+                        ode_event_inds       = ode_event_inds,
+                        census_indices       = census_indices,
+                        measproc_indmat      = measproc_indmat,
+                        ode_pointer          = ode_pointer,
+                        ode_set_pars_pointer = ode_set_pars_pointer,
+                        d_meas_pointer       = d_meas_pointer,
+                        do_prevalence        = do_prevalence,
+                        step_size            = step_size
+                  )
+                  
+                  # update the kernel covariance
+                  if(iter < stop_adaptation) {
+                        
+                        kernel_resid <- model_params_est - kernel_mean
+                        kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
+                        kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
+                  }
+                  
+                  # adapt the harss bracket width
+                  harss_bracket_width <- 
+                        max(harss_bracket_min,
+                            min(exp(log(harss_bracket_width) +
+                                          sqrt(adaptations[iter]) * (n_expansions_harss / (n_expansions_harss + n_contractions_harss) - 0.5)),
+                                harss_bracket_max)
+                        )
+                  
+            } else if (mcmc_kernel$method == "mvnss") {
+                  
+                  if (iter == stop_adaptation) {
+                        mcmc_kernel$sigma = kernel_cov 
+                        mcmc_kernel$kernel_settings$mvnss_setting_list <- 
+                              mvnss_settings(n_mvnss_updates = n_mvnss_updates,
+                                             cov_update_interval = cov_update_interval,
+                                             initial_bracket_width = mvnss_bracket_width,
+                                             bracket_limits = c(mvnss_bracket_min, mvnss_bracket_max))
+                  }
+                  
+                  # sample new parameter values
+                  mvn_slice_sampler_ode(
+                        model_params_est     = model_params_est,
+                        model_params_nat     = model_params_nat,
+                        params_prop_est      = params_prop_est,
+                        params_prop_nat      = params_prop_nat,
+                        mvn_direction        = mvn_direction,
+                        har_direction        = har_direction,
+                        mvnss_propvec        = mvnss_propvec,
+                        kernel_cov_chol      = kernel_cov_chol,
+                        nugget               = ifelse(iter < stop_adaptation, nugget * adaptations[iter], 0),
+                        mvnss_bracket_width  = mvnss_bracket_width, 
+                        n_expansions_mvnss   = n_expansions_mvnss,
+                        n_contractions_mvnss = n_contractions_mvnss,
+                        n_mvnss_updates      = n_mvnss_updates, 
+                        path                 = path,
+                        pathmat_prop         = pathmat_prop,
+                        data                 = data,
+                        priors               = priors,
+                        params_logprior_cur  = params_logprior_cur,
+                        ode_params_cur       = ode_params_cur,
+                        ode_param_vec        = ode_param_vec,
+                        tparam               = tparam,
+                        censusmat            = censusmat,
+                        emitmat              = emitmat,
+                        flow_matrix          = flow_matrix,
+                        stoich_matrix        = stoich_matrix,
+                        ode_times            = ode_times,
+                        forcing_inds         = forcing_inds,
+                        forcing_matrix       = forcing_matrix,
+                        ode_param_inds       = ode_param_inds,
+                        ode_const_inds       = ode_const_inds,
+                        ode_tcovar_inds      = ode_tcovar_inds,
+                        ode_initdist_inds    = ode_initdist_inds,
+                        param_update_inds    = param_update_inds,
+                        ode_event_inds       = ode_event_inds,
+                        census_indices       = census_indices,
+                        measproc_indmat      = measproc_indmat,
+                        ode_pointer          = ode_pointer,
+                        ode_set_pars_pointer = ode_set_pars_pointer,
+                        d_meas_pointer       = d_meas_pointer,
+                        do_prevalence        = do_prevalence,
+                        step_size            = step_size
+                  )
+                  
+                  # adapt the bracket width
+                  if(iter < stop_adaptation) {
+                        
+                        # update the kernel covariance
+                        kernel_resid <- model_params_est - kernel_mean
+                        kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
+                        kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
+                        
+                        if((iter-1) %% cov_update_interval == 0) {
+                              comp_chol(kernel_cov_chol, kernel_cov)
+                        }
+                  }
+                  
+                  # adapt the mvnss bracket width
+                  mvnss_bracket_width <- 
+                        max(mvnss_bracket_min,
+                            min(mvnss_bracket_max,
+                                exp(log(mvnss_bracket_width) +
+                                          sqrt(adaptations[iter]) * (n_expansions_mvnss / (n_expansions_mvnss + n_contractions_mvnss) - 0.5))
+                                ))
+            }
+            
+            # Propose and Accept-reject initial state/time
+            if(!fixed_inits || !t0_fixed) {
+                  
+                  # if t0 is not fixed, sample a new value
+                  if(!t0_fixed) {
+                        # sample the new time from proposal centered at t0
+                        t0_prop <- extraDistr:::cpp_rtnorm(n     = 1,
+                                                           mu    = t0,
+                                                           sigma = t0_kernel$rw_sd,
+                                                           lower = t0_kernel$lower,
+                                                           upper = t0_kernel$upper)
+                        
+                        # log prior of the proposal
+                        t0_logprior_prop <- extraDistr:::cpp_dtnorm(x        = t0_prop,
+                                                                    mu       = t0_kernel$mean,
+                                                                    sigma    = t0_kernel$sd,
+                                                                    lower    = t0_kernel$lower,
+                                                                    upper    = t0_kernel$upper,
+                                                                    log_prob = TRUE)
+                        # insert the new time
+                        ode_times[1]       <- t0_prop
+                        path$ode_path[1,1] <- t0_prop
+                        pathmat_prop[1,1]  <- t0_prop
+                        
+                        ### compute the log proposal probabilities for the forward and reverse moves
+                        # prob of going from current to new t0
+                        t0_cur2new <- extraDistr:::cpp_dtnorm(x         = t0_prop,
+                                                              mu        = t0,
+                                                              sigma     = t0_kernel$rw_sd,
+                                                              lower     = t0_kernel$lower,
+                                                              upper     = t0_kernel$upper,
+                                                              log_prob  = TRUE)
+                        
+                        # prob of going from new to current t0
+                        t0_new2cur <- extraDistr:::cpp_dtnorm(x        = t0,
+                                                              mu       = t0_prop,
+                                                              sigma    = t0_kernel$rw_sd,
+                                                              lower    = t0_kernel$lower,
+                                                              upper    = t0_kernel$upper,
+                                                              log_prob = TRUE)
+                  }
+                  
+                  # If the initial compartment counts are not fixed, sample new values
+                  if(!fixed_inits) {
+                        initdist_params_prop <- initdist_sampler()
+                        init_volumes_prop    <- concs2vols(initdist_params_prop)
+                        
+                        # still need to check that the initial distribution does not have loglik of -Inf
+                        initdist_lp_prop <- initdist_prior(initdist_params_prop)
+                  }
+                  
+                  # Insert the proposed parameters into the parameter proposal matrix
+                  pars2lnapars(ode_params_prop, c(model_params_nat, t0_prop, init_volumes_prop))
+                  
+                  # make sure the time--varying parameters are in there too
+                  if(!is.null(tparam)) {
+                        for(tpar_ind in seq_along(tparam)) {
+                              copy_col(dest = ode_params_prop, 
+                                       orig = ode_params_cur,
+                                       ind = tparam[[tpar_ind]]$col_ind)
+                        }
+                  }
+                  
+                  # set the data log likelihood for the proposal to NULL
+                  data_log_lik_prop <- NULL
+                  
+                  try({
+                        map_pars_2_ode(
+                              pathmat           = pathmat_prop,
+                              ode_times         = ode_times,
+                              ode_pars          = ode_params_prop,
+                              init_start        = ode_initdist_inds[1],
+                              param_update_inds = param_update_inds,
+                              stoich_matrix     = stoich_matrix,
+                              forcing_inds      = forcing_inds,
+                              forcing_matrix    = forcing_matrix,
+                              ode_pointer       = ode_pointer,
+                              set_pars_pointer  = ode_set_pars_pointer,
+                              step_size         = step_size
+                        )
+                        
+                        census_lna(
+                              path                = pathmat_prop,
+                              census_path         = censusmat,
+                              census_inds         = census_indices,
+                              lna_event_inds      = ode_event_inds,
+                              flow_matrix_lna     = flow_matrix,
+                              do_prevalence       = do_prevalence,
+                              init_state          = init_volumes_prop,
+                              forcing_matrix      = forcing_matrix
+                        )
+                        
+                        # evaluate the density of the incidence counts
+                        evaluate_d_measure_LNA(
+                              emitmat           = emitmat,
+                              obsmat            = data,
+                              censusmat         = censusmat,
+                              measproc_indmat   = measproc_indmat,
+                              lna_parameters    = ode_params_prop,
+                              lna_param_inds    = ode_param_inds,
+                              lna_const_inds    = ode_const_inds,
+                              lna_tcovar_inds   = ode_tcovar_inds,
+                              param_update_inds = param_update_inds,
+                              census_indices    = census_indices,
+                              lna_param_vec     = ode_param_vec,
+                              d_meas_ptr        = d_meas_pointer
+                        )
+                        
+                        # compute the data log likelihood
+                        data_log_lik_prop <- sum(emitmat[,-1][measproc_indmat])
+                        if(is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
+                  }, silent = TRUE)
+                  
+                  if(is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
+                  
+                  ## Compute the log posteriors
+                  # N.B. no need to include the initial distribution log likelihoods
+                  # since those are updated via an independence sampler so they cancel out
+                  acceptance_prob <- data_log_lik_prop - path$data_log_lik
+                  
+                  # if t0 is not fixed, need to include the proposal probabilities in the MH ratio
+                  if(!t0_fixed) acceptance_prob <- acceptance_prob +
+                        t0_logprior_prop - t0_logprior_cur +
+                        t0_new2cur - t0_cur2new
+                  
+                  # make sure no proposals with initdist_lp == -Inf are accepted
+                  if(!fixed_inits && is.infinite(initdist_lp_prop)) {
+                        acceptance_prob <- -Inf
+                  } 
+                  
+                  # Accept/Reject via metropolis-hastings
+                  if(acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
+                        
+                        ### ACCEPTANCE
+                        acceptances_init  <- acceptances_init + 1      # increment acceptances
+                        copy_vec(path$data_log_lik, data_log_lik_prop) # update the data log likelihood
+                        
+                        # Update the initial distribution parameters and log prior if not fixed
+                        if (!fixed_inits) {
+                              copy_vec(initdist_params_cur, initdist_params_prop)
+                              copy_vec(init_volumes_cur, init_volumes_prop)
+                              
+                              # copy the initial compartment volumes
+                              for(s in seq_along(init_volumes_cur)) {
+                                    copy_col(dest = ode_params_cur, orig = ode_params_prop, ind = ode_initdist_inds[s])
+                              }
+                        }
+                        
+                        # update t0 and its log prior if it is not fixed
+                        if(!t0_fixed) {
+                              t0              <- t0_prop              # update t0
+                              t0_logprior_cur <- t0_logprior_prop     # update the log prior for t0
+                        }
+                        
+                        # update the initial distribution log likelihood
+                        initdist_lp_cur <- initdist_lp_prop
+                        
+                  } else {
+                        ### REJECTION - only need to reset t0 if it is not fixed
+                        if(!t0_fixed) {
+                              ode_times[1] <- t0
+                              path$ode_path[1,1] <- t0
+                              pathmat_prop[1,1] <- t0
+                        }
+                  }
+            }
+            
+            if(!is.null(tparam)) {
+                  update_tparam_ode(
+                        tparam               = tparam,
+                        path_cur             = path,
+                        data                 = data,
+                        ode_parameters       = ode_params_cur,
+                        ode_param_vec        = ode_param_vec,
+                        pathmat_prop         = pathmat_prop,
+                        censusmat            = censusmat,
+                        emitmat              = emitmat,
+                        flow_matrix          = flow_matrix,
+                        stoich_matrix        = stoich_matrix,
+                        ode_times            = ode_times,
+                        forcing_inds         = forcing_inds,
+                        forcing_matrix       = forcing_matrix,
+                        ode_param_inds       = ode_param_inds,
+                        ode_const_inds       = ode_const_inds,
+                        ode_tcovar_inds      = ode_tcovar_inds,
+                        ode_initdist_inds    = ode_initdist_inds,
+                        param_update_inds    = param_update_inds,
+                        census_indices       = census_indices,
+                        ode_event_inds       = ode_event_inds,
+                        measproc_indmat      = measproc_indmat,
+                        ode_pointer          = ode_pointer,
+                        ode_set_pars_pointer = ode_set_pars_pointer,
+                        d_meas_pointer       = d_meas_pointer,
+                        do_prevalence        = do_prevalence,
+                        step_size            = step_size,
+                        tparam_ess           = tparam_ess
+                  )
+            }
+            
+            # Save the latent process if called for in this iteration
+            if(iter %% thin_latent_proc == 0) {
+                  ode_paths[,,path_rec_ind]     <- path$ode_path    # save the path
+                  path_rec_ind                  <- path_rec_ind + 1 # increment the path record index
+            }
+            
+            # Save the parameters if called for in this iteration
+            if(iter %% thin_params == 0) {
+                  
+                  # Save the ode log likelihood, data log likelihood, and log priors
+                  data_log_lik[param_rec_ind]     <- path$data_log_lik
+                  params_log_prior[param_rec_ind] <- params_logprior_cur
+                  
+                  if(!fixed_inits) initdist_log_prior[param_rec_ind] <- initdist_lp_cur
+                  if(!t0_fixed) t0_log_prior[param_rec_ind] <- t0_logprior_cur
+                  
+                  if (!is.null(tparam)) {
+                        
+                        if (!tparam_ess_update) tparam_ess_record[param_rec_ind] <- tparam_ess
+                        
+                        for (p in seq_along(tparam)) tparam[[p]]$log_lik <- sum(dnorm(tparam[[p]]$draws_cur, log = T))
+                        
+                        tparam_log_lik[param_rec_ind, ] <- sapply(tparam, "[[", "log_lik")
+                        mat_2_arr(tparam_samples, ode_params_cur[, tparam_inds + 1, drop = FALSE], param_rec_ind - 1)
+                  }
+                  
+                  # Store the parameter sample
+                  parameter_samples_nat[param_rec_ind, ] <- c(model_params_nat, t0, initdist_params_cur)
+                  parameter_samples_est[param_rec_ind, ] <- c(model_params_est, t0, init_volumes_cur)
+                  
+                  # Store the proposal covariance matrix if monitoring is requested
+                  if (mcmc_kernel$method == "mvn_g_adaptive") {
+                        
+                        adaptation_scale_record[param_rec_ind] <- proposal_scaling
+                        kernel_cov_record[, , param_rec_ind]   <- kernel_cov
+                        
+                  } else if(mcmc_kernel$method == "afss") {
+                        
+                        kernel_cov_record[, , param_rec_ind] <- kernel_cov
+                        
+                  } else if(mcmc_kernel$method == "mvnss") {
+                        
+                        kernel_cov_record[, , param_rec_ind] <- kernel_cov
+                  }
+                  
+                  # Increment the parameter record index
+                  param_rec_ind <- param_rec_ind + 1
+            }
+            
+            # print status messages if called for
+            if(print_progress && (iter-1) %% progress_interval == 0) {
+                  
+                  if(mcmc_kernel$method == "mvn_g_adaptive") {
+                        
+                        if (iter < stop_adaptation) {
+                              cat(
+                                    paste0("Iteration: ", iter-1),
+                                    paste0("Global acceptances: ", acceptances_g),
+                                    paste0(
+                                          "Global acceptance rate: ",
+                                          acceptances_g / (iter - 1)
+                                    ),
+                                    file = status_file,
+                                    sep = "\n",
+                                    append = TRUE
+                              )
+                              
+                        } else {
+                              cat(
+                                    paste0("Iteration: ", iter-1),
+                                    file = status_file,
+                                    sep = "\n",
+                                    append = TRUE
+                              )
+                        }
+                  } else if(mcmc_kernel$method %in% c("afss", "mvn_rw")) {
+                        
+                        cat(
+                              paste0("Iteration: ", iter-1),
+                              file = status_file,
+                              sep = "\n",
+                              append = TRUE
+                        )
+                        
+                  } else if(mcmc_kernel$method == "harss") {
+                        
+                        cat(paste0("Iteration: ", iter-1),
+                            paste0("n_contractions = ", n_contractions_harss - 0.5,
+                                   "; n_expansions = ", n_expansions_harss - 0.5),
+                            file = status_file,
+                            sep = "\n",
+                            append = T)
+                        
+                  } else if(mcmc_kernel$method == "mvnss") {
+                        
+                        cat(paste0("Iteration: ", iter-1),
+                            paste0("n_contractions = ", n_contractions_mvnss - 0.5,
+                                   "; n_expansions = ", n_expansions_mvnss - 0.5),
+                            file = status_file,
+                            sep = "\n",
+                            append = T)
+                  }
+            }
+      }
+      
+      # record the end time
+      end.time <- Sys.time()
+      
+      # compile the results
+      MCMC_results <- data.frame(
+            data_log_lik       = data_log_lik,
+            params_log_prior   = params_log_prior,
+            row.names          = seq(1, iterations+1, by=thin_params)-1)
+      
+      if(!fixed_inits) MCMC_results <- cbind(MCMC_results, initdist_log_prior = initdist_log_prior)
+      if(!t0_fixed)    MCMC_results <- cbind(MCMC_results, t0_log_prior = t0_log_prior)
+      if (!is.null(tparam)) MCMC_results <- cbind(MCMC_results, tparam_log_lik)
+      
+      # append the parameter samples on their natural and estimation scales
+      MCMC_results <- cbind(MCMC_results, parameter_samples_nat, parameter_samples_est)
+      
+      # set the parameters (for restart) and save the results
+      stem_object$dynamics$parameters         <- model_params_nat
+      if(!t0_fixed) stem_object$dynamics$t0   <- t0
+      if(!fixed_inits) {
+            stem_object$dynamics$initdist_params <- init_volumes_cur
+            names(stem_object$dynamics$initdist_params) <- initdist_names
+      }
+      
+      stem_object$results <- list(time         = difftime(end.time, start.time, units = "hours"),
+                                  ode_paths    = ode_paths,
+                                  MCMC_results = MCMC_results)
+      
+      if (!is.null(tparam)) {
+            stem_object$results$tparam_samples <- tparam_samples
+            if (!tparam_ess_update) stem_object$results$tparam_ess_record <- tparam_ess_record
+      }
+      
+      if (mcmc_kernel$method == "mvn_rw") {
+            stem_object$results$acceptances_g = acceptances_g
+            
+      } else if (mcmc_kernel$method == "mvn_g_adaptive") {
+            
+            stem_object$results$acceptances_g     = acceptances_g
+            stem_object$results$adaptation_record =
+                  list(
+                        adaptation_scale_record  = adaptation_scale_record,
+                        kernel_cov_record        = kernel_cov_record,
+                        proposal_covariance      = proposal_scaling * kernel_cov
+                  )
+            
+      } else if (mcmc_kernel$method == "afss") {
+            
+            stem_object$results$adaptation_record = 
+                  list(
+                        kernel_cov_record     = kernel_cov_record,
+                        proposal_covariance   = kernel_cov,
+                        c_expansions_afss     = c_expansions_afss,
+                        c_contractions_afss   = c_contractions_afss
+                  )
+            
+            if(n_afss_updates != n_model_params) {
+                  stem_object$results$adaptation_record$n_expansions_harss = n_expansions_harss
+                  stem_object$results$adaptation_record$n_contractions_harss = n_contractions_harss
+            }
+            
+      } else if (mcmc_kernel$method == "harss") {
+            
+            stem_object$results$adaptation_record = 
+                  list(
+                        n_expansions_harss    = n_expansions_harss - 0.5,
+                        n_contractions_harss  = n_contractions_harss - 0.5
+                  )
+            
+      } else if (mcmc_kernel$method == "mvnss") {
+            
+            stem_object$results$adaptation_record = 
+                  list(
+                        proposal_covariance   = kernel_cov,
+                        n_expansions_mvnss    = n_expansions_mvnss - 0.5,
+                        n_contractions_mvnss  = n_contractions_mvnss - 0.5
+                  )
+      }
+      
+      if(!fixed_inits || !t0_fixed) {
+            stem_object$results$acceptances_init = acceptances_init
+      }
+      
+      # save the settings
+      stem_object$stem_settings <- list(iterations       = iterations,
+                                        thin_params      = thin_params,
+                                        thin_latent_proc = thin_latent_proc,
+                                        n_ess_updates    = n_ess_updates,
+                                        priors           = priors,
+                                        prior_density    = prior_density,
+                                        mcmc_kernel      = mcmc_kernel,
+                                        t0_kernel        = t0_kernel,
+                                        initdist_prior   = initdist_prior,
+                                        initdist_sampler = initdist_sampler,
+                                        path_for_restart = path,
+                                        tparam_for_restart = tparam)
+      
+      return(stem_object)
 }

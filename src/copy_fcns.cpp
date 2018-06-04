@@ -110,3 +110,14 @@ void mat_2_arr(arma::cube& dest, const arma::mat& orig, int ind) {
       
       dest.slice(ind) = orig;
 }
+
+//' Reset a vector by filling it with zeros
+//'
+//' @param v vector to fill with zeros
+//'
+//' @return reset vector in place
+//' @export
+// [[Rcpp::export]]
+void reset_vec(arma::vec& v) {
+      v.zeros();
+}

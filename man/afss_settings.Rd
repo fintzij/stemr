@@ -8,7 +8,8 @@ afss_settings(factor_update_interval = NULL, prob_update_interval = NULL,
   first_factor_update = 100, first_prob_update = 100,
   initial_slice_probs = NULL, initial_widths = NULL,
   n_afss_updates = NULL, sample_all_initially = TRUE,
-  afss_slice_ratio = 0.5, target_prop_totsd = NULL, harss_prob = 0.05)
+  afss_slice_ratio = 0.5, target_prop_totsd = NULL,
+  harss_bracket_limits = c(0, Inf), harss_prob = 0.05)
 }
 \arguments{
 \item{factor_update_interval}{number of iterations between factor and
