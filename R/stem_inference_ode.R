@@ -207,7 +207,8 @@ stem_inference_ode <- function(stem_object,
       }
       
       # grab the names of parameters on their natural and estimation scales
-      param_names_nat <- names(parameters)[!names(parameters) %in% c(names(ode_initdist_inds), "t0")]
+      param_names_nat <- 
+            names(stem_object$dynamics$param_codes)[!names(stem_object$dynamics$param_codes) %in% c(names(ode_initdist_inds), "t0")]
       param_names_est <- colnames(mcmc_kernel$sigma)
       n_model_params  <- length(param_names_est)
       
@@ -1985,7 +1986,7 @@ stem_inference_ode <- function(stem_object,
       MCMC_results <- cbind(MCMC_results, parameter_samples_nat, parameter_samples_est)
       
       # set the parameters (for restart) and save the results
-      stem_object$dynamics$parameters         <- model_params_nat
+      stem_object$dynamics$parameters <- setNames(model_params_nat, param_names_nat)
       if(!t0_fixed) stem_object$dynamics$t0   <- t0
       if(!fixed_inits) {
             stem_object$dynamics$initdist_params <- init_volumes_cur
