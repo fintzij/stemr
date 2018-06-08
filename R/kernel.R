@@ -18,8 +18,8 @@
 #'@param step_size adaptation increment for each iteration, defaults to 1.
 #'@param max_scaling maximum scale factor, defaults to Inf.
 #'@param target_g target acceptance rate for global Metropolis proposals.
-#'@param nugget fixed nugget contribution, defaults to 0.5 for afss and 0.01
-#'  otherwise.
+#'@param nugget fixed nugget contribution, defaults 0.05 for afss, 0.01 for
+#'  mvn_g_adaptive, and 0.5 for mvnss (cooling controlled in mvnss_settings)
 #'@param stop_adaptation iteration at which to stop adapting the proposal
 #'  distribution.
 #'@param harss_warmup Number of hit-and-run warmup iterations, possibly
@@ -83,7 +83,7 @@ kernel <-
                   nugget <- 0.05
                   
             } else if(method == "mvnss") {
-                  nugget <- 0.1
+                  nugget <- 0.5
                   
             } else {
                   nugget <- 0.001 * min(diag(sigma))

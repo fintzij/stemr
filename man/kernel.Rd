@@ -31,8 +31,8 @@ scale_constant/(iteration/step_size+1)^scale_cooling. The
 
 \item{target_g}{target acceptance rate for global Metropolis proposals.}
 
-\item{nugget}{fixed nugget contribution, defaults to 0.5 for afss and 0.01
-otherwise.}
+\item{nugget}{fixed nugget contribution, defaults 0.05 for afss, 0.01 for
+mvn_g_adaptive, and 0.5 for mvnss (cooling controlled in mvnss_settings)}
 
 \item{harss_warmup}{Number of hit-and-run warmup iterations, possibly
 interleaved with elliptical slice sampling warmup updates if ess_warmup =

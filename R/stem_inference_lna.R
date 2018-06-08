@@ -551,6 +551,18 @@ stem_inference_lna <- function(stem_object,
                   mcmc_kernel$kernel_settings$scale_constant *
                   (seq(0, warmup_iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
             
+            # nugget cooling schedule
+            nugget_cooling   <- mcmc_kernel$kernel_settings$mvnss_setting_list$nugget_cooling
+            nugget_step_size <- 
+                  if(is.null(mcmc_kernel$kernel_settings$mvnss_setting_list$nugget_step_size)) {
+                        100 / iterations
+                  }  else {
+                        mcmc_kernel$kernel_settings$mvnss_setting_list$nugget_step_size
+                  }
+            
+            nugget_sequence <- 
+                  mcmc_kernel$kernel_settings$nugget * (seq(0, iterations) * nugget_step_size + 1) ^ -nugget_cooling
+            
             # interval widths, expansions, and contractions
             if(is.null(mcmc_kernel$kernel_settings$mvnss_setting_list)) {
                   mvnss_setting_list <- mvnss_settings()
@@ -1703,7 +1715,9 @@ stem_inference_lna <- function(stem_object,
                               mvnss_settings(n_mvnss_updates = n_mvnss_updates,
                                              cov_update_interval = cov_update_interval,
                                              initial_bracket_width = mvnss_bracket_width,
-                                             bracket_limits = c(mvnss_bracket_min, mvnss_bracket_max))
+                                             bracket_limits = c(mvnss_bracket_min, mvnss_bracket_max),
+                                             nugget_step_size = nugget_step_size,
+                                             nugget_cooling = nugget_cooling)
                   }
                   
                   # sample new parameter values
@@ -1716,7 +1730,7 @@ stem_inference_lna <- function(stem_object,
                         har_direction        = har_direction,
                         mvnss_propvec        = mvnss_propvec,
                         kernel_cov_chol      = kernel_cov_chol,
-                        nugget               = ifelse(iter < stop_adaptation, nugget * adaptations[iter], 0),
+                        nugget               = ifelse(iter < stop_adaptation, nugget_sequence[iter], 0),
                         mvnss_bracket_width  = mvnss_bracket_width, 
                         n_expansions_mvnss   = n_expansions_mvnss,
                         n_contractions_mvnss = n_contractions_mvnss,

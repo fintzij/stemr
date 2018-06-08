@@ -5,16 +5,28 @@
 \title{Generate a list of settings for automated factor slice sampling}
 \usage{
 mvnss_settings(n_mvnss_updates = 1, initial_bracket_width = 1,
-  cov_update_interval = 1, bracket_limits = c(0, Inf))
+  cov_update_interval = 1, bracket_limits = c(0, Inf),
+  nugget_cooling = 0.9, nugget_step_size = NULL)
 }
 \arguments{
 \item{n_mvnss_updates}{number of non-isotropoc hit-and-run updates.}
 
 \item{initial_bracket_width}{initial width of the slice bracket}
 
-\item{cov_update_interval}{how often the empirical covariance matrix should be updated}
+\item{cov_update_interval}{how often the empirical covariance matrix should
+be updated}
 
-\item{bracket_limits}{limits for the slice bracket width, defaults to (0,Inf).}
+\item{bracket_limits}{limits for the slice bracket width, defaults to
+(0,Inf).}
+
+\item{nugget_cooling}{rate at which to cool the nugget, defaults to 0.9.
+Adaptation contributions are governed by a harmonic sequence:
+scale_constant/(iteration/step_size+1)^scale_cooling. The
+\code{plot_adaptations} function may be used to plot the adaptation
+factors.}
+
+\item{nugget_step_size}{increment for each iteration, defaults to 100/number
+of iterations.}
 }
 \value{
 list with additional settings for hit and run slice sampling
