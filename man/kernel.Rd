@@ -5,8 +5,9 @@
 \title{Specify an MCMC transition kernel for updating the model parameters.}
 \usage{
 kernel(method, sigma, scale_constant = 0.5, scale_cooling = 0.5 + 1e-05,
-  step_size = 1, max_scaling = Inf, target_g = 0.234, nugget = NULL,
-  harss_warmup = 0, stop_adaptation = NULL, afss_setting_list = NULL,
+  step_size = 1, adaptation_offset = 0, max_scaling = Inf,
+  target_g = 0.234, nugget = NULL, harss_warmup = 0,
+  stop_adaptation = NULL, afss_setting_list = NULL,
   harss_setting_list = NULL, mvnss_setting_list = NULL, messages = TRUE)
 }
 \arguments{

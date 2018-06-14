@@ -30,6 +30,20 @@ void copy_elem(arma::rowvec& dest, const arma::rowvec& orig, int ind) {
         dest[ind] = orig[ind];
 }
 
+//' Copy an multiple elements from one vector into another
+//'
+//' @param dest destination row vector
+//' @param orig origin row vector
+//' @param ind C++ style index for the element to be copied
+//'
+//' @return copy an element of one row vector into another.
+//' @export
+// [[Rcpp::export]]
+void copy_elem2(arma::rowvec& dest, const arma::rowvec& orig, const arma::uvec& inds) {
+      
+      dest.elem(inds) = orig.elem(inds);
+}
+
 //' Increment an element of a vector by 1
 //'
 //' @param vec destination row vector
@@ -83,6 +97,20 @@ void copy_col(arma::mat& dest, const arma::mat& orig, int ind) {
       dest.col(ind) = orig.col(ind);
 }
 
+//' Copy the columns of one matrix into another
+//'
+//' @param dest destination matrix
+//' @param orig origin matrix
+//' @param ind column index
+//'
+//' @return copy the elements of one matrix into another.
+//' @export
+// [[Rcpp::export]]
+void copy_pathmat(arma::mat& dest, const arma::mat& orig) {
+      
+      dest.cols(1, orig.n_cols-1) = orig.cols(1, orig.n_cols-1);
+}
+
 //' Copy some of the rows of one matrix into another
 //'
 //' @param dest destination matrix
@@ -120,4 +148,17 @@ void mat_2_arr(arma::cube& dest, const arma::mat& orig, int ind) {
 // [[Rcpp::export]]
 void reset_vec(arma::vec& v) {
       v.zeros();
+}
+
+//' Add the contents of one vector to another vector
+//'
+//' @param dest target vector
+//' @param orig vector to be added
+//' @param indices in the target
+//'
+//' @return add the elements of one row vector to another.
+//' @export
+// [[Rcpp::export]]
+void add2vec(arma::rowvec& target, const arma::rowvec& increments, const arma::uvec& inds) {
+      target.elem(inds) += increments;
 }

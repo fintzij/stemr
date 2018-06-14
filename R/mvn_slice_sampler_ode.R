@@ -44,8 +44,8 @@
 #' @param mvnss_bracket_width 
 #' @param n_expansions_mvnss 
 #' @param n_contractions_mvnss 
-#' @param n_mvnss_updates 
 #' @param pathmat_prop 
+#' @param param_inds_Cpp 
 #'
 #' @return update the model parameters, path, and likelihood terms in place
 #' @export
@@ -57,12 +57,12 @@ mvn_slice_sampler_ode <-
                mvn_direction,
                har_direction,
                mvnss_propvec,
+               param_inds_Cpp, 
                kernel_cov_chol,
                nugget,
                mvnss_bracket_width,
                n_expansions_mvnss,
                n_contractions_mvnss,
-               n_mvnss_updates,
                path,
                pathmat_prop,
                data,
@@ -91,379 +91,380 @@ mvn_slice_sampler_ode <-
                d_meas_pointer,
                do_prevalence,
                step_size) {
+
+      # sample the likelihood threshold
+      threshold <- path$data_log_lik + params_logprior_cur - rexp(1)
       
-      for(f in seq_len(n_mvnss_updates)) {
+      # sample the hit-and-run direction
+      if(nugget != 0) {
             
-            # sample the likelihood threshold
-            threshold <- path$data_log_lik + params_logprior_cur - rexp(1)
+            draw_normals(mvn_direction)
+            sample_unit_sphere(har_direction)
             
-            # sample the hit-and-run direction
-            if(nugget != 0) {
-                  draw_normals(mvn_direction)
-                  sample_unit_sphere(har_direction)
-                  
-                  # compute the proposal
-                  copy_vec(dest = mvnss_propvec, 
-                           orig = normalise2((1 - nugget) * normalise2(mvn_direction %*% kernel_cov_chol, 2) + nugget * har_direction, 2))
-                  
-            } else {
-                  draw_normals(mvn_direction)
-                  copy_vec(dest = mvnss_propvec, 
-                           orig = normalise2(mvn_direction %*% kernel_cov_chol, 2))
-            }
+            # compute the proposal
+            copy_vec(dest = mvnss_propvec, 
+                     orig = normalise2((1 - nugget) * normalise2(mvn_direction %*% kernel_cov_chol, 2) + nugget * har_direction, 2))
             
-            # construct the approximate bracket
-            center <- runif(1)
-            lower  <- -mvnss_bracket_width * center
-            upper  <- lower + mvnss_bracket_width
+      } else {
+            draw_normals(mvn_direction)
+            copy_vec(dest = mvnss_propvec, 
+                     orig = normalise2(mvn_direction %*% kernel_cov_chol, 2))
+      }
+      
+      # construct the approximate bracket
+      center <- runif(1)
+      lower  <- -mvnss_bracket_width * center
+      upper  <- lower + mvnss_bracket_width
+      
+      # initialize the log-posterior at the endpoints
+      logpost_lower <- NULL
+      logpost_upper <- NULL
+      logpost_prop  <- -Inf 
+      
+      # # step out lower bound
+      while(is.null(logpost_lower) || threshold < logpost_lower) {
+
+            # lower end of the bracket on the estimation scale
+            copy_vec(dest  = params_prop_est, orig = model_params_est)
+            add2vec(target = params_prop_est, increments = lower * mvnss_propvec, inds = param_inds_Cpp)
+
+            # get the parameters on the natural scale
+            copy_vec(params_prop_nat, priors$from_estimation_scale(params_prop_est))
+
+            # compute the prior density
+            logprior_lower <- priors$prior_density(params_nat = params_prop_nat,
+                                                   params_est = params_prop_est)
             
-            # initialize the log-posterior at the endpoints
-            logpost_lower <- NULL
-            logpost_upper <- NULL
-            logpost_prop  <- -Inf 
-            
-            # # step out lower bound
-            while(is.null(logpost_lower) || threshold < logpost_lower) {
-
-                  # lower end of the bracket on the estimation scale
-                  copy_vec(params_prop_est, model_params_est + lower * mvnss_propvec)
-
-                  # get the parameters on the natural scale
-                  copy_vec(params_prop_nat, priors$from_estimation_scale(params_prop_est))
-
-                  # compute the prior density
-                  logprior_lower <- priors$prior_density(params_nat = params_prop_nat,
-                                                         params_est = params_prop_est)
+            # if the log prior is not -Inf, find the path
+            if(logprior_lower != -Inf) {
                   
-                  # if the log prior is not -Inf, find the path
-                  if(logprior_lower != -Inf) {
-                        
-                        # insert the parameters into the ode_parameters matrix
-                        pars2lnapars(ode_params_cur, params_prop_nat)
-                        
-                        # compute the time-varying parameters if necessary
-                        if(!is.null(tparam)) {
-                              for(p in seq_along(tparam)) {
-                                    insert_tparam(tcovar    = ode_params_cur,
-                                                  values    = tparam[[p]]$draws2par(
-                                                        parameters = params_prop_nat,
-                                                        draws      = tparam[[p]]$draws_cur),
-                                                  col_ind   = tparam[[p]]$col_ind,
-                                                  tpar_inds = tparam[[p]]$tpar_inds)
-                              }
-                        }
-                        
-                        # initialize data log likelihood
-                        loglik_lower <- NULL
-                        
-                        # map the perturbations to an ode path
-                        try({
-                              map_pars_2_ode(
-                                    pathmat           = pathmat_prop,
-                                    ode_times         = ode_times,
-                                    ode_pars          = ode_params_cur,
-                                    init_start        = ode_initdist_inds[1],
-                                    param_update_inds = param_update_inds,
-                                    stoich_matrix     = stoich_matrix,
-                                    forcing_inds      = forcing_inds,
-                                    forcing_matrix    = forcing_matrix,
-                                    ode_pointer       = ode_pointer,
-                                    set_pars_pointer  = ode_set_pars_pointer,
-                                    step_size         = step_size
-                              )
-                              
-                              census_lna(
-                                    path                = pathmat_prop,
-                                    census_path         = censusmat,
-                                    census_inds         = census_indices,
-                                    lna_event_inds      = ode_event_inds,
-                                    flow_matrix_lna     = flow_matrix,
-                                    do_prevalence       = do_prevalence,
-                                    init_state          = ode_params_cur[1, ode_initdist_inds + 1],
-                                    forcing_matrix      = forcing_matrix
-                              )
-                              
-                              # evaluate the density of the incidence counts
-                              evaluate_d_measure_LNA(
-                                    emitmat           = emitmat,
-                                    obsmat            = data,
-                                    censusmat         = censusmat,
-                                    measproc_indmat   = measproc_indmat,
-                                    lna_parameters    = ode_params_cur,
-                                    lna_param_inds    = ode_param_inds,
-                                    lna_const_inds    = ode_const_inds,
-                                    lna_tcovar_inds   = ode_tcovar_inds,
-                                    param_update_inds = param_update_inds,
-                                    census_indices    = census_indices,
-                                    lna_param_vec     = ode_param_vec,
-                                    d_meas_ptr        = d_meas_pointer
-                              )
-                              
-                              # compute the data log likelihood
-                              loglik_lower <- sum(emitmat[,-1][measproc_indmat])
-                              if(is.nan(loglik_lower)) loglik_lower <- -Inf
-                        }, silent = TRUE)
-                        
-                        if(is.null(loglik_lower)) loglik_lower <- -Inf
-                        
-                  } else {
-                        loglik_lower <- -Inf
-                  }
-
-                  # compute log-posterior
-                  logpost_lower <- loglik_lower + logprior_lower
-
-                  # step out the bracket if necessary
-                  if(threshold < logpost_lower) {
-
-                        # decrease the lower endpoint of the bracket
-                        lower <- lower - mvnss_bracket_width
-
-                        # increment the number of expansions
-                        increment_elem(n_expansions_mvnss, 0)
-                  }
-            }
-
-            # step out upper
-            while(is.null(logpost_upper) || threshold < logpost_upper) {
-
-                  # upper end of the bracket on the estimation scale
-                  copy_vec(params_prop_est, model_params_est + upper * mvnss_propvec)
-
-                  # get the parameters on the natural scale
-                  copy_vec(params_prop_nat, priors$from_estimation_scale(params_prop_est))
-
-                  # compute the prior density
-                  logprior_upper <- priors$prior_density(params_nat = params_prop_nat,
-                                                         params_est = params_prop_est)
+                  # insert the parameters into the ode_parameters matrix
+                  pars2lnapars(ode_params_cur, params_prop_nat)
                   
-                  # if the log prior density is not -Inf, find the path
-                  if(logprior_upper != -Inf) {
-                        
-                        # insert the parameters into the ode_parameters matrix
-                        pars2lnapars(ode_params_cur, params_prop_nat)
-                        
-                        # compute the time-varying parameters if necessary
-                        if(!is.null(tparam)) {
-                              for(p in seq_along(tparam)) {
-                                    insert_tparam(tcovar    = ode_params_cur,
-                                                  values    = tparam[[p]]$draws2par(
-                                                        parameters = params_prop_nat,
-                                                        draws      = tparam[[p]]$draws_cur),
-                                                  col_ind   = tparam[[p]]$col_ind,
-                                                  tpar_inds = tparam[[p]]$tpar_inds)
-                              }
-                        }
-                        
-                        # initialize data log likelihood
-                        loglik_upper <- NULL
-                        
-                        # map the perturbations to an ode path
-                        try({
-                              map_pars_2_ode(
-                                    pathmat           = pathmat_prop,
-                                    ode_times         = ode_times,
-                                    ode_pars          = ode_params_cur,
-                                    init_start        = ode_initdist_inds[1],
-                                    param_update_inds = param_update_inds,
-                                    stoich_matrix     = stoich_matrix,
-                                    forcing_inds      = forcing_inds,
-                                    forcing_matrix    = forcing_matrix,
-                                    ode_pointer       = ode_pointer,
-                                    set_pars_pointer  = ode_set_pars_pointer,
-                                    step_size         = step_size
-                              )
-                              
-                              census_lna(
-                                    path                = pathmat_prop,
-                                    census_path         = censusmat,
-                                    census_inds         = census_indices,
-                                    lna_event_inds      = ode_event_inds,
-                                    flow_matrix_lna     = flow_matrix,
-                                    do_prevalence       = do_prevalence,
-                                    init_state          = ode_params_cur[1, ode_initdist_inds + 1],
-                                    forcing_matrix      = forcing_matrix
-                              )
-                              
-                              # evaluate the density of the incidence counts
-                              evaluate_d_measure_LNA(
-                                    emitmat           = emitmat,
-                                    obsmat            = data,
-                                    censusmat         = censusmat,
-                                    measproc_indmat   = measproc_indmat,
-                                    lna_parameters    = ode_params_cur,
-                                    lna_param_inds    = ode_param_inds,
-                                    lna_const_inds    = ode_const_inds,
-                                    lna_tcovar_inds   = ode_tcovar_inds,
-                                    param_update_inds = param_update_inds,
-                                    census_indices    = census_indices,
-                                    lna_param_vec     = ode_param_vec,
-                                    d_meas_ptr        = d_meas_pointer
-                              )
-                              
-                              # compute the data log likelihood
-                              loglik_upper <- sum(emitmat[,-1][measproc_indmat])
-                              if(is.nan(loglik_upper)) loglik_upper <- -Inf
-                        }, silent = TRUE)
-                        
-                        if(is.null(loglik_upper)) loglik_upper <- -Inf  
-                        
-                  } else {
-                        loglik_upper <- -Inf
-                  }
-
-                  # compute log-posterior
-                  logpost_upper <- loglik_upper + logprior_upper
-
-                  # step out the bracket if necessary
-                  if(threshold < logpost_upper) {
-
-                        # increase the upper endpoint of the bracket
-                        upper <- upper + mvnss_bracket_width
-
-                        # increment the number of expansions
-                        increment_elem(n_expansions_mvnss, 0)
-                  }
-            }
-
-            # sample from the bracket
-            while((upper - lower) > sqrt(.Machine$double.eps) && (logpost_prop < threshold)) {
-                  
-                  # sample uniformly in the bracket
-                  prop <- runif(1, lower, upper)
-                  
-                  # proposed parameters on the estimation scale
-                  copy_vec(params_prop_est, model_params_est + prop * mvnss_propvec)
-                  
-                  # get the parameters on the natural scale
-                  copy_vec(params_prop_nat, priors$from_estimation_scale(params_prop_est))
-                  
-                  # compute the prior density
-                  logprior_prop <- priors$prior_density(params_nat = params_prop_nat,
-                                                        params_est = params_prop_est)
-                  
-                  
-                  # if the log prior is not -Inf, find the path
-                  if(logprior_prop != -Inf) {
-                        
-                        # insert the parameters into the lna_parameters matrix
-                        pars2lnapars(ode_params_cur, params_prop_nat)
-                        
-                        # compute the time-varying parameters if necessary
-                        if(!is.null(tparam)) {
-                              for(p in seq_along(tparam)) {
-                                    insert_tparam(tcovar    = ode_params_cur,
-                                                  values    = tparam[[p]]$draws2par(
-                                                        parameters = params_prop_nat,
-                                                        draws      = tparam[[p]]$draws_cur),
-                                                  col_ind   = tparam[[p]]$col_ind,
-                                                  tpar_inds = tparam[[p]]$tpar_inds)
-                              }
-                        }
-                        
-                        # initialize data log likelihood
-                        loglik_prop <- NULL
-                        
-                        # map the perturbations to an ode path
-                        try({
-                              map_pars_2_ode(
-                                    pathmat           = pathmat_prop,
-                                    ode_times         = ode_times,
-                                    ode_pars          = ode_params_cur,
-                                    init_start        = ode_initdist_inds[1],
-                                    param_update_inds = param_update_inds,
-                                    stoich_matrix     = stoich_matrix,
-                                    forcing_inds      = forcing_inds,
-                                    forcing_matrix    = forcing_matrix,
-                                    ode_pointer       = ode_pointer,
-                                    set_pars_pointer  = ode_set_pars_pointer,
-                                    step_size         = step_size
-                              )
-                              
-                              census_lna(
-                                    path                = pathmat_prop,
-                                    census_path         = censusmat,
-                                    census_inds         = census_indices,
-                                    lna_event_inds      = ode_event_inds,
-                                    flow_matrix_lna     = flow_matrix,
-                                    do_prevalence       = do_prevalence,
-                                    init_state          = ode_params_cur[1, ode_initdist_inds + 1],
-                                    forcing_matrix      = forcing_matrix
-                              )
-                              
-                              # evaluate the density of the incidence counts
-                              evaluate_d_measure_LNA(
-                                    emitmat           = emitmat,
-                                    obsmat            = data,
-                                    censusmat         = censusmat,
-                                    measproc_indmat   = measproc_indmat,
-                                    lna_parameters    = ode_params_cur,
-                                    lna_param_inds    = ode_param_inds,
-                                    lna_const_inds    = ode_const_inds,
-                                    lna_tcovar_inds   = ode_tcovar_inds,
-                                    param_update_inds = param_update_inds,
-                                    census_indices    = census_indices,
-                                    lna_param_vec     = ode_param_vec,
-                                    d_meas_ptr        = d_meas_pointer
-                              )
-                              
-                              # compute the data log likelihood
-                              loglik_prop <- sum(emitmat[,-1][measproc_indmat])
-                              if(is.nan(loglik_prop)) loglik_prop <- -Inf
-                        }, silent = TRUE)
-                        
-                        if(is.null(loglik_prop)) loglik_prop <- -Inf
-                        
-                  } else {
-                        loglik_prop <- -Inf
-                  }
-                  
-                  # compute log-posterior
-                  logpost_prop <- loglik_prop + logprior_prop
-                  
-                  # shrink the bracket if necessary
-                  if(threshold > logpost_prop) {
-                        
-                        # adjust the bounds
-                        if(prop < 0) {
-                              lower <- prop
-                        } else {
-                              upper <- prop
-                        }
-                        
-                        # increment the number of contractions 
-                        increment_elem(n_contractions_mvnss, 0)
-                  }
-            }
-            
-            if((upper - lower) > sqrt(.Machine$double.eps)) {
-                  
-                  # update vectors of model parameters
-                  copy_vec(dest = model_params_est, orig = params_prop_est)
-                  copy_vec(dest = model_params_nat, orig = params_prop_nat)
-                  
-                  # update the likelihood terms
-                  copy_vec(dest = params_logprior_cur, orig = logprior_prop)
-                  copy_vec(dest = path$data_log_lik,   orig = loglik_prop)
-                  
-                  # copy the path matrix
-                  copy_mat(path$ode_path, pathmat_prop)
-                  
-            } else {
-                  
-                  # insert the parameters into the lna_parameters matrix
-                  pars2lnapars(ode_params_cur, model_params_nat)
-                  
-                  # recover the original time-varying parameter draws and compute the values
+                  # compute the time-varying parameters if necessary
                   if(!is.null(tparam)) {
                         for(p in seq_along(tparam)) {
                               insert_tparam(tcovar    = ode_params_cur,
-                                            values    = tparam[[p]]$draws2par(parameters = model_params_nat,
-                                                                              draws = tparam[[p]]$draws_cur),
+                                            values    = tparam[[p]]$draws2par(
+                                                  parameters = params_prop_nat,
+                                                  draws      = tparam[[p]]$draws_cur),
                                             col_ind   = tparam[[p]]$col_ind,
                                             tpar_inds = tparam[[p]]$tpar_inds)
                         }
                   }
+                  
+                  # initialize data log likelihood
+                  loglik_lower <- NULL
+                  
+                  # map the perturbations to an ode path
+                  try({
+                        map_pars_2_ode(
+                              pathmat           = pathmat_prop,
+                              ode_times         = ode_times,
+                              ode_pars          = ode_params_cur,
+                              init_start        = ode_initdist_inds[1],
+                              param_update_inds = param_update_inds,
+                              stoich_matrix     = stoich_matrix,
+                              forcing_inds      = forcing_inds,
+                              forcing_matrix    = forcing_matrix,
+                              ode_pointer       = ode_pointer,
+                              set_pars_pointer  = ode_set_pars_pointer,
+                              step_size         = step_size
+                        )
+                        
+                        census_lna(
+                              path                = pathmat_prop,
+                              census_path         = censusmat,
+                              census_inds         = census_indices,
+                              lna_event_inds      = ode_event_inds,
+                              flow_matrix_lna     = flow_matrix,
+                              do_prevalence       = do_prevalence,
+                              init_state          = ode_params_cur[1, ode_initdist_inds + 1],
+                              forcing_matrix      = forcing_matrix
+                        )
+                        
+                        # evaluate the density of the incidence counts
+                        evaluate_d_measure_LNA(
+                              emitmat           = emitmat,
+                              obsmat            = data,
+                              censusmat         = censusmat,
+                              measproc_indmat   = measproc_indmat,
+                              lna_parameters    = ode_params_cur,
+                              lna_param_inds    = ode_param_inds,
+                              lna_const_inds    = ode_const_inds,
+                              lna_tcovar_inds   = ode_tcovar_inds,
+                              param_update_inds = param_update_inds,
+                              census_indices    = census_indices,
+                              lna_param_vec     = ode_param_vec,
+                              d_meas_ptr        = d_meas_pointer
+                        )
+                        
+                        # compute the data log likelihood
+                        loglik_lower <- sum(emitmat[,-1][measproc_indmat])
+                        if(is.nan(loglik_lower)) loglik_lower <- -Inf
+                  }, silent = TRUE)
+                  
+                  if(is.null(loglik_lower)) loglik_lower <- -Inf
+                  
+            } else {
+                  loglik_lower <- -Inf
             }
-      }      
+
+            # compute log-posterior
+            logpost_lower <- loglik_lower + logprior_lower
+
+            # step out the bracket if necessary
+            if(threshold < logpost_lower) {
+
+                  # decrease the lower endpoint of the bracket
+                  lower <- lower - mvnss_bracket_width
+
+                  # increment the number of expansions
+                  increment_elem(n_expansions_mvnss, 0)
+            }
+      }
+
+      # step out upper
+      while(is.null(logpost_upper) || threshold < logpost_upper) {
+
+            # upper end of the bracket on the estimation scale
+            copy_elem2(dest = params_prop_est, orig = model_params_est, inds = param_inds_Cpp)
+            add2vec(target = params_prop_est, increments = upper * mvnss_propvec, inds = param_inds_Cpp)
+            
+            # get the parameters on the natural scale
+            copy_vec(params_prop_nat, priors$from_estimation_scale(params_prop_est))
+
+            # compute the prior density
+            logprior_upper <- priors$prior_density(params_nat = params_prop_nat,
+                                                   params_est = params_prop_est)
+            
+            # if the log prior density is not -Inf, find the path
+            if(logprior_upper != -Inf) {
+                  
+                  # insert the parameters into the ode_parameters matrix
+                  pars2lnapars(ode_params_cur, params_prop_nat)
+                  
+                  # compute the time-varying parameters if necessary
+                  if(!is.null(tparam)) {
+                        for(p in seq_along(tparam)) {
+                              insert_tparam(tcovar    = ode_params_cur,
+                                            values    = tparam[[p]]$draws2par(
+                                                  parameters = params_prop_nat,
+                                                  draws      = tparam[[p]]$draws_cur),
+                                            col_ind   = tparam[[p]]$col_ind,
+                                            tpar_inds = tparam[[p]]$tpar_inds)
+                        }
+                  }
+                  
+                  # initialize data log likelihood
+                  loglik_upper <- NULL
+                  
+                  # map the perturbations to an ode path
+                  try({
+                        map_pars_2_ode(
+                              pathmat           = pathmat_prop,
+                              ode_times         = ode_times,
+                              ode_pars          = ode_params_cur,
+                              init_start        = ode_initdist_inds[1],
+                              param_update_inds = param_update_inds,
+                              stoich_matrix     = stoich_matrix,
+                              forcing_inds      = forcing_inds,
+                              forcing_matrix    = forcing_matrix,
+                              ode_pointer       = ode_pointer,
+                              set_pars_pointer  = ode_set_pars_pointer,
+                              step_size         = step_size
+                        )
+                        
+                        census_lna(
+                              path                = pathmat_prop,
+                              census_path         = censusmat,
+                              census_inds         = census_indices,
+                              lna_event_inds      = ode_event_inds,
+                              flow_matrix_lna     = flow_matrix,
+                              do_prevalence       = do_prevalence,
+                              init_state          = ode_params_cur[1, ode_initdist_inds + 1],
+                              forcing_matrix      = forcing_matrix
+                        )
+                        
+                        # evaluate the density of the incidence counts
+                        evaluate_d_measure_LNA(
+                              emitmat           = emitmat,
+                              obsmat            = data,
+                              censusmat         = censusmat,
+                              measproc_indmat   = measproc_indmat,
+                              lna_parameters    = ode_params_cur,
+                              lna_param_inds    = ode_param_inds,
+                              lna_const_inds    = ode_const_inds,
+                              lna_tcovar_inds   = ode_tcovar_inds,
+                              param_update_inds = param_update_inds,
+                              census_indices    = census_indices,
+                              lna_param_vec     = ode_param_vec,
+                              d_meas_ptr        = d_meas_pointer
+                        )
+                        
+                        # compute the data log likelihood
+                        loglik_upper <- sum(emitmat[,-1][measproc_indmat])
+                        if(is.nan(loglik_upper)) loglik_upper <- -Inf
+                  }, silent = TRUE)
+                  
+                  if(is.null(loglik_upper)) loglik_upper <- -Inf  
+                  
+            } else {
+                  loglik_upper <- -Inf
+            }
+
+            # compute log-posterior
+            logpost_upper <- loglik_upper + logprior_upper
+
+            # step out the bracket if necessary
+            if(threshold < logpost_upper) {
+
+                  # increase the upper endpoint of the bracket
+                  upper <- upper + mvnss_bracket_width
+
+                  # increment the number of expansions
+                  increment_elem(n_expansions_mvnss, 0)
+            }
+      }
+
+      # sample from the bracket
+      while((upper - lower) > sqrt(.Machine$double.eps) && (logpost_prop < threshold)) {
+            
+            # sample uniformly in the bracket
+            prop <- runif(1, lower, upper)
+            
+            # proposed parameters on the estimation scale
+            copy_elem2(dest = params_prop_est, orig = model_params_est, inds = param_inds_Cpp)
+            add2vec(target = params_prop_est, increments = prop * mvnss_propvec, inds = param_inds_Cpp)
+            
+            # get the parameters on the natural scale
+            copy_vec(params_prop_nat, priors$from_estimation_scale(params_prop_est))
+            
+            # compute the prior density
+            logprior_prop <- priors$prior_density(params_nat = params_prop_nat,
+                                                  params_est = params_prop_est)
+            
+            
+            # if the log prior is not -Inf, find the path
+            if(logprior_prop != -Inf) {
+                  
+                  # insert the parameters into the lna_parameters matrix
+                  pars2lnapars(ode_params_cur, params_prop_nat)
+                  
+                  # compute the time-varying parameters if necessary
+                  if(!is.null(tparam)) {
+                        for(p in seq_along(tparam)) {
+                              insert_tparam(tcovar    = ode_params_cur,
+                                            values    = tparam[[p]]$draws2par(
+                                                  parameters = params_prop_nat,
+                                                  draws      = tparam[[p]]$draws_cur),
+                                            col_ind   = tparam[[p]]$col_ind,
+                                            tpar_inds = tparam[[p]]$tpar_inds)
+                        }
+                  }
+                  
+                  # initialize data log likelihood
+                  loglik_prop <- NULL
+                  
+                  # map the perturbations to an ode path
+                  try({
+                        map_pars_2_ode(
+                              pathmat           = pathmat_prop,
+                              ode_times         = ode_times,
+                              ode_pars          = ode_params_cur,
+                              init_start        = ode_initdist_inds[1],
+                              param_update_inds = param_update_inds,
+                              stoich_matrix     = stoich_matrix,
+                              forcing_inds      = forcing_inds,
+                              forcing_matrix    = forcing_matrix,
+                              ode_pointer       = ode_pointer,
+                              set_pars_pointer  = ode_set_pars_pointer,
+                              step_size         = step_size
+                        )
+                        
+                        census_lna(
+                              path                = pathmat_prop,
+                              census_path         = censusmat,
+                              census_inds         = census_indices,
+                              lna_event_inds      = ode_event_inds,
+                              flow_matrix_lna     = flow_matrix,
+                              do_prevalence       = do_prevalence,
+                              init_state          = ode_params_cur[1, ode_initdist_inds + 1],
+                              forcing_matrix      = forcing_matrix
+                        )
+                        
+                        # evaluate the density of the incidence counts
+                        evaluate_d_measure_LNA(
+                              emitmat           = emitmat,
+                              obsmat            = data,
+                              censusmat         = censusmat,
+                              measproc_indmat   = measproc_indmat,
+                              lna_parameters    = ode_params_cur,
+                              lna_param_inds    = ode_param_inds,
+                              lna_const_inds    = ode_const_inds,
+                              lna_tcovar_inds   = ode_tcovar_inds,
+                              param_update_inds = param_update_inds,
+                              census_indices    = census_indices,
+                              lna_param_vec     = ode_param_vec,
+                              d_meas_ptr        = d_meas_pointer
+                        )
+                        
+                        # compute the data log likelihood
+                        loglik_prop <- sum(emitmat[,-1][measproc_indmat])
+                        if(is.nan(loglik_prop)) loglik_prop <- -Inf
+                  }, silent = TRUE)
+                  
+                  if(is.null(loglik_prop)) loglik_prop <- -Inf
+                  
+            } else {
+                  loglik_prop <- -Inf
+            }
+            
+            # compute log-posterior
+            logpost_prop <- loglik_prop + logprior_prop
+            
+            # shrink the bracket if necessary
+            if(threshold > logpost_prop) {
+                  
+                  # adjust the bounds
+                  if(prop < 0) {
+                        lower <- prop
+                  } else {
+                        upper <- prop
+                  }
+                  
+                  # increment the number of contractions 
+                  increment_elem(n_contractions_mvnss, 0)
+            }
+      }
+      
+      if((upper - lower) > sqrt(.Machine$double.eps)) {
+            
+            # update vectors of model parameters
+            copy_elem2(dest = model_params_est, orig = params_prop_est, inds = param_inds_Cpp)
+            copy_vec(dest = model_params_nat, orig = params_prop_nat)
+            
+            # update the likelihood terms
+            copy_vec(dest = params_logprior_cur, orig = logprior_prop)
+            copy_vec(dest = path$data_log_lik,   orig = loglik_prop)
+            
+            # copy the path matrix
+            copy_pathmat(path$ode_path, pathmat_prop)
+            
+      } else {
+            
+            # insert the parameters into the lna_parameters matrix
+            pars2lnapars(ode_params_cur, model_params_nat)
+            
+            # recover the original time-varying parameter draws and compute the values
+            if(!is.null(tparam)) {
+                  for(p in seq_along(tparam)) {
+                        insert_tparam(tcovar    = ode_params_cur,
+                                      values    = tparam[[p]]$draws2par(parameters = model_params_nat,
+                                                                        draws = tparam[[p]]$draws_cur),
+                                      col_ind   = tparam[[p]]$col_ind,
+                                      tpar_inds = tparam[[p]]$tpar_inds)
+                  }
+            }
+      }
 }

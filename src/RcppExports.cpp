@@ -174,6 +174,18 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// copy_elem2
+void copy_elem2(arma::rowvec& dest, const arma::rowvec& orig, const arma::uvec& inds);
+RcppExport SEXP _stemr_copy_elem2(SEXP destSEXP, SEXP origSEXP, SEXP indsSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::rowvec& >::type dest(destSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type orig(origSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type inds(indsSEXP);
+    copy_elem2(dest, orig, inds);
+    return R_NilValue;
+END_RCPP
+}
 // increment_elem
 void increment_elem(arma::vec& vec, int ind);
 RcppExport SEXP _stemr_increment_elem(SEXP vecSEXP, SEXP indSEXP) {
@@ -219,6 +231,17 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// copy_pathmat
+void copy_pathmat(arma::mat& dest, const arma::mat& orig);
+RcppExport SEXP _stemr_copy_pathmat(SEXP destSEXP, SEXP origSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat& >::type dest(destSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type orig(origSEXP);
+    copy_pathmat(dest, orig);
+    return R_NilValue;
+END_RCPP
+}
 // copy_2_rows
 void copy_2_rows(arma::mat& dest, const arma::mat& orig, const arma::uvec& inds);
 RcppExport SEXP _stemr_copy_2_rows(SEXP destSEXP, SEXP origSEXP, SEXP indsSEXP) {
@@ -250,6 +273,18 @@ BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::vec& >::type v(vSEXP);
     reset_vec(v);
+    return R_NilValue;
+END_RCPP
+}
+// add2vec
+void add2vec(arma::rowvec& target, const arma::rowvec& increments, const arma::uvec& inds);
+RcppExport SEXP _stemr_add2vec(SEXP targetSEXP, SEXP incrementsSEXP, SEXP indsSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::rowvec& >::type target(targetSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type increments(incrementsSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type inds(indsSEXP);
+    add2vec(target, increments, inds);
     return R_NilValue;
 END_RCPP
 }
@@ -705,13 +740,16 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_convert_lna2", (DL_FUNC) &_stemr_convert_lna2, 4},
     {"_stemr_pars2lnapars", (DL_FUNC) &_stemr_pars2lnapars, 2},
     {"_stemr_copy_elem", (DL_FUNC) &_stemr_copy_elem, 3},
+    {"_stemr_copy_elem2", (DL_FUNC) &_stemr_copy_elem2, 3},
     {"_stemr_increment_elem", (DL_FUNC) &_stemr_increment_elem, 2},
     {"_stemr_copy_vec", (DL_FUNC) &_stemr_copy_vec, 2},
     {"_stemr_copy_mat", (DL_FUNC) &_stemr_copy_mat, 2},
     {"_stemr_copy_col", (DL_FUNC) &_stemr_copy_col, 3},
+    {"_stemr_copy_pathmat", (DL_FUNC) &_stemr_copy_pathmat, 2},
     {"_stemr_copy_2_rows", (DL_FUNC) &_stemr_copy_2_rows, 3},
     {"_stemr_mat_2_arr", (DL_FUNC) &_stemr_mat_2_arr, 3},
     {"_stemr_reset_vec", (DL_FUNC) &_stemr_reset_vec, 1},
+    {"_stemr_add2vec", (DL_FUNC) &_stemr_add2vec, 3},
     {"_stemr_draw_normals", (DL_FUNC) &_stemr_draw_normals, 1},
     {"_stemr_draw_normals2", (DL_FUNC) &_stemr_draw_normals2, 1},
     {"_stemr_sample_unit_sphere", (DL_FUNC) &_stemr_sample_unit_sphere, 1},

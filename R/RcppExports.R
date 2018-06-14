@@ -173,6 +173,18 @@ copy_elem <- function(dest, orig, ind) {
     invisible(.Call(`_stemr_copy_elem`, dest, orig, ind))
 }
 
+#' Copy an multiple elements from one vector into another
+#'
+#' @param dest destination row vector
+#' @param orig origin row vector
+#' @param ind C++ style index for the element to be copied
+#'
+#' @return copy an element of one row vector into another.
+#' @export
+copy_elem2 <- function(dest, orig, inds) {
+    invisible(.Call(`_stemr_copy_elem2`, dest, orig, inds))
+}
+
 #' Increment an element of a vector by 1
 #'
 #' @param vec destination row vector
@@ -218,6 +230,18 @@ copy_col <- function(dest, orig, ind) {
     invisible(.Call(`_stemr_copy_col`, dest, orig, ind))
 }
 
+#' Copy the columns of one matrix into another
+#'
+#' @param dest destination matrix
+#' @param orig origin matrix
+#' @param ind column index
+#'
+#' @return copy the elements of one matrix into another.
+#' @export
+copy_pathmat <- function(dest, orig) {
+    invisible(.Call(`_stemr_copy_pathmat`, dest, orig))
+}
+
 #' Copy some of the rows of one matrix into another
 #'
 #' @param dest destination matrix
@@ -250,6 +274,18 @@ mat_2_arr <- function(dest, orig, ind) {
 #' @export
 reset_vec <- function(v) {
     invisible(.Call(`_stemr_reset_vec`, v))
+}
+
+#' Add the contents of one vector to another vector
+#'
+#' @param dest target vector
+#' @param orig vector to be added
+#' @param indices in the target
+#'
+#' @return add the elements of one row vector to another.
+#' @export
+add2vec <- function(target, increments, inds) {
+    invisible(.Call(`_stemr_add2vec`, target, increments, inds))
 }
 
 #' Draw new N(0,1) values and fill a vector.
