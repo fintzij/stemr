@@ -460,7 +460,7 @@ stem_inference_ode <- function(stem_object,
             # harss bracket limits
             harss_bracket_min  <- afss_setting_list$harss_bracket_limits[1]
             harss_bracket_max  <- afss_setting_list$harss_bracket_limits[2]
-            warmup_bracket_min <- afss_setting_list$harss_bracket_limits[1]
+            warmup_bracket_min <- afss_setting_list$harss_bracket_limits[1] * 0.01
             warmup_bracket_max <- afss_setting_list$harss_bracket_limits[2]
             
             # objects for saving the adaptation history
@@ -513,7 +513,7 @@ stem_inference_ode <- function(stem_object,
             harss_bracket_width <- 1.0
             harss_bracket_min   <- harss_setting_list$bracket_limits[1]
             harss_bracket_max   <- harss_setting_list$bracket_limits[2]
-            warmup_bracket_min  <- harss_setting_list$bracket_limits[1]
+            warmup_bracket_min  <- harss_setting_list$bracket_limits[1] * 0.01
             warmup_bracket_max  <- harss_setting_list$bracket_limits[2]
             
             # for adaptive the hit-and-run proposal
@@ -574,7 +574,7 @@ stem_inference_ode <- function(stem_object,
             mvnss_bracket_width <- mvnss_setting_list$initial_bracket_width
             mvnss_bracket_min   <- mvnss_setting_list$bracket_limits[1]
             mvnss_bracket_max   <- mvnss_setting_list$bracket_limits[2]
-            warmup_bracket_min  <- mvnss_setting_list$bracket_limits[1]
+            warmup_bracket_min  <- mvnss_setting_list$bracket_limits[1] * 0.01
             warmup_bracket_max  <- mvnss_setting_list$bracket_limits[2]
             
             # nugget
@@ -1219,6 +1219,9 @@ stem_inference_ode <- function(stem_object,
                   
                   if (iter == stop_adaptation) {
                         mcmc_kernel$sigma = proposal_scaling * kernel_cov
+                        colnames(mcmc_kernel$sigma) <- 
+                              rownames(mcmc_kernel$sigma) <- param_names_est
+                        
                         comp_chol(kernel_cov_chol, mcmc_kernel$sigma)
                   }
                   
@@ -1352,6 +1355,8 @@ stem_inference_ode <- function(stem_object,
                   
                   if (iter == stop_adaptation) {
                         mcmc_kernel$sigma = kernel_cov
+                        colnames(mcmc_kernel$sigma) <- 
+                              rownames(mcmc_kernel$sigma) <- param_names_est
                         
                         mcmc_kernel$kernel_settings$afss_setting_list = 
                               afss_settings(
@@ -1562,6 +1567,8 @@ stem_inference_ode <- function(stem_object,
                   
                   if (iter == stop_adaptation) {
                         mcmc_kernel$sigma = kernel_cov
+                        colnames(mcmc_kernel$sigma) <- 
+                              rownames(mcmc_kernel$sigma) <- param_names_est
                   }
                   
                   # sample new parameter values
@@ -1629,6 +1636,9 @@ stem_inference_ode <- function(stem_object,
                         mcmc_kernel$sigma <- 
                               blocks2cov(kernel_objects   = mvnss_objects, 
                                          parameter_blocks = parameter_blocks)
+                        
+                        colnames(mcmc_kernel$sigma) <- 
+                              rownames(mcmc_kernel$sigma) <- param_names_est
                         
                         # reconstruct mvnss settings
                         mcmc_kernel$kernel_settings$mvnss_setting_list <- 

@@ -5,9 +5,9 @@
 \title{Update model parameters via factor slice sampling}
 \usage{
 mvn_slice_sampler_ode(model_params_est, model_params_nat, params_prop_est,
-  params_prop_nat, mvn_direction, har_direction, mvnss_propvec, kernel_cov_chol,
-  nugget, mvnss_bracket_width, n_expansions_mvnss, n_contractions_mvnss,
-  n_mvnss_updates, path, pathmat_prop, data, priors, params_logprior_cur,
+  params_prop_nat, mvn_direction, har_direction, mvnss_propvec, param_inds_Cpp,
+  kernel_cov_chol, nugget, mvnss_bracket_width, n_expansions_mvnss,
+  n_contractions_mvnss, path, pathmat_prop, data, priors, params_logprior_cur,
   ode_params_cur, ode_param_vec, tparam, censusmat, emitmat, flow_matrix,
   stoich_matrix, ode_times, forcing_inds, forcing_matrix, ode_param_inds,
   ode_const_inds, ode_tcovar_inds, ode_initdist_inds, param_update_inds,
@@ -30,6 +30,8 @@ estimation scale}
 
 \item{mvnss_propvec}{}
 
+\item{param_inds_Cpp}{}
+
 \item{kernel_cov_chol}{}
 
 \item{nugget}{}
@@ -39,8 +41,6 @@ estimation scale}
 \item{n_expansions_mvnss}{}
 
 \item{n_contractions_mvnss}{}
-
-\item{n_mvnss_updates}{}
 
 \item{path}{list containing the ode path and likelihood}
 
