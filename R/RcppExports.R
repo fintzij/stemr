@@ -218,6 +218,19 @@ copy_mat <- function(dest, orig) {
     invisible(.Call(`_stemr_copy_mat`, dest, orig))
 }
 
+#' Insert one matrix into another
+#'
+#' @param dest destination matrix
+#' @param orig origin matrix
+#' @param rowinds vector of row indices
+#' @param colinds vector of column indices
+#'
+#' @return copy the elements of one matrix into another.
+#' @export
+insert_block <- function(dest, orig, rowinds, colinds) {
+    invisible(.Call(`_stemr_insert_block`, dest, orig, rowinds, colinds))
+}
+
 #' Copy the contents of one matrix into another
 #'
 #' @param dest destination matrix

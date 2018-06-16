@@ -83,6 +83,21 @@ void copy_mat(arma::mat& dest, const arma::mat& orig) {
       dest = orig;
 }
 
+//' Insert one matrix into another
+//'
+//' @param dest destination matrix
+//' @param orig origin matrix
+//' @param rowinds vector of row indices
+//' @param colinds vector of column indices
+//'
+//' @return copy the elements of one matrix into another.
+//' @export
+// [[Rcpp::export]]
+void insert_block(arma::mat& dest, const arma::mat& orig, const arma::uvec& rowinds, const arma::uvec& colinds) {
+      
+      dest(rowinds, colinds) = orig;
+}
+
 //' Copy the contents of one matrix into another
 //'
 //' @param dest destination matrix

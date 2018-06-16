@@ -284,13 +284,13 @@ stem_inference_lna <- function(stem_object,
             target_g         <- mcmc_kernel$kernel_settings$target_g
             adaptation_offset <- mcmc_kernel$kernel_settings$adaptation_offset
             
-            adaptations      <- 
-                  mcmc_kernel$kernel_settings$scale_constant *
-                  (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + adaptation_offset + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+            adaptations <- 
+                  pmin(1, mcmc_kernel$kernel_settings$scale_constant *
+                             (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + adaptation_offset + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling)
             
             warmup_adaptations <- 
-                  mcmc_kernel$kernel_settings$scale_constant *
-                  (seq(0, warmup_iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+                  pmin(1, mcmc_kernel$kernel_settings$scale_constant *
+                             (seq(0, warmup_iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling)
             
             if (is.null(mcmc_kernel$kernel_settings$stop_adaptation)) {
                   stop_adaptation <- iterations + 1
@@ -334,13 +334,13 @@ stem_inference_lna <- function(stem_object,
             adaptation_offset <- mcmc_kernel$kernel_settings$adaptation_offset
             
             # sequence for adaptation factors
-            adaptations      <- 
-                  mcmc_kernel$kernel_settings$scale_constant *
-                  (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + adaptation_offset + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+            adaptations <- 
+                  pmin(1, mcmc_kernel$kernel_settings$scale_constant *
+                             (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + adaptation_offset + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling)
             
             warmup_adaptations <- 
-                  mcmc_kernel$kernel_settings$scale_constant *
-                  (seq(0, warmup_iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+                  pmin(1, mcmc_kernel$kernel_settings$scale_constant *
+                             (seq(0, warmup_iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling)
             
             # slice interval width update interval
             interval_update_ind <- 2
@@ -497,12 +497,12 @@ stem_inference_lna <- function(stem_object,
             
             # sequence for adaptation factors
             adaptations <- 
-                  mcmc_kernel$kernel_settings$scale_constant *
-                  (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + adaptation_offset + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+                  pmin(1, mcmc_kernel$kernel_settings$scale_constant *
+                             (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + adaptation_offset + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling)
             
             warmup_adaptations <- 
-                  mcmc_kernel$kernel_settings$scale_constant *
-                  (seq(0, warmup_iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+                  pmin(1, mcmc_kernel$kernel_settings$scale_constant *
+                             (seq(0, warmup_iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling)
             
             # interval widths, expansions, and contractions
             if(is.null(mcmc_kernel$kernel_settings$harss_setting_list)) {
@@ -550,13 +550,13 @@ stem_inference_lna <- function(stem_object,
             adaptation_offset <- mcmc_kernel$kernel_settings$adaptation_offset
             
             # sequence for adaptation factors
-            adaptations      <- 
-                  mcmc_kernel$kernel_settings$scale_constant *
-                  (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + adaptation_offset + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+            adaptations <- 
+                  pmin(1, mcmc_kernel$kernel_settings$scale_constant *
+                             (seq(0, iterations) * mcmc_kernel$kernel_settings$step_size + adaptation_offset + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling)
             
             warmup_adaptations <- 
-                  mcmc_kernel$kernel_settings$scale_constant *
-                  (seq(0, warmup_iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling
+                  pmin(1, mcmc_kernel$kernel_settings$scale_constant *
+                             (seq(0, warmup_iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling)
             
             # nugget cooling schedule
             nugget_cooling   <- mcmc_kernel$kernel_settings$mvnss_setting_list$nugget_cooling
@@ -636,6 +636,45 @@ stem_inference_lna <- function(stem_object,
                   mat_2_arr(dest = kernel_cov_record[[b]],
                             orig = mvnss_objects[[b]]$kernel_cov,
                             ind  = 0)
+            }
+            
+            # update_sequence
+            if(length(parameter_blocks) == 1 | mcmc_kernel$kernel_settings$joint_block_update) {
+                  mvnss_update_seq <- rep(1, n_mvnss_updates)
+            } else {
+                  mvnss_update_seq <- rep(seq_along(parameter_blocks), n_mvnss_updates)
+            }
+            
+            # joint block update
+            joint_block_update <- 
+                  length(parameter_blocks) != 1 & mcmc_kernel$kernel_settings$joint_block_update
+            
+            # set up joint covariance matrix if doing joint updates
+            if(joint_block_update) {
+                  
+                  # initialize the list of objects for mvnss in the block
+                  mvnss_objects_joint <- 
+                        list(har_direction   = rep(0.0, n_model_params),
+                             mvn_direction   = rep(0.0, n_model_params),
+                             mvnss_propvec   = rep(0.0, n_model_params),
+                             n_expansions    = c(0.5),
+                             n_contractions  = c(0.5),
+                             bracket_width   = mvnss_bracket_width,
+                             kernel_resid    = double(n_model_params),
+                             kernel_mean     = double(n_model_params),
+                             kernel_cov      = blocks2cov(kernel_objects   = mvnss_objects,
+                                                          parameter_blocks = parameter_blocks),
+                             param_inds_R    = seq_len(n_model_params),
+                             param_inds_Cpp  = seq_len(n_model_params) - 1,
+                             param_names_est = param_names_est,
+                             block_size      = n_model_params)
+                  
+                  # fill out the mean, covariance, and cholesky
+                  copy_vec(dest = mvnss_objects_joint$kernel_mean, orig = model_params_est)
+                  mvnss_objects_joint$kernel_cov_chol <- chol(mvnss_objects_joint$kernel_cov)
+                  
+            } else {
+                  mvnss_objects_joint <- NULL
             }
       }
       
@@ -1745,77 +1784,105 @@ stem_inference_lna <- function(stem_object,
                               blocks2cov(kernel_objects   = mvnss_objects, 
                                          parameter_blocks = parameter_blocks)
                         
-                        colnames(mcmc_kernel$sigma) <- 
-                              rownames(mcmc_kernel$sigma) <- param_names_est
-                        
                         # reconstruct mvnss settings
                         mcmc_kernel$kernel_settings$mvnss_setting_list <- 
                               mvnss_settings(n_mvnss_updates       = n_mvnss_updates,
                                              cov_update_interval   = cov_update_interval,
-                                             initial_bracket_width = mean(sapply(mvnss_objects, function(x) x$bracket_width)),
+                                             initial_bracket_width = if(joint_block_update) {
+                                                                           mvnss_objects_joint$bracket_width
+                                                                     } else {
+                                                                           mean(sapply(mvnss_objects, function(x) x$bracket_width))      
+                                                                     },
                                              nugget_cooling        = nugget_cooling,
                                              nugget_step_size      = nugget_step_size,
                                              bracket_limits        = c(mvnss_bracket_min, mvnss_bracket_max))
                   }
                   
-                  for(f in seq_len(n_mvnss_updates)) {
-                        for(b in seq_along(parameter_blocks)) {
-                              
-                              # sample new parameter values
-                              mvn_slice_sampler(
-                                    model_params_est     = model_params_est,
-                                    model_params_nat     = model_params_nat,
-                                    params_prop_est      = params_prop_est,
-                                    params_prop_nat      = params_prop_nat,
-                                    mvn_direction        = mvnss_objects[[b]]$mvn_direction,
-                                    har_direction        = mvnss_objects[[b]]$har_direction,
-                                    mvnss_propvec        = mvnss_objects[[b]]$mvnss_propvec,
-                                    param_inds_Cpp       = parameter_blocks[[b]]$param_inds_Cpp,
-                                    kernel_cov_chol      = mvnss_objects[[b]]$kernel_cov_chol,
-                                    nugget               = ifelse(iter < stop_adaptation, nugget_sequence[iter], 0),
-                                    mvnss_bracket_width  = mvnss_objects[[b]]$bracket_width, 
-                                    n_expansions_mvnss   = mvnss_objects[[b]]$n_expansions,
-                                    n_contractions_mvnss = mvnss_objects[[b]]$n_contractions, 
-                                    path                 = path,
-                                    pathmat_prop         = pathmat_prop,
-                                    data                 = data,
-                                    priors               = priors,
-                                    params_logprior_cur  = params_logprior_cur,
-                                    lna_params_cur       = lna_params_cur,
-                                    lna_param_vec        = lna_param_vec,
-                                    tparam               = tparam,
-                                    censusmat            = censusmat,
-                                    emitmat              = emitmat,
-                                    flow_matrix          = flow_matrix,
-                                    stoich_matrix        = stoich_matrix,
-                                    lna_times            = lna_times,
-                                    forcing_inds         = forcing_inds,
-                                    forcing_matrix       = forcing_matrix,
-                                    lna_param_inds       = lna_param_inds,
-                                    lna_const_inds       = lna_const_inds,
-                                    lna_tcovar_inds      = lna_tcovar_inds,
-                                    lna_initdist_inds    = lna_initdist_inds,
-                                    param_update_inds    = param_update_inds,
-                                    lna_event_inds       = lna_event_inds,
-                                    census_indices       = census_indices,
-                                    measproc_indmat      = measproc_indmat,
-                                    svd_d                = svd_d,
-                                    svd_U                = svd_U,
-                                    svd_V                = svd_V,
-                                    lna_pointer          = lna_pointer,
-                                    lna_set_pars_pointer = lna_set_pars_pointer,
-                                    d_meas_pointer       = d_meas_pointer,
-                                    do_prevalence        = do_prevalence,
-                                    step_size            = step_size
-                              )
-                        }
+                  for(b in mvnss_update_seq) {
+                        # sample new parameter values
+                        mvn_slice_sampler(
+                              model_params_est     = model_params_est,
+                              model_params_nat     = model_params_nat,
+                              params_prop_est      = params_prop_est,
+                              params_prop_nat      = params_prop_nat,
+                              mvn_direction        = if(joint_block_update) {
+                                                            mvnss_objects_joint$mvn_direction
+                                                      } else {
+                                                            mvnss_objects[[b]]$mvn_direction
+                                                      },
+                              har_direction        = if(joint_block_update) {
+                                                            mvnss_objects_joint$har_direction
+                                                      } else {
+                                                            mvnss_objects[[b]]$har_direction
+                                                      },
+                              mvnss_propvec        = if(joint_block_update) {
+                                                            mvnss_objects_joint$mvnss_propvec
+                                                      } else {
+                                                            mvnss_objects[[b]]$mvnss_propvec
+                                                      },
+                              param_inds_Cpp       = if(joint_block_update) {
+                                                            mvnss_objects_joint$param_inds_Cpp
+                                                      } else {
+                                                            parameter_blocks[[b]]$param_inds_Cpp
+                                                      },
+                              kernel_cov_chol      = if(joint_block_update) {
+                                                            mvnss_objects_joint$kernel_cov_chol
+                                                      } else {
+                                                            mvnss_objects[[b]]$kernel_cov_chol
+                                                      },
+                              nugget               = ifelse(iter < stop_adaptation, nugget_sequence[iter], 0),
+                              mvnss_bracket_width  = if(joint_block_update) {
+                                                            mvnss_objects_joint$bracket_width
+                                                      } else {
+                                                            mvnss_objects[[b]]$bracket_width
+                                                      },
+                              n_expansions_mvnss   = if(joint_block_update) {
+                                                            mvnss_objects_joint$n_expansions
+                                                      } else {
+                                                            mvnss_objects[[b]]$n_expansions
+                                                      },
+                              n_contractions_mvnss = if(joint_block_update) {
+                                                            mvnss_objects_joint$n_contractions
+                                                      } else {
+                                                            mvnss_objects[[b]]$n_contractions
+                                                      }, 
+                              path                 = path,
+                              pathmat_prop         = pathmat_prop,
+                              data                 = data,
+                              priors               = priors,
+                              params_logprior_cur  = params_logprior_cur,
+                              lna_params_cur       = lna_params_cur,
+                              lna_param_vec        = lna_param_vec,
+                              tparam               = tparam,
+                              censusmat            = censusmat,
+                              emitmat              = emitmat,
+                              flow_matrix          = flow_matrix,
+                              stoich_matrix        = stoich_matrix,
+                              lna_times            = lna_times,
+                              forcing_inds         = forcing_inds,
+                              forcing_matrix       = forcing_matrix,
+                              lna_param_inds       = lna_param_inds,
+                              lna_const_inds       = lna_const_inds,
+                              lna_tcovar_inds      = lna_tcovar_inds,
+                              lna_initdist_inds    = lna_initdist_inds,
+                              param_update_inds    = param_update_inds,
+                              lna_event_inds       = lna_event_inds,
+                              census_indices       = census_indices,
+                              measproc_indmat      = measproc_indmat,
+                              svd_d                = svd_d,
+                              svd_U                = svd_U,
+                              svd_V                = svd_V,
+                              lna_pointer          = lna_pointer,
+                              lna_set_pars_pointer = lna_set_pars_pointer,
+                              d_meas_pointer       = d_meas_pointer,
+                              do_prevalence        = do_prevalence,
+                              step_size            = step_size
+                        )
                   }
                   
-                  # adapt proposal objects
-                  for(b in seq_along(parameter_blocks)) {
-                        
-                        # adapt the bracket width
-                        if(iter < stop_adaptation) {
+                  # adapt the covariance blocks
+                  if(iter < stop_adaptation) {
+                        for(b in seq_along(parameter_blocks)) {
                               
                               # update the kernel covariance
                               mvnss_objects[[b]]$kernel_resid <- 
@@ -1828,20 +1895,54 @@ stem_inference_lna <- function(stem_object,
                               mvnss_objects[[b]]$kernel_mean <- 
                                     mvnss_objects[[b]]$kernel_mean + adaptations[iter] * mvnss_objects[[b]]$kernel_resid
                               
+                              # compute the cholesky
                               if((iter-1) %% cov_update_interval == 0) {
+                                    
+                                    # compute the cholesky
                                     comp_chol(mvnss_objects[[b]]$kernel_cov_chol, mvnss_objects[[b]]$kernel_cov)
+                                    
+                                    # insert into the joint covariance matrix and cholesky if appropriate
+                                    if(joint_block_update) {
+                                          
+                                          # covariance block
+                                          insert_block(dest = mvnss_objects_joint$kernel_cov,
+                                                       orig = mvnss_objects[[b]]$kernel_cov,
+                                                       rowinds = parameter_blocks[[b]]$param_inds_Cpp,
+                                                       colinds = parameter_blocks[[b]]$param_inds_Cpp)
+                                          
+                                          # cholesky block
+                                          insert_block(dest = mvnss_objects_joint$kernel_cov_chol,
+                                                       orig = mvnss_objects[[b]]$kernel_cov_chol,
+                                                       rowinds = parameter_blocks[[b]]$param_inds_Cpp,
+                                                       colinds = parameter_blocks[[b]]$param_inds_Cpp)
+                                    }
                               }
                         }
+                  }
+                  
+                  # adapt the mvnss bracket width
+                  if(joint_block_update) {
                         
-                        # adapt the mvnss bracket width
-                        mvnss_objects[[b]]$bracket_width <- 
+                        mvnss_objects_joint$bracket_width <- 
                               max(mvnss_bracket_min,
                                   min(mvnss_bracket_max,
-                                      exp(log(mvnss_objects[[b]]$bracket_width) +
+                                      exp(log(mvnss_objects_joint$bracket_width) +
                                                 sqrt(adaptations[iter]) * 
-                                                (mvnss_objects[[b]]$n_expansions / 
-                                                       (mvnss_objects[[b]]$n_expansions + mvnss_objects[[b]]$n_contractions) - 0.5))
-                                  ))           
+                                                (mvnss_objects_joint$n_expansions / 
+                                                       (mvnss_objects_joint$n_expansions + mvnss_objects_joint$n_contractions) - 0.5))
+                                  ))
+                        
+                  } else {
+                        for(b in seq_along(parameter_blocks)) {
+                              mvnss_objects[[b]]$bracket_width <- 
+                                    max(mvnss_bracket_min,
+                                        min(mvnss_bracket_max,
+                                            exp(log(mvnss_objects[[b]]$bracket_width) +
+                                                      sqrt(adaptations[iter]) * 
+                                                      (mvnss_objects[[b]]$n_expansions / 
+                                                             (mvnss_objects[[b]]$n_expansions + mvnss_objects[[b]]$n_contractions) - 0.5))
+                                        ))
+                        }      
                   }
             }
             
@@ -2208,16 +2309,27 @@ stem_inference_lna <- function(stem_object,
                         
                   } else if(mcmc_kernel$method == "mvnss") {
                         
-                        expansions_by_block   <- sapply(mvnss_objects, function(x) x$n_expansions - 0.5)
-                        contractions_by_block <- sapply(mvnss_objects, function(x) x$n_contractions - 0.5)
-                        
-                        cat(paste0("Iteration: ", iter-1, "\n"),
-                            paste0("Block ", seq_along(parameter_blocks), ": ",
-                                   "n_contractions = ", contractions_by_block,
-                                   "; n_expansions = ", expansions_by_block, sep = "\n"),
-                            file = status_file,
-                            sep = "\n",
-                            append = T)
+                        if(joint_block_update) {
+                              
+                              cat(paste0("Iteration: ", iter-1, "\n"),
+                                  paste0("n_contractions = ", mvnss_objects_joint$n_contractions,
+                                         "; n_expansions = ", mvnss_objects_joint$n_expansions, sep = "\n"),
+                                  file = status_file,
+                                  sep = "\n",
+                                  append = T)
+                              
+                        } else {
+                              expansions_by_block   <- sapply(mvnss_objects, function(x) x$n_expansions - 0.5)
+                              contractions_by_block <- sapply(mvnss_objects, function(x) x$n_contractions - 0.5)
+                              
+                              cat(paste0("Iteration: ", iter-1, "\n"),
+                                  paste0("Block ", seq_along(parameter_blocks), ": ",
+                                         "n_contractions = ", contractions_by_block,
+                                         "; n_expansions = ", expansions_by_block, sep = "\n"),
+                                  file = status_file,
+                                  sep = "\n",
+                                  append = T)
+                        }
                   }
             }
       }
@@ -2312,8 +2424,16 @@ stem_inference_lna <- function(stem_object,
                   list(
                         proposal_covariance   = mcmc_kernel$sigma,
                         kernel_cov_record     = kernel_cov_record,
-                        expansions_by_block   = sapply(mvnss_objects, function(x) x$n_expansions - 0.5),
-                        contractions_by_block = sapply(mvnss_objects, function(x) x$n_contractions - 0.5)
+                        expansions_by_block   = if(joint_block_update) {
+                                                      mvnss_objects_joint$n_expansions - 0.5
+                                                } else {
+                                                      sapply(mvnss_objects, function(x) x$n_expansions - 0.5)
+                                                },
+                                                contractions_by_block = if(joint_block_update) {
+                                                      mvnss_objects_joint$n_contractions - 0.5
+                                                } else {
+                                                      sapply(mvnss_objects, function(x) x$n_contractions - 0.5)
+                                                }
                   )
       }
       

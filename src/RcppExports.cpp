@@ -219,6 +219,19 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// insert_block
+void insert_block(arma::mat& dest, const arma::mat& orig, const arma::uvec& rowinds, const arma::uvec& colinds);
+RcppExport SEXP _stemr_insert_block(SEXP destSEXP, SEXP origSEXP, SEXP rowindsSEXP, SEXP colindsSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat& >::type dest(destSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type orig(origSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type rowinds(rowindsSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type colinds(colindsSEXP);
+    insert_block(dest, orig, rowinds, colinds);
+    return R_NilValue;
+END_RCPP
+}
 // copy_col
 void copy_col(arma::mat& dest, const arma::mat& orig, int ind);
 RcppExport SEXP _stemr_copy_col(SEXP destSEXP, SEXP origSEXP, SEXP indSEXP) {
@@ -744,6 +757,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_increment_elem", (DL_FUNC) &_stemr_increment_elem, 2},
     {"_stemr_copy_vec", (DL_FUNC) &_stemr_copy_vec, 2},
     {"_stemr_copy_mat", (DL_FUNC) &_stemr_copy_mat, 2},
+    {"_stemr_insert_block", (DL_FUNC) &_stemr_insert_block, 4},
     {"_stemr_copy_col", (DL_FUNC) &_stemr_copy_col, 3},
     {"_stemr_copy_pathmat", (DL_FUNC) &_stemr_copy_pathmat, 2},
     {"_stemr_copy_2_rows", (DL_FUNC) &_stemr_copy_2_rows, 3},
