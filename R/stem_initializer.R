@@ -7,21 +7,20 @@
 #' The initial state of the system is initialized at the first observation time,
 #' either with a fixed vector of compartment counts, or is sampled by drawing
 #' the initial compartment counts from a multinomial distribution for a Markov
-#' jump process (MJP), or by drawing the initial compartment concentrations from
-#' a dirichlet distribution and multiplying by the population/strata sizes to
-#' obtain compartment volumes (LNA). If the initial state is not fixed and no
-#' prior is specified, then the hyperparameters are handled internally as follows:
-#' For the MJP, if the multinomial hyperprior parameters are not specified,
-#' the normalized probabilities are computed from the init_states vector and used
-#' in the prior slot. For the LNA, the init_state vector is used directly as the
-#' dirichlet prior hyperparameters.
+#' jump process (MJP), or by the normal approximation to the multinomial
+#' (LNA/ODE). If the initial state is not fixed and no prior is specified, then
+#' the hyperparameters are handled internally as follows: For the MJP, if the
+#' multinomial hyperprior parameters are not specified, the normalized
+#' probabilities are computed from the init_states vector and used in the prior
+#' slot. For the LNA or ODE, the init_state vector is used to construct the
+#' multivariate normal approximation of the multinomial.
 #'
 #' @param init_states named vector of initial compartment counts (MJP) or
 #'   volumes (LNA).
 #' @param fixed should the vector of compartment counts be treated as random?
 #' @param strata character vector strata to which the vector of initial
 #'   compartment counts or probabilities applies, possibly "ALL".
-#' @param prior dirichlet hyperparameters for state probabilities at time t0.
+#' @param prior hyperparameters for state probabilities at time t0.
 #'
 #' @return list of settings used to initialize the initial state at the first
 #'   observation time.

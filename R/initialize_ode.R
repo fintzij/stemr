@@ -58,6 +58,9 @@ initialize_ode <-
                  forcing_matrix,
                  initialization_attempts,
                  step_size,
+                 fixed_inits,
+                 init_volumes_cur,
+                 initdist_objects,
                  par_init_fcn = NULL) {
 
         # get the initial state parameters
@@ -67,11 +70,14 @@ initialize_ode <-
         keep_going   <- TRUE
 
         while(keep_going && (attempt <= initialization_attempts)) {
+              
               try({
                     # integrate the ODEs
                     path <- integrate_odes(ode_times         = ode_times,
                                            ode_pars          = ode_parameters,
                                            init_start        = ode_initdist_inds[1],
+                                           ode_param_inds    = ode_param_inds,
+                                           ode_tcovar_inds   = ode_tcovar_inds,
                                            param_update_inds = param_update_inds,
                                            stoich_matrix     = stoich_matrix,
                                            forcing_inds      = forcing_inds,
@@ -116,20 +122,64 @@ initialize_ode <-
                     if(is.nan(data_log_lik)) data_log_lik <- -Inf
               }, silent = TRUE)
               
-              if(is.null(par_init_fcn)) {
+              # propose new parameter values and/or initial volumes
+              if(is.null(par_init_fcn) & !fixed_inits) {
+                    
                     keep_going <- FALSE
                     
               } else {
+                    
                     keep_going <- is.nan(data_log_lik) || data_log_lik == -Inf
                     attempt    <- attempt + 1
                     
                     # try new parameters
                     if(keep_going) {
                           
-                          pars2lnapars(ode_parameters, par_init_fcn())
+                          if(!fixed_inits) {
+                                for(s in seq_along(initdist_objects)) {
+                                      
+                                      if(!initdist_objects[[s]]$fixed) {
+                                            
+                                            # N(0,1) draws
+                                            draw_normals(initdist_objects[[s]]$draws_cur)
+                                            
+                                            # map to volumes
+                                            copy_vec2(dest = init_volumes_cur,
+                                                      orig = initdist_objects[[s]]$comp_mean + 
+                                                             initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur,
+                                                      inds = initdist_objects[[s]]$comp_inds_Cpp) 
+                                            
+                                            while(any(init_volumes_cur[initdist_objects[[s]]$comp_inds_R] < 0) | 
+                                                  any(init_volumes_cur[initdist_objects[[s]]$comp_inds_R] > initdist_objects[[s]]$comp_size)) {
+                                                  
+                                                  # N(0,1) draws
+                                                  draw_normals(initdist_objects[[s]]$draws_cur)
+                                                  
+                                                  # map to volumes
+                                                  copy_vec2(dest = init_volumes_cur,
+                                                            orig = initdist_objects[[s]]$comp_mean + 
+                                                                  initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur,
+                                                            inds = initdist_objects[[s]]$comp_inds_Cpp) 
+                                            }
+                                      }
+                                }
+                                
+                                # copy to the ode parameter matrix
+                                pars2lnapars2(lnapars    = ode_parameters,
+                                              parameters = init_volumes_cur,
+                                              c_start    = ode_initdist_inds[1])
+                          }
+                          
+                          # draw new parameter values if called for
+                          if(!is.null(par_init_fcn)) {
+                                pars2lnapars2(lnapars    = ode_parameters,
+                                              parameters = par_init_fcn(),
+                                              c_start    = 0)
+                          }
                           
                           if(!is.null(tparam)) {
                                 for(s in seq_along(tparam)) {
+                                      
                                       # sample new draws
                                       draw_normals(tparam[[s]]$draws_cur)
                                       
@@ -144,7 +194,7 @@ initialize_ode <-
               }
         }
         
-        if(data_log_lik == -Inf) {
+        if(keep_going) {
 
                 stop("Initialization failed. Try different initial parameter values.")
 

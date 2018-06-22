@@ -68,7 +68,6 @@ void map_draws_2_lna(arma::mat& pathmat,
         double t_R = 0;
 
         // vector of parameters, initial compartment columes, constants, and time-varying covariates
-        // Rcpp::NumericVector current_params(lna_pars.ncol());
         std::copy(lna_pars.row(0).begin(), lna_pars.row(0).end(), lna_param_vec.begin());
 
         CALL_SET_ODE_PARAMS(lna_param_vec, set_pars_pointer); // set the parameters in the odeintr namespace
@@ -147,7 +146,6 @@ void map_draws_2_lna(arma::mat& pathmat,
 
                 // compute the LNA increment
                 nat_lna = arma::vec(expm1(Rcpp::NumericVector(log_lna.begin(), log_lna.end())));
-                      // arma::exp(log_lna) - 1;
 
                 // save the LNA increment
                 pathmat(j+1, arma::span(1, n_events)) = nat_lna.t();

@@ -32,6 +32,8 @@ using namespace arma;
 // [[Rcpp::export]]
 Rcpp::List propose_lna(const arma::rowvec& lna_times,
                        const Rcpp::NumericMatrix& lna_pars,
+                       const Rcpp::IntegerVector& lna_param_inds,
+                       const Rcpp::IntegerVector& lna_tcovar_inds,
                        const int init_start,
                        const Rcpp::LogicalVector& param_update_inds,
                        const arma::mat& stoich_matrix,
@@ -47,6 +49,8 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
         int n_comps  = stoich_matrix.n_rows;         // number of model compartments (all strata)
         int n_odes   = n_events + n_events*n_events; // number of ODEs
         int n_times  = lna_times.n_elem;             // number of times at which the LNA must be evaluated
+        int n_lna_params = lna_param_inds.size();    // number of ODE parameters
+        int n_tcovar     = lna_tcovar_inds.size();   // number of time-varying covariates or parameters
 
         // initialize the objects used in each time interval
         double t_L = 0;
@@ -206,7 +210,12 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
 
                 // update the parameters if they need to be updated
                 if(param_update_inds[j+1]) {
-                        current_params = lna_pars.row(j+1);
+                      
+                      // time-varying covariates and parameters
+                      std::copy(lna_pars.row(j+1).end() - n_tcovar,
+                                lna_pars.row(j+1).end(),
+                                current_params.end() - n_tcovar);
+                      
                 }
 
                 // copy the compartment volumes to the current parameters

@@ -75,6 +75,8 @@ update_tparam_ode <-
                   ode_times         = ode_times,
                   ode_pars          = ode_parameters,
                   init_start        = ode_initdist_inds[1],
+                  ode_param_inds    = ode_param_inds,
+                  ode_tcovar_inds   = ode_tcovar_inds,
                   param_update_inds = param_update_inds,
                   stoich_matrix     = stoich_matrix,
                   forcing_inds      = forcing_inds,
@@ -119,7 +121,7 @@ update_tparam_ode <-
       if(is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
 
       # continue proposing if not accepted
-      while(!isTRUE(all.equal(lower, upper)) && (data_log_lik_prop < threshold)) {
+      while((upper - lower) > sqrt(.Machine$double.eps) && (data_log_lik_prop < threshold)) {
       
               # increment the number of ESS proposals for the current iteration
               ess_count <- ess_count + 1
@@ -157,6 +159,8 @@ update_tparam_ode <-
                           ode_times         = ode_times,
                           ode_pars          = ode_parameters,
                           init_start        = ode_initdist_inds[1],
+                          ode_param_inds    = ode_param_inds,
+                          ode_tcovar_inds   = ode_tcovar_inds,
                           param_update_inds = param_update_inds,
                           stoich_matrix     = stoich_matrix,
                           forcing_inds      = forcing_inds,
@@ -202,7 +206,7 @@ update_tparam_ode <-
       }
       
       # if the bracket width is not equal to zero, update the draws, path, and data log likelihood
-      if(!isTRUE(all.equal(lower, upper))) {
+      if((upper - lower) > sqrt(.Machine$double.eps)) {
       
               # transfer the new path and residual path into the* sin(theta) path_prop list
               for(p in seq_along(tparam)) {
@@ -214,6 +218,7 @@ update_tparam_ode <-
               copy_vec(path_cur$data_log_lik, data_log_lik_prop)
               
       } else {
+            
             # recover the original time-varying parameter values
             for(p in seq_along(tparam)) {
                   insert_tparam(tcovar    = ode_parameters,

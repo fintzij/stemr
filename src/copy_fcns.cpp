@@ -2,7 +2,7 @@
 using namespace Rcpp;
 using namespace arma;
 
-//' Identify which rates to update when a state transition event occurs.
+//' Insert parameters into each row of a parameter matrix
 //'
 //' @param lnapars matrix of lna parameters, constants, and time-varying covars
 //' @param parameters vector of parameters to be copied into the matrix
@@ -14,6 +14,21 @@ void pars2lnapars(arma::mat& lnapars, const arma::rowvec& parameters) {
 
         int n_pars  = parameters.n_elem;
         lnapars.cols(0, n_pars-1).each_row() = parameters;
+}
+
+//' Insert parameters into the first row of a parameter matrix
+//'
+//' @param lnapars matrix of lna/ode parameters, constants, and time-varying covars
+//' @param parameters vector of parameters to be copied into the matrix
+//' @param c_start index of the initial column
+//'
+//' @return modifies the lna parameter matrix in place
+//' @export
+// [[Rcpp::export]]
+void pars2lnapars2(arma::mat& lnapars, const arma::rowvec& parameters, int c_start) {
+      
+      int c_end = parameters.n_elem - 1;
+      lnapars(0, arma::span(c_start, c_start + c_end)) = parameters;
 }
 
 //' Copy an element from one vector into another
@@ -68,6 +83,20 @@ void increment_elem(arma::vec& vec, int ind) {
 void copy_vec(arma::rowvec& dest, const arma::rowvec& orig) {
 
         dest = orig;
+}
+
+//' Copy the contents of one vector into another
+//'
+//' @param dest destination row vector
+//' @param orig origin row vector
+//' @param inds vector of indices in the destination
+//'
+//' @return copy the elements of one row vector into another.
+//' @export
+// [[Rcpp::export]]
+void copy_vec2(arma::rowvec& dest, const arma::rowvec& orig, const arma::uvec& inds) {
+      
+      dest.elem(inds) = orig;
 }
 
 //' Copy the contents of one matrix into another

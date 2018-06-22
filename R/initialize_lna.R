@@ -65,6 +65,9 @@ initialize_lna <-
                  forcing_matrix,
                  initialization_attempts,
                  step_size,
+                 fixed_inits,
+                 initdist_objects,
+                 init_volumes_cur,
                  par_init_fcn = NULL,
                  ess_warmup) {
 
@@ -75,12 +78,15 @@ initialize_lna <-
                 keep_going   <- TRUE
                 
                 while(keep_going && (attempt <= initialization_attempts)) {
+                
                       try({
                             # propose another LNA path
                             path_init <- propose_lna(
                                   lna_times         = lna_times,
                                   lna_pars          = lna_parameters,
                                   init_start        = lna_initdist_inds[1],
+                                  lna_param_inds    = lna_param_inds,
+                                  lna_tcovar_inds   = lna_tcovar_inds,
                                   param_update_inds = param_update_inds,
                                   stoich_matrix     = stoich_matrix,
                                   forcing_inds      = forcing_inds,
@@ -129,23 +135,64 @@ initialize_lna <-
                       keep_going <- is.nan(data_log_lik) || data_log_lik == -Inf
                       attempt    <- attempt + 1
                       
-                      if(keep_going && !is.null(par_init_fcn)) {
-                            pars2lnapars(lna_parameters, par_init_fcn())
-                      }
-                      
-                      if(keep_going && !is.null(tparam)) {
+                      # try new parameters
+                      if(keep_going) {
                             
-                            for(s in seq_along(tparam)) {
+                            if(!fixed_inits) {
+                                  for(s in seq_along(initdist_objects)) {
+                                        
+                                        if(!initdist_objects[[s]]$fixed) {
+                                              
+                                              # N(0,1) draws
+                                              draw_normals(initdist_objects[[s]]$draws_cur)
+                                              
+                                              # map to volumes
+                                              copy_vec2(dest = init_volumes_cur,
+                                                        orig = initdist_objects[[s]]$comp_mean + 
+                                                              initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur,
+                                                        inds = initdist_objects[[s]]$comp_inds_Cpp) 
+                                              
+                                              while(any(init_volumes_cur[initdist_objects[[s]]$comp_inds_R] < 0) | 
+                                                    any(init_volumes_cur[initdist_objects[[s]]$comp_inds_R] > initdist_objects[[s]]$comp_size)) {
+                                                    
+                                                    # N(0,1) draws
+                                                    draw_normals(initdist_objects[[s]]$draws_cur)
+                                                    
+                                                    # map to volumes
+                                                    copy_vec2(dest = init_volumes_cur,
+                                                              orig = initdist_objects[[s]]$comp_mean + 
+                                                                    initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur,
+                                                              inds = initdist_objects[[s]]$comp_inds_Cpp) 
+                                              }
+                                        }
+                                  }
                                   
-                                  # sample new draws
-                                  draw_normals(tparam[[s]]$draws_cur)
-                                  
-                                  # get values
-                                  insert_tparam(tcovar    = lna_parameters,
-                                                values    = tparam[[s]]$draws2par(parameters = lna_parameters[1,], draws = tparam[[s]]$draws_cur),
-                                                col_ind   = tparam[[s]]$col_ind,
-                                                tpar_inds = tparam[[s]]$tpar_inds)
+                                  # copy to the ode parameter matrix
+                                  pars2lnapars2(lnapars    = lna_parameters,
+                                                parameters = init_volumes_cur,
+                                                c_start    = lna_initdist_inds[1])
                             }
+                            
+                              # draw new parameter values if called for
+                            if(!is.null(par_init_fcn)) {
+                                  pars2lnapars2(lnapars    = lna_parameters,
+                                                parameters = par_init_fcn(),
+                                                c_start    = 0)
+                            }
+                            
+                            if(!is.null(tparam)) {
+                                  for(s in seq_along(tparam)) {
+                                        
+                                        # sample new draws
+                                        draw_normals(tparam[[s]]$draws_cur)
+                                        
+                                        # get values
+                                        insert_tparam(tcovar    = lna_parameters,
+                                                      values    = tparam[[s]]$draws2par(parameters = lna_parameters[1,], draws = tparam[[s]]$draws_cur),
+                                                      col_ind   = tparam[[s]]$col_ind,
+                                                      tpar_inds = tparam[[s]]$tpar_inds)
+                                  }
+                            }      
                       }
                 }
                 
@@ -159,6 +206,8 @@ initialize_lna <-
                                         lna_times         = lna_times,
                                         lna_pars          = lna_parameters,
                                         init_start        = lna_initdist_inds[1],
+                                        lna_param_inds    = lna_param_inds, 
+                                        lna_tcovar_inds   = lna_tcovar_inds,
                                         param_update_inds = param_update_inds,
                                         stoich_matrix     = stoich_matrix,
                                         forcing_inds      = forcing_inds,
@@ -210,23 +259,64 @@ initialize_lna <-
                         keep_going <- is.nan(data_log_lik) || data_log_lik == -Inf
                         attempt    <- attempt + 1
 
-                        if(keep_going && !is.null(par_init_fcn)) {
-                                pars2lnapars(lna_parameters, par_init_fcn())
-                        }
-                        
-                        if(keep_going && !is.null(tparam)) {
+                        # try new parameters
+                        if(keep_going) {
                               
-                              for(s in seq_along(tparam)) {
+                              if(!fixed_inits) {
+                                    for(s in seq_along(initdist_objects)) {
+                                          
+                                          if(!initdist_objects[[s]]$fixed) {
+                                                
+                                                # N(0,1) draws
+                                                draw_normals(initdist_objects[[s]]$draws_cur)
+                                                
+                                                # map to volumes
+                                                copy_vec2(dest = init_volumes_cur,
+                                                          orig = initdist_objects[[s]]$comp_mean + 
+                                                                initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur,
+                                                          inds = initdist_objects[[s]]$comp_inds_Cpp) 
+                                                
+                                                while(any(init_volumes_cur[initdist_objects[[s]]$comp_inds_R] < 0) | 
+                                                      any(init_volumes_cur[initdist_objects[[s]]$comp_inds_R] > initdist_objects[[s]]$comp_size)) {
+                                                      
+                                                      # N(0,1) draws
+                                                      draw_normals(initdist_objects[[s]]$draws_cur)
+                                                      
+                                                      # map to volumes
+                                                      copy_vec2(dest = init_volumes_cur,
+                                                                orig = initdist_objects[[s]]$comp_mean + 
+                                                                      initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur,
+                                                                inds = initdist_objects[[s]]$comp_inds_Cpp) 
+                                                }
+                                          }
+                                    }
                                     
-                                    # sample new draws
-                                    draw_normals(tparam[[s]]$draws_cur)
-                                    
-                                    # get values
-                                    insert_tparam(tcovar    = lna_parameters,
-                                                  values    = tparam[[s]]$draws2par(parameters = lna_parameters[1,], draws = tparam[[s]]$draws_cur),
-                                                  col_ind   = tparam[[s]]$col_ind,
-                                                  tpar_inds = tparam[[s]]$tpar_inds)
+                                    # copy to the ode parameter matrix
+                                    pars2lnapars2(lnapars    = lna_parameters,
+                                                  parameters = init_volumes_cur,
+                                                  c_start    = lna_initdist_inds[1])
                               }
+                              
+                              # draw new parameter values if called for
+                              if(!is.null(par_init_fcn)) {
+                                    pars2lnapars2(lnapars    = lna_parameters,
+                                                  parameters = par_init_fcn(),
+                                                  c_start    = 0)
+                              }
+                              
+                              if(!is.null(tparam)) {
+                                    for(s in seq_along(tparam)) {
+                                          
+                                          # sample new draws
+                                          draw_normals(tparam[[s]]$draws_cur)
+                                          
+                                          # get values
+                                          insert_tparam(tcovar    = lna_parameters,
+                                                        values    = tparam[[s]]$draws2par(parameters = lna_parameters[1,], draws = tparam[[s]]$draws_cur),
+                                                        col_ind   = tparam[[s]]$col_ind,
+                                                        tpar_inds = tparam[[s]]$tpar_inds)
+                                    }
+                              }      
                         }
                 }
 

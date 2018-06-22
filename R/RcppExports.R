@@ -150,7 +150,7 @@ convert_lna2 <- function(path, flow_matrix, init_state, statemat) {
     invisible(.Call(`_stemr_convert_lna2`, path, flow_matrix, init_state, statemat))
 }
 
-#' Identify which rates to update when a state transition event occurs.
+#' Insert parameters into each row of a parameter matrix
 #'
 #' @param lnapars matrix of lna parameters, constants, and time-varying covars
 #' @param parameters vector of parameters to be copied into the matrix
@@ -159,6 +159,18 @@ convert_lna2 <- function(path, flow_matrix, init_state, statemat) {
 #' @export
 pars2lnapars <- function(lnapars, parameters) {
     invisible(.Call(`_stemr_pars2lnapars`, lnapars, parameters))
+}
+
+#' Insert parameters into the first row of a parameter matrix
+#'
+#' @param lnapars matrix of lna/ode parameters, constants, and time-varying covars
+#' @param parameters vector of parameters to be copied into the matrix
+#' @param c_start index of the initial column
+#'
+#' @return modifies the lna parameter matrix in place
+#' @export
+pars2lnapars2 <- function(lnapars, parameters, c_start) {
+    invisible(.Call(`_stemr_pars2lnapars2`, lnapars, parameters, c_start))
 }
 
 #' Copy an element from one vector into another
@@ -205,6 +217,18 @@ increment_elem <- function(vec, ind) {
 #' @export
 copy_vec <- function(dest, orig) {
     invisible(.Call(`_stemr_copy_vec`, dest, orig))
+}
+
+#' Copy the contents of one vector into another
+#'
+#' @param dest destination row vector
+#' @param orig origin row vector
+#' @param inds vector of indices in the destination
+#'
+#' @return copy the elements of one row vector into another.
+#' @export
+copy_vec2 <- function(dest, orig, inds) {
+    invisible(.Call(`_stemr_copy_vec2`, dest, orig, inds))
 }
 
 #' Copy the contents of one matrix into another
@@ -446,8 +470,8 @@ insert_tparam <- function(tcovar, values, col_ind, tpar_inds) {
 #' @return List containing the ODE incidence and prevalence paths.
 #'
 #' @export
-integrate_odes <- function(ode_times, ode_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer) {
-    .Call(`_stemr_integrate_odes`, ode_times, ode_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer)
+integrate_odes <- function(ode_times, ode_pars, ode_param_inds, ode_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer) {
+    .Call(`_stemr_integrate_odes`, ode_times, ode_pars, ode_param_inds, ode_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer)
 }
 
 #' Convert an LNA path from the counting process on transition events to the
@@ -527,8 +551,8 @@ map_draws_2_lna <- function(pathmat, draws, lna_times, lna_pars, lna_param_vec, 
 #' @return List containing the ODE incidence and prevalence paths.
 #'
 #' @export
-map_pars_2_ode <- function(pathmat, ode_times, ode_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer) {
-    invisible(.Call(`_stemr_map_pars_2_ode`, pathmat, ode_times, ode_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer))
+map_pars_2_ode <- function(pathmat, ode_times, ode_pars, ode_param_inds, ode_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer) {
+    invisible(.Call(`_stemr_map_pars_2_ode`, pathmat, ode_times, ode_pars, ode_param_inds, ode_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer))
 }
 
 #' Cholesky decomposition
@@ -650,8 +674,8 @@ normalise2 <- function(v, p) {
 #' the LNA path on its natural scale which is determined by the perturbations.
 #'
 #' @export
-propose_lna_approx <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, nsim, ess_updates, ess_warmup, step_size, lna_pointer, set_pars_pointer) {
-    .Call(`_stemr_propose_lna_approx`, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, nsim, ess_updates, ess_warmup, step_size, lna_pointer, set_pars_pointer)
+propose_lna_approx <- function(lna_times, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, nsim, ess_updates, ess_warmup, step_size, lna_pointer, set_pars_pointer) {
+    .Call(`_stemr_propose_lna_approx`, lna_times, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, nsim, ess_updates, ess_warmup, step_size, lna_pointer, set_pars_pointer)
 }
 
 #' Simulate an LNA path using a non-centered parameterization for the
@@ -678,8 +702,8 @@ propose_lna_approx <- function(lna_times, lna_pars, init_start, param_update_ind
 #' the LNA path on its natural scale which is determined by the perturbations.
 #'
 #' @export
-propose_lna <- function(lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, step_size, lna_pointer, set_pars_pointer) {
-    .Call(`_stemr_propose_lna`, lna_times, lna_pars, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, step_size, lna_pointer, set_pars_pointer)
+propose_lna <- function(lna_times, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, step_size, lna_pointer, set_pars_pointer) {
+    .Call(`_stemr_propose_lna`, lna_times, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, step_size, lna_pointer, set_pars_pointer)
 }
 
 #' Identify which rates to update when a state transition event occurs.

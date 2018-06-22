@@ -178,8 +178,6 @@ stem_dynamics <-
                 }
         }
 
-        args = list(...)
-
         # create a hidden list of user supplied arguments prior to processing
         dynamics_args <- list(rates              = rates,
                                parameters        = parameters,
@@ -696,27 +694,27 @@ stem_dynamics <-
                         }
                 }
 
-                initializer            <- unlist(state_initializer, recursive = FALSE)
-                initdist_params        <- initializer$init_states
-                initializer$param_inds <- seq_along(initdist_params)
-                initializer$codes      <- match(names(initializer$init_states), names(compartment_codes))
+                initializer                 <- state_initializer
+                initdist_params             <- initializer[[1]]$init_states
+                initializer[[1]]$param_inds <- seq_along(initdist_params)
+                initializer[[1]]$codes      <- match(names(initializer[[1]]$init_states), names(compartment_codes))
 
                 if(is.null(initializer$prior)) {
                         if(is.character(compile_lna)||compile_lna) {
-                                prior <- initializer$init_states
+                                prior <- initializer[[1]]$init_states
                                 prior <- pmax(prior, 1e-16)
                         } else {
-                                prior <- initializer$init_states / sum(initializer$init_states)
+                                prior <- initializer[[1]]$init_states / sum(initializer[[1]]$init_states)
                         }
                         initdist_priors <- prior
-                        initializer$prior <- prior
+                        initializer[[1]]$prior <- prior
                 } else {
-                        initdist_priors <- initializer$prior
+                        initdist_priors <- initializer[[1]]$prior
                 }
 
-                fixed_inits  <- initializer$fixed
+                fixed_inits  <- initializer[[1]]$fixed
                 strata_sizes <- NULL
-                popsize      <- sum(initializer$init_states)
+                popsize      <- sum(initializer[[1]]$init_states)
 
                 constants          <- c(constants, popsize = popsize)
                 const_codes        <- c(const_codes, length(const_codes))
@@ -785,14 +783,9 @@ stem_dynamics <-
                                                    forcings     = forcings)
         timecode            <- which(names(tcovar_codes) == "TIME")
 
-        # generate the initial distribution
-        if(n_strata == 1) {
-                param_inds     <- initializer$param_inds # initial distribution parameter indices
-                initdist_codes <- initializer$codes # codes, by compartment then stratum
-        } else {
-                param_inds     <- unlist(lapply(initializer, function(x) x$param_inds))
-                initdist_codes <- unlist(lapply(initializer, function(x) x$codes))
-        }
+        # indices for the the initial distribution
+        param_inds     <- unlist(lapply(initializer, function(x) x$param_inds))
+        initdist_codes <- unlist(lapply(initializer, function(x) x$codes))
 
         # reorder the initial distribution parameters
         initdist_parameters        <- as.numeric(initdist_params[order(initdist_codes)])

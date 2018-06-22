@@ -38,6 +38,8 @@ using namespace arma;
 // [[Rcpp::export]]
 Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
                               const Rcpp::NumericMatrix& lna_pars,
+                              const Rcpp::IntegerVector& lna_param_inds,
+                              const Rcpp::IntegerVector& lna_tcovar_inds,
                               const int init_start,
                               const Rcpp::LogicalVector& param_update_inds,
                               const arma::mat& stoich_matrix,
@@ -56,6 +58,8 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
         int n_comps  = stoich_matrix.n_rows;         // number of model compartments (all strata)
         int n_odes   = n_events + n_events*n_events; // number of ODEs
         int n_times  = lna_times.n_elem;             // number of times at which the LNA must be evaluated
+        int n_tcovar = lna_tcovar_inds.size();   // number of time-varying covariates or parameters
+        int n_lna_params = lna_param_inds.size();    // number of ODE parameters
 
         // initialize the LNA objects - the vector for storing the current state
         Rcpp::NumericVector lna_state_vec(n_odes);   // vector to store the results of the ODEs
@@ -233,7 +237,12 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
 
                 // update the parameters if they need to be updated
                 if(param_update_inds[j+1]) {
-                        current_params = lna_pars.row(j+1);
+                      
+                      // time-varying covariates and parameters
+                      std::copy(lna_pars.row(j+1).end() - n_tcovar,
+                                lna_pars.row(j+1).end(),
+                                current_params.end() - n_tcovar);
+                      
                 }
 
                 // copy the compartment volumes to the current parameters
@@ -357,7 +366,12 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
 
                     // update the parameters if they need to be updated
                     if(param_update_inds[j+1]) {
-                          current_params = lna_pars.row(j+1);
+                          
+                          // time-varying covariates and parameters
+                          std::copy(lna_pars.row(j+1).end() - n_tcovar,
+                                    lna_pars.row(j+1).end(),
+                                    current_params.end() - n_tcovar);
+                          
                     }
 
                     // copy the compartment volumes to the current parameters
@@ -367,7 +381,7 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
                     CALL_SET_ODE_PARAMS(current_params, set_pars_pointer);
               }
 
-              while((lower != upper) && !valid_path) {
+              while( (upper - lower) > sqrt(arma::datum::eps) && !valid_path) {
 
                     // initialize the parameters and volumes
                     current_params = lna_pars.row(0);   // vector for storing the current parameter values
@@ -486,7 +500,12 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
 
                           // update the parameters if they need to be updated
                           if(param_update_inds[j+1]) {
-                                current_params = lna_pars.row(j+1);
+                                
+                                // time-varying covariates and parameters
+                                std::copy(lna_pars.row(j+1).end() - n_tcovar,
+                                          lna_pars.row(j+1).end(),
+                                          current_params.end() - n_tcovar);
+                                
                           }
 
                           // copy the compartment volumes to the current parameters
@@ -626,7 +645,12 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
 
                           // update the parameters if they need to be updated
                           if(param_update_inds[j+1]) {
-                                current_params = lna_pars.row(j+1);
+                                
+                                // time-varying covariates and parameters
+                                std::copy(lna_pars.row(j+1).end() - n_tcovar,
+                                          lna_pars.row(j+1).end(),
+                                          current_params.end() - n_tcovar);
+                                
                           }
 
                           // copy the compartment volumes to the current parameters
@@ -636,7 +660,7 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
                           CALL_SET_ODE_PARAMS(current_params, set_pars_pointer);
                     }
 
-                    while((lower != upper) && !valid_path) {
+                    while( (upper - lower) > sqrt(arma::datum::eps) && !valid_path) {
 
                           // initialize the parameters and volumes
                           current_params = lna_pars.row(0);   // vector for storing the current parameter values
@@ -755,7 +779,12 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
 
                                 // update the parameters if they need to be updated
                                 if(param_update_inds[j+1]) {
-                                      current_params = lna_pars.row(j+1);
+                                      
+                                      // time-varying covariates and parameters
+                                      std::copy(lna_pars.row(j+1).end() - n_tcovar,
+                                                lna_pars.row(j+1).end(),
+                                                current_params.end() - n_tcovar);
+                                      
                                 }
 
                                 // copy the compartment volumes to the current parameters

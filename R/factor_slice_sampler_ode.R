@@ -121,7 +121,7 @@ factor_slice_sampler_ode <-
                   if(logprior_lower != -Inf) {
                         
                         # insert the parameters into the lna_parameters matrix
-                        pars2lnapars(lnapars = ode_params_cur, parameters = params_prop_nat)
+                        pars2lnapars2(lnapars = ode_params_cur, parameters = params_prop_nat, 0)
                         
                         # compute the time-varying parameters if necessary
                         if(!is.null(tparam)) {
@@ -144,6 +144,8 @@ factor_slice_sampler_ode <-
                                     pathmat           = pathmat_prop,
                                     ode_times         = ode_times,
                                     ode_pars          = ode_params_cur,
+                                    ode_param_inds    = ode_param_inds,
+                                    ode_tcovar_inds   = ode_tcovar_inds,
                                     init_start        = ode_initdist_inds[1],
                                     param_update_inds = param_update_inds,
                                     stoich_matrix     = stoich_matrix,
@@ -222,8 +224,9 @@ factor_slice_sampler_ode <-
                   
                   # if the log prior is not -Inf, find the path
                   if(logprior_upper != -Inf) {
+                        
                         # insert the parameters into the lna_parameters matrix
-                        pars2lnapars(lnapars = ode_params_cur, parameters = params_prop_nat)
+                        pars2lnapars2(lnapars = ode_params_cur, parameters = params_prop_nat, 0)
                         
                         # compute the time-varying parameters if necessary
                         if(!is.null(tparam)) {
@@ -246,6 +249,8 @@ factor_slice_sampler_ode <-
                                     pathmat           = pathmat_prop,
                                     ode_times         = ode_times,
                                     ode_pars          = ode_params_cur,
+                                    ode_param_inds    = ode_param_inds,
+                                    ode_tcovar_inds   = ode_tcovar_inds,
                                     init_start        = ode_initdist_inds[1],
                                     param_update_inds = param_update_inds,
                                     stoich_matrix     = stoich_matrix,
@@ -332,7 +337,7 @@ factor_slice_sampler_ode <-
                   if(logprior_prop != -Inf) {
                         
                         # insert the parameters into the lna_parameters matrix
-                        pars2lnapars(lnapars = ode_params_cur, parameters = params_prop_nat)
+                        pars2lnapars2(lnapars = ode_params_cur, parameters = params_prop_nat, 0)
                         
                         # compute the time-varying parameters if necessary
                         if(!is.null(tparam)) {
@@ -355,6 +360,8 @@ factor_slice_sampler_ode <-
                                     pathmat           = pathmat_prop,
                                     ode_times         = ode_times,
                                     ode_pars          = ode_params_cur,
+                                    ode_param_inds    = ode_param_inds,
+                                    ode_tcovar_inds   = ode_tcovar_inds,
                                     init_start        = ode_initdist_inds[1],
                                     param_update_inds = param_update_inds,
                                     stoich_matrix     = stoich_matrix,
@@ -438,7 +445,7 @@ factor_slice_sampler_ode <-
             } else {
                   
                   # insert the parameters into the lna_parameters matrix
-                  pars2lnapars(lnapars = ode_params_cur, parameters = model_params_nat)
+                  pars2lnapars2(lnapars = ode_params_cur, parameters = model_params_nat, 0)
                   
                   # recover the original time-varying covariates
                   # compute the time-varying parameters if necessary

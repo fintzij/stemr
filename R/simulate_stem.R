@@ -454,12 +454,20 @@ simulate_stem <-
                   constant_inds  <- length(stem_object$dynamics$param_codes) + seq_along(stem_object$dynamics$const_codes) - 1
                   tcovar_inds    <- length(stem_object$dynamics$param_codes) + length(constant_inds) + seq_along(stem_object$dynamics$tcovar_codes) - 1
                   
-                  lna_pars[, parameter_inds+1] <- matrix(as.numeric(stem_object$dynamics$parameters[parameter_inds+1]),
+                  lna_pars[, parameter_inds+1] <- matrix(0.0,
                                                        nrow = nrow(lna_pars),
-                                                       ncol = length(parameter_inds), byrow = T)
-                  lna_pars[, constant_inds+1]  <- matrix(as.numeric(stem_object$dynamics$constants),
+                                                       ncol = length(parameter_inds))
+                  lna_pars[, constant_inds+1]  <- matrix(0.0,
                                                        nrow = nrow(lna_pars),
-                                                       ncol = length(constant_inds), byrow = T)
+                                                       ncol = length(constant_inds))
+                  
+                  pars2lnapars2(lnapars = lna_pars,
+                                parameters = c(as.numeric(stem_object$dynamics$parameters[parameter_inds+1])), 
+                                c_start = 0)
+                  
+                  pars2lnapars2(lnapars = lna_pars,
+                                parameters = as.numeric(stem_object$dynamics$constants),
+                                c_start = constant_inds[1])
 
                   # Generate forcing indices and update the LNA parameter matrix with forcings
                   forcing_inds <- rep(FALSE, length(lna_times))
@@ -619,7 +627,7 @@ simulate_stem <-
                         }
                         
                         # set the parameters and initial volumes
-                        pars2lnapars(lna_pars, as.numeric(c(sim_pars, init_vols)))
+                        pars2lnapars2(lna_pars, as.numeric(c(sim_pars, init_vols)), 0)
                         
                         # draw values for the time-varying parameters
                         if(!is.null(stem_object$dynamics$tparam)) {
@@ -648,6 +656,8 @@ simulate_stem <-
                                           path <- propose_lna(lna_times         = lna_times,
                                                               lna_pars          = lna_pars,
                                                               init_start        = stem_object$dynamics$lna_initdist_inds[1],
+                                                              lna_param_inds    = parameter_inds, 
+                                                              lna_tcovar_inds   = tcovar_inds,
                                                               param_update_inds = param_update_inds,
                                                               stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
                                                               forcing_inds      = forcing_inds,
@@ -672,6 +682,8 @@ simulate_stem <-
                                           path <- propose_lna_approx(lna_times         = lna_times,
                                                                      lna_pars          = lna_pars,
                                                                      init_start        = stem_object$dynamics$lna_initdist_inds[1],
+                                                                     lna_param_inds    = parameter_inds, 
+                                                                     lna_tcovar_inds   = tcovar_inds,
                                                                      param_update_inds = param_update_inds,
                                                                      stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
                                                                      forcing_inds      = forcing_inds,
@@ -726,12 +738,20 @@ simulate_stem <-
                   constant_inds  <- length(stem_object$dynamics$param_codes) + seq_along(stem_object$dynamics$const_codes) - 1
                   tcovar_inds    <- length(stem_object$dynamics$param_codes) + length(constant_inds) + seq_along(stem_object$dynamics$tcovar_codes) - 1
                   
-                  ode_pars[, parameter_inds+1] <- matrix(as.numeric(stem_object$dynamics$parameters[parameter_inds+1]),
-                                                       nrow = nrow(ode_pars),
-                                                       ncol = length(parameter_inds), byrow = T)
-                  ode_pars[, constant_inds+1]  <- matrix(as.numeric(stem_object$dynamics$constants),
-                                                       nrow = nrow(ode_pars),
-                                                       ncol = length(constant_inds), byrow = T)
+                  ode_pars[, parameter_inds+1] <- matrix(0.0,
+                                                         nrow = nrow(ode_pars),
+                                                         ncol = length(parameter_inds))
+                  ode_pars[, constant_inds+1]  <- matrix(0.0,
+                                                         nrow = nrow(ode_pars),
+                                                         ncol = length(constant_inds))
+                  
+                  pars2lnapars2(lnapars = ode_pars,
+                                parameters = c(as.numeric(stem_object$dynamics$parameters[parameter_inds+1])), 
+                                c_start = 0)
+                  
+                  pars2lnapars2(lnapars = ode_pars,
+                                parameters = as.numeric(stem_object$dynamics$constants),
+                                c_start = constant_inds[1])
 
                   # Generate forcing indices and update the ODE parameter matrix with forcings
                   forcing_inds <- rep(FALSE, length(ode_times))
@@ -896,7 +916,9 @@ simulate_stem <-
                           }
 
                           # set the parameters and initial volumes
-                          pars2lnapars(ode_pars, as.numeric(c(sim_pars, init_vols)))
+                          pars2lnapars2(lnapars = ode_pars, 
+                                        parameters = as.numeric(c(sim_pars, init_vols)), 
+                                        c_start = 0)
                           
                           # draw values for the time-varying parameters
                           if(!is.null(stem_object$dynamics$tparam)) {
@@ -922,6 +944,8 @@ simulate_stem <-
                                   path <- integrate_odes(ode_times         = ode_times,
                                                          ode_pars          = ode_pars,
                                                          init_start        = stem_object$dynamics$ode_initdist_inds[1],
+                                                         ode_param_inds    = parameter_inds,
+                                                         ode_tcovar_inds   = tcovar_inds,
                                                          param_update_inds = param_update_inds,
                                                          stoich_matrix     = stem_object$dynamics$stoich_matrix_ode,
                                                          forcing_inds      = forcing_inds,
@@ -1113,7 +1137,7 @@ simulate_stem <-
                           sim_pars         <- as.numeric(stem_object$dynamics$parameters)
                           constants        <- as.numeric(stem_object$dynamics$constants)
                           tcovar           <- tcovar_obstimes
-                          r_measure_ptr    <- stem_object$measurement_process$meas_pointers$r_measure_ptr
+                          r_measure_ptr    <- stem_object$measurement_process$meas_pointers_lna$r_measure_ptr
                           cens_inds        <- c(0,match(round(stem_object$measurement_process$obstimes, digits = 8),
                                                         round(census_times, digits = 8)) - 1)
                           do_prevalence    <- stem_object$measurement_process$ode_prevalence
