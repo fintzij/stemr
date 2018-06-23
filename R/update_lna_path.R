@@ -48,6 +48,7 @@ update_lna_path <-
                  d_meas_pointer,
                  do_prevalence,
                  n_ess_updates,
+                 ess_bracket_width,
                  tparam_update,
                  initdist_update,
                  step_size) {
@@ -63,12 +64,12 @@ update_lna_path <-
             # choose a likelihood threshold
             threshold <- path_cur$data_log_lik + log(runif(1))
             
+            # initial proposal, which also defines a bracket
+            theta <- runif(1, 0, ess_bracket_width)
+            lower <- theta - ess_bracket_width; upper <- theta
+            
             # initialize the data log likelihood for the proposed path
             data_log_lik_prop <- NULL
-            
-            # initial proposal, which also defines a bracket
-            theta <- runif(1, 0, 2*pi)
-            lower <- theta - 2*pi; upper <- theta
             
             # propose a new initial state
             if(initdist_update) {

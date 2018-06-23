@@ -39,6 +39,7 @@ update_tparam <-
                  d_meas_pointer,
                  do_prevalence,
                  step_size,
+                 tparam_bracket_width,
                  tparam_ess) {
               
       # initialize ess count
@@ -51,8 +52,8 @@ update_tparam <-
       threshold <- path_cur$data_log_lik + log(runif(1))
       
       # initial proposal, which also defines a bracket
-      theta <- runif(1, 0, 2*pi)
-      lower <- theta - 2*pi; upper <- theta
+      theta <- runif(1, 0, tparam_bracket_width)
+      lower <- theta - tparam_bracket_width; upper <- theta
       
       # sample a new set of perturbations and construct the first proposal
       for(p in seq_along(tparam)) {

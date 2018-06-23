@@ -112,14 +112,18 @@ stem_inference_ode <- function(stem_object,
       
       # elliptical slice sampling settings
       if (is.null(ess_args)) {
-            n_ess_updates <- 1
-            ess_warmup    <- 50
-            tparam_ess_update <- TRUE
+            n_ess_updates          <- 1
+            ess_warmup             <- 50
+            initdist_bracket_width <- 2*pi
+            tparam_bracket_width   <- 2*pi
+            tparam_ess_update      <- TRUE
             
       } else {
-            n_ess_updates <- ess_args$n_ess_updates
-            ess_warmup    <- ess_args$ess_warmup
-            tparam_ess_update <- ess_args$tparam_update
+            n_ess_updates          <- ess_args$n_ess_updates
+            ess_warmup             <- ess_args$ess_warmup
+            initdist_bracket_width <- ess_args$initdist_bracket_width
+            tparam_bracket_width   <- ess_args$tparam_bracket_width
+            tparam_ess_update      <- ess_args$tparam_update
       }
       
       # indices of parameters, constants, and time-varying covariates in the ode_params_* matrices
@@ -1047,7 +1051,8 @@ stem_inference_ode <- function(stem_object,
                               d_meas_pointer       = d_meas_pointer,
                               do_prevalence        = do_prevalence,
                               step_size            = step_size,
-                              tparam_ess           = tparam_ess
+                              tparam_ess           = tparam_ess,
+                              tparam_bracket_width = tparam_bracket_width
                         )
                   }
                   
@@ -1082,7 +1087,8 @@ stem_inference_ode <- function(stem_object,
                               d_meas_pointer       = d_meas_pointer,
                               do_prevalence        = do_prevalence,
                               step_size            = step_size,
-                              initdist_ess         = initdist_ess
+                              initdist_ess         = initdist_ess,
+                              initdist_bracket_width = initdist_bracket_width
                         )
                   }
                   
@@ -1912,7 +1918,8 @@ stem_inference_ode <- function(stem_object,
                         d_meas_pointer       = d_meas_pointer,
                         do_prevalence        = do_prevalence,
                         step_size            = step_size,
-                        initdist_ess         = initdist_ess
+                        initdist_ess         = initdist_ess,
+                        initdist_bracket_width = initdist_bracket_width
                   )
             }
             
@@ -1944,7 +1951,8 @@ stem_inference_ode <- function(stem_object,
                         d_meas_pointer       = d_meas_pointer,
                         do_prevalence        = do_prevalence,
                         step_size            = step_size,
-                        tparam_ess           = tparam_ess
+                        tparam_ess           = tparam_ess,
+                        tparam_bracket_width = tparam_bracket_width
                   )
             }
             

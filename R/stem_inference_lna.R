@@ -117,18 +117,24 @@ stem_inference_lna <- function(stem_object,
       
       # elliptical slice sampling settings
       if (is.null(ess_args)) {
-            n_ess_updates       <- 1
-            ess_warmup          <- 50
-            tparam_ess_update   <- TRUE
-            initdist_ess_update <- TRUE
+            n_ess_updates          <- 1
+            ess_bracket_width      <- 2*pi
+            initdist_bracket_width <- 2*pi
+            tparam_bracket_width   <- 2*pi
+            ess_warmup             <- 50
+            tparam_ess_update      <- TRUE
+            initdist_ess_update    <- TRUE
             
       } else {
-            n_ess_updates       <- ess_args$n_ess_updates
-            ess_warmup          <- ess_args$ess_warmup
-            tparam_ess_update   <- ess_args$tparam_update
-            initdist_ess_update <- ess_args$initdist_update
+            n_ess_updates          <- ess_args$n_ess_updates
+            ess_bracket_width      <- ess_args$ess_bracket_width
+            initdist_bracket_width <- ess_args$initdist_bracket_width
+            tparam_bracket_width   <- ess_args$tparam_bracket_width
+            ess_warmup             <- ess_args$ess_warmup
+            tparam_ess_update      <- ess_args$tparam_update
+            initdist_ess_update    <- ess_args$initdist_update
       }
-      
+
       # indices of parameters, constants, and time-varying covariates in the lna_params_* matrices
       lna_param_inds  <- 
             setdiff(stem_object$dynamics$param_codes, 
@@ -1093,6 +1099,7 @@ stem_inference_lna <- function(stem_object,
                         d_meas_pointer          = d_meas_pointer,
                         do_prevalence           = do_prevalence,
                         n_ess_updates           = 1,
+                        ess_bracket_width       = 2*pi,
                         tparam_update           = tparam_ess_update,
                         initdist_update         = initdist_ess_update,
                         step_size               = step_size
@@ -1101,39 +1108,40 @@ stem_inference_lna <- function(stem_object,
                   if(!fixed_inits && !initdist_ess_update) {
                         
                         update_initdist_lna(
-                              initdist_objects     = initdist_objects,
-                              init_volumes_cur     = init_volumes_cur,
-                              init_volumes_prop    = init_volumes_prop,
-                              path_cur             = path,
-                              data                 = data,
-                              lna_parameters       = lna_params_cur,
-                              lna_param_vec        = lna_param_vec,
-                              tparam               = tparam,
-                              pathmat_prop         = pathmat_prop,
-                              censusmat            = censusmat,
-                              emitmat              = emitmat,
-                              flow_matrix          = flow_matrix,
-                              stoich_matrix        = stoich_matrix,
-                              lna_times            = lna_times,
-                              forcing_inds         = forcing_inds,
-                              forcing_matrix       = forcing_matrix,
-                              lna_param_inds       = lna_param_inds,
-                              lna_const_inds       = lna_const_inds,
-                              lna_tcovar_inds      = lna_tcovar_inds,
-                              lna_initdist_inds    = lna_initdist_inds,
-                              param_update_inds    = param_update_inds,
-                              census_indices       = census_indices,
-                              lna_event_inds       = lna_event_inds,
-                              measproc_indmat      = measproc_indmat,
-                              svd_d                = svd_d,
-                              svd_U                = svd_U,
-                              svd_V                = svd_V,
-                              lna_pointer          = lna_pointer,
-                              lna_set_pars_pointer = lna_set_pars_pointer,
-                              d_meas_pointer       = d_meas_pointer,
-                              do_prevalence        = do_prevalence,
-                              step_size            = step_size,
-                              initdist_ess         = initdist_ess
+                              initdist_objects       = initdist_objects,
+                              init_volumes_cur       = init_volumes_cur,
+                              init_volumes_prop      = init_volumes_prop,
+                              path_cur               = path,
+                              data                   = data,
+                              lna_parameters         = lna_params_cur,
+                              lna_param_vec          = lna_param_vec,
+                              tparam                 = tparam,
+                              pathmat_prop           = pathmat_prop,
+                              censusmat              = censusmat,
+                              emitmat                = emitmat,
+                              flow_matrix            = flow_matrix,
+                              stoich_matrix          = stoich_matrix,
+                              lna_times              = lna_times,
+                              forcing_inds           = forcing_inds,
+                              forcing_matrix         = forcing_matrix,
+                              lna_param_inds         = lna_param_inds,
+                              lna_const_inds         = lna_const_inds,
+                              lna_tcovar_inds        = lna_tcovar_inds,
+                              lna_initdist_inds      = lna_initdist_inds,
+                              param_update_inds      = param_update_inds,
+                              census_indices         = census_indices,
+                              lna_event_inds         = lna_event_inds,
+                              measproc_indmat        = measproc_indmat,
+                              svd_d                  = svd_d,
+                              svd_U                  = svd_U,
+                              svd_V                  = svd_V,
+                              lna_pointer            = lna_pointer,
+                              lna_set_pars_pointer   = lna_set_pars_pointer,
+                              d_meas_pointer         = d_meas_pointer,
+                              do_prevalence          = do_prevalence,
+                              step_size              = step_size,
+                              initdist_bracket_width = initdist_bracket_width,
+                              initdist_ess           = initdist_ess
                         )
                   }
                   
@@ -1168,6 +1176,7 @@ stem_inference_lna <- function(stem_object,
                               d_meas_pointer       = d_meas_pointer,
                               do_prevalence        = do_prevalence,
                               step_size            = step_size,
+                              tparam_bracket_width = tparam_bracket_width,
                               tparam_ess           = tparam_ess
                         )
                   }
@@ -1850,6 +1859,7 @@ stem_inference_lna <- function(stem_object,
                   }
                   
                   for(b in mvnss_update_seq) {
+                        
                         # sample new parameter values
                         mvn_slice_sampler(
                               model_params_est     = model_params_est,
@@ -2001,39 +2011,40 @@ stem_inference_lna <- function(stem_object,
             if(!fixed_inits && !initdist_ess_update) {
                   
                   update_initdist_lna(
-                        initdist_objects     = initdist_objects,
-                        init_volumes_cur     = init_volumes_cur,
-                        init_volumes_prop    = init_volumes_prop,
-                        path_cur             = path,
-                        data                 = data,
-                        lna_parameters       = lna_params_cur,
-                        lna_param_vec        = lna_param_vec,
-                        tparam               = tparam,
-                        pathmat_prop         = pathmat_prop,
-                        censusmat            = censusmat,
-                        emitmat              = emitmat,
-                        flow_matrix          = flow_matrix,
-                        stoich_matrix        = stoich_matrix,
-                        lna_times            = lna_times,
-                        forcing_inds         = forcing_inds,
-                        forcing_matrix       = forcing_matrix,
-                        lna_param_inds       = lna_param_inds,
-                        lna_const_inds       = lna_const_inds,
-                        lna_tcovar_inds      = lna_tcovar_inds,
-                        lna_initdist_inds    = lna_initdist_inds,
-                        param_update_inds    = param_update_inds,
-                        census_indices       = census_indices,
-                        lna_event_inds       = lna_event_inds,
-                        measproc_indmat      = measproc_indmat,
-                        svd_d                = svd_d,
-                        svd_U                = svd_U,
-                        svd_V                = svd_V,
-                        lna_pointer          = lna_pointer,
-                        lna_set_pars_pointer = lna_set_pars_pointer,
-                        d_meas_pointer       = d_meas_pointer,
-                        do_prevalence        = do_prevalence,
-                        step_size            = step_size,
-                        initdist_ess         = initdist_ess
+                        initdist_objects       = initdist_objects,
+                        init_volumes_cur       = init_volumes_cur,
+                        init_volumes_prop      = init_volumes_prop,
+                        path_cur               = path,
+                        data                   = data,
+                        lna_parameters         = lna_params_cur,
+                        lna_param_vec          = lna_param_vec,
+                        tparam                 = tparam,
+                        pathmat_prop           = pathmat_prop,
+                        censusmat              = censusmat,
+                        emitmat                = emitmat,
+                        flow_matrix            = flow_matrix,
+                        stoich_matrix          = stoich_matrix,
+                        lna_times              = lna_times,
+                        forcing_inds           = forcing_inds,
+                        forcing_matrix         = forcing_matrix,
+                        lna_param_inds         = lna_param_inds,
+                        lna_const_inds         = lna_const_inds,
+                        lna_tcovar_inds        = lna_tcovar_inds,
+                        lna_initdist_inds      = lna_initdist_inds,
+                        param_update_inds      = param_update_inds,
+                        census_indices         = census_indices,
+                        lna_event_inds         = lna_event_inds,
+                        measproc_indmat        = measproc_indmat,
+                        svd_d                  = svd_d,
+                        svd_U                  = svd_U,
+                        svd_V                  = svd_V,
+                        lna_pointer            = lna_pointer,
+                        lna_set_pars_pointer   = lna_set_pars_pointer,
+                        d_meas_pointer         = d_meas_pointer,
+                        do_prevalence          = do_prevalence,
+                        step_size              = step_size,
+                        initdist_bracket_width = initdist_bracket_width,
+                        initdist_ess           = initdist_ess
                   )
             }
             
@@ -2262,6 +2273,7 @@ stem_inference_lna <- function(stem_object,
                   d_meas_pointer          = d_meas_pointer,
                   do_prevalence           = do_prevalence,
                   n_ess_updates           = n_ess_updates,
+                  ess_bracket_width       = ess_bracket_width,
                   tparam_update           = tparam_ess_update,
                   initdist_update         = initdist_ess_update,
                   step_size               = step_size

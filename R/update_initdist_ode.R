@@ -37,7 +37,8 @@ update_initdist_ode <-
                  d_meas_pointer,
                  do_prevalence,
                  step_size,
-                 initdist_ess) {
+                 initdist_ess,
+                 initdist_bracket_width) {
               
       # initialize ess count
       ess_count <- 1
@@ -49,8 +50,8 @@ update_initdist_ode <-
       data_log_lik_prop <- NULL
       
       # initial proposal, which also defines a bracket
-      theta <- runif(1, 0, 2*pi)
-      lower <- theta - 2*pi; upper <- theta
+      theta <- runif(1, 0, initdist_bracket_width)
+      lower <- theta - initdist_bracket_width; upper <- theta
       
       # vector of logicals for whether boundary conditions are respected
       bad_draws <- vector("logical", length(initdist_objects))
