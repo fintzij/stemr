@@ -34,11 +34,12 @@ update_tparam_ode <-
                  d_meas_pointer,
                  do_prevalence,
                  step_size,
-                 tparam_ess,
+                 tparam_steps,
+                 tparam_angle,
                  tparam_bracket_width) {
               
       # initialize ess count
-      ess_count <- 1
+      step_count <- 1.0
 
       # get the initial state parameters and census the ode path
       init_state <- ode_parameters[1, ode_initdist_inds + 1]
@@ -47,8 +48,11 @@ update_tparam_ode <-
       threshold <- path_cur$data_log_lik + log(runif(1))
       
       # initial proposal, which also defines a bracket
-      theta <- runif(1, 0, tparam_bracket_width)
-      lower <- theta - tparam_bracket_width; upper <- theta
+      # theta <- runif(1, 0, tparam_bracket_width)
+      # lower <- theta - tparam_bracket_width; upper <- theta
+      pos <- runif(1) 
+      lower <- -tparam_bracket_width * pos; upper <- lower + tparam_bracket_width
+      theta <- runif(1, lower, upper)
       
       # sample a new set of perturbations and construct the first proposal
       for(p in seq_along(tparam)) {
@@ -125,7 +129,7 @@ update_tparam_ode <-
       while((upper - lower) > sqrt(.Machine$double.eps) && (data_log_lik_prop < threshold)) {
       
               # increment the number of ESS proposals for the current iteration
-              ess_count <- ess_count + 1
+              step_count <- step_count + 1
       
               # shrink the bracket
               if(theta < 0) {
@@ -229,5 +233,6 @@ update_tparam_ode <-
             }
       }
       
-      copy_vec(tparam_ess, ess_count)
+      copy_vec(tparam_steps, step_count)
+      copy_vec(tparam_angle, theta)
 }

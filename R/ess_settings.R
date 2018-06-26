@@ -3,14 +3,18 @@
 #'
 #' @param n_ess_updates number of elliptical slice sampling updates per MCMC
 #'   iteration, defaults to 1.
-#' @param ess_bracket_width width of the elliptical slice sampling bracket for
-#'   LNA path/joint updates, must be in (0,2*pi], and defaults to 2*pi.
-#' @param initdist_bracket_width width of the elliptical slice sampling bracket
-#'   for initial distribution updates, must be in (0,2*pi], and defaults to
-#'   2*pi.
-#' @param tparam_bracket_width width of the elliptical slice sampling bracket
-#'   for time varying parameter updates, must be in (0,2*pi], and defaults to
-#'   2*pi.
+#' @param lna_bracket_width,initdist_bracket_width,tparam_bracket_widths width
+#'   of the elliptical slice sampling brackets, must be in (0,2*pi], and default
+#'   to 2*pi.
+#' @param lna_bracket_update,initdist_bracket_update,tparam_bracket_update
+#'   iterations at which the widths of the respective elliptical slice sampling
+#'   brackets should be shrunk, defaults to 0 and the bracket widths are
+#'   kept constant.
+#' @param lna_bracket_scaling,initdist_bracket_scaling,tparam_bracket_scaling
+#'   Scaling factors for elliptical slice sampling bracket widths. If brackets
+#'   are to be shrunk, the new width is set to the minimum of 2*pi or the
+#'   scaling multiplied by the standard deviation of the previous ESS angles.
+#'   The scalings default to the full width at one tenth maximum for a gaussian.
 #' @param joint_tparam_update either TRUE (default) if time-varying parameter
 #'   values should be updated in an ESS step jointly with the LNA path, or FALSE
 #'   if time-varying parameters should be updated in their own block.
@@ -24,14 +28,20 @@
 #' @export
 ess_settings <-
       function(n_ess_updates = 1,
-               ess_bracket_width = 2*pi,
+               lna_bracket_width = 2*pi,
                initdist_bracket_width = 2*pi,
                tparam_bracket_width = 2*pi,
+               lna_bracket_update = 0,
+               initdist_bracket_update = 0,
+               tparam_bracket_update = 0,
+               lna_bracket_scaling = 2*sqrt(2*log(10)),
+               initdist_bracket_scaling = 2*sqrt(2*log(10)),
+               tparam_bracket_scaling = 2*sqrt(2*log(10)),
                joint_tparam_update = TRUE,
                joint_initdist_update = TRUE,
                ess_warmup = 50) {
             
-            if(ess_bracket_width <= 0 | ess_bracket_width > 2*pi) {
+            if(lna_bracket_width <= 0 | lna_bracket_width > 2*pi) {
                   stop("The elliptical slice sampling bracket width must be in (0,2*pi].")
             }
             
@@ -39,16 +49,19 @@ ess_settings <-
                   stop("The initial distribution slice sampling bracket width must be in (0,2*pi].")
             }
             
-            if(ess_bracket_width <= 0 | ess_bracket_width > 2*pi) {
+            if(lna_bracket_width <= 0 | lna_bracket_width > 2*pi) {
                   stop("The time varying parameter slice sampling bracket width must be in (0,2*pi].")
             }
             
-        return(list(n_ess_updates          = n_ess_updates,
-                    ess_bracket_width      = ess_bracket_width,
-                    initdist_bracket_width = initdist_bracket_width,
-                    tparam_bracket_width   = tparam_bracket_width,
-                    tparam_update          = joint_tparam_update,
-                    initdist_update        = joint_initdist_update,
-                    ess_warmup             = ess_warmup))
+        return(list(n_ess_updates           = n_ess_updates,
+                    lna_bracket_width       = lna_bracket_width,
+                    initdist_bracket_width  = initdist_bracket_width,
+                    tparam_bracket_width    = tparam_bracket_width,
+                    lna_bracket_update      = lna_bracket_update,
+                    initdist_bracket_update = initdist_bracket_update,
+                    tparam_bracket_update   = tparam_bracket_update,
+                    tparam_update           = joint_tparam_update,
+                    initdist_update         = joint_initdist_update,
+                    ess_warmup              = ess_warmup))
 
 }
