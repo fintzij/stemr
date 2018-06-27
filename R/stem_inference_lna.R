@@ -2564,8 +2564,8 @@ stem_inference_lna <- function(stem_object,
                   lna_paths        = lna_paths,
                   lna_draws        = lna_draws,
                   MCMC_results     = MCMC_results,
-                  ess_step_record  = ess_step_record,
-                  ess_angle_record = ess_angle_record
+                  ess_step_record  = t(ess_step_record),
+                  ess_angle_record = t(ess_angle_record)
             )
       
       if(!fixed_inits & !joint_initdist_update) {
