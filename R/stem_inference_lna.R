@@ -137,8 +137,8 @@ stem_inference_lna <- function(stem_object,
             initdist_bracket_width   <- ess_args$initdist_bracket_width
             tparam_bracket_width     <- ess_args$tparam_bracket_width
             lna_bracket_update       <- ess_args$lna_bracket_update
-            initdist_bracket_update  <- ess_args$initdist_bracket_width
-            tparam_bracket_update    <- ess_args$tparam_bracket_width
+            initdist_bracket_update  <- ess_args$initdist_bracket_update
+            tparam_bracket_update    <- ess_args$tparam_bracket_update
             lna_bracket_scaling      <- ess_args$lna_bracket_scaling
             initdist_bracket_scaling <- ess_args$initdist_bracket_scaling
             tparam_bracket_scaling   <- ess_args$tparam_bracket_scaling
@@ -2646,8 +2646,8 @@ stem_inference_lna <- function(stem_object,
                                initdist_bracket_width   = initdist_bracket_width,
                                tparam_bracket_width     = tparam_bracket_width,
                                lna_bracket_update       = lna_bracket_update,
-                               initdist_bracket_update  = initdist_bracket_width,
-                               tparam_bracket_update    = tparam_bracket_width,
+                               initdist_bracket_update  = initdist_bracket_update,
+                               tparam_bracket_update    = tparam_bracket_update,
                                lna_bracket_scaling      = lna_bracket_scaling,
                                initdist_bracket_scaling = initdist_bracket_scaling,
                                tparam_bracket_scaling   = tparam_bracket_scaling,
