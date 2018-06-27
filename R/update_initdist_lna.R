@@ -40,11 +40,12 @@ update_initdist_lna <-
                  d_meas_pointer,
                  do_prevalence,
                  step_size,
-                 initdist_bracket_width,
-                 initdist_ess) {
+                 initdist_steps,
+                 initdist_angle,
+                 initdist_bracket_width) {
               
       # initialize ess count
-      ess_count <- 1
+      step_count <- 1.0
       
       # choose a likelihood threshold
       threshold <- path_cur$data_log_lik + log(runif(1))
@@ -53,8 +54,9 @@ update_initdist_lna <-
       data_log_lik_prop <- NULL
       
       # initial proposal, which also defines a bracket
-      theta <- runif(1, 0, initdist_bracket_width)
-      lower <- theta - initdist_bracket_width; upper <- theta
+      pos <- runif(1) 
+      lower <- -initdist_bracket_width * pos; upper <- lower + initdist_bracket_width
+      theta <- runif(1, lower, upper)
       
       # vector of logicals for whether boundary conditions are respected
       bad_draws <- vector("logical", length(initdist_objects))
@@ -167,7 +169,7 @@ update_initdist_lna <-
       while((upper - lower) > sqrt(.Machine$double.eps) && (data_log_lik_prop < threshold)) {
       
               # increment the number of ESS proposals for the current iteration
-              ess_count <- ess_count + 1
+              step_count <- step_count + 1
       
               # shrink the bracket
               if(theta < 0) {
@@ -319,5 +321,7 @@ update_initdist_lna <-
             }
       }
       
-      copy_vec(initdist_ess, ess_count)
+      # copy the number of steps and ess angle
+      copy_vec(initdist_steps, step_count)
+      copy_vec(initdist_angle, theta)
 }

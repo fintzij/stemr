@@ -117,22 +117,54 @@ stem_inference_lna <- function(stem_object,
       
       # elliptical slice sampling settings
       if (is.null(ess_args)) {
-            n_ess_updates          <- 1
-            ess_bracket_width      <- 2*pi
-            initdist_bracket_width <- 2*pi
-            tparam_bracket_width   <- 2*pi
-            ess_warmup             <- 50
-            tparam_ess_update      <- TRUE
-            initdist_ess_update    <- TRUE
+            n_ess_updates            <- 1
+            initdist_bracket_width   <- 2*pi
+            tparam_bracket_width     <- 2*pi     
+            lna_bracket_width        <- 2*pi
+            initdist_bracket_update  <- 0
+            tparam_bracket_update    <- 0
+            lna_bracket_update       <- 0
+            lna_bracket_scaling      <- 2*sqrt(2*log(10))
+            initdist_bracket_scaling <- 2*sqrt(2*log(10))
+            tparam_bracket_scaling   <- 2*sqrt(2*log(10))
+            joint_initdist_update    <- TRUE
+            joint_tparam_update      <- TRUE
+            ess_warmup               <- 50
             
       } else {
-            n_ess_updates          <- ess_args$n_ess_updates
-            ess_bracket_width      <- ess_args$ess_bracket_width
-            initdist_bracket_width <- ess_args$initdist_bracket_width
-            tparam_bracket_width   <- ess_args$tparam_bracket_width
-            ess_warmup             <- ess_args$ess_warmup
-            tparam_ess_update      <- ess_args$tparam_update
-            initdist_ess_update    <- ess_args$initdist_update
+            n_ess_updates            <- ess_args$n_ess_updates
+            lna_bracket_width        <- ess_args$lna_bracket_width
+            initdist_bracket_width   <- ess_args$initdist_bracket_width
+            tparam_bracket_width     <- ess_args$tparam_bracket_width
+            lna_bracket_update       <- ess_args$lna_bracket_update
+            initdist_bracket_update  <- ess_args$initdist_bracket_width
+            tparam_bracket_update    <- ess_args$tparam_bracket_width
+            lna_bracket_scaling      <- ess_args$lna_bracket_scaling
+            initdist_bracket_scaling <- ess_args$initdist_bracket_scaling
+            tparam_bracket_scaling   <- ess_args$tparam_bracket_scaling
+            joint_initdist_update    <- ess_args$joint_initdist_update
+            joint_tparam_update      <- ess_args$joint_tparam_update
+            ess_warmup               <- ess_args$ess_warmup
+      }
+      
+      # objects for updating the brackets if necessary
+      # objects for updating the brackets if necessary
+      if(lna_bracket_update != Inf) {
+            lna_angle_mean  <- 0
+            lna_angle_var   <- 1
+            lna_angle_resid <- 0
+      }
+      
+      if(initdist_bracket_update != Inf) {
+            initdist_angle_mean  <- 0
+            initdist_angle_var   <- 1
+            initdist_angle_resid <- 0
+      }
+      
+      if(tparam_bracket_update != Inf) {
+            tparam_angle_mean  <- 0
+            tparam_angle_var   <- 1
+            tparam_angle_resid <- 0
       }
 
       # indices of parameters, constants, and time-varying covariates in the lna_params_* matrices
@@ -196,12 +228,14 @@ stem_inference_lna <- function(stem_object,
                   )
       }
       
-      # for recording the number of ess updates
+      # for recording the ess initdist updates
       if(!fixed_inits) {
             
-            if(!initdist_ess_update) {
-                  initdist_ess <- 1.0
-                  initdist_ess_record <- rep(1, floor(iterations / thin_params))      
+            if(!joint_initdist_update) {
+                  initdist_steps        <- 1.0
+                  initdist_angle        <- 0.0
+                  initdist_step_record  <- rep(1, floor(iterations / thin_params))
+                  initdist_angle_record <- rep(1, floor(iterations / thin_params))
             }
             
             initdist_log_lik <- rep(0.0, floor(iterations / thin_params) + 1)
@@ -748,7 +782,7 @@ stem_inference_lna <- function(stem_object,
             tparam_inds <-
                   stem_object$dynamics$lna_rates$lna_param_codes[sapply(tparam, function(x) x$tparam_name)]
             
-            if (!tparam_ess_update) {
+            if (!joint_tparam_update) {
                   tparam_ess  <- 1
             } else {
                   tparam_ess <- NULL
@@ -913,11 +947,31 @@ stem_inference_lna <- function(stem_object,
                    dimnames = list(NULL, c(param_names_est, t0_name)))
       
       if (!is.null(tparam)) {
+            
+            if(!joint_tparam_update) {
+                  tparam_steps        <- 1.0
+                  tparam_angle        <- 0.0
+                  tparam_step_record  <- rep(1, floor(iterations / thin_params))
+                  tparam_angle_record <- rep(1, floor(iterations / thin_params))
+            }
+            
+            tparam_log_lik <-
+                  matrix(0.0,
+                         nrow = 1 + floor(iterations / thin_params),
+                         ncol = length(tparam),
+                         dimnames = list(NULL, paste0(sapply(tparam, function(x) x$tparam_name),"_loglik")))
             tparam_samples <-
                   array(0.0, 
                         dim = c(n_times, length(tparam), 1 + floor(iterations / thin_params)))
+            
       } else {
-            tparam_samples <- NULL
+            tparam_steps        <- NULL
+            tparam_angle        <- NULL
+            tparam_step_record  <- NULL
+            tparam_angle_record <- NULL
+            tparam_log_lik      <- NULL
+            tparam_samples      <- NULL
+            tparam_log_lik      <- NULL
       }
       
       lna_paths <-
@@ -933,25 +987,12 @@ stem_inference_lna <- function(stem_object,
       data_log_lik      <- double(1 + floor(iterations / thin_params))
       lna_log_lik       <- double(1 + floor(iterations / thin_params))
       params_log_prior  <- double(1 + floor(iterations / thin_params))
-      ess_record        <- matrix(1, nrow = n_ess_updates, ncol = floor(iterations / thin_params))
-      
-      if (!is.null(tparam)) {
-            tparam_log_lik <-
-                  matrix(0.0,
-                         nrow = 1 + floor(iterations / thin_params),
-                         ncol = length(tparam),
-                         dimnames = list(NULL, paste0(sapply(tparam, function(x) x$tparam_name),"_loglik")))
-            
-            if (!tparam_ess_update) {
-                  tparam_ess_record <- rep(1, floor(iterations / thin_params))
-            } else {
-                  tparam_ess_record <- NULL
-            }
-            
-      } else {
-            tparam_log_lik <- NULL
-            tparam_ess_record <- NULL
-      }
+      ess_step_record   <- matrix(1.0, 
+                                  nrow = n_ess_updates, 
+                                  ncol = floor(iterations / thin_params))
+      ess_angle_record  <- matrix(1.0, 
+                                  nrow = n_ess_updates, 
+                                  ncol = floor(iterations / thin_params))
       
       # initialize the lna_param_vec for the measurement process
       lna_param_vec <- lna_params_cur[1,]
@@ -1051,7 +1092,8 @@ stem_inference_lna <- function(stem_object,
       copy_mat(draws_prop, path$draws)
       
       # add a vector for the ESS record to the path
-      path$ess_record <- rep(1, n_ess_updates)
+      path$step_record  <- rep(1.0, n_ess_updates)
+      path$angle_record <- rep(1.0, n_ess_updates)
       
       # instatiate matrix for elliptical slice sampling draws
       ess_draws_prop <- matrix(0.0, nrow = nrow(path$draws), ncol = ncol(path$draws))
@@ -1099,13 +1141,13 @@ stem_inference_lna <- function(stem_object,
                         d_meas_pointer          = d_meas_pointer,
                         do_prevalence           = do_prevalence,
                         n_ess_updates           = 1,
-                        ess_bracket_width       = 2*pi,
-                        tparam_update           = tparam_ess_update,
-                        initdist_update         = initdist_ess_update,
+                        lna_bracket_width       = lna_bracket_width,
+                        joint_tparam_update     = joint_tparam_update,
+                        joint_initdist_update   = joint_initdist_update,
                         step_size               = step_size
                   )
                   
-                  if(!fixed_inits && !initdist_ess_update) {
+                  if(!fixed_inits && !joint_initdist_update) {
                         
                         update_initdist_lna(
                               initdist_objects       = initdist_objects,
@@ -1140,13 +1182,14 @@ stem_inference_lna <- function(stem_object,
                               d_meas_pointer         = d_meas_pointer,
                               do_prevalence          = do_prevalence,
                               step_size              = step_size,
-                              initdist_bracket_width = initdist_bracket_width,
-                              initdist_ess           = initdist_ess
+                              initdist_steps         = initdist_steps,
+                              initdist_angle         = initdist_angle,
+                              initdist_bracket_width = initdist_bracket_width
                         )
                   }
                   
-                  if (!is.null(tparam) && !tparam_ess_update) {
-                        update_tparam(
+                  if (!is.null(tparam) && !joint_tparam_update) {
+                        update_tparam_lna(
                               tparam               = tparam,
                               path_cur             = path,
                               data                 = data,
@@ -1176,8 +1219,9 @@ stem_inference_lna <- function(stem_object,
                               d_meas_pointer       = d_meas_pointer,
                               do_prevalence        = do_prevalence,
                               step_size            = step_size,
-                              tparam_bracket_width = tparam_bracket_width,
-                              tparam_ess           = tparam_ess
+                              tparam_angle         = tparam_angle,
+                              tparam_steps         = tparam_steps,
+                              tparam_bracket_width = tparam_bracket_width
                         )
                   }
                   
@@ -1295,7 +1339,7 @@ stem_inference_lna <- function(stem_object,
       # begin the MCMC
       start.time <- Sys.time()
       for (iter in (seq_len(iterations) + 1)) {
-            
+
             # Sample new parameter values
             if (mcmc_kernel$method == "mvn_rw") {
                   
@@ -2008,7 +2052,7 @@ stem_inference_lna <- function(stem_object,
             }
             
             # update the initial compartment volumes
-            if(!fixed_inits && !initdist_ess_update) {
+            if(!fixed_inits && !joint_initdist_update) {
                   
                   update_initdist_lna(
                         initdist_objects       = initdist_objects,
@@ -2043,14 +2087,36 @@ stem_inference_lna <- function(stem_object,
                         d_meas_pointer         = d_meas_pointer,
                         do_prevalence          = do_prevalence,
                         step_size              = step_size,
-                        initdist_bracket_width = initdist_bracket_width,
-                        initdist_ess           = initdist_ess
+                        initdist_steps         = initdist_steps,
+                        initdist_angle         = initdist_angle,
+                        initdist_bracket_width = initdist_bracket_width
                   )
+                  
+                  if((iter-1) <= initdist_bracket_update) {
+                        
+                        # angle residual
+                        initdist_angle_resid <- 
+                              initdist_angle - initdist_angle_mean
+                        
+                        # angle variance
+                        initdist_angle_var   <- 
+                              (iter-2) / (iter-1) * initdist_angle_var + initdist_angle_resid^2 / (iter - 1)
+                        
+                        # angle mean
+                        initdist_angle_mean  <- 
+                              (iter-2) / (iter-1) * initdist_angle_mean + initdist_angle / (iter - 1)
+                        
+                        # set the new angle bracket
+                        if(((iter-1) == initdist_bracket_update)) {
+                              initdist_bracket_width <- 
+                                    min(initdist_bracket_scaling * sqrt(initdist_angle_var), 2*pi)
+                        }
+                  }
             }
             
             # update the tparam draws
-            if (!is.null(tparam) && !tparam_ess_update) {
-                  update_tparam(
+            if (!is.null(tparam) && !joint_tparam_update) {
+                  update_tparam_lna(
                         tparam               = tparam,
                         path_cur             = path,
                         data                 = data,
@@ -2080,8 +2146,31 @@ stem_inference_lna <- function(stem_object,
                         d_meas_pointer       = d_meas_pointer,
                         do_prevalence        = do_prevalence,
                         step_size            = step_size,
-                        tparam_ess           = tparam_ess
+                        tparam_angle         = tparam_angle,
+                        tparam_steps         = tparam_steps,
+                        tparam_bracket_width = tparam_bracket_width
                   )
+                  
+                  if((iter-1) <= tparam_bracket_update) {
+                        
+                        # angle residual
+                        tparam_angle_resid <- 
+                              tparam_angle - tparam_angle_mean
+                        
+                        # angle variance
+                        tparam_angle_var   <- 
+                              (iter-2) / (iter-1) * tparam_angle_var + tparam_angle_resid^2 / (iter - 1)
+                        
+                        # angle mean
+                        tparam_angle_mean  <- 
+                              (iter-2) / (iter-1) * tparam_angle_mean + tparam_angle / (iter - 1)
+                        
+                        # set the new angle bracket
+                        if(((iter-1) == tparam_bracket_update)) {
+                              tparam_bracket_width <- 
+                                    min(tparam_bracket_scaling * sqrt(tparam_angle_var), 2*pi)
+                        }
+                  }
             }
             
             # Propose and Accept-reject initial state/time
@@ -2237,7 +2326,6 @@ stem_inference_lna <- function(stem_object,
             }
             
             # Update the path via elliptical slice sampling
-            # Update the path via elliptical slice sampling
             update_lna_path(
                   path_cur                = path,
                   data                    = data,
@@ -2273,15 +2361,40 @@ stem_inference_lna <- function(stem_object,
                   d_meas_pointer          = d_meas_pointer,
                   do_prevalence           = do_prevalence,
                   n_ess_updates           = n_ess_updates,
-                  ess_bracket_width       = ess_bracket_width,
-                  tparam_update           = tparam_ess_update,
-                  initdist_update         = initdist_ess_update,
+                  lna_bracket_width       = lna_bracket_width,
+                  joint_tparam_update     = joint_tparam_update,
+                  joint_initdist_update   = joint_initdist_update,
                   step_size               = step_size
             )
             
+            # update the lna bracket if required
+            if((iter-1) <= lna_bracket_update) {
+                  
+                  # angle residual
+                  lna_angle_resid <- 
+                        path$angle_record - lna_angle_mean
+                  
+                  # angle variance
+                  lna_angle_var <- 
+                        (iter - 1 - n_ess_updates) / (iter - 1) * lna_angle_var + 
+                        sum(lna_angle_resid^2) / (iter - 1)
+                  
+                  # angle mean
+                  lna_angle_mean  <- 
+                        (iter - 1 - n_ess_updates) / (iter - 1) * lna_angle_mean + 
+                        sum(path$angle_record) / (iter - 1)
+                  
+                  # set the new angle bracket
+                  if(((iter-1) == lna_bracket_update)) {
+                        lna_bracket_width <- 
+                              min(lna_bracket_scaling * sqrt(lna_angle_var), 2*pi)
+                  }
+            }
+            
             # Save the latent process if called for in this iteration
             if ((iter-1) %% thin_latent_proc == 0) {
-                  ess_record[, param_rec_ind - 1] <- path$ess_record    # save the ESS record
+                  ess_step_record[, param_rec_ind - 1]  <- path$step_record # save the number of steps
+                  ess_angle_record[, param_rec_ind - 1] <- path$angle_record # save the angle
                   mat_2_arr(lna_paths, path$lna_path, path_rec_ind - 1) # save the path
                   mat_2_arr(lna_draws, path$draws, path_rec_ind - 1)    # save the N(0,1) draws
                   path_rec_ind <- path_rec_ind + 1                      # increment the path record index
@@ -2297,16 +2410,24 @@ stem_inference_lna <- function(stem_object,
                   
                   # save initdist ess record and log prior
                   if(!fixed_inits){
+                        
                         initdist_log_lik[param_rec_ind] <- 
                               sum(dnorm(unlist(lapply(initdist_objects, "[[", "draws_cur")), log = T))
-                        if(!initdist_ess_update) initdist_ess_record[param_rec_ind] <- initdist_ess
+                        
+                        if(!joint_initdist_update) {
+                              initdist_step_record[param_rec_ind]  <- initdist_steps
+                              initdist_angle_record[param_rec_ind] <- initdist_angle
+                        }
                   } 
                   
                   if (!t0_fixed) t0_log_prior[param_rec_ind] <- t0_logprior_cur
                   
                   if (!is.null(tparam)) {
                         
-                        if (!tparam_ess_update) tparam_ess_record[param_rec_ind] <- tparam_ess
+                        if (!joint_tparam_update) {
+                              tparam_step_record[param_rec_ind]  <- tparam_steps
+                              tparam_angle_record[param_rec_ind] <- tparam_angle
+                        } 
                         
                         for (p in seq_along(tparam)) tparam[[p]]$log_lik <- sum(dnorm(tparam[[p]]$draws_cur, log = T))
                         
@@ -2414,51 +2535,50 @@ stem_inference_lna <- function(stem_object,
       end.time <- Sys.time()
       
       # compile the results
-      MCMC_results <- cbind(
+      MCMC_results <- data.frame(
             data_log_lik       = data_log_lik,
             lna_log_lik        = lna_log_lik,
-            params_log_prior   = params_log_prior
-      )
-      rownames(MCMC_results) <- seq(1, iterations + 1, by = thin_params) - 1
+            params_log_prior   = params_log_prior,
+            row.names          = seq(1, iterations + 1, by = thin_params) - 1
+      ) 
       
       if (!fixed_inits) MCMC_results <- cbind(MCMC_results, initdist_log_lik = initdist_log_lik)
       if (!t0_fixed) MCMC_results <- cbind(MCMC_results, t0_log_prior = t0_log_prior)
       if (!is.null(tparam)) MCMC_results <- cbind(MCMC_results, tparam_log_lik)
       
       # append the parameter samples on their natural and estimation scales
-      MCMC_results <-
-            as.data.frame(
-                  cbind(MCMC_results,
-                        parameter_samples_nat,
-                        parameter_samples_est))
+      MCMC_results <- cbind(MCMC_results, parameter_samples_nat, parameter_samples_est)
       
       # set the parameters (for restart) and save the results
       stem_object$dynamics$parameters <- setNames(model_params_nat, param_names_nat)
-      if (!t0_fixed) stem_object$dynamics$t0 <- t0
-      if(!fixed_inits) {
-            stem_object$dynamics$initdist_params <- init_volumes_cur
-      }
       
-      if (!is.null(tparam)) {
-            stem_object$dynamics$tparam <- tparam
-      }
+      if (!t0_fixed) stem_object$dynamics$t0 <- t0
+      
+      if(!fixed_inits) stem_object$dynamics$initdist_params <- init_volumes_cur
+      
+      if (!is.null(tparam)) stem_object$dynamics$tparam <- tparam
       
       stem_object$results <-
             list(
-                  time         = difftime(end.time, start.time, units = "hours"),
-                  lna_paths    = lna_paths,
-                  lna_draws    = lna_draws,
-                  MCMC_results = MCMC_results,
-                  ess_record   = ess_record
+                  time             = difftime(end.time, start.time, units = "hours"),
+                  lna_paths        = lna_paths,
+                  lna_draws        = lna_draws,
+                  MCMC_results     = MCMC_results,
+                  ess_step_record  = ess_step_record,
+                  ess_angle_record = ess_angle_record
             )
       
-      if(!fixed_inits & !initdist_ess_update) {
-            stem_object$results$initdist_ess_record <- initdist_ess_record
+      if(!fixed_inits & !joint_initdist_update) {
+            stem_object$results$initdist_step_record  <- initdist_step_record
+            stem_object$results$initdist_angle_record <- initdist_angle_record
       }
       
       if (!is.null(tparam)) {
             stem_object$results$tparam_samples <- tparam_samples
-            if (!tparam_ess_update) stem_object$results$tparam_ess_record <- tparam_ess_record
+            if (!joint_tparam_update) {
+                  stem_object$results$tparam_step_record  <- tparam_step_record
+                  stem_object$results$tparam_angle_record <- tparam_angle_record
+            } 
       }
       
       if (mcmc_kernel$method == "mvn_rw") {
@@ -2520,17 +2640,32 @@ stem_inference_lna <- function(stem_object,
             stem_object$results$acceptances_t0 = acceptances_t0
       }
       
+      # ess settings
+      ess_args <- ess_settings(n_ess_updates            = n_ess_updates,
+                               lna_bracket_width        = lna_bracket_width,
+                               initdist_bracket_width   = initdist_bracket_width,
+                               tparam_bracket_width     = tparam_bracket_width,
+                               lna_bracket_update       = lna_bracket_update,
+                               initdist_bracket_update  = initdist_bracket_width,
+                               tparam_bracket_update    = tparam_bracket_width,
+                               lna_bracket_scaling      = lna_bracket_scaling,
+                               initdist_bracket_scaling = initdist_bracket_scaling,
+                               tparam_bracket_scaling   = tparam_bracket_scaling,
+                               joint_initdist_update    = joint_initdist_update,
+                               joint_tparam_update      = joint_tparam_update,
+                               ess_warmup               = ess_warmup)
+      
       # save the settings
       stem_object$stem_settings <-
             list(
                   iterations       = iterations,
                   thin_params      = thin_params,
                   thin_latent_proc = thin_latent_proc,
-                  n_ess_updates    = n_ess_updates,
                   priors           = priors,
                   prior_density    = prior_density,
                   mcmc_kernel      = mcmc_kernel,
                   t0_kernel        = t0_kernel,
+                  ess_args         = ess_args,
                   path_for_restart = path,
                   tparam_for_restart = tparam
             )

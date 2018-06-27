@@ -304,12 +304,13 @@ BEGIN_RCPP
 END_RCPP
 }
 // reset_vec
-void reset_vec(arma::vec& v);
-RcppExport SEXP _stemr_reset_vec(SEXP vSEXP) {
+void reset_vec(arma::vec& v, double value);
+RcppExport SEXP _stemr_reset_vec(SEXP vSEXP, SEXP valueSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::vec& >::type v(vSEXP);
-    reset_vec(v);
+    Rcpp::traits::input_parameter< double >::type value(valueSEXP);
+    reset_vec(v, value);
     return R_NilValue;
 END_RCPP
 }
@@ -796,7 +797,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_copy_pathmat", (DL_FUNC) &_stemr_copy_pathmat, 2},
     {"_stemr_copy_2_rows", (DL_FUNC) &_stemr_copy_2_rows, 3},
     {"_stemr_mat_2_arr", (DL_FUNC) &_stemr_mat_2_arr, 3},
-    {"_stemr_reset_vec", (DL_FUNC) &_stemr_reset_vec, 1},
+    {"_stemr_reset_vec", (DL_FUNC) &_stemr_reset_vec, 2},
     {"_stemr_add2vec", (DL_FUNC) &_stemr_add2vec, 3},
     {"_stemr_draw_normals", (DL_FUNC) &_stemr_draw_normals, 1},
     {"_stemr_draw_normals2", (DL_FUNC) &_stemr_draw_normals2, 1},

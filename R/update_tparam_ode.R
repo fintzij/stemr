@@ -233,6 +233,7 @@ update_tparam_ode <-
             }
       }
       
+      # copy steps and angle
       copy_vec(tparam_steps, step_count)
       copy_vec(tparam_angle, theta)
 }

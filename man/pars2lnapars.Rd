@@ -2,7 +2,7 @@
 % Please edit documentation in R/RcppExports.R
 \name{pars2lnapars}
 \alias{pars2lnapars}
-\title{Identify which rates to update when a state transition event occurs.}
+\title{Insert parameters into each row of a parameter matrix}
 \usage{
 pars2lnapars(lnapars, parameters)
 }
@@ -15,5 +15,5 @@ pars2lnapars(lnapars, parameters)
 modifies the lna parameter matrix in place
 }
 \description{
-Identify which rates to update when a state transition event occurs.
+Insert parameters into each row of a parameter matrix
 }

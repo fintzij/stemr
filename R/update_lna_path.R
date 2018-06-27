@@ -48,13 +48,14 @@ update_lna_path <-
                  d_meas_pointer,
                  do_prevalence,
                  n_ess_updates,
-                 ess_bracket_width,
-                 tparam_update,
-                 initdist_update,
+                 lna_bracket_width,
+                 joint_tparam_update,
+                 joint_initdist_update,
                  step_size) {
               
-      copy_vec(dest = path_cur$ess_record, orig = rep(1, n_ess_updates))
-      
+      step_count <- rep(1.0, n_ess_updates)
+      ess_angles <- rep(0.0, n_ess_updates)
+
       # perform the ESS updates, retaining the last state
       for(k in seq_len(n_ess_updates)) {
 
@@ -65,14 +66,17 @@ update_lna_path <-
             threshold <- path_cur$data_log_lik + log(runif(1))
             
             # initial proposal, which also defines a bracket
-            theta <- runif(1, 0, ess_bracket_width)
-            lower <- theta - ess_bracket_width; upper <- theta
+            # theta <- runif(1, 0, ess_bracket_width)
+            # lower <- theta - ess_bracket_width; upper <- theta
+            pos <- runif(1) 
+            lower <- -lna_bracket_width * pos; upper <- lower + lna_bracket_width
+            theta <- runif(1, lower, upper)
             
             # initialize the data log likelihood for the proposed path
             data_log_lik_prop <- NULL
             
             # propose a new initial state
-            if(initdist_update) {
+            if(joint_initdist_update) {
                   
                   bad_draws <- vector("logical", length(initdist_objects))
                   
@@ -103,12 +107,12 @@ update_lna_path <-
                   }
             }
             
-            if(initdist_update && any(bad_draws)) {
+            if(joint_initdist_update && any(bad_draws)) {
                   data_log_lik_prop <- -Inf
             
             } else {
                   
-                  if(initdist_update) {
+                  if(joint_initdist_update) {
                         # copy the initial volumes into the parameter matrix
                         pars2lnapars2(lna_parameters, init_volumes_prop, lna_initdist_inds[1])
                   }
@@ -119,7 +123,7 @@ update_lna_path <-
                   # propose time-varying parameter values if called for
                   if(!is.null(tparam)) {
                         
-                        if(tparam_update) {
+                        if(joint_tparam_update) {
                               
                               # sample a new set of perturbations and construct the first proposal
                               for(p in seq_along(tparam)) {
@@ -139,7 +143,7 @@ update_lna_path <-
                                                   tpar_inds = tparam[[p]]$tpar_inds)
                               }
                               
-                        } else if(initdist_update) {
+                        } else {
                               # or recompute time varying parameters 
                               
                               for(p in seq_along(tparam)) {
@@ -215,7 +219,7 @@ update_lna_path <-
             while((upper - lower) > sqrt(.Machine$double.eps) && (data_log_lik_prop < threshold)) {
             
                     # increment the number of ESS proposals for the current iteration
-                    increment_elem(path_cur$ess_record, k-1)
+                    step_count[k] <- step_count[k] + 1
                     
                     # shrink the bracket
                     if(theta < 0) {
@@ -228,7 +232,7 @@ update_lna_path <-
                     theta <- runif(1, lower, upper)
                     
                     # construct the next initial distribution proposal
-                    if(initdist_update) {
+                    if(joint_initdist_update) {
                           for(s in seq_along(initdist_objects)) {
                                 
                                 # if the state is not fixed draw new values
@@ -252,13 +256,13 @@ update_lna_path <-
                           }
                     }
                   
-                    if(initdist_update && any(bad_draws)) {
+                    if(joint_initdist_update && any(bad_draws)) {
                           data_log_lik_prop <- -Inf
                           
                     } else {
                           
                           # copy the initial volumes into the parameter matrix
-                          if(initdist_update) {
+                          if(joint_initdist_update) {
                                 pars2lnapars2(lna_parameters, init_volumes_prop, lna_initdist_inds[1])
                           }
                           
@@ -268,7 +272,7 @@ update_lna_path <-
                           # propose time-varying parameter values if called for
                           if(!is.null(tparam)) {
                                 
-                                if(tparam_update) {
+                                if(joint_tparam_update) {
                                       
                                       # sample a new set of perturbations and construct the first proposal
                                       for(p in seq_along(tparam)) {
@@ -285,7 +289,7 @@ update_lna_path <-
                                                           tpar_inds = tparam[[p]]$tpar_inds)
                                       }
                                       
-                                } else if(initdist_update) {
+                                } else {
                                       # or recompute time varying parameters 
                                       
                                       for(p in seq_along(tparam)) {
@@ -362,7 +366,7 @@ update_lna_path <-
             if((upper - lower) > sqrt(.Machine$double.eps)) {
                   
                   # transfer the new initial volumes and draws (volumes already in parameter matrix)
-                  if(initdist_update) {
+                  if(joint_initdist_update) {
                         for(s in seq_along(initdist_objects)) {
                               if(!initdist_objects[[s]]$fixed) {
                                     
@@ -379,7 +383,7 @@ update_lna_path <-
                   }
                   
                   # copy time varying parameter draws (mapped values already in parameter matrix)
-                  if(!is.null(tparam) && tparam_update) {
+                  if(!is.null(tparam) && joint_tparam_update) {
                         for(p in seq_along(tparam)) {
                               copy_vec(dest = tparam[[p]]$draws_cur, orig = tparam[[p]]$draws_ess)
                         }
@@ -391,17 +395,20 @@ update_lna_path <-
                   # copy the LNA path and the data log likelihood
                   copy_mat(dest = path_cur$lna_path, orig = pathmat_prop)
                   copy_vec(dest = path_cur$data_log_lik, orig = data_log_lik_prop)
+                  
+                  # record the final angle
+                  ess_angles[k] <- theta
                     
             } else {
                   
                   # insert the original compartment counts back into the parameter matrix
-                  if(initdist_update) {
+                  if(joint_initdist_update) {
                         pars2lnapars2(lna_parameters, init_volumes_cur, lna_initdist_inds[1])
                   }
                   
                   # if updating the time-varying parameters jointly with the LNA path
                   # recover the original time-varying parameter values
-                  if(!is.null(tparam) && (tparam_update || initdist_update)) {
+                  if(!is.null(tparam) && (joint_tparam_update || joint_initdist_update)) {
                         for(p in seq_along(tparam)) {
                               insert_tparam(tcovar    = lna_parameters,
                                             values    = tparam[[p]]$draws2par(parameters = lna_parameters[1,], 
@@ -412,4 +419,8 @@ update_lna_path <-
                   }
             }
       }
+      
+      # copy the step and angle records
+      copy_vec(dest = path_cur$step_record, orig = step_count)
+      copy_vec(dest = path_cur$angle_record, orig = ess_angles)
 }

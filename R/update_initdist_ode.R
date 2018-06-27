@@ -310,6 +310,7 @@ update_initdist_ode <-
             }
       }
       
+      # copy the number of steps and the angle
       copy_vec(initdist_steps, step_count)
       copy_vec(initdist_angle, theta)
 }

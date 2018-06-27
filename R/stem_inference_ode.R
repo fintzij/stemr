@@ -931,12 +931,11 @@ stem_inference_ode <- function(stem_object,
             tparam_angle        <- 0.0
             tparam_step_record  <- rep(1, floor(iterations / thin_params))
             tparam_angle_record <- rep(1, floor(iterations / thin_params))
-            tparam_log_lik      <- rep(0.0, floor(iterations / thin_params) + 1)
-            tparam_samples      <- array(0.0, 
-                                         dim = c(n_times, 
-                                                 length(tparam), 
-                                                 1 + floor(iterations / thin_params)))
             
+            tparam_samples <- array(0.0, 
+                                    dim = c(n_times, 
+                                            length(tparam), 
+                                            1 + floor(iterations / thin_params)))
             tparam_log_lik <-
                   matrix(0.0,
                          nrow = 1 + floor(iterations / thin_params),
@@ -1970,7 +1969,7 @@ stem_inference_ode <- function(stem_object,
                         
                         # set the new angle bracket
                         if(((iter-1) == initdist_bracket_update)) {
-                              initdist_bracket_width <- initdist_bracket_scaling * sqrt(initdist_angle_var)
+                              initdist_bracket_width <- min(initdist_bracket_scaling * sqrt(initdist_angle_var), 2*pi)
                         }
                   }
             }
@@ -2024,7 +2023,7 @@ stem_inference_ode <- function(stem_object,
                         
                         # set the new angle bracket
                         if(((iter-1) == tparam_bracket_update)) {
-                              tparam_bracket_width <- tparam_bracket_scaling * sqrt(tparam_angle_var)
+                              tparam_bracket_width <- min(tparam_bracket_scaling * sqrt(tparam_angle_var), 2*pi)
                         }
                   }
             }
@@ -2315,10 +2314,12 @@ stem_inference_ode <- function(stem_object,
       
       # set the parameters (for restart) and save the results
       stem_object$dynamics$parameters <- setNames(model_params_nat, param_names_nat)
-      if(!t0_fixed) stem_object$dynamics$t0   <- t0
-      if(!fixed_inits) {
-            stem_object$dynamics$initdist_params <- init_volumes_cur
-      }
+      
+      if(!t0_fixed) stem_object$dynamics$t0 <- t0
+      
+      if(!fixed_inits) stem_object$dynamics$initdist_params <- init_volumes_cur
+      
+      if (!is.null(tparam)) stem_object$dynamics$tparam <- tparam
       
       stem_object$results <- list(time         = difftime(end.time, start.time, units = "hours"),
                                   ode_paths    = ode_paths,
@@ -2413,7 +2414,6 @@ stem_inference_ode <- function(stem_object,
       stem_object$stem_settings <- list(iterations       = iterations,
                                         thin_params      = thin_params,
                                         thin_latent_proc = thin_latent_proc,
-                                        n_ess_updates    = n_ess_updates,
                                         priors           = priors,
                                         prior_density    = prior_density,
                                         mcmc_kernel      = mcmc_kernel,

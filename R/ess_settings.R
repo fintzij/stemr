@@ -53,15 +53,18 @@ ess_settings <-
                   stop("The time varying parameter slice sampling bracket width must be in (0,2*pi].")
             }
             
-        return(list(n_ess_updates           = n_ess_updates,
-                    lna_bracket_width       = lna_bracket_width,
-                    initdist_bracket_width  = initdist_bracket_width,
-                    tparam_bracket_width    = tparam_bracket_width,
-                    lna_bracket_update      = lna_bracket_update,
-                    initdist_bracket_update = initdist_bracket_update,
-                    tparam_bracket_update   = tparam_bracket_update,
-                    tparam_update           = joint_tparam_update,
-                    initdist_update         = joint_initdist_update,
-                    ess_warmup              = ess_warmup))
+        return(list(n_ess_updates            = n_ess_updates,
+                    lna_bracket_width        = lna_bracket_width,
+                    initdist_bracket_width   = initdist_bracket_width,
+                    tparam_bracket_width     = tparam_bracket_width,
+                    lna_bracket_update       = lna_bracket_update,
+                    initdist_bracket_update  = initdist_bracket_update,
+                    tparam_bracket_update    = tparam_bracket_update,
+                    lna_bracket_scaling      = lna_bracket_scaling,
+                    initdist_bracket_scaling = initdist_bracket_scaling,
+                    tparam_bracket_scaling   = tparam_bracket_scaling,
+                    joint_tparam_update      = joint_tparam_update,
+                    joint_initdist_update    = joint_initdist_update,
+                    ess_warmup               = ess_warmup))
 
 }

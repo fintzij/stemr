@@ -2,16 +2,18 @@
 % Please edit documentation in R/RcppExports.R
 \name{reset_vec}
 \alias{reset_vec}
-\title{Reset a vector by filling it with zeros}
+\title{Reset a vector by filling it with an element}
 \usage{
-reset_vec(v)
+reset_vec(v, value = 0)
 }
 \arguments{
 \item{v}{vector to fill with zeros}
+
+\item{value}{to insert}
 }
 \value{
 reset vector in place
 }
 \description{
-Reset a vector by filling it with zeros
+Reset a vector by filling it with an element
 }

@@ -183,15 +183,16 @@ void mat_2_arr(arma::cube& dest, const arma::mat& orig, int ind) {
       dest.slice(ind) = orig;
 }
 
-//' Reset a vector by filling it with zeros
+//' Reset a vector by filling it with an element
 //'
 //' @param v vector to fill with zeros
+//' @param value to insert
 //'
 //' @return reset vector in place
 //' @export
 // [[Rcpp::export]]
-void reset_vec(arma::vec& v) {
-      v.zeros();
+void reset_vec(arma::vec& v, double value = 0) {
+      v.fill(value);
 }
 
 //' Add the contents of one vector to another vector

@@ -25,8 +25,8 @@
 #' @param thin_latent_proc thinning interval for latent paths, defaults to
 #'   ceiling(iterations/100) so that every 100th path will be saved
 #' @param messages should status messages be printed? defaults to FALSE.
-#' @param initialization_attempts
-#' @param ess_args
+#' @param initialization_attempts number of initialization attempts
+#' @param ess_args list of elliptical slice sampling arguments
 #' @param print_progress interval at which to print progress to a text file. If
 #'   0 (default) progress is not printed.
 #'

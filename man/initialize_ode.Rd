@@ -9,7 +9,8 @@ initialize_ode(data, ode_parameters, tparam, censusmat, emitmat, stoich_matrix,
   ode_const_inds, ode_tcovar_inds, ode_initdist_inds, param_update_inds,
   census_indices, ode_event_inds, measproc_indmat, d_meas_pointer,
   do_prevalence, forcing_inds, forcing_matrix, initialization_attempts,
-  step_size, par_init_fcn = NULL)
+  step_size, fixed_inits, init_volumes_cur, initdist_objects,
+  par_init_fcn = NULL)
 }
 \arguments{
 \item{data}{matrix containing the dataset}

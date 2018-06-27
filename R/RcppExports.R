@@ -303,14 +303,15 @@ mat_2_arr <- function(dest, orig, ind) {
     invisible(.Call(`_stemr_mat_2_arr`, dest, orig, ind))
 }
 
-#' Reset a vector by filling it with zeros
+#' Reset a vector by filling it with an element
 #'
 #' @param v vector to fill with zeros
+#' @param value to insert
 #'
 #' @return reset vector in place
 #' @export
-reset_vec <- function(v) {
-    invisible(.Call(`_stemr_reset_vec`, v))
+reset_vec <- function(v, value = 0) {
+    invisible(.Call(`_stemr_reset_vec`, v, value))
 }
 
 #' Add the contents of one vector to another vector
