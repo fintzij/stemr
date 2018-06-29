@@ -2179,8 +2179,8 @@ stem_inference_ode <- function(stem_object,
                   
                   # save initdist ess record and log prior
                   if(!fixed_inits){
-                        initdist_step_record[param_rec_ind]  <- initdist_steps
-                        initdist_angle_record[param_rec_ind] <- initdist_angle
+                        initdist_step_record[param_rec_ind - 1]  <- initdist_steps
+                        initdist_angle_record[param_rec_ind - 1] <- initdist_angle
                         initdist_log_lik[param_rec_ind] <- 
                               sum(dnorm(unlist(lapply(initdist_objects, "[[", "draws_cur")), log = T))
                   } 
@@ -2191,8 +2191,8 @@ stem_inference_ode <- function(stem_object,
                   # save tparam log likelihoods
                   if (!is.null(tparam)) {
                         
-                        tparam_step_record[param_rec_ind]  <- tparam_steps
-                        tparam_angle_record[param_rec_ind] <- tparam_angle
+                        tparam_step_record[param_rec_ind - 1]  <- tparam_steps
+                        tparam_angle_record[param_rec_ind - 1] <- tparam_angle
                         
                         for (p in seq_along(tparam)) tparam[[p]]$log_lik <- sum(dnorm(tparam[[p]]$draws_cur, log = T))
                         

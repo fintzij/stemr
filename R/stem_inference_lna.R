@@ -151,19 +151,19 @@ stem_inference_lna <- function(stem_object,
       # objects for updating the brackets if necessary
       if(lna_bracket_update != Inf) {
             lna_angle_mean  <- 0
-            lna_angle_var   <- 1
+            lna_angle_var   <- pi^2 / 3
             lna_angle_resid <- 0
       }
       
       if(initdist_bracket_update != Inf) {
             initdist_angle_mean  <- 0
-            initdist_angle_var   <- 1
+            initdist_angle_var   <- pi^2 / 3
             initdist_angle_resid <- 0
       }
       
       if(tparam_bracket_update != Inf) {
             tparam_angle_mean  <- 0
-            tparam_angle_var   <- 1
+            tparam_angle_var   <- pi^2 / 3
             tparam_angle_resid <- 0
       }
 
