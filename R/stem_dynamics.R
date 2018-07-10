@@ -161,21 +161,24 @@ stem_dynamics <-
         if(!all(sapply(state_initializer, is.list))) {
                 stop("The state_initializer argument must be a list of lists.")
         }
+        
+        if(!any(sapply(rates, function(x) is.null(x$strata)))) {
+              if(any(sapply(rates, function(x) is.null(x$strata)))) {
+                    stop("Strata must be supplied for all rates if they are supplied for any rates.")
+              }
+              
+              if(is.null(strata)) {
+                    stop("If strata are supplied for some of the rates, they must be supplied as an argument.")
+              }
+        }
+        
+        if(!is.null(strata) && length(state_initializer) != length(strata)) {
+              stop("The state initializer must be the same length as the number of strata.")
+        }
 
         # check that the strata names in the compartment list match the strata
         if(is.list(compartments) && !all(unlist(compartments[unlist(compartments)]) %in% strata)) {
                 stop(sQuote(unlist(compartments)[which((!unlist(compartments) %in% strata) & (unlist(compartments) != "ALL"))]), "is not in the supplied vector of stratum names")
-        }
-
-        # check that the strata argument is specified for all rates if there are
-        # multiple strata the rate list is invalid if it is of length three so
-        # that strata are not supplied
-        if(!is.null(strata)) {
-                for(k in 1:length(rates)) {
-                        if(is.null(rates[[k]]$strata)) {
-                                stop("If strata are specified in the model, they must also be specified in all rate functions.")
-                        }
-                }
         }
 
         # create a hidden list of user supplied arguments prior to processing
@@ -215,6 +218,8 @@ stem_dynamics <-
 
         # build the vector of full compartment names
         if(!is.list(compartments)) {
+              
+                comp_names <- compartments
                 compartment_names <- compartments
 
         } else if(is.list(compartments)){
@@ -229,6 +234,7 @@ stem_dynamics <-
                                 compartment_names[[k]] <- do.call(paste, list(comp_names[k], strata, sep = "_"))
                         }
                 }
+                
                 compartment_names <- unlist(compartment_names)
         }
 
@@ -561,12 +567,18 @@ stem_dynamics <-
                         initdist_priors[[k]] <- vector(mode = "list", length = length(rel_strata))
 
                         for(j in seq_along(initializer[[k]])) {
+                              
                                 initializer[[k]][[j]]$init_states <- state_initializer[[k]]$init_states
                                 initializer[[k]][[j]]$fixed       <- state_initializer[[k]]$fixed
                                 initializer[[k]][[j]]$strata      <- rel_strata[j]
-                                initializer[[k]][[j]]$codes       <-
-                                        match(paste(names(initializer[[k]][[j]]$init_states), rel_strata[j], sep = "_"),
-                                              names(compartment_codes))
+                                
+                                initializer[[k]][[j]]$codes <- 
+                                      if(all(names(initializer[[k]][[j]]$init_states) %in% names(compartment_codes))) {
+                                            match(names(initializer[[k]][[j]]$init_states), names(compartment_codes))
+                                      } else {
+                                            match(paste(names(initializer[[k]][[j]]$init_states), rel_strata[j], sep = "_"),
+                                                  names(compartment_codes))
+                                      }
 
                                 initdist_params[[k]][[j]] <- state_initializer[[k]]$init_states
                                 param_inds <- max(param_inds) + seq_along(state_initializer[[k]]$init_states)
