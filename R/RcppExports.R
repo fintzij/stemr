@@ -663,7 +663,6 @@ normalise2 <- function(v, p) {
 #' @param forcing_matrix matrix containing the forcings.
 #' @param max_attempts maximum number of tries to restart negative increments if 
 #' reject_negatives is false.
-#' @param nsim number of paths to simulate
 #' @param ess_updates number of elliptical slice sampling updates between samples.
 #' @param ess_warmup number of elliptical slice sampling updates before the first
 #' sample.
@@ -675,14 +674,15 @@ normalise2 <- function(v, p) {
 #' the LNA path on its natural scale which is determined by the perturbations.
 #'
 #' @export
-propose_lna_approx <- function(lna_times, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, nsim, ess_updates, ess_warmup, step_size, lna_pointer, set_pars_pointer) {
-    .Call(`_stemr_propose_lna_approx`, lna_times, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, nsim, ess_updates, ess_warmup, step_size, lna_pointer, set_pars_pointer)
+propose_lna_approx <- function(lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, ess_updates, ess_warmup, step_size, lna_pointer, set_pars_pointer) {
+    .Call(`_stemr_propose_lna_approx`, lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, ess_updates, ess_warmup, step_size, lna_pointer, set_pars_pointer)
 }
 
 #' Simulate an LNA path using a non-centered parameterization for the
 #' log-transformed counting process LNA.
 #'
 #' @param lna_times vector of interval endpoint times
+#' @param lna_draws vector of N(0,1) draws to be mapped to the path
 #' @param lna_pars numeric matrix of parameters, constants, and time-varying
 #'   covariates at each of the lna_times
 #' @param init_start index in the parameter vector where the initial compartment
@@ -703,8 +703,8 @@ propose_lna_approx <- function(lna_times, lna_pars, lna_param_inds, lna_tcovar_i
 #' the LNA path on its natural scale which is determined by the perturbations.
 #'
 #' @export
-propose_lna <- function(lna_times, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, step_size, lna_pointer, set_pars_pointer) {
-    .Call(`_stemr_propose_lna`, lna_times, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, step_size, lna_pointer, set_pars_pointer)
+propose_lna <- function(lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, step_size, lna_pointer, set_pars_pointer) {
+    .Call(`_stemr_propose_lna`, lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, step_size, lna_pointer, set_pars_pointer)
 }
 
 #' Identify which rates to update when a state transition event occurs.

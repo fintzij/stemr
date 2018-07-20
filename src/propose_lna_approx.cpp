@@ -23,7 +23,6 @@ using namespace arma;
 //' @param forcing_matrix matrix containing the forcings.
 //' @param max_attempts maximum number of tries to restart negative increments if 
 //' reject_negatives is false.
-//' @param nsim number of paths to simulate
 //' @param ess_updates number of elliptical slice sampling updates between samples.
 //' @param ess_warmup number of elliptical slice sampling updates before the first
 //' sample.
@@ -37,6 +36,7 @@ using namespace arma;
 //' @export
 // [[Rcpp::export]]
 Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
+                              const Rcpp::NumericVector& lna_draws,
                               const Rcpp::NumericMatrix& lna_pars,
                               const Rcpp::IntegerVector& lna_param_inds,
                               const Rcpp::IntegerVector& lna_tcovar_inds,
@@ -46,7 +46,6 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
                               const Rcpp::LogicalVector& forcing_inds,
                               const arma::mat& forcing_matrix,
                               int max_attempts,
-                              int nsim,
                               int ess_updates,
                               int ess_warmup,
                               double step_size,
@@ -76,11 +75,6 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
         arma::mat svd_V(n_events, n_events, arma::fill::zeros);
         bool good_svd = true;
 
-        // arrays in which to store the LNA paths
-        arma::cube incid_paths(n_times, n_events+1, nsim, arma::fill::zeros); // incidence path
-        arma::cube prev_paths(n_times, n_comps+1, nsim, arma::fill::zeros); // prevalence path (compartment volumes)
-        arma::cube lna_draws(n_times-1, n_events, nsim, arma::fill::zeros);     // N(0,1) draws that map to the path         
-        
         // initialize the objects used in each time interval
         double t_L = 0;
         double t_R = 0;
@@ -108,8 +102,8 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
 
         // sample the stochastic perturbations
         int n_draws = n_events * (n_times-1);
-        Rcpp::NumericVector draws_cur_rcpp  = Rcpp::rnorm(n_draws);
-        Rcpp::NumericVector draws_prop_rcpp = Rcpp::rnorm(n_draws);
+        Rcpp::NumericVector draws_cur_rcpp(Rcpp::clone(lna_draws));
+        Rcpp::NumericVector draws_prop_rcpp(Rcpp::clone(lna_draws));
 
         arma::mat draws_cur(draws_cur_rcpp.begin(), n_events, n_times-1, false, true);
         arma::mat draws_prop(draws_prop_rcpp.begin(), n_events, n_times-1, false, true);
@@ -523,9 +517,142 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
         }
 
         // now sample paths
-        for(int k = 0; k < nsim; ++k) {
+        for(int i = 0; i < ess_updates; ++i) {
 
-              for(int i = 0; i < ess_updates; ++i) {
+              // initialize the parameters and volumes
+              current_params = lna_pars.row(0);   // vector for storing the current parameter values
+              CALL_SET_ODE_PARAMS(current_params, set_pars_pointer);  // set the parameters in the odeintr namespace
+
+              // initial state vector - copy elements from the current parameter vector
+              std::copy(current_params.begin()+init_start, current_params.begin()+init_start+n_comps, init_volumes.begin());
+              init_volumes_prop = init_volumes;
+
+              // apply forcings if called for - applied after censusing at the first time
+              if(forcing_inds[0]) {
+                    init_volumes      += forcing_matrix.col(0);
+                    init_volumes_prop += forcing_matrix.col(0);
+              }
+
+              // sample new perturbations
+              std::copy_n(Rcpp::rnorm(n_draws).begin(), n_draws, draws_prop_rcpp.begin());
+
+              // center the bracket
+              theta = runif(1, 0, 2*arma::datum::pi)[0];
+              lower = theta - 2*arma::datum::pi;
+              upper = theta;
+
+              // construct the first proposal
+              draws_temp = cos(theta) * draws_cur + sin(theta) * draws_prop;
+
+              // initialize the log-likelihood (indicator for a valid proposal)
+              valid_path = true;
+
+              // get the LNA path
+              for(int j = 0; j < (n_times-1); ++j) {
+
+                    // set the times of the interval endpoints
+                    t_L = lna_times[j];
+                    t_R = lna_times[j+1];
+
+                    // Reset the LNA state vector and integrate the LNA ODEs over the next interval to 0
+                    std::fill(lna_state_vec.begin(), lna_state_vec.end(), 0.0);
+                    CALL_INTEGRATE_STEM_ODE(lna_state_vec, t_L, t_R, step_size, lna_pointer);
+
+                    // transfer the elements of the lna_state_vec to the process objects
+                    std::copy(lna_state_vec.begin(), lna_state_vec.begin() + n_events, lna_drift.begin());
+                    std::copy(lna_state_vec.begin() + n_events, lna_state_vec.end(), lna_diffusion.begin());
+
+                    // ensure symmetry of the diffusion matrix
+                    // lna_diffusion = arma::symmatu(lna_diffusion);
+
+                    // map the stochastic perturbation to the LNA path on its natural scale
+                    try{
+                          if(lna_drift.has_nan() || lna_diffusion.has_nan()) {
+                                good_svd = false;
+                                throw std::runtime_error("Integration failed.");
+                          } else {
+                                good_svd = arma::svd(svd_U, svd_d, svd_V, lna_diffusion); // compute the SVD
+                          }
+
+                          if(!good_svd) {
+                                throw std::runtime_error("SVD failed.");
+
+                          } else {
+                                svd_d.elem(arma::find(svd_d < 0)).zeros();          // zero out negative sing. vals
+                                svd_V.each_row() %= arma::sqrt(svd_d).t();          // multiply rows of V by sqrt(d)
+                                svd_U *= svd_V.t();                                 // complete svd_sqrt
+                                svd_U.elem(arma::find(lna_diffusion == 0)).zeros(); // zero out numerical errors
+
+                                log_lna = lna_drift + svd_U * draws_temp.col(j);         // map the LNA draws
+                          }
+
+                    } catch(std::exception & err) {
+
+                          // reinstatiate the SVD objects
+                          arma::vec svd_d(n_events, arma::fill::zeros);
+                          arma::mat svd_U(n_events, n_events, arma::fill::zeros);
+                          arma::mat svd_V(n_events, n_events, arma::fill::zeros);
+
+                          // forward the exception
+                          forward_exception_to_r(err);
+
+                    } catch(...) {
+                          ::Rf_error("c++ exception (unknown reason)");
+                    }
+
+                    // when initializing, draws leading to negative compartments or volumes are resampled.
+                    // compute the LNA increment
+                    nat_lna = arma::exp(log_lna) - 1;
+
+                    // update the compartment volumes
+                    init_volumes_prop = init_volumes + stoich_matrix * nat_lna;
+
+                    // ensure monotonicity of the increment, compartment volumes,
+                    // and compartment volumes with forcings
+                    attempt = 0;
+                    if(any(nat_lna < 0) || any(init_volumes_prop < 0)) {
+                          valid_path = false;
+                          break;
+                    }
+
+                    // set the initial volumes to the proposed values
+                    init_volumes = init_volumes_prop;
+
+                    // save the increment and the prevalence
+                    if(i == (ess_updates-1)) {
+                          lna_path(arma::span(1,n_events), j+1) = nat_lna;
+                          prev_path(arma::span(1,n_comps), j+1) = init_volumes;
+                    }
+
+                    // apply forcings if called for - applied after censusing the path
+                    if(forcing_inds[j+1]) {
+                          init_volumes += forcing_matrix.col(j+1);
+
+                          // throw errors for negative increments or negative volumes
+                          if(any(init_volumes < 0)) {
+                                valid_path = false;
+                                break;
+                          }
+                    }
+
+                    // update the parameters if they need to be updated
+                    if(param_update_inds[j+1]) {
+                          
+                          // time-varying covariates and parameters
+                          std::copy(lna_pars.row(j+1).end() - n_tcovar,
+                                    lna_pars.row(j+1).end(),
+                                    current_params.end() - n_tcovar);
+                          
+                    }
+
+                    // copy the compartment volumes to the current parameters
+                    std::copy(init_volumes.begin(), init_volumes.end(), current_params.begin() + init_start);
+
+                    // set the lna parameters and reset the LNA state vector
+                    CALL_SET_ODE_PARAMS(current_params, set_pars_pointer);
+              }
+
+              while( (upper - lower) > sqrt(arma::datum::eps) && !valid_path) {
 
                     // initialize the parameters and volumes
                     current_params = lna_pars.row(0);   // vector for storing the current parameter values
@@ -541,15 +668,14 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
                           init_volumes_prop += forcing_matrix.col(0);
                     }
 
-                    // sample new perturbations
-                    std::copy_n(Rcpp::rnorm(n_draws).begin(), n_draws, draws_prop_rcpp.begin());
+                    // construct the next proposal
+                    if(theta<0) {
+                          lower = theta;
+                    } else {
+                          upper = theta;
+                    }
 
-                    // center the bracket
-                    theta = runif(1, 0, 2*arma::datum::pi)[0];
-                    lower = theta - 2*arma::datum::pi;
-                    upper = theta;
-
-                    // construct the first proposal
+                    theta = runif(1, lower, upper)[0];
                     draws_temp = cos(theta) * draws_cur + sin(theta) * draws_prop;
 
                     // initialize the log-likelihood (indicator for a valid proposal)
@@ -659,158 +785,18 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
                           // set the lna parameters and reset the LNA state vector
                           CALL_SET_ODE_PARAMS(current_params, set_pars_pointer);
                     }
-
-                    while( (upper - lower) > sqrt(arma::datum::eps) && !valid_path) {
-
-                          // initialize the parameters and volumes
-                          current_params = lna_pars.row(0);   // vector for storing the current parameter values
-                          CALL_SET_ODE_PARAMS(current_params, set_pars_pointer);  // set the parameters in the odeintr namespace
-
-                          // initial state vector - copy elements from the current parameter vector
-                          std::copy(current_params.begin()+init_start, current_params.begin()+init_start+n_comps, init_volumes.begin());
-                          init_volumes_prop = init_volumes;
-
-                          // apply forcings if called for - applied after censusing at the first time
-                          if(forcing_inds[0]) {
-                                init_volumes      += forcing_matrix.col(0);
-                                init_volumes_prop += forcing_matrix.col(0);
-                          }
-
-                          // construct the next proposal
-                          if(theta<0) {
-                                lower = theta;
-                          } else {
-                                upper = theta;
-                          }
-
-                          theta = runif(1, lower, upper)[0];
-                          draws_temp = cos(theta) * draws_cur + sin(theta) * draws_prop;
-
-                          // initialize the log-likelihood (indicator for a valid proposal)
-                          valid_path = true;
-
-                          // get the LNA path
-                          for(int j = 0; j < (n_times-1); ++j) {
-
-                                // set the times of the interval endpoints
-                                t_L = lna_times[j];
-                                t_R = lna_times[j+1];
-
-                                // Reset the LNA state vector and integrate the LNA ODEs over the next interval to 0
-                                std::fill(lna_state_vec.begin(), lna_state_vec.end(), 0.0);
-                                CALL_INTEGRATE_STEM_ODE(lna_state_vec, t_L, t_R, step_size, lna_pointer);
-
-                                // transfer the elements of the lna_state_vec to the process objects
-                                std::copy(lna_state_vec.begin(), lna_state_vec.begin() + n_events, lna_drift.begin());
-                                std::copy(lna_state_vec.begin() + n_events, lna_state_vec.end(), lna_diffusion.begin());
-
-                                // ensure symmetry of the diffusion matrix
-                                // lna_diffusion = arma::symmatu(lna_diffusion);
-
-                                // map the stochastic perturbation to the LNA path on its natural scale
-                                try{
-                                      if(lna_drift.has_nan() || lna_diffusion.has_nan()) {
-                                            good_svd = false;
-                                            throw std::runtime_error("Integration failed.");
-                                      } else {
-                                            good_svd = arma::svd(svd_U, svd_d, svd_V, lna_diffusion); // compute the SVD
-                                      }
-
-                                      if(!good_svd) {
-                                            throw std::runtime_error("SVD failed.");
-
-                                      } else {
-                                            svd_d.elem(arma::find(svd_d < 0)).zeros();          // zero out negative sing. vals
-                                            svd_V.each_row() %= arma::sqrt(svd_d).t();          // multiply rows of V by sqrt(d)
-                                            svd_U *= svd_V.t();                                 // complete svd_sqrt
-                                            svd_U.elem(arma::find(lna_diffusion == 0)).zeros(); // zero out numerical errors
-
-                                            log_lna = lna_drift + svd_U * draws_temp.col(j);         // map the LNA draws
-                                      }
-
-                                } catch(std::exception & err) {
-
-                                      // reinstatiate the SVD objects
-                                      arma::vec svd_d(n_events, arma::fill::zeros);
-                                      arma::mat svd_U(n_events, n_events, arma::fill::zeros);
-                                      arma::mat svd_V(n_events, n_events, arma::fill::zeros);
-
-                                      // forward the exception
-                                      forward_exception_to_r(err);
-
-                                } catch(...) {
-                                      ::Rf_error("c++ exception (unknown reason)");
-                                }
-
-                                // when initializing, draws leading to negative compartments or volumes are resampled.
-                                // compute the LNA increment
-                                nat_lna = arma::exp(log_lna) - 1;
-
-                                // update the compartment volumes
-                                init_volumes_prop = init_volumes + stoich_matrix * nat_lna;
-
-                                // ensure monotonicity of the increment, compartment volumes,
-                                // and compartment volumes with forcings
-                                attempt = 0;
-                                if(any(nat_lna < 0) || any(init_volumes_prop < 0)) {
-                                      valid_path = false;
-                                      break;
-                                }
-
-                                // set the initial volumes to the proposed values
-                                init_volumes = init_volumes_prop;
-
-                                // save the increment and the prevalence
-                                if(i == (ess_updates-1)) {
-                                      lna_path(arma::span(1,n_events), j+1) = nat_lna;
-                                      prev_path(arma::span(1,n_comps), j+1) = init_volumes;
-                                }
-
-                                // apply forcings if called for - applied after censusing the path
-                                if(forcing_inds[j+1]) {
-                                      init_volumes += forcing_matrix.col(j+1);
-
-                                      // throw errors for negative increments or negative volumes
-                                      if(any(init_volumes < 0)) {
-                                            valid_path = false;
-                                            break;
-                                      }
-                                }
-
-                                // update the parameters if they need to be updated
-                                if(param_update_inds[j+1]) {
-                                      
-                                      // time-varying covariates and parameters
-                                      std::copy(lna_pars.row(j+1).end() - n_tcovar,
-                                                lna_pars.row(j+1).end(),
-                                                current_params.end() - n_tcovar);
-                                      
-                                }
-
-                                // copy the compartment volumes to the current parameters
-                                std::copy(init_volumes.begin(), init_volumes.end(), current_params.begin() + init_start);
-
-                                // set the lna parameters and reset the LNA state vector
-                                CALL_SET_ODE_PARAMS(current_params, set_pars_pointer);
-                          }
-                    }
-
-                    if(lower != upper) {
-                          // update the draws
-                          draws_cur = draws_temp;
-                    }
               }
 
-              // save the increment and the prevalence
-              incid_paths.slice(k) = lna_path.t();
-              prev_paths.slice(k)  = prev_path.t();
-              lna_draws.slice(k)   = draws_cur.t();
+              if(lower != upper) {
+                    // update the draws
+                    draws_cur = draws_temp;
+              }
         }
 
         // return the paths
-        return Rcpp::List::create(Rcpp::Named("draws")       = lna_draws,
-                                  Rcpp::Named("incid_paths") = incid_paths,
-                                  Rcpp::Named("prev_paths")  = prev_paths);
+        return Rcpp::List::create(Rcpp::Named("draws")       = draws_cur.t(),
+                                  Rcpp::Named("incid_paths") = lna_path.t(),
+                                  Rcpp::Named("prev_paths")  = prev_path.t());
                                   // Rcpp::Named("drift_vecs") = drift_vecs,
                                   // Rcpp::Named("diff_mats") = diff_mats);
 }

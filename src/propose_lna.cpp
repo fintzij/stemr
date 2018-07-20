@@ -9,6 +9,7 @@ using namespace arma;
 //' log-transformed counting process LNA.
 //'
 //' @param lna_times vector of interval endpoint times
+//' @param lna_draws vector of N(0,1) draws to be mapped to the path
 //' @param lna_pars numeric matrix of parameters, constants, and time-varying
 //'   covariates at each of the lna_times
 //' @param init_start index in the parameter vector where the initial compartment
@@ -31,6 +32,7 @@ using namespace arma;
 //' @export
 // [[Rcpp::export]]
 Rcpp::List propose_lna(const arma::rowvec& lna_times,
+                       const Rcpp::NumericVector& lna_draws,
                        const Rcpp::NumericMatrix& lna_pars,
                        const Rcpp::IntegerVector& lna_param_inds,
                        const Rcpp::IntegerVector& lna_tcovar_inds,
@@ -91,8 +93,8 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
         }
 
         // sample the stochastic perturbations - use Rcpp RNG for safety
-        Rcpp::NumericVector draws_rcpp = Rcpp::rnorm(n_events * (n_times-1));
-        arma::mat draws(draws_rcpp.begin(), n_events, n_times-1, false, true);
+        Rcpp::NumericVector draws_rcpp(Rcpp::clone(lna_draws));
+        arma::mat draws(draws_rcpp.begin(), n_events, n_times-1, true);
         
         // integer for the attempt number
         int attempt = 0;
@@ -154,17 +156,17 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                 init_volumes_prop = init_volumes + stoich_matrix * nat_lna;
                 
                 // ensure monotonicity of the first increment and positivity of volumes
-                if(j == 0) {
-                      attempt = 0;
-                      while((any(nat_lna < 0) || any(init_volumes_prop < 0)) && (attempt <= max_attempts)) {
-                            attempt     += 1;
-                            draws_rcpp   = Rcpp::rnorm(n_events * (n_times-1));                                   // draw a new vector of N(0,1)
-                            log_lna      = lna_drift + svd_U * draws.col(j);                                      // map the new draws to log LNA 
-                            nat_lna      = arma::vec(expm1(Rcpp::NumericVector(log_lna.begin(), log_lna.end()))); // compute the LNA increment
-                            init_volumes_prop = init_volumes + stoich_matrix * nat_lna;                           // compute new initial volumes
-                      }
-                      
-                } else {
+                // if(j == 0) {
+                //       attempt = 0;
+                //       while((any(nat_lna < 0) || any(init_volumes_prop < 0)) && (attempt <= max_attempts)) {
+                //             attempt     += 1;
+                //             draws_rcpp   = Rcpp::rnorm(n_events * (n_times-1));                                   // draw a new vector of N(0,1)
+                //             log_lna      = lna_drift + svd_U * draws.col(j);                                      // map the new draws to log LNA 
+                //             nat_lna      = arma::vec(expm1(Rcpp::NumericVector(log_lna.begin(), log_lna.end()))); // compute the LNA increment
+                //             init_volumes_prop = init_volumes + stoich_matrix * nat_lna;                           // compute new initial volumes
+                //       }
+                //       
+                // } else {
                       // throw errors for negative increments or negative volumes
                       try{
                             if(any(nat_lna < 0)) {
@@ -182,7 +184,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                       } catch(...) {
                             ::Rf_error("c++ exception (unknown reason)");
                       }      
-                }
+                // }
                 
                 // save the increment and the prevalence
                 init_volumes = init_volumes_prop; 

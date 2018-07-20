@@ -1000,6 +1000,7 @@ stem_inference_lna <- function(stem_object,
       # initialize the latent path
       path <- NULL
       if (mcmc_restart) {
+            
             # extract the path
             assign("path", stem_object$stem_settings$path_for_restart)
             data_log_lik_prop <- NULL

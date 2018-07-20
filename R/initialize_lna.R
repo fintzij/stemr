@@ -83,6 +83,7 @@ initialize_lna <-
                             # propose another LNA path
                             path_init <- propose_lna(
                                   lna_times         = lna_times,
+                                  lna_draws         = rnorm(ncol(stoich_matrix) * (length(lna_times) - 1)),
                                   lna_pars          = lna_parameters,
                                   init_start        = lna_initdist_inds[1],
                                   lna_param_inds    = lna_param_inds,
@@ -204,6 +205,7 @@ initialize_lna <-
                                 # propose another LNA path - includes ESS warmup
                                 path_init <- propose_lna_approx(
                                         lna_times         = lna_times,
+                                        lna_draws         = rnorm(ncol(stoich_matrix) * (length(lna_times) - 1)),
                                         lna_pars          = lna_parameters,
                                         init_start        = lna_initdist_inds[1],
                                         lna_param_inds    = lna_param_inds, 
@@ -214,15 +216,14 @@ initialize_lna <-
                                         forcing_matrix    = forcing_matrix,
                                         max_attempts      = initialization_attempts,
                                         step_size         = step_size, 
-                                        nsim              = 1, 
                                         ess_updates       = 1, 
                                         ess_warmup        = ess_warmup,
                                         lna_pointer       = lna_pointer,
                                         set_pars_pointer  = lna_set_pars_pointer
                                 )
                                 
-                                path <- list(draws    = t(path_init$draws[,,1]),
-                                             lna_path = path_init$incid_paths[,,1])
+                                path <- list(draws    = t(path_init$draws),
+                                             lna_path = path_init$incid_paths)
 
                                 census_lna(
                                         path                = path$lna_path,
