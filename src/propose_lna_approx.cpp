@@ -48,6 +48,7 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
                               int max_attempts,
                               int ess_updates,
                               int ess_warmup,
+                              double lna_bracket_width,
                               double step_size,
                               SEXP lna_pointer,
                               SEXP set_pars_pointer) {
@@ -267,8 +268,8 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
               std::copy_n(Rcpp::rnorm(n_draws).begin(), n_draws, draws_prop_rcpp.begin());
 
               // center the bracket
-              theta = runif(1, 0, 2*arma::datum::pi)[0];
-              lower = theta - 2*arma::datum::pi;
+              theta = runif(1, 0, lna_bracket_width)[0];
+              lower = theta - lna_bracket_width;
               upper = theta;
 
               // construct the first proposal

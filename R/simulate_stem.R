@@ -1,8 +1,5 @@
 #' Simulations from a stochastic epidemic model.
 #'
-#' @param stem Stochastic epidemic model object. The dynamics slot must be
-#'   supplied at a minimum. If simulations from the measurement process are
-#'   desired, the measurement process slot must also be supplied.
 #' @param nsim number of realizations to simulate
 #' @param simulation_parameters optional list of vectors of simulation
 #'   parameters. If NULL, paths are simulated using the parameters specified in
@@ -31,9 +28,12 @@
 #' @param lna_method defaults to "exact". If "approx", an initial path is
 #'   proposed by resampling perturbations that lead to negative increments or
 #'   volumes. The initial path is then updated via elliptical slice sampling
-#' @param ess_warmup number of elliptical slice sampling updates before the
-#'   lna sample is saved
+#' @param ess_warmup number of elliptical slice sampling updates before the lna
+#'   sample is saved
 #' @param messages should a message be printed when parsing the rates?
+#' @param stem_object stem object list
+#' @param lna_bracket_width initial elliptical slice sampling bracket width to
+#'   be used if lna_method == "approx"
 #'
 #' @return Returns a list with the simulated paths, subject-level paths, and/or
 #'   datasets. If \code{paths = FALSE} and \code{observations = FALSE}, or if
@@ -65,6 +65,7 @@ simulate_stem <-
                census_times = NULL,
                max_attempts = 500,
                lna_method = "exact",
+               lna_bracket_width = 2*pi,
                ess_warmup = 100,
                messages = TRUE) {
             
@@ -705,6 +706,7 @@ simulate_stem <-
                                                                      max_attempts      = max_attempts,
                                                                      ess_updates       = 1, 
                                                                      ess_warmup        = ess_warmup,
+                                                                     lna_bracket_width = lna_bracket_width,
                                                                      lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
                                                                      set_pars_pointer  = stem_object$dynamics$lna_pointers$set_lna_params_ptr)
                                     }, silent = TRUE)

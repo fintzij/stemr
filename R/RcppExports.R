@@ -674,8 +674,8 @@ normalise2 <- function(v, p) {
 #' the LNA path on its natural scale which is determined by the perturbations.
 #'
 #' @export
-propose_lna_approx <- function(lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, ess_updates, ess_warmup, step_size, lna_pointer, set_pars_pointer) {
-    .Call(`_stemr_propose_lna_approx`, lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, ess_updates, ess_warmup, step_size, lna_pointer, set_pars_pointer)
+propose_lna_approx <- function(lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, ess_updates, ess_warmup, lna_bracket_width, step_size, lna_pointer, set_pars_pointer) {
+    .Call(`_stemr_propose_lna_approx`, lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, ess_updates, ess_warmup, lna_bracket_width, step_size, lna_pointer, set_pars_pointer)
 }
 
 #' Simulate an LNA path using a non-centered parameterization for the

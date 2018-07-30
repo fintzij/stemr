@@ -218,6 +218,7 @@ initialize_lna <-
                                         step_size         = step_size, 
                                         ess_updates       = 1, 
                                         ess_warmup        = ess_warmup,
+                                        lna_bracket_width = 2*pi,
                                         lna_pointer       = lna_pointer,
                                         set_pars_pointer  = lna_set_pars_pointer
                                 )

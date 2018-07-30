@@ -606,8 +606,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // propose_lna_approx
-Rcpp::List propose_lna_approx(const arma::rowvec& lna_times, const Rcpp::NumericVector& lna_draws, const Rcpp::NumericMatrix& lna_pars, const Rcpp::IntegerVector& lna_param_inds, const Rcpp::IntegerVector& lna_tcovar_inds, const int init_start, const Rcpp::LogicalVector& param_update_inds, const arma::mat& stoich_matrix, const Rcpp::LogicalVector& forcing_inds, const arma::mat& forcing_matrix, int max_attempts, int ess_updates, int ess_warmup, double step_size, SEXP lna_pointer, SEXP set_pars_pointer);
-RcppExport SEXP _stemr_propose_lna_approx(SEXP lna_timesSEXP, SEXP lna_drawsSEXP, SEXP lna_parsSEXP, SEXP lna_param_indsSEXP, SEXP lna_tcovar_indsSEXP, SEXP init_startSEXP, SEXP param_update_indsSEXP, SEXP stoich_matrixSEXP, SEXP forcing_indsSEXP, SEXP forcing_matrixSEXP, SEXP max_attemptsSEXP, SEXP ess_updatesSEXP, SEXP ess_warmupSEXP, SEXP step_sizeSEXP, SEXP lna_pointerSEXP, SEXP set_pars_pointerSEXP) {
+Rcpp::List propose_lna_approx(const arma::rowvec& lna_times, const Rcpp::NumericVector& lna_draws, const Rcpp::NumericMatrix& lna_pars, const Rcpp::IntegerVector& lna_param_inds, const Rcpp::IntegerVector& lna_tcovar_inds, const int init_start, const Rcpp::LogicalVector& param_update_inds, const arma::mat& stoich_matrix, const Rcpp::LogicalVector& forcing_inds, const arma::mat& forcing_matrix, int max_attempts, int ess_updates, int ess_warmup, double lna_bracket_width, double step_size, SEXP lna_pointer, SEXP set_pars_pointer);
+RcppExport SEXP _stemr_propose_lna_approx(SEXP lna_timesSEXP, SEXP lna_drawsSEXP, SEXP lna_parsSEXP, SEXP lna_param_indsSEXP, SEXP lna_tcovar_indsSEXP, SEXP init_startSEXP, SEXP param_update_indsSEXP, SEXP stoich_matrixSEXP, SEXP forcing_indsSEXP, SEXP forcing_matrixSEXP, SEXP max_attemptsSEXP, SEXP ess_updatesSEXP, SEXP ess_warmupSEXP, SEXP lna_bracket_widthSEXP, SEXP step_sizeSEXP, SEXP lna_pointerSEXP, SEXP set_pars_pointerSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -624,10 +624,11 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type max_attempts(max_attemptsSEXP);
     Rcpp::traits::input_parameter< int >::type ess_updates(ess_updatesSEXP);
     Rcpp::traits::input_parameter< int >::type ess_warmup(ess_warmupSEXP);
+    Rcpp::traits::input_parameter< double >::type lna_bracket_width(lna_bracket_widthSEXP);
     Rcpp::traits::input_parameter< double >::type step_size(step_sizeSEXP);
     Rcpp::traits::input_parameter< SEXP >::type lna_pointer(lna_pointerSEXP);
     Rcpp::traits::input_parameter< SEXP >::type set_pars_pointer(set_pars_pointerSEXP);
-    rcpp_result_gen = Rcpp::wrap(propose_lna_approx(lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, ess_updates, ess_warmup, step_size, lna_pointer, set_pars_pointer));
+    rcpp_result_gen = Rcpp::wrap(propose_lna_approx(lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, ess_updates, ess_warmup, lna_bracket_width, step_size, lna_pointer, set_pars_pointer));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -819,7 +820,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_mvn_rw", (DL_FUNC) &_stemr_mvn_rw, 3},
     {"_stemr_normalise", (DL_FUNC) &_stemr_normalise, 2},
     {"_stemr_normalise2", (DL_FUNC) &_stemr_normalise2, 2},
-    {"_stemr_propose_lna_approx", (DL_FUNC) &_stemr_propose_lna_approx, 16},
+    {"_stemr_propose_lna_approx", (DL_FUNC) &_stemr_propose_lna_approx, 17},
     {"_stemr_propose_lna", (DL_FUNC) &_stemr_propose_lna, 14},
     {"_stemr_rate_update_event", (DL_FUNC) &_stemr_rate_update_event, 3},
     {"_stemr_rate_update_tcovar", (DL_FUNC) &_stemr_rate_update_tcovar, 3},
