@@ -5,17 +5,22 @@
 \title{Simulations from a stochastic epidemic model.}
 \usage{
 simulate_stem(stem_object, nsim = 1, simulation_parameters = NULL,
-  paths = FALSE, full_paths = FALSE, observations = FALSE,
-  subject_paths = FALSE, method = "gillespie", tmax = NULL,
-  census_times = NULL, max_attempts = 500, lna_method = "exact",
-  ess_warmup = 100, messages = TRUE)
+  lna_draws = NULL, paths = FALSE, full_paths = FALSE,
+  observations = FALSE, subject_paths = FALSE, method = "gillespie",
+  tmax = NULL, census_times = NULL, max_attempts = 500,
+  lna_method = "exact", lna_bracket_width = 2 * pi, ess_warmup = 100,
+  messages = TRUE)
 }
 \arguments{
+\item{stem_object}{stem object list}
+
 \item{nsim}{number of realizations to simulate}
 
 \item{simulation_parameters}{optional list of vectors of simulation
 parameters. If NULL, paths are simulated using the parameters specified in
 the stem object.}
+
+\item{lna_draws}{optional list of matrices of lna draws}
 
 \item{paths}{Should population-level paths at census times be returned?}
 
@@ -49,14 +54,13 @@ point}
 proposed by resampling perturbations that lead to negative increments or
 volumes. The initial path is then updated via elliptical slice sampling}
 
-\item{ess_warmup}{number of elliptical slice sampling updates before the
-lna sample is saved}
+\item{lna_bracket_width}{initial elliptical slice sampling bracket width to
+be used if lna_method == "approx"}
+
+\item{ess_warmup}{number of elliptical slice sampling updates before the lna
+sample is saved}
 
 \item{messages}{should a message be printed when parsing the rates?}
-
-\item{stem}{Stochastic epidemic model object. The dynamics slot must be
-supplied at a minimum. If simulations from the measurement process are
-desired, the measurement process slot must also be supplied.}
 }
 \value{
 Returns a list with the simulated paths, subject-level paths, and/or
