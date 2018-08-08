@@ -187,32 +187,32 @@ stem_inference_ode <- function(stem_object,
       
       # list for initial compartment volume objects
       initdist_objects <- vector("list", length = n_strata)
-      for(s in seq_len(n_strata)) {
+      for(t in seq_len(n_strata)) {
             
             comp_probs <- 
-                  if(!state_initializer[[s]]$fixed & !is.null(state_initializer[[s]]$prior)) {
-                        state_initializer[[s]]$prior / comp_size_vec[s]
+                  if(!state_initializer[[t]]$fixed & !is.null(state_initializer[[t]]$prior)) {
+                        state_initializer[[t]]$prior / comp_size_vec[t]
                   } else {
-                        state_initializer[[s]]$init_states / comp_size_vec[s]
+                        state_initializer[[t]]$init_states / comp_size_vec[t]
                   }
             
-            comp_mean <- comp_size_vec[s] * comp_probs
-            comp_cov <- as.matrix(comp_size_vec[s] * (diag(comp_probs) - comp_probs %*% t(comp_probs)))
+            comp_mean <- comp_size_vec[t] * comp_probs
+            comp_cov <- comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs))
             comp_cov_svd <- svd(comp_cov)
             comp_cov_svd$d[length(comp_cov_svd)] <- 0
             comp_sqrt_cov <- comp_cov_svd$u %*% diag(sqrt(comp_cov_svd$d))
             
-            initdist_objects[[s]] <- 
+            initdist_objects[[t]] <- 
                   list(
-                        fixed         = state_initializer[[s]]$fixed,
-                        comp_size     = comp_size_vec[s],
+                        fixed         = state_initializer[[t]]$fixed,
+                        comp_size     = comp_size_vec[t],
                         comp_mean     = comp_mean,
                         comp_sqrt_cov = comp_sqrt_cov[,-length(comp_mean)],
                         draws_cur     = rep(0.0, length(comp_mean) - 1),
                         draws_prop    = rep(0.0, length(comp_mean) - 1),
                         draws_ess     = rep(0.0, length(comp_mean) - 1),
-                        comp_inds_R   = state_initializer[[s]]$codes,
-                        comp_inds_Cpp = state_initializer[[s]]$codes - 1
+                        comp_inds_R   = state_initializer[[t]]$codes,
+                        comp_inds_Cpp = state_initializer[[t]]$codes - 1
                   )
       }
       
@@ -557,14 +557,6 @@ stem_inference_ode <- function(stem_object,
             
       } else if (mcmc_kernel$method == "mvnss") {
             
-            # interval widths, expansions, and contractions
-            if(is.null(mcmc_kernel$kernel_settings$mvnss_setting_list)) {
-                  mvnss_setting_list <- mvnss_settings()
-                  
-            } else {
-                  mvnss_setting_list <- mcmc_kernel$kernel_settings$mvnss_setting_list
-            }
-            
             # adaptation schedule
             if (is.null(mcmc_kernel$kernel_settings$stop_adaptation)) {
                   stop_adaptation <- iterations + 1
@@ -584,16 +576,24 @@ stem_inference_ode <- function(stem_object,
                              (seq(0, warmup_iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling)
             
             # nugget cooling schedule
-            nugget_cooling   <- mvnss_setting_list$nugget_cooling
+            nugget_cooling   <- mcmc_kernel$kernel_settings$mvnss_setting_list$nugget_cooling
             nugget_step_size <- 
-                  if(is.null(mvnss_setting_list$nugget_step_size)) {
+                  if(is.null(mcmc_kernel$kernel_settings$mvnss_setting_list$nugget_step_size)) {
                         100 / iterations
                   }  else {
-                        mvnss_setting_list$nugget_step_size
+                        mcmc_kernel$kernel_settings$mvnss_setting_list$nugget_step_size
                   }
             
             nugget_sequence <- 
                   mcmc_kernel$kernel_settings$nugget * (seq(0, iterations) * nugget_step_size + 1) ^ -nugget_cooling
+            
+            # interval widths, expansions, and contractions
+            if(is.null(mcmc_kernel$kernel_settings$mvnss_setting_list)) {
+                  mvnss_setting_list <- mvnss_settings()
+                  
+            } else {
+                  mvnss_setting_list <- mcmc_kernel$kernel_settings$mvnss_setting_list
+            }
             
             # extract list settings
             n_mvnss_updates     <- mvnss_setting_list$n_mvnss_updates
