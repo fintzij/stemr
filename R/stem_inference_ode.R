@@ -728,8 +728,12 @@ stem_inference_ode <- function(stem_object,
                                   dimnames = list(NULL, names(stem_object$dynamics$ode_rates$ode_param_codes)))
       
       # insert the ode parameters into the parameter matrix
-      pars2lnapars2(ode_params_cur, c(model_params_nat, t0, init_volumes_cur), 0)
-      pars2lnapars2(ode_params_prop, c(params_prop_nat, t0_prop, init_volumes_prop), 0)
+      pars2lnapars2(lnapars    = ode_params_cur, 
+                    parameters = c(model_params_nat, t0, init_volumes_cur), 
+                    c_start    = 0)
+      pars2lnapars2(lnapars    = ode_params_prop, 
+                    parameters = c(params_prop_nat, t0_prop, init_volumes_prop), 
+                    c_start    = 0)
       
       # get column indices for constants and time-varying covariates
       const_inds  <- 
