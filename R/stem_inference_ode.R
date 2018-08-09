@@ -557,6 +557,14 @@ stem_inference_ode <- function(stem_object,
             
       } else if (mcmc_kernel$method == "mvnss") {
             
+            # interval widths, expansions, and contractions
+            if(is.null(mcmc_kernel$kernel_settings$mvnss_setting_list)) {
+                  mvnss_setting_list <- mvnss_settings()
+                  
+            } else {
+                  mvnss_setting_list <- mcmc_kernel$kernel_settings$mvnss_setting_list
+            }
+            
             # adaptation schedule
             if (is.null(mcmc_kernel$kernel_settings$stop_adaptation)) {
                   stop_adaptation <- iterations + 1
@@ -578,22 +586,14 @@ stem_inference_ode <- function(stem_object,
             # nugget cooling schedule
             nugget_cooling   <- mcmc_kernel$kernel_settings$mvnss_setting_list$nugget_cooling
             nugget_step_size <- 
-                  if(is.null(mcmc_kernel$kernel_settings$mvnss_setting_list$nugget_step_size)) {
+                  if(is.null(mvnss_setting_list$nugget_step_size)) {
                         100 / iterations
                   }  else {
-                        mcmc_kernel$kernel_settings$mvnss_setting_list$nugget_step_size
+                        mvnss_setting_list$nugget_step_size
                   }
             
             nugget_sequence <- 
                   mcmc_kernel$kernel_settings$nugget * (seq(0, iterations) * nugget_step_size + 1) ^ -nugget_cooling
-            
-            # interval widths, expansions, and contractions
-            if(is.null(mcmc_kernel$kernel_settings$mvnss_setting_list)) {
-                  mvnss_setting_list <- mvnss_settings()
-                  
-            } else {
-                  mvnss_setting_list <- mcmc_kernel$kernel_settings$mvnss_setting_list
-            }
             
             # extract list settings
             n_mvnss_updates     <- mvnss_setting_list$n_mvnss_updates
