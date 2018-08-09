@@ -93,7 +93,9 @@ update_initdist_ode <-
       } else {
             
             # copy the proposed state into the parameter matrix
-            pars2lnapars2(ode_parameters, init_volumes_prop, ode_initdist_inds[1])
+            pars2lnapars2(lnapars    = ode_parameters, 
+                          parameters = init_volumes_prop, 
+                          c_start    = ode_initdist_inds[1])
             
             # map time varying parameters if called for
             if(!is.null(tparam)) {
@@ -205,7 +207,9 @@ update_initdist_ode <-
               } else {
                     
                     # copy the proposed state into the parameter matrix
-                    pars2lnapars2(ode_parameters, init_volumes_prop, ode_initdist_inds[1])
+                    pars2lnapars2(lnapars    = ode_parameters, 
+                                  parameters = init_volumes_prop, 
+                                  c_start    = ode_initdist_inds[1])
                     
                     # map time varying parameters if called for
                     if(!is.null(tparam)) {
@@ -297,7 +301,9 @@ update_initdist_ode <-
       } else {
             
             # insert the original initial compartment counts into the parameter matrix
-            pars2lnapars2(ode_parameters, init_volumes_cur, ode_initdist_inds[1])
+            pars2lnapars2(lnapars    = ode_parameters,
+                          parameters = init_volumes_cur, 
+                          c_start    = ode_initdist_inds[1])
             
             # recover the original time-varying parameter values
             if(!is.null(tparam)) {

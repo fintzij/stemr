@@ -27,8 +27,9 @@ Imports:
     extraDistr,
     Rcpp (>= 0.12.16)
 LinkingTo: Rcpp,
-    RcppArmadillo
-RoxygenNote: 6.0.1
+    RcppArmadillo,
+    BH
+RoxygenNote: 6.1.0
 Suggests: knitr,
     rmarkdown,
     testthat

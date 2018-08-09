@@ -6,11 +6,11 @@
 \usage{
 update_tparam_lna(tparam, path_cur, data, lna_parameters, lna_param_vec,
   pathmat_prop, censusmat, emitmat, flow_matrix, stoich_matrix, lna_times,
-  forcing_inds, forcing_matrix, lna_param_inds, lna_const_inds, lna_tcovar_inds,
-  lna_initdist_inds, param_update_inds, census_indices, lna_event_inds,
-  measproc_indmat, svd_d, svd_U, svd_V, lna_pointer, lna_set_pars_pointer,
-  d_meas_pointer, do_prevalence, step_size, tparam_steps, tparam_angle,
-  tparam_bracket_width)
+  forcing_inds, forcing_matrix, lna_param_inds, lna_const_inds,
+  lna_tcovar_inds, lna_initdist_inds, param_update_inds, census_indices,
+  lna_event_inds, measproc_indmat, svd_d, svd_U, svd_V, lna_pointer,
+  lna_set_pars_pointer, d_meas_pointer, do_prevalence, step_size,
+  tparam_steps, tparam_angle, tparam_bracket_width)
 }
 \arguments{
 \item{tparam}{list containing the time-varying parameters}

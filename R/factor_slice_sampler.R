@@ -127,7 +127,9 @@ factor_slice_sampler <-
                   if(logprior_lower != -Inf) {
                         
                         # insert the parameters into the lna_parameters matrix
-                        pars2lnapars(lnapars = lna_params_cur, parameters = params_prop_nat)
+                        pars2lnapars2(lnapars    = lna_params_cur,
+                                      parameters = params_prop_nat, 
+                                      c_start    = 0)
                         
                         # compute the time-varying parameters if necessary
                         if(!is.null(tparam)) {
@@ -237,7 +239,9 @@ factor_slice_sampler <-
                   if(logprior_upper != -Inf) {
                         
                         # insert the parameters into the lna_parameters matrix
-                        pars2lnapars(lnapars = lna_params_cur, parameters = params_prop_nat)
+                        pars2lnapars2(lnapars    = lna_params_cur, 
+                                      parameters = params_prop_nat, 
+                                      c_start    = 0)
                         
                         # compute the time-varying parameters if necessary
                         if(!is.null(tparam)) {
@@ -353,7 +357,9 @@ factor_slice_sampler <-
                   if(logprior_prop != -Inf) {
                         
                         # insert the parameters into the lna_parameters matrix
-                        pars2lnapars(lnapars = lna_params_cur, parameters = params_prop_nat)
+                        pars2lnapars2(lnapars    = lna_params_cur, 
+                                      parameters = params_prop_nat,
+                                      c_start    = 0)
                         
                         # compute the time-varying parameters if necessary
                         if(!is.null(tparam)) {
@@ -466,7 +472,9 @@ factor_slice_sampler <-
             } else {
                   
                   # insert the parameters into the lna_parameters matrix
-                  pars2lnapars(lnapars = lna_params_cur, parameters = model_params_nat)
+                  pars2lnapars2(lnapars    = lna_params_cur,
+                                parameters = model_params_nat, 
+                                c_start    = 0)
                   
                   # recover the original time-varying covariates
                   # compute the time-varying parameters if necessary

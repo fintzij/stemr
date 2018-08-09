@@ -4,7 +4,8 @@
 \alias{census_path}
 \title{Wrapper for evaluating the compartment counts at census times.}
 \usage{
-census_path(path, census_times, census_columns = NULL, census_matrix = NULL)
+census_path(path, census_times, census_columns = NULL,
+  census_matrix = NULL)
 }
 \arguments{
 \item{path}{matrix containing the path to be censused.}

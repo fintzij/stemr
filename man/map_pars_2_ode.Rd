@@ -5,9 +5,9 @@
 \title{Map parameters to the deterministic mean incidence increments for a stochastic
 epidemic model.}
 \usage{
-map_pars_2_ode(pathmat, ode_times, ode_pars, ode_param_inds, ode_tcovar_inds,
-  init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix,
-  step_size, ode_pointer, set_pars_pointer)
+map_pars_2_ode(pathmat, ode_times, ode_pars, ode_param_inds,
+  ode_tcovar_inds, init_start, param_update_inds, stoich_matrix,
+  forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer)
 }
 \arguments{
 \item{pathmat}{matrix where the ODE path should be stored}

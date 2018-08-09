@@ -1,8 +1,6 @@
 PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
-CC=clang
-CXX=clang++
 CCACHE_CPP2=yes
 CXX_STD=CXX11
-CXXFLAGS=-O3 -mtune=native -march=native -Wno-unused-variable -Wno-unused-function  -Wno-macro-redefined
+CXXFLAGS=-O3 -mtune=native -march=native -Wno-unused-variable -Wno-unused-function -Wno-macro-redefined
 CXXFLAGS+= -Wno-unused-local-typedefs
 CXXFLAGS+= -Wno-ignored-attributes -Wno-deprecated-declarations

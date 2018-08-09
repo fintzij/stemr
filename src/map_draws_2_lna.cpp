@@ -60,7 +60,6 @@ void map_draws_2_lna(arma::mat& pathmat,
         int n_comps  = stoich_matrix.n_rows;         // number of model compartments (all strata)
         int n_odes   = n_events + n_events*n_events; // number of ODEs
         int n_times  = lna_times.n_elem;             // number of times at which the LNA must be evaluated
-        int n_lna_params = lna_param_inds.size();    // number of LNA parameters
         int n_tcovar     = lna_tcovar_inds.size();   // number of time-varying covariates or parameters
 
         // initialize the objects used in each time interval

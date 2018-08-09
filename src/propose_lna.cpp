@@ -51,7 +51,6 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
         int n_comps  = stoich_matrix.n_rows;         // number of model compartments (all strata)
         int n_odes   = n_events + n_events*n_events; // number of ODEs
         int n_times  = lna_times.n_elem;             // number of times at which the LNA must be evaluated
-        int n_lna_params = lna_param_inds.size();    // number of ODE parameters
         int n_tcovar     = lna_tcovar_inds.size();   // number of time-varying covariates or parameters
 
         // initialize the objects used in each time interval
@@ -95,9 +94,6 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
         // sample the stochastic perturbations - use Rcpp RNG for safety
         Rcpp::NumericVector draws_rcpp(Rcpp::clone(lna_draws));
         arma::mat draws(draws_rcpp.begin(), n_events, n_times-1, true);
-        
-        // integer for the attempt number
-        int attempt = 0;
         
         // iterate over the time sequence, solving the LNA over each interval
         for(int j=0; j < (n_times-1); ++j) {

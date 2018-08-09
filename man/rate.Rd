@@ -5,7 +5,8 @@
 \title{Generates a rate list to be supplied to the \code{\link{stem_dynamics}} 
 funciton.}
 \usage{
-rate(rate, from, to, strata = NULL, incidence = FALSE, lumped = FALSE)
+rate(rate, from, to, strata = NULL, incidence = FALSE,
+  lumped = FALSE)
 }
 \arguments{
 \item{rate}{string for computing the rate (unlumped by default unless 

@@ -5,9 +5,9 @@
 \title{Map N(0,1) stochastic perturbations to an LNA path.}
 \usage{
 map_draws_2_lna(pathmat, draws, lna_times, lna_pars, lna_param_vec,
-  lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix,
-  forcing_inds, forcing_matrix, svd_d, svd_U, svd_V, step_size, lna_pointer,
-  set_pars_pointer)
+  lna_param_inds, lna_tcovar_inds, init_start, param_update_inds,
+  stoich_matrix, forcing_inds, forcing_matrix, svd_d, svd_U, svd_V,
+  step_size, lna_pointer, set_pars_pointer)
 }
 \arguments{
 \item{pathmat}{matrix where the LNA path should be stored}

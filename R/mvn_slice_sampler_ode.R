@@ -106,6 +106,7 @@ mvn_slice_sampler_ode <-
                      orig = normalise2((1 - nugget) * normalise2(mvn_direction %*% kernel_cov_chol, 2) + nugget * har_direction, 2))
             
       } else {
+        
             draw_normals(mvn_direction)
             copy_vec(dest = mvnss_propvec, 
                      orig = normalise2(mvn_direction %*% kernel_cov_chol, 2))
@@ -139,7 +140,9 @@ mvn_slice_sampler_ode <-
             if(logprior_lower != -Inf) {
                   
                   # insert the parameters into the ode_parameters matrix
-                  pars2lnapars2(ode_params_cur, params_prop_nat, 0)
+                  pars2lnapars2(lnapars    = ode_params_cur,
+                                parameters = params_prop_nat, 
+                                c_start    = 0)
                   
                   # compute the time-varying parameters if necessary
                   if(!is.null(tparam)) {
@@ -244,7 +247,9 @@ mvn_slice_sampler_ode <-
             if(logprior_upper != -Inf) {
                   
                   # insert the parameters into the ode_parameters matrix
-                  pars2lnapars2(ode_params_cur, params_prop_nat, 0)
+                  pars2lnapars2(lnapars    = ode_params_cur, 
+                                parameters = params_prop_nat, 
+                                c_start    = 0)
                   
                   # compute the time-varying parameters if necessary
                   if(!is.null(tparam)) {
@@ -353,7 +358,9 @@ mvn_slice_sampler_ode <-
             if(logprior_prop != -Inf) {
                   
                   # insert the parameters into the lna_parameters matrix
-                  pars2lnapars2(ode_params_cur, params_prop_nat, 0)
+                  pars2lnapars2(lnapars    = ode_params_cur, 
+                                parameters = params_prop_nat, 
+                                c_start    = 0)
                   
                   # compute the time-varying parameters if necessary
                   if(!is.null(tparam)) {
@@ -460,7 +467,9 @@ mvn_slice_sampler_ode <-
       } else {
             
             # insert the parameters into the lna_parameters matrix
-            pars2lnapars2(ode_params_cur, model_params_nat, 0)
+            pars2lnapars2(lnapars    = ode_params_cur,
+                          parameters = model_params_nat,
+                          c_start    = 0)
             
             # recover the original time-varying parameter draws and compute the values
             if(!is.null(tparam)) {

@@ -211,7 +211,7 @@ stem_inference_lna <- function(stem_object,
             comp_mean <- comp_size_vec[t] * comp_probs
             comp_cov <- comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs))
             comp_cov_svd <- svd(comp_cov)
-            comp_cov_svd$d[length(comp_cov_svd)] <- 0
+            comp_cov_svd$d[length(comp_cov_svd$d)] <- 0
             comp_sqrt_cov <- comp_cov_svd$u %*% diag(sqrt(comp_cov_svd$d))
             
             initdist_objects[[t]] <- 
@@ -749,8 +749,12 @@ stem_inference_lna <- function(stem_object,
                                 dimnames = list(NULL, names(stem_object$dynamics$lna_rates$lna_param_codes)))
       
       # insert the lna parameters into the parameter matrix
-      pars2lnapars2(lna_params_cur, c(model_params_nat, t0, init_volumes_cur), 0)
-      pars2lnapars2(lna_params_prop, c(params_prop_nat, t0_prop, init_volumes_prop), 0)
+      pars2lnapars2(lnapars    = lna_params_cur,
+                    parameters = c(model_params_nat, t0, init_volumes_cur), 
+                    c_start    = 0)
+      pars2lnapars2(lnapars    = lna_params_prop, 
+                    parameters = c(params_prop_nat, t0_prop, init_volumes_prop), 
+                    c_start    = 0)
       
       # get column indices for constants and time-varying covariates
       const_inds  <- 
@@ -1354,7 +1358,9 @@ stem_inference_lna <- function(stem_object,
                   params_logprior_prop <- prior_density(params_prop_nat, params_prop_est)
                   
                   # Insert the proposed parameters into the parameter proposal matrix
-                  pars2lnapars(lna_params_prop, c(params_prop_nat, t0, init_volumes_cur))
+                  pars2lnapars2(lnapars    = lna_params_prop,  
+                                parameters = c(params_prop_nat, t0, init_volumes_cur), 
+                                c_start    = 0)
                   
                   # update the time-varying parameters if necessary
                   if (!is.null(tparam)) {
@@ -1496,7 +1502,9 @@ stem_inference_lna <- function(stem_object,
                   params_logprior_prop <- prior_density(params_prop_nat, params_prop_est)
                   
                   # Insert the proposed parameters into the parameter proposal matrix
-                  pars2lnapars(lna_params_prop, c(params_prop_nat, t0, init_volumes_cur))
+                  pars2lnapars2(lnapars    = lna_params_prop, 
+                                parameters = c(params_prop_nat, t0, init_volumes_cur),
+                                c_start    = 0)
                   
                   # set the data log likelihood for the proposal to NULL
                   data_log_lik_prop <- NULL
@@ -2226,7 +2234,9 @@ stem_inference_lna <- function(stem_object,
                         )
                   
                   # Insert the proposed parameters into the parameter proposal matrix
-                  pars2lnapars2(lna_params_prop, c(model_params_nat, t0_prop, init_volumes_cur), 0)
+                  pars2lnapars2(lnapars    = lna_params_prop,
+                                parameters = c(model_params_nat, t0_prop, init_volumes_cur),
+                                c_start    =  0)
                   
                   # make sure the time--varying parameters are in there too
                   if(!is.null(tparam)) {

@@ -4,11 +4,12 @@
 \alias{compute_lna_logliks}
 \title{Compute the LNA log likelihood and data log likelihood.}
 \usage{
-compute_lna_logliks(path, data, params_prop_nat, lna_params_prop, censusmat,
-  emitmat, flow_matrix, lna_times, lna_initdist_inds, param_update_inds,
-  incidence_codes, census_incidence_codes, census_indices, measproc_indmat,
-  obstime_inds, constants, tcovar_censmat, do_prevalence, do_incidence,
-  lna_pointer, lna_set_pars_pointer, d_meas_pointer)
+compute_lna_logliks(path, data, params_prop_nat, lna_params_prop,
+  censusmat, emitmat, flow_matrix, lna_times, lna_initdist_inds,
+  param_update_inds, incidence_codes, census_incidence_codes,
+  census_indices, measproc_indmat, obstime_inds, constants, tcovar_censmat,
+  do_prevalence, do_incidence, lna_pointer, lna_set_pars_pointer,
+  d_meas_pointer)
 }
 \arguments{
 \item{path}{list with the current LNA path along with its ODE paths to be

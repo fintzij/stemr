@@ -5,9 +5,9 @@
 \title{Obtain the path of the deterministic mean of a stochastic epidemic model by
 integrating the corresponding ODE functions.}
 \usage{
-integrate_odes(ode_times, ode_pars, ode_param_inds, ode_tcovar_inds, init_start,
-  param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size,
-  ode_pointer, set_pars_pointer)
+integrate_odes(ode_times, ode_pars, ode_param_inds, ode_tcovar_inds,
+  init_start, param_update_inds, stoich_matrix, forcing_inds,
+  forcing_matrix, step_size, ode_pointer, set_pars_pointer)
 }
 \arguments{
 \item{ode_times}{vector of interval endpoint times}

@@ -93,7 +93,7 @@ stem_inference <-
                           ess_args = ess_args,
                           print_progress = print_progress,
                           messages = messages
-                    )
+                )
 
         } else if (method == "bda") {
                 print("bda not yet implemented")

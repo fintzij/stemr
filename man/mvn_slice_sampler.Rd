@@ -5,14 +5,15 @@
 \title{Update model parameters via factor slice sampling}
 \usage{
 mvn_slice_sampler(model_params_est, model_params_nat, params_prop_est,
-  params_prop_nat, mvn_direction, har_direction, mvnss_propvec, param_inds_Cpp,
-  kernel_cov_chol, nugget, mvnss_bracket_width, n_expansions_mvnss,
-  n_contractions_mvnss, path, pathmat_prop, data, priors, params_logprior_cur,
-  lna_params_cur, lna_param_vec, tparam, censusmat, emitmat, flow_matrix,
-  stoich_matrix, lna_times, forcing_inds, forcing_matrix, lna_param_inds,
-  lna_const_inds, lna_tcovar_inds, lna_initdist_inds, param_update_inds,
-  lna_event_inds, census_indices, measproc_indmat, svd_d, svd_U, svd_V,
-  lna_pointer, lna_set_pars_pointer, d_meas_pointer, do_prevalence, step_size)
+  params_prop_nat, mvn_direction, har_direction, mvnss_propvec,
+  param_inds_Cpp, kernel_cov_chol, nugget, mvnss_bracket_width,
+  n_expansions_mvnss, n_contractions_mvnss, path, pathmat_prop, data,
+  priors, params_logprior_cur, lna_params_cur, lna_param_vec, tparam,
+  censusmat, emitmat, flow_matrix, stoich_matrix, lna_times, forcing_inds,
+  forcing_matrix, lna_param_inds, lna_const_inds, lna_tcovar_inds,
+  lna_initdist_inds, param_update_inds, lna_event_inds, census_indices,
+  measproc_indmat, svd_d, svd_U, svd_V, lna_pointer, lna_set_pars_pointer,
+  d_meas_pointer, do_prevalence, step_size)
 }
 \arguments{
 \item{model_params_est}{vector of model parameters on the estimation scale}

@@ -12,7 +12,8 @@ factor_slice_sampler(model_params_est, model_params_nat, params_prop_est,
   stoich_matrix, lna_times, forcing_inds, forcing_matrix, lna_param_inds,
   lna_const_inds, lna_tcovar_inds, lna_initdist_inds, param_update_inds,
   lna_event_inds, census_indices, measproc_indmat, svd_d, svd_U, svd_V,
-  lna_pointer, lna_set_pars_pointer, d_meas_pointer, do_prevalence, step_size)
+  lna_pointer, lna_set_pars_pointer, d_meas_pointer, do_prevalence,
+  step_size)
 }
 \arguments{
 \item{model_params_est}{vector of model parameters on the estimation scale}

@@ -47,8 +47,7 @@ Rcpp::List integrate_odes(const arma::rowvec& ode_times,
         int n_events = stoich_matrix.n_cols;         // number of transition events, e.g., S2I, I2R
         int n_comps  = stoich_matrix.n_rows;         // number of model compartments (all strata)
         int n_times  = ode_times.n_elem;             // number of times at which the ODEs must be evaluated
-        int n_ode_params = ode_param_inds.size();    // number of LNA parameters
-        int n_tcovar     = ode_tcovar_inds.size();   // number of time-varying covariates or parameters
+        int n_tcovar = ode_tcovar_inds.size();   // number of time-varying covariates or parameters
 
         // initialize the objects used in each time interval
         double t_L = 0;

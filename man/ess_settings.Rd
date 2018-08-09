@@ -8,8 +8,8 @@ time-varying parameters via elliptical slice sampling.}
 ess_settings(n_ess_updates = 1, lna_bracket_width = 2 * pi,
   initdist_bracket_width = 2 * pi, tparam_bracket_width = 2 * pi,
   lna_bracket_update = 0, initdist_bracket_update = 0,
-  tparam_bracket_update = 0, lna_bracket_scaling = 2 * sqrt(2 * log(10)),
-  initdist_bracket_scaling = 2 * sqrt(2 * log(10)),
+  tparam_bracket_update = 0, lna_bracket_scaling = 2 * sqrt(2 *
+  log(10)), initdist_bracket_scaling = 2 * sqrt(2 * log(10)),
   tparam_bracket_scaling = 2 * sqrt(2 * log(10)),
   joint_tparam_update = TRUE, joint_initdist_update = TRUE,
   ess_warmup = 50)
