@@ -148,7 +148,6 @@ stem_inference_lna <- function(stem_object,
       }
       
       # objects for updating the brackets if necessary
-      # objects for updating the brackets if necessary
       if(lna_bracket_update != Inf) {
             lna_angle_mean  <- 0
             lna_angle_var   <- pi^2 / 3
@@ -180,10 +179,10 @@ stem_inference_lna <- function(stem_object,
             seq_along(stem_object$dynamics$tcovar_codes) - 1
       
       # measurement process objects
-      data            <- stem_object$measurement_process$data
       measproc_indmat <- stem_object$measurement_process$measproc_indmat
       d_meas_pointer  <- stem_object$measurement_process$meas_pointers_lna$d_measure_ptr
-      obstimes        <- data[, 1]
+      data            <- stem_object$measurement_process$data
+      obstimes        <- stem_object$measurement_process$obstimes
       
       # construct prior density functions
       prior_density         <- priors$prior_density
@@ -930,11 +929,10 @@ stem_inference_lna <- function(stem_object,
                              dimnames = list(NULL, colnames(measproc_indmat))))
       
       pathmat_prop <- cbind(lna_times,
-                            matrix(
-                                  0.0,
-                                  nrow = length(lna_times),
-                                  ncol = nrow(flow_matrix),
-                                  dimnames = list(NULL, c(rownames(flow_matrix)))))
+                            matrix(0.0,
+                                   nrow = length(lna_times),
+                                   ncol = nrow(flow_matrix),
+                                   dimnames = list(NULL, c(rownames(flow_matrix)))))
       
       # set up MCMC objects
       parameter_samples_nat <-
@@ -1050,6 +1048,7 @@ stem_inference_lna <- function(stem_object,
             }
             
       } else {
+            
             path <- initialize_lna(
                   data                    = data,
                   lna_parameters          = lna_params_cur,

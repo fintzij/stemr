@@ -145,13 +145,13 @@ stem_inference_ode <- function(stem_object,
       # objects for updating the brackets if necessary
       if(initdist_bracket_update != Inf) {
             initdist_angle_mean  <- 0
-            initdist_angle_var   <- 1
+            initdist_angle_var   <- pi^2 / 3
             initdist_angle_resid <- 0
       }
       
       if(tparam_bracket_update != Inf) {
             tparam_angle_mean  <- 0
-            tparam_angle_var   <- 1
+            tparam_angle_var   <- pi^2 / 3
             tparam_angle_resid <- 0
       }
       
@@ -171,7 +171,7 @@ stem_inference_ode <- function(stem_object,
       measproc_indmat <- stem_object$measurement_process$measproc_indmat
       d_meas_pointer  <- stem_object$measurement_process$meas_pointers_lna$d_measure_ptr
       data            <- stem_object$measurement_process$data
-      obstimes        <- data[,1]
+      obstimes        <- stem_object$measurement_process$obstimes
       
       # construct prior density functions
       prior_density         <- priors$prior_density
@@ -198,7 +198,7 @@ stem_inference_ode <- function(stem_object,
             
             comp_mean <- comp_size_vec[t] * comp_probs
             comp_cov <- comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs))
-            comp_cov_svd <- svd(x = comp_cov)
+            comp_cov_svd <- svd(comp_cov)
             comp_cov_svd$d[length(comp_cov_svd$d)] <- 0
             comp_sqrt_cov <- comp_cov_svd$u %*% diag(sqrt(comp_cov_svd$d))
             
@@ -319,8 +319,7 @@ stem_inference_ode <- function(stem_object,
             kernel_resid <- double(n_model_params) # already initialized to 0
             kernel_mean  <- double(n_model_params)
             copy_vec(kernel_mean, model_params_est)
-            
-            kernel_cov      <- diag(1, n_model_params)
+            kernel_cov   <- diag(1, n_model_params)
             kernel_cov_chol <- diag(1,n_model_params)
             copy_mat(kernel_cov, mcmc_kernel$sigma)
             comp_chol(kernel_cov_chol, kernel_cov)
@@ -584,7 +583,7 @@ stem_inference_ode <- function(stem_object,
                              (seq(0, warmup_iterations) * mcmc_kernel$kernel_settings$step_size + 1) ^ -mcmc_kernel$kernel_settings$scale_cooling)
             
             # nugget cooling schedule
-            nugget_cooling   <- mcmc_kernel$kernel_settings$mvnss_setting_list$nugget_cooling
+            nugget_cooling   <- mvnss_setting_list$nugget_cooling
             nugget_step_size <- 
                   if(is.null(mvnss_setting_list$nugget_step_size)) {
                         100 / iterations
@@ -922,15 +921,8 @@ stem_inference_ode <- function(stem_object,
                    ncol = n_model_params + as.numeric(!t0_fixed),
                    dimnames = list(NULL, c(param_names_est, t0_name)))
       
-      ode_paths <- 
-            array(0.0, dim = c(n_times, 1 + n_rates, 1 + floor(iterations / thin_latent_proc)))
-      
-      colnames(ode_paths) <- c("time", rownames(flow_matrix))
-      
-      data_log_lik      <- double(1 + floor(iterations / thin_params))
-      params_log_prior  <- double(1 + floor(iterations / thin_params))
-      
       if (!is.null(tparam)) {
+            
             tparam_steps        <- 1.0
             tparam_angle        <- 0.0
             tparam_step_record  <- rep(1, floor(iterations / thin_params))
@@ -955,6 +947,15 @@ stem_inference_ode <- function(stem_object,
             tparam_samples      <- NULL
             tparam_log_lik      <- NULL
       }
+      
+      ode_paths <- 
+            array(0.0, 
+                  dim = c(n_times, 1 + n_rates, 1 + floor(iterations / thin_latent_proc)))
+      
+      colnames(ode_paths) <- c("time", rownames(flow_matrix))
+      
+      data_log_lik      <- double(1 + floor(iterations / thin_params))
+      params_log_prior  <- double(1 + floor(iterations / thin_params))
       
       # initialize the lna_param_vec for the measurement process
       ode_param_vec <- ode_params_cur[1,]
@@ -1054,41 +1055,6 @@ stem_inference_ode <- function(stem_object,
       if (!mcmc_restart) {
             for (warmup in seq_len(warmup_iterations)) {
                   
-                  # update time varying parameters via elliptical slice sampling
-                  if (!is.null(tparam)) {
-                        update_tparam_ode(
-                              tparam               = tparam,
-                              path_cur             = path,
-                              data                 = data,
-                              ode_parameters       = ode_params_cur,
-                              ode_param_vec        = ode_param_vec,
-                              pathmat_prop         = pathmat_prop,
-                              censusmat            = censusmat,
-                              emitmat              = emitmat,
-                              flow_matrix          = flow_matrix,
-                              stoich_matrix        = stoich_matrix,
-                              ode_times            = ode_times,
-                              forcing_inds         = forcing_inds,
-                              forcing_matrix       = forcing_matrix,
-                              ode_param_inds       = ode_param_inds,
-                              ode_const_inds       = ode_const_inds,
-                              ode_tcovar_inds      = ode_tcovar_inds,
-                              ode_initdist_inds    = ode_initdist_inds,
-                              param_update_inds    = param_update_inds,
-                              census_indices       = census_indices,
-                              ode_event_inds       = ode_event_inds,
-                              measproc_indmat      = measproc_indmat,
-                              ode_pointer          = ode_pointer,
-                              ode_set_pars_pointer = ode_set_pars_pointer,
-                              d_meas_pointer       = d_meas_pointer,
-                              do_prevalence        = do_prevalence,
-                              step_size            = step_size,
-                              tparam_steps         = tparam_steps,
-                              tparam_angle         = tparam_angle,
-                              tparam_bracket_width = tparam_bracket_width
-                        )
-                  }
-                  
                   if(!fixed_inits) {
                         update_initdist_ode(
                               initdist_objects     = initdist_objects,
@@ -1123,6 +1089,41 @@ stem_inference_ode <- function(stem_object,
                               initdist_steps       = initdist_steps,
                               initdist_angle       = initdist_angle,
                               initdist_bracket_width = initdist_bracket_width
+                        )
+                  }
+                  
+                  # update time varying parameters via elliptical slice sampling
+                  if (!is.null(tparam)) {
+                        update_tparam_ode(
+                              tparam               = tparam,
+                              path_cur             = path,
+                              data                 = data,
+                              ode_parameters       = ode_params_cur,
+                              ode_param_vec        = ode_param_vec,
+                              pathmat_prop         = pathmat_prop,
+                              censusmat            = censusmat,
+                              emitmat              = emitmat,
+                              flow_matrix          = flow_matrix,
+                              stoich_matrix        = stoich_matrix,
+                              ode_times            = ode_times,
+                              forcing_inds         = forcing_inds,
+                              forcing_matrix       = forcing_matrix,
+                              ode_param_inds       = ode_param_inds,
+                              ode_const_inds       = ode_const_inds,
+                              ode_tcovar_inds      = ode_tcovar_inds,
+                              ode_initdist_inds    = ode_initdist_inds,
+                              param_update_inds    = param_update_inds,
+                              census_indices       = census_indices,
+                              ode_event_inds       = ode_event_inds,
+                              measproc_indmat      = measproc_indmat,
+                              ode_pointer          = ode_pointer,
+                              ode_set_pars_pointer = ode_set_pars_pointer,
+                              d_meas_pointer       = d_meas_pointer,
+                              do_prevalence        = do_prevalence,
+                              step_size            = step_size,
+                              tparam_steps         = tparam_steps,
+                              tparam_angle         = tparam_angle,
+                              tparam_bracket_width = tparam_bracket_width
                         )
                   }
                   
@@ -1360,9 +1361,11 @@ stem_inference_ode <- function(stem_object,
                         )
                         
                   } else {
-                        mvn_rw(params_prop = params_prop_est,
+                        mvn_rw(
+                              params_prop = params_prop_est,
                                params_cur = model_params_est,
-                               sigma_chol = kernel_cov_chol)
+                               sigma_chol = kernel_cov_chol
+                              )
                   }
                   
                   # Convert the proposed parameters to their natural scale
@@ -1386,7 +1389,7 @@ stem_inference_ode <- function(stem_object,
                   
                   # Insert the proposed parameters into the parameter proposal matrix
                   pars2lnapars2(lnapars    = ode_params_prop, 
-                                parameters = c(params_prop_nat, t0, init_volumes_cur), 
+                                parameters = c(params_prop_nat, t0, init_volumes_cur),
                                 c_start    = 0)
                   
                   # set the data log likelihood for the proposal to NULL
@@ -1926,6 +1929,7 @@ stem_inference_ode <- function(stem_object,
             }
             
             if(!fixed_inits) {
+                  
                   update_initdist_ode(
                         initdist_objects     = initdist_objects,
                         init_volumes_cur     = init_volumes_cur,
