@@ -26,6 +26,8 @@
 #'   parameter scales should take vector of parameters as an argument, returning
 #'   a transformed vector (the function call has the form:
 #'   \code{transformed_vector <- conversion_function(original_vector)}).
+#' @param initialization_attempts 
+#' @param ess_args 
 #'
 #' @return list with parameter posterior samples and MCMC diagnostics
 #' @export
@@ -95,7 +97,7 @@ stem_inference_ode <- function(stem_object,
       n_rates                <- nrow(flow_matrix)
       do_prevalence          <- stem_object$measurement_process$ode_prevalence
       ode_event_inds         <- stem_object$measurement_process$incidence_codes_ode
-      state_initializer      <- stem_object$dynamics$state_initializer
+      initializer            <- stem_object$dynamics$initializer
       fixed_inits            <- stem_object$dynamics$fixed_inits
       n_strata               <- stem_object$dynamics$n_strata
       ode_initdist_inds      <- stem_object$dynamics$ode_initdist_inds
@@ -114,31 +116,21 @@ stem_inference_ode <- function(stem_object,
       if (is.null(ess_args)) {
             n_ess_updates            <- 1
             initdist_bracket_width   <- 2*pi
-            tparam_bracket_width     <- 2*pi     
-            lna_bracket_width        <- 2*pi
+            tparam_bracket_width     <- 2*pi
             initdist_bracket_update  <- 0
             tparam_bracket_update    <- 0
-            lna_bracket_update       <- 0
-            lna_bracket_scaling      <- 2*sqrt(2*log(10))
             initdist_bracket_scaling <- 2*sqrt(2*log(10))
             tparam_bracket_scaling   <- 2*sqrt(2*log(10))
-            joint_initdist_update    <- TRUE
-            joint_tparam_update      <- TRUE
             ess_warmup               <- 50
 
       } else {
             n_ess_updates            <- ess_args$n_ess_updates
-            lna_bracket_width        <- ess_args$lna_bracket_width
             initdist_bracket_width   <- ess_args$initdist_bracket_width
             tparam_bracket_width     <- ess_args$tparam_bracket_width
-            lna_bracket_update       <- ess_args$lna_bracket_update
             initdist_bracket_update  <- ess_args$initdist_bracket_update
             tparam_bracket_update    <- ess_args$tparam_bracket_update
-            lna_bracket_scaling      <- ess_args$lna_bracket_scaling
             initdist_bracket_scaling <- ess_args$initdist_bracket_scaling
             tparam_bracket_scaling   <- ess_args$tparam_bracket_scaling
-            joint_initdist_update    <- ess_args$joint_initdist_update
-            joint_tparam_update      <- ess_args$joint_tparam_update
             ess_warmup               <- ess_args$ess_warmup
       }
       
@@ -182,37 +174,37 @@ stem_inference_ode <- function(stem_object,
       if(n_strata == 1) {
             comp_size_vec <- constants["popsize"]
       } else {
-            comp_size_vec <- constants[paste0("popsize_", sapply(state_initializer,"[[","strata"))]
+            comp_size_vec <- constants[paste0("popsize_", sapply(initializer,"[[","strata"))]
       }
       
       # list for initial compartment volume objects
       initdist_objects <- vector("list", length = n_strata)
-      for(t in seq_len(n_strata)) {
+      for(s in seq_len(n_strata)) {
             
             comp_probs <- 
-                  if(!state_initializer[[t]]$fixed & !is.null(state_initializer[[t]]$prior)) {
-                        state_initializer[[t]]$prior / comp_size_vec[t]
+                  if(!initializer[[s]]$fixed & !is.null(initializer[[s]]$prior)) {
+                        initializer[[s]]$prior / comp_size_vec[s]
                   } else {
-                        state_initializer[[t]]$init_states / comp_size_vec[t]
+                        initializer[[s]]$init_states / comp_size_vec[s]
                   }
             
-            comp_mean <- comp_size_vec[t] * comp_probs
-            comp_cov <- comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs))
+            comp_mean <- comp_size_vec[s] * comp_probs
+            comp_cov <- comp_size_vec[s] * (diag(comp_probs) - comp_probs %*% t(comp_probs))
             comp_cov_svd <- svd(comp_cov)
             comp_cov_svd$d[length(comp_cov_svd$d)] <- 0
             comp_sqrt_cov <- comp_cov_svd$u %*% diag(sqrt(comp_cov_svd$d))
             
-            initdist_objects[[t]] <- 
+            initdist_objects[[s]] <- 
                   list(
-                        fixed         = state_initializer[[t]]$fixed,
-                        comp_size     = comp_size_vec[t],
+                        fixed         = initializer[[s]]$fixed,
+                        comp_size     = comp_size_vec[s],
                         comp_mean     = comp_mean,
                         comp_sqrt_cov = comp_sqrt_cov[,-length(comp_mean)],
                         draws_cur     = rep(0.0, length(comp_mean) - 1),
                         draws_prop    = rep(0.0, length(comp_mean) - 1),
                         draws_ess     = rep(0.0, length(comp_mean) - 1),
-                        comp_inds_R   = state_initializer[[t]]$codes,
-                        comp_inds_Cpp = state_initializer[[t]]$codes - 1
+                        comp_inds_R   = initializer[[s]]$codes,
+                        comp_inds_Cpp = initializer[[s]]$codes - 1
                   )
       }
       
@@ -2411,17 +2403,12 @@ stem_inference_ode <- function(stem_object,
       
       # ess_settings
       ess_args <- ess_settings(n_ess_updates            = n_ess_updates,
-                               lna_bracket_width        = lna_bracket_width,
                                initdist_bracket_width   = initdist_bracket_width,
                                tparam_bracket_width     = tparam_bracket_width,
-                               lna_bracket_update       = lna_bracket_update,
                                initdist_bracket_update  = initdist_bracket_update,
                                tparam_bracket_update    = tparam_bracket_update,
-                               lna_bracket_scaling      = lna_bracket_scaling,
                                initdist_bracket_scaling = initdist_bracket_scaling,
                                tparam_bracket_scaling   = tparam_bracket_scaling,
-                               joint_initdist_update    = joint_initdist_update,
-                               joint_tparam_update      = joint_tparam_update,
                                ess_warmup               = ess_warmup)
       
       # save the settings

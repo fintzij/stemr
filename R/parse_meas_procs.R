@@ -8,6 +8,12 @@
 #' @return Two vector of strings that serve as function pointers.
 #' @export
 parse_meas_procs <- function(meas_procs, compile_moments = FALSE, messages = TRUE) {
+      
+        # set to null to avoid warnings
+      R_MEASURE_XPtr <- NULL
+      D_MEASURE_XPtr <- NULL
+      MEAS_MEAN_XPtr <- NULL
+      MEAS_VAR_XPtr  <- NULL
 
         # emitmat is the matrix of emission probabilities
         d_measure_args <- "Rcpp::NumericMatrix& emitmat, const Rcpp::LogicalVector& emit_inds, const int record_ind, const Rcpp::NumericVector& record, const Rcpp::NumericVector& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar"

@@ -32,6 +32,7 @@
 #' @param harss_prob probability of a hit and run update at each iteration
 #' @param initial_widths vector of initial slice widths, defaults to a vector of
 #' @param afss_slice_ratio target ratio of expansions / (expansions +
+#' @param harss_bracket_limits 
 #'   contractions) ones.
 #' @return list with additional settings for automated factor slice sampling
 #' @export

@@ -100,7 +100,7 @@ stem_inference_lna <- function(stem_object,
       n_rates                <- nrow(flow_matrix)
       do_prevalence          <- stem_object$measurement_process$lna_prevalence
       lna_event_inds         <- stem_object$measurement_process$incidence_codes_lna
-      state_initializer      <- stem_object$dynamics$state_initializer
+      initializer            <- stem_object$dynamics$initializer
       fixed_inits            <- stem_object$dynamics$fixed_inits
       n_strata               <- stem_object$dynamics$n_strata
       lna_initdist_inds      <- stem_object$dynamics$lna_initdist_inds
@@ -193,7 +193,7 @@ stem_inference_lna <- function(stem_object,
       if(n_strata == 1) {
             comp_size_vec <- constants["popsize"]
       } else {
-            comp_size_vec <- constants[paste0("popsize_", sapply(state_initializer,"[[","strata"))]
+            comp_size_vec <- constants[paste0("popsize_", sapply(initializer,"[[","strata"))]
       }
       
       # list for initial compartment volume objects
@@ -201,10 +201,10 @@ stem_inference_lna <- function(stem_object,
       for(t in seq_len(n_strata)) {
             
             comp_probs <- 
-                  if(!state_initializer[[t]]$fixed & !is.null(state_initializer[[t]]$prior)) {
-                        state_initializer[[t]]$prior / comp_size_vec[t]
+                  if(!initializer[[t]]$fixed & !is.null(initializer[[t]]$prior)) {
+                        initializer[[t]]$prior / comp_size_vec[t]
                   } else {
-                        state_initializer[[t]]$init_states / comp_size_vec[t]
+                        initializer[[t]]$init_states / comp_size_vec[t]
                   }
             
             comp_mean <- comp_size_vec[t] * comp_probs
@@ -215,15 +215,15 @@ stem_inference_lna <- function(stem_object,
             
             initdist_objects[[t]] <- 
                   list(
-                        fixed         = state_initializer[[t]]$fixed,
+                        fixed         = initializer[[t]]$fixed,
                         comp_size     = comp_size_vec[t],
                         comp_mean     = comp_mean,
                         comp_sqrt_cov = comp_sqrt_cov[,-length(comp_mean)],
                         draws_cur     = rep(0.0, length(comp_mean) - 1),
                         draws_prop    = rep(0.0, length(comp_mean) - 1),
                         draws_ess     = rep(0.0, length(comp_mean) - 1),
-                        comp_inds_R   = state_initializer[[t]]$codes,
-                        comp_inds_Cpp = state_initializer[[t]]$codes - 1
+                        comp_inds_R   = initializer[[t]]$codes,
+                        comp_inds_Cpp = initializer[[t]]$codes - 1
                   )
       }
       

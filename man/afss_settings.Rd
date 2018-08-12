@@ -45,8 +45,7 @@ direction probabilities should occur.}
 \item{sample_all_initially}{should all factor directions be sampled until the
 first slice probability update? defaults to TRUE}
 
-\item{afss_slice_ratio}{target ratio of expansions / (expansions +
-contractions) ones.}
+\item{afss_slice_ratio}{target ratio of expansions / (expansions +}
 
 \item{target_prop_totsd}{Between 0 and 1. If supplied, the number of factor
 directions sampled after the first probability update set to be the maximum
@@ -54,6 +53,8 @@ of the requested number of directions and number of factors required to
 explain the specified proportion of the total standard deviation in the
 posterior. If not equal to the number of parameters, a hit and run update
 is carried out to ensure ergodicity.}
+
+\item{harss_bracket_limits}{contractions) ones.}
 
 \item{harss_prob}{probability of a hit and run update at each iteration}
 }

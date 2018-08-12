@@ -39,6 +39,10 @@ defaults to 1}
 \item{thin_latent_proc}{thinning interval for latent paths, defaults to
 ceiling(iterations/100)}
 
+\item{initialization_attempts}{}
+
+\item{ess_args}{}
+
 \item{print_progress}{prints progress every n iterations, defaults to 0 for
 no printing}
 

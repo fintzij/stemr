@@ -29,7 +29,6 @@
 #' # of infection as the sum of beta times the number of infecteds in an
 #' # individual's own compartment, and gamma times the sum of the log number of
 #' # infecteds in adjacent compartments.
-#' rate("beta * I_SELF + gamma * comp_fcn(log(I_ADJ), sum)", S, I, ALL)
 comp_fcn <- function(fcn, aggregation, compartments = NULL) {
 
         if(!aggregation %in% c("sum", "prod")) {

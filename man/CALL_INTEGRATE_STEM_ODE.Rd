@@ -9,13 +9,13 @@ CALL_INTEGRATE_STEM_ODE(init, start, end, step_size, stem_ode_ptr)
 \arguments{
 \item{init}{initial condition}
 
+\item{start}{time at left endpoint of interval}
+
 \item{end}{time at right endpoint}
 
 \item{step_size}{set automatically by caller, required argument not specified by user}
 
 \item{stem_ode_ptr}{external pointer for calling the ODE integrator}
-
-\item{state}{time at left endpoint of interval}
 }
 \description{
 Integrate a system of ODEs via external Xptr.

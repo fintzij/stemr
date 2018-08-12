@@ -98,7 +98,7 @@
 #' @return rate list
 #' @export
 #' 
-#' @examples rate("beta*I", "S", "I", "ALL", lumped = FALSE))
+#' @examples rate("beta*I", "S", "I", "ALL", lumped = FALSE)
 rate <- function(rate, from, to, strata = NULL, incidence = FALSE, lumped = FALSE) {
 
         # generate the formula

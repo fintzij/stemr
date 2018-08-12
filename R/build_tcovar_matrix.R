@@ -6,10 +6,12 @@
 #' @param tparam list for instatiating time-varying parameters
 #' @param forcings list of forcings
 #' @param timestep time discretization interval
+#' @param census_times 
+#' @param t0 
+#' @param tmax 
+#' @param messages 
 #' @param parameters vector of model parameters
-#' @param t0,tmax left and right endpoints of the time-period over which the 
-#'   process evolves
-#'   
+#'
 #' @return matrix for time-varying covariates and parameters. If neither a
 #'   time-varying covariate matrix or parameters, or a timestep is supplied,
 #'   TCOVAR will just be a matrix with the left and right endpoints of the

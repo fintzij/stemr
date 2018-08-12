@@ -1,0 +1,7 @@
+Beginning MCMC
+Iteration: 1000
+Global acceptances: 222
+Global acceptance rate: 0.222
+Iteration: 2000
+Global acceptances: 446
+Global acceptance rate: 0.223

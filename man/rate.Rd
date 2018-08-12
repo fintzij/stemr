@@ -119,5 +119,5 @@ funciton.
 }
 
 \examples{
-rate("beta*I", "S", "I", "ALL", lumped = FALSE))
+rate("beta*I", "S", "I", "ALL", lumped = FALSE)
 }

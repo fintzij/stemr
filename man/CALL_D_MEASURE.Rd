@@ -25,7 +25,7 @@ CALL_D_MEASURE(emitmat, emit_inds, record_ind, record, state, parameters,
 
 \item{tcovar}{numeric vector of time-varying covariate values}
 
-\item{r_meas_ptr}{external pointer to measurement process simulation function}
+\item{d_meas_ptr}{external pointer to measurement process simulation function}
 }
 \description{
 Evaluate the log-density of the measurement process by calling measurement

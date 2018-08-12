@@ -19,10 +19,15 @@ build_tcovar_matrix(tcovar = NULL, tparam = NULL, forcings = NULL,
 
 \item{timestep}{time discretization interval}
 
+\item{census_times}{}
+
 \item{parameters}{vector of model parameters}
 
-\item{t0, tmax}{left and right endpoints of the time-period over which the 
-process evolves}
+\item{t0}{}
+
+\item{tmax}{}
+
+\item{messages}{}
 }
 \value{
 matrix for time-varying covariates and parameters. If neither a

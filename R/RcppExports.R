@@ -25,7 +25,7 @@ build_census_path <- function(path, census_times, census_columns) {
 #' @param parameters numeric vector of parameter values
 #' @param constants numeric vector of constants
 #' @param tcovar numeric vector of time-varying covariate values
-#' @param r_meas_ptr external pointer to measurement process simulation function
+#' @param d_meas_ptr external pointer to measurement process simulation function
 #'
 #' @export
 CALL_D_MEASURE <- function(emitmat, emit_inds, record_ind, record, state, parameters, constants, tcovar, d_meas_ptr) {
@@ -35,7 +35,7 @@ CALL_D_MEASURE <- function(emitmat, emit_inds, record_ind, record, state, parame
 #' Integrate a system of ODEs via external Xptr.
 #'
 #' @param init initial condition
-#' @param state time at left endpoint of interval
+#' @param start time at left endpoint of interval
 #' @param end time at right endpoint
 #' @param step_size set automatically by caller, required argument not specified by user
 #' @param stem_ode_ptr external pointer for calling the ODE integrator

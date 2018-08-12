@@ -15,7 +15,7 @@ using namespace Rcpp;
 //' @param parameters numeric vector of parameter values
 //' @param constants numeric vector of constants
 //' @param tcovar numeric vector of time-varying covariate values
-//' @param r_meas_ptr external pointer to measurement process simulation function
+//' @param d_meas_ptr external pointer to measurement process simulation function
 //'
 //' @export
 // [[Rcpp::export]]

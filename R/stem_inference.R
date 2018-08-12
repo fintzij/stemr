@@ -40,7 +40,7 @@ stem_inference <-
                  priors,
                  mcmc_kernel,
                  t0_kernel = NULL,
-                 thin_params = 1,
+                 thin_params = ceiling(iterations / 1000),
                  thin_latent_proc = ceiling(iterations / 1000),
                  initialization_attempts = 500,
                  ess_args = NULL,

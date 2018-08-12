@@ -952,7 +952,7 @@ stem_dynamics <-
                          tcovar              = tcovar,
                          forcings            = forcings,
                          constants           = constants,
-                         state_initializer   = initializer,
+                         initializer         = initializer,
                          initdist_params     = initdist_parameters,
                          initdist_priors     = initdist_priors,
                          fixed_inits         = fixed_inits,

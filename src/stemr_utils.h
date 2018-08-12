@@ -3,9 +3,7 @@
 
 #include <RcppArmadillo.h>
 #include <algorithm>
-#include "boost/numeric/odeint.hpp"
-
-// [[Rcpp::depends(BH)]]
+#include <boost/numeric/odeint.hpp>
 
 using namespace Rcpp;
 using namespace arma;
@@ -125,57 +123,65 @@ arma::vec dmvtn(const arma::mat& x,
                 const arma::mat& sigma,
                 bool logd = false);
 
+void draw_normals(arma::vec& v);
+void draw_normals2(arma::mat& M);
+void sample_unit_sphere(arma::vec& v);
+
 // MCMC transition kernel functions
-void c_rw(arma::rowvec& params_prop,
-          const arma::rowvec& params_cur,
-          int ind,
-          const arma::vec& kernel_cov);
-
-void c_rw_adaptive(arma::rowvec& params_prop,
-                   const arma::rowvec& params_cur,
-                   int ind,
-                   const arma::vec& kernel_cov,
-                   const arma::vec& proposal_scaling,
-                   const arma::vec& nugget);
-
 void mvn_rw(arma::rowvec& params_prop,
             const arma::rowvec& params_cur,
             const arma::mat& sigma_chol);
 
 void mvn_g_adaptive(arma::rowvec& params_prop,
                     const arma::rowvec& params_cur,
-                    const arma::mat& kernel_cov,
-                    double proposal_scaling,
-                    double nugget);
-
-void mvn_c_adaptive(arma::rowvec& params_prop,
-                    const arma::rowvec& params_cur,
-                    const arma::mat& kernel_cov,
-                    const arma::vec& proposal_scaling,
-                    arma::mat& sqrt_scalemat,
+                    const arma::mat& kernel_cov_chol,
                     double nugget);
 
 // copy functions
-void copy_elem(arma::rowvec& dest, const arma::rowvec& orig, int ind);
+void add2vec(arma::rowvec& target, const arma::rowvec& increments, const arma::uvec& inds);
+void copy_2_rows(arma::mat& dest, const arma::mat& orig, const arma::uvec& inds);
 void copy_col(arma::mat& dest, const arma::mat& orig, int ind);
-void copy_vec(arma::rowvec& dest, const arma::rowvec& orig);
-void copy_mat(arma::mat& dest, const arma::mat& orig);
-void pars2lnapars(arma::mat& lnapars, const arma::rowvec& parameters);
+void copy_elem(arma::rowvec& dest, const arma::rowvec& orig, int ind);
+void copy_elem2(arma::rowvec& dest, const arma::rowvec& orig, const arma::uvec& inds);
 void g_prop2c_prop(arma::mat& g2c_mat, const arma::rowvec& params_cur, const arma::rowvec& params_prop);
+void copy_pathmat(arma::mat& dest, const arma::mat& orig);
+void copy_vec(arma::rowvec& dest, const arma::rowvec& orig);
+void copy_vec2(arma::rowvec& dest, const arma::rowvec& orig, const arma::uvec& inds);
+void copy_mat(arma::mat& dest, const arma::mat& orig);
+void increment_elem(arma::vec& vec, int ind);
+void insert_block(arma::mat& dest, const arma::mat& orig, const arma::uvec& rowinds, const arma::uvec& colinds);
+void insert_tparam(arma::mat& tcovar, const arma::vec& values, int col_ind, const arma::uvec& tpar_inds);
+void mat_2_arr(arma::cube& dest, const arma::mat& orig, int ind);
+void pars2lnapars(arma::mat& lnapars, const arma::rowvec& parameters);
+void pars2lnapars2(arma::mat& lnapars, const arma::rowvec& parameters, int c_start);
+void reset_vec(arma::vec& v, double value = 0);
 
-// convert the lna from the counting process on transition events to its natural state space
-// arma::mat convert_lna(const arma::mat& path, const arma::mat& flow_matrix, const arma::rowvec& init_state);
-// void convert_lna2(const arma::mat& path, const arma::mat& flow_matrix, const arma::rowvec& init_state, arma::mat& statemat);
+// normalise
+void normalise(arma::vec& v, int p);
+arma::vec normalise2(arma::vec& v, int p);
 
-// compute the lna density
-// retintegrating all LNA ODEs - required after updating parameters
-// Rcpp::List lna_density(const Rcpp::List& path, const arma::colvec& lna_times, const Rcpp::NumericMatrix& lna_pars,
-                       // const Rcpp::LogicalVector& param_update_inds, const arma::mat& flow_matrix,
-                       // SEXP lna_pointer, SEXP set_pars_pointer);
+// comp_chol
+void comp_chol(arma::mat& C, arma::mat& M);
 
-// reintegrating just the drift and residual ODEs - sufficient after elliptical slice sampling
-// Rcpp::List lna_density2(const Rcpp::List& path, const arma::colvec& lna_times, const Rcpp::NumericMatrix& lna_pars,
-                        // const Rcpp::LogicalVector& param_update_inds, const arma::mat& flow_matrix,
-                        // SEXP lna_pointer, SEXP set_pars_pointer);
+// reset slice ratios
+void reset_slice_ratios(arma::vec& n_expansions,
+                        arma::vec& n_contractions,
+                        arma::vec& n_expansions_c,
+                        arma::vec& n_contractions_c,
+                        arma::vec& slice_ratios);
+
+// update factors
+void update_factors(arma::vec& slice_eigenvals,
+                    arma::mat& slice_eigenvecs,
+                    const arma::mat& kernel_cov);
+
+void update_interval_widths(arma::vec& interval_widths,
+                            arma::vec& n_expansions_afss,
+                            arma::vec& n_contractions_afss,
+                            const arma::vec& c_expansions_afss,
+                            const arma::vec& c_contractions_afss,
+                            arma::vec& slice_ratios,
+                            double adaptation_factor,
+                            double target_ratio);
 
 #endif // stemr_UTILITIES_H

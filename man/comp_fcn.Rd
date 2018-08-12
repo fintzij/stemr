@@ -41,5 +41,4 @@ resulting quantities should be added or multiplied together.
 # of infection as the sum of beta times the number of infecteds in an
 # individual's own compartment, and gamma times the sum of the log number of
 # infecteds in adjacent compartments.
-rate("beta * I_SELF + gamma * comp_fcn(log(I_ADJ), sum)", S, I, ALL)
 }

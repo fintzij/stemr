@@ -7,7 +7,7 @@ using namespace Rcpp;
 //' Integrate a system of ODEs via external Xptr.
 //'
 //' @param init initial condition
-//' @param state time at left endpoint of interval
+//' @param start time at left endpoint of interval
 //' @param end time at right endpoint
 //' @param step_size set automatically by caller, required argument not specified by user
 //' @param stem_ode_ptr external pointer for calling the ODE integrator
