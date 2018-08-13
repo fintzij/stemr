@@ -11,7 +11,7 @@ update_initdist_lna(initdist_objects, init_volumes_cur, init_volumes_prop,
   lna_initdist_inds, param_update_inds, census_indices, lna_event_inds,
   measproc_indmat, svd_d, svd_U, svd_V, lna_pointer, lna_set_pars_pointer,
   d_meas_pointer, do_prevalence, step_size, initdist_steps, initdist_angle,
-  initdist_bracket_width)
+  initdist_bracket_width, n_initdist_updates)
 }
 \arguments{
 \item{path_cur}{list with the current path}

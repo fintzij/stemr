@@ -114,7 +114,8 @@ stem_inference_ode <- function(stem_object,
       
       # elliptical slice sampling settings
       if (is.null(ess_args)) {
-            n_ess_updates            <- 1
+            n_initdist_updates       <- 1
+            n_tparam_updates         <- 1
             initdist_bracket_width   <- 2*pi
             tparam_bracket_width     <- 2*pi
             initdist_bracket_update  <- 0
@@ -124,7 +125,8 @@ stem_inference_ode <- function(stem_object,
             ess_warmup               <- 50
 
       } else {
-            n_ess_updates            <- ess_args$n_ess_updates
+            n_initdist_updates       <- ess_args$n_initdist_updates
+            n_tparam_updates         <- ess_args$n_tparam_updates
             initdist_bracket_width   <- ess_args$initdist_bracket_width
             tparam_bracket_width     <- ess_args$tparam_bracket_width
             initdist_bracket_update  <- ess_args$initdist_bracket_update
@@ -183,9 +185,17 @@ stem_inference_ode <- function(stem_object,
             
             comp_probs <- 
                   if(!initializer[[s]]$fixed & !is.null(initializer[[s]]$prior)) {
-                        initializer[[s]]$prior / comp_size_vec[s]
+                        if(comp_size_vec[s] != 0) {
+                              initializer[[s]]$prior / comp_size_vec[s]
+                        } else {
+                              rep(0.0, length(initializer[[s]]$prior))
+                        }
                   } else {
-                        initializer[[s]]$init_states / comp_size_vec[s]
+                        if(comp_size_vec[s] != 0) {
+                              initializer[[s]]$prior / comp_size_vec[s]
+                        } else {
+                              rep(0.0, length(initializer[[s]]$init_states))
+                        }
                   }
             
             comp_mean <- comp_size_vec[s] * comp_probs
@@ -1080,12 +1090,14 @@ stem_inference_ode <- function(stem_object,
                               step_size            = step_size,
                               initdist_steps       = initdist_steps,
                               initdist_angle       = initdist_angle,
-                              initdist_bracket_width = initdist_bracket_width
+                              initdist_bracket_width = initdist_bracket_width,
+                              n_initdist_updates   = 1
                         )
                   }
                   
                   # update time varying parameters via elliptical slice sampling
                   if (!is.null(tparam)) {
+                        
                         update_tparam_ode(
                               tparam               = tparam,
                               path_cur             = path,
@@ -1115,7 +1127,8 @@ stem_inference_ode <- function(stem_object,
                               step_size            = step_size,
                               tparam_steps         = tparam_steps,
                               tparam_angle         = tparam_angle,
-                              tparam_bracket_width = tparam_bracket_width
+                              tparam_bracket_width = tparam_bracket_width,
+                              n_tparam_updates     = 1
                         )
                   }
                   
@@ -1954,7 +1967,8 @@ stem_inference_ode <- function(stem_object,
                         step_size            = step_size,
                         initdist_steps       = initdist_steps,
                         initdist_angle       = initdist_angle,
-                        initdist_bracket_width = initdist_bracket_width
+                        initdist_bracket_width = initdist_bracket_width,
+                        n_initdist_updates     = n_initdist_updates
                   )
                   
                   if((iter-1) <= initdist_bracket_update) {
@@ -2008,7 +2022,8 @@ stem_inference_ode <- function(stem_object,
                         step_size            = step_size,
                         tparam_steps         = tparam_steps,
                         tparam_angle         = tparam_angle,
-                        tparam_bracket_width = tparam_bracket_width
+                        tparam_bracket_width = tparam_bracket_width,
+                        n_tparam_updates     = n_tparam_updates
                   )
                   
                   if((iter-1) <= tparam_bracket_update) {
@@ -2402,7 +2417,8 @@ stem_inference_ode <- function(stem_object,
       }
       
       # ess_settings
-      ess_args <- ess_settings(n_ess_updates            = n_ess_updates,
+      ess_args <- ess_settings(n_initdist_updates       = n_initdist_updates,
+                               n_tparam_updates         = n_initdist_updates,
                                initdist_bracket_width   = initdist_bracket_width,
                                tparam_bracket_width     = tparam_bracket_width,
                                initdist_bracket_update  = initdist_bracket_update,

@@ -11,7 +11,7 @@ update_initdist_ode(initdist_objects, init_volumes_cur, init_volumes_prop,
   ode_initdist_inds, param_update_inds, census_indices, ode_event_inds,
   measproc_indmat, ode_pointer, ode_set_pars_pointer, d_meas_pointer,
   do_prevalence, step_size, initdist_steps, initdist_angle,
-  initdist_bracket_width)
+  initdist_bracket_width, n_initdist_updates)
 }
 \arguments{
 \item{path_cur}{list with the current path}

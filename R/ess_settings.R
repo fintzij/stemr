@@ -1,15 +1,15 @@
 #' Generates a list of settings for sampling the latent LNA paths and
 #' time-varying parameters via elliptical slice sampling.
 #'
-#' @param n_ess_updates number of elliptical slice sampling updates per MCMC
-#'   iteration, defaults to 1.
+#' @param n_ess_updates,n_initdist_updates,n_tparam_updates number of elliptical
+#'   slice sampling updates per MCMC iteration, defaults to 1.
 #' @param lna_bracket_width,initdist_bracket_width,tparam_bracket_widths width
 #'   of the elliptical slice sampling brackets, must be in (0,2*pi], and default
 #'   to 2*pi.
 #' @param lna_bracket_update,initdist_bracket_update,tparam_bracket_update
 #'   iterations at which the widths of the respective elliptical slice sampling
-#'   brackets should be shrunk, defaults to 0 and the bracket widths are
-#'   kept constant.
+#'   brackets should be shrunk, defaults to 0 and the bracket widths are kept
+#'   constant.
 #' @param lna_bracket_scaling,initdist_bracket_scaling,tparam_bracket_scaling
 #'   Scaling factors for elliptical slice sampling bracket widths. If brackets
 #'   are to be shrunk, the new width is set to the minimum of 2*pi or the
@@ -28,6 +28,8 @@
 #' @export
 ess_settings <-
       function(n_ess_updates = 1,
+               n_initdist_updates = 1,
+               n_tparam_updates = 1,
                lna_bracket_width = 2*pi,
                initdist_bracket_width = 2*pi,
                tparam_bracket_width = 2*pi,
@@ -54,6 +56,8 @@ ess_settings <-
             }
             
         return(list(n_ess_updates            = n_ess_updates,
+                    n_initdist_updates       = n_initdist_updates,
+                    n_tparam_updates         = n_tparam_updates,
                     lna_bracket_width        = lna_bracket_width,
                     initdist_bracket_width   = initdist_bracket_width,
                     tparam_bracket_width     = tparam_bracket_width,
