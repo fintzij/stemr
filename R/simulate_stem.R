@@ -236,17 +236,17 @@ simulate_stem <-
                               
                               for(s in seq_len(stem_object$dynamics$n_strata)) {
                                     
-                                    if(!stem_object$dynamics$state_initializer[[s]]$fixed) {
-                                          init_states[, stem_object$dynamics$state_initializer[[s]]$codes] <-
+                                    if(!stem_object$dynamics$initializer[[s]]$fixed) {
+                                          init_states[, stem_object$dynamics$initializer[[s]]$codes] <-
                                                 as.matrix(t(rmultinom(nsim,
                                                                       stem_object$dynamics$strata_sizes[s],
-                                                                      stem_object$dynamics$state_initializer[[s]]$prior)))
+                                                                      stem_object$dynamics$initializer[[s]]$prior)))
                                           
                                     } else {
-                                          init_states[, stem_object$dynamics$state_initializer[[s]]$codes] <-
-                                                matrix(as.numeric(stem_object$dynamics$state_initializer[[s]]$init_states),
+                                          init_states[, stem_object$dynamics$initializer[[s]]$codes] <-
+                                                matrix(as.numeric(stem_object$dynamics$initializer[[s]]$init_states),
                                                        nrow = nsim,
-                                                       ncol = length(stem_object$dynamics$state_initializer[[s]]$init_states),
+                                                       ncol = length(stem_object$dynamics$initializer[[s]]$init_states),
                                                        byrow = T)
                                     }
                               }
@@ -268,7 +268,7 @@ simulate_stem <-
                               init_dims <- c(n_rows = sum(stem_object$dynamics$popsize * stem_object$dynamics$n_compartments),
                                              n_cols = ncol(stem_object$dynamics$flow_matrix) + 2)
                         } else {
-                              init_dims <- c(n_rows = sum(stem_object$dynamics$strata_sizes * sapply(sapply(stem_object$dynamics$state_initializer, "[[", 4), length)),
+                              init_dims <- c(n_rows = sum(stem_object$dynamics$strata_sizes * sapply(sapply(stem_object$dynamics$initializer, "[[", 4), length)),
                                              n_cols = ncol(stem_object$dynamics$flow_matrix) + 2)
                               
                         }
@@ -277,7 +277,7 @@ simulate_stem <-
                               init_dims <- c(n_rows = sum(stem_object$dynamics$popsize * stem_object$dynamics$n_compartments) * 3,
                                              n_cols = ncol(stem_object$dynamics$flow_matrix) + 2)
                         } else if(stem_object$dynamics$n_strata > 1) {
-                              init_dims <- c(n_rows = sum(stem_object$dynamics$strata_sizes * sapply(sapply(stem_object$dynamics$state_initializer, "[[", 4), length)) * 3,
+                              init_dims <- c(n_rows = sum(stem_object$dynamics$strata_sizes * sapply(sapply(stem_object$dynamics$initializer, "[[", 4), length)) * 3,
                                              n_cols = ncol(stem_object$dynamics$flow_matrix) + 2)
                         }
                   }
@@ -553,33 +553,33 @@ simulate_stem <-
 
                                   for(s in seq_len(stem_object$dynamics$n_strata)) {
 
-                                          if(!stem_object$dynamics$state_initializer[[s]]$fixed) {
+                                          if(!stem_object$dynamics$initializer[[s]]$fixed) {
 
-                                                  init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <-
-                                                          stem_object$dynamics$strata_sizes[s] * extraDistr::rdirichlet(nsim, stem_object$dynamics$state_initializer[[s]]$prior)
+                                                  init_states[,stem_object$dynamics$initializer[[s]]$codes] <-
+                                                          stem_object$dynamics$strata_sizes[s] * extraDistr::rdirichlet(nsim, stem_object$dynamics$initializer[[s]]$prior)
 
                                           } else {
-                                                  init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <-
-                                                          matrix(as.numeric(stem_object$dynamics$state_initializer[[s]]$init_states),
+                                                  init_states[,stem_object$dynamics$initializer[[s]]$codes] <-
+                                                          matrix(as.numeric(stem_object$dynamics$initializer[[s]]$init_states),
                                                                  nrow = nsim,
-                                                                 ncol = length(stem_object$dynamics$state_initializer[[s]]$init_states),
+                                                                 ncol = length(stem_object$dynamics$initializer[[s]]$init_states),
                                                                  byrow = TRUE)
                                           }
                                   }
                           }
                   } else {
                           if(stem_object$dynamics$n_strata == 1) {
-                                  init_states <- matrix(rep(as.numeric(stem_object$dynamics$state_initializer$init_states), nsim), nrow = nsim, byrow = T)
+                                  init_states <- matrix(rep(as.numeric(stem_object$dynamics$initializer$init_states), nsim), nrow = nsim, byrow = T)
 
                           } else {
                                   init_states <- matrix(0.0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
                                   colnames(init_states) <- names(stem_object$dynamics$comp_codes)
 
                                   for(s in seq_len(stem_object$dynamics$n_strata)) {
-                                          init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <-
-                                                  matrix(as.numeric(stem_object$dynamics$state_initializer[[s]]$init_states),
+                                          init_states[,stem_object$dynamics$initializer[[s]]$codes] <-
+                                                  matrix(as.numeric(stem_object$dynamics$initializer[[s]]$init_states),
                                                          nrow = nsim,
-                                                         ncol = length(stem_object$dynamics$state_initializer[[s]]$init_states),
+                                                         ncol = length(stem_object$dynamics$initializer[[s]]$init_states),
                                                          byrow = TRUE)
                                   }
                           }
@@ -848,33 +848,33 @@ simulate_stem <-
 
                                   for(s in seq_len(stem_object$dynamics$n_strata)) {
 
-                                          if(!stem_object$dynamics$state_initializer[[s]]$fixed) {
+                                          if(!stem_object$dynamics$initializer[[s]]$fixed) {
 
-                                                  init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <-
-                                                          stem_object$dynamics$strata_sizes[s] * extraDistr::rdirichlet(nsim, stem_object$dynamics$state_initializer[[s]]$prior)
+                                                  init_states[,stem_object$dynamics$initializer[[s]]$codes] <-
+                                                          stem_object$dynamics$strata_sizes[s] * extraDistr::rdirichlet(nsim, stem_object$dynamics$initializer[[s]]$prior)
 
                                           } else {
-                                                  init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <-
-                                                          matrix(as.numeric(stem_object$dynamics$state_initializer[[s]]$init_states),
+                                                  init_states[,stem_object$dynamics$initializer[[s]]$codes] <-
+                                                          matrix(as.numeric(stem_object$dynamics$initializer[[s]]$init_states),
                                                                  nrow = nsim,
-                                                                 ncol = length(stem_object$dynamics$state_initializer[[s]]$init_states),
+                                                                 ncol = length(stem_object$dynamics$initializer[[s]]$init_states),
                                                                  byrow = TRUE)
                                           }
                                   }
                           }
                   } else {
                           if(stem_object$dynamics$n_strata == 1) {
-                                  init_states <- matrix(rep(as.numeric(stem_object$dynamics$state_initializer$init_states), nsim), nrow = nsim, byrow = T)
+                                  init_states <- matrix(rep(as.numeric(stem_object$dynamics$initializer$init_states), nsim), nrow = nsim, byrow = T)
 
                           } else {
                                   init_states <- matrix(0.0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
                                   colnames(init_states) <- names(stem_object$dynamics$comp_codes)
 
                                   for(s in seq_len(stem_object$dynamics$n_strata)) {
-                                          init_states[,stem_object$dynamics$state_initializer[[s]]$codes] <-
-                                                  matrix(as.numeric(stem_object$dynamics$state_initializer[[s]]$init_states),
+                                          init_states[,stem_object$dynamics$initializer[[s]]$codes] <-
+                                                  matrix(as.numeric(stem_object$dynamics$initializer[[s]]$init_states),
                                                          nrow = nsim,
-                                                         ncol = length(stem_object$dynamics$state_initializer[[s]]$init_states),
+                                                         ncol = length(stem_object$dynamics$initializer[[s]]$init_states),
                                                          byrow = TRUE)
                                   }
                           }
