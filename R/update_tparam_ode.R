@@ -43,6 +43,7 @@ update_tparam_ode <-
       step_count <- 1.0
 
       for(k in seq_len(n_tparam_updates)) {
+            
             # get the initial state parameters and census the ode path
             init_state <- ode_parameters[1, ode_initdist_inds + 1]
             
