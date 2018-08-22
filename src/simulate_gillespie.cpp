@@ -41,7 +41,9 @@ arma::mat simulate_gillespie(const arma::mat& flow,
                              const arma::mat& tcovar_changemat,
                              const Rcpp::IntegerVector init_dims,
                              const Rcpp::LogicalVector& forcing_inds,
-                             const arma::mat& forcing_matrix,
+                             const arma::uvec& forcing_tcov_inds,
+                             const arma::mat& forcings_out,
+                             const arma::cube& forcing_transfers,
                              SEXP rate_ptr) {
       
       // Get dimensions of various objects
@@ -51,6 +53,11 @@ arma::mat simulate_gillespie(const arma::mat& flow,
       flow_dims[1]    = flow.n_cols;
       tcovar_dims[0]  = tcovar.n_rows;
       tcovar_dims[1]  = tcovar.n_cols;
+      int n_forcings  = forcing_tcov_inds.n_elem;
+      
+      // for use with forcings
+      double forcing_flow = 0;
+      arma::vec forcing_distvec(init_dims[1]-2, arma::fill::zeros);
       
       // initialize bookkeeping matrix
       arma::mat path(init_dims[0], init_dims[1]);
@@ -79,7 +86,13 @@ arma::mat simulate_gillespie(const arma::mat& flow,
       
       // apply forcings if necessary
       if(forcing_inds[tcov_ind]) {
-            state = state + forcing_matrix.row(tcov_ind);
+            for(int j=0; j < n_forcings; ++j) {
+                  
+                  // distribute the forcings proportionally to the compartment counts in the applicable states
+                  forcing_flow = tcovar(tcov_ind, forcing_tcov_inds[j]);
+                  forcing_distvec = arma::round(forcing_flow * normalise(forcings_out.col(j) % state.t(), 1));
+                  state += (forcing_transfers.slice(j) * forcing_distvec).t();
+            }
       }
       
       // insert the initial time into the path matrix
@@ -128,7 +141,13 @@ arma::mat simulate_gillespie(const arma::mat& flow,
                         // apply forcings if necessary
                         if(forcing_inds[tcov_ind]) {
                               
-                              state += forcing_matrix.row(tcov_ind);
+                              for(int j=0; j < n_forcings; ++j) {
+                                    
+                                    // distribute the forcings proportionally to the compartment counts in the applicable states
+                                    forcing_flow = tcovar(tcov_ind, forcing_tcov_inds[j]);
+                                    forcing_distvec = arma::round(forcing_flow * normalise(forcings_out.col(j) % state.t(), 1));
+                                    state += (forcing_transfers.slice(j) * forcing_distvec).t();
+                              }
                               
                               // throw errors for negative volumes
                               try{
@@ -192,7 +211,7 @@ arma::mat simulate_gillespie(const arma::mat& flow,
             last_row(0) = t_max;
             last_row(1) = -1;
             path.insert_rows(path.n_rows, last_row);
-        }
-
-        return path;
+      }
+      
+      return path;
 }

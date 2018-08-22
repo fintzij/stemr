@@ -38,7 +38,9 @@ Rcpp::List integrate_odes(const arma::rowvec& ode_times,
                        const Rcpp::LogicalVector& param_update_inds,
                        const arma::mat& stoich_matrix,
                        const Rcpp::LogicalVector& forcing_inds,
-                       const arma::mat& forcing_matrix,
+                       const arma::uvec& forcing_tcov_inds,
+                       const arma::mat& forcings_out,
+                       const arma::cube& forcing_transfers,
                        double step_size,
                        SEXP ode_pointer,
                        SEXP set_pars_pointer) {
@@ -48,7 +50,12 @@ Rcpp::List integrate_odes(const arma::rowvec& ode_times,
         int n_comps  = stoich_matrix.n_rows;         // number of model compartments (all strata)
         int n_times  = ode_times.n_elem;             // number of times at which the ODEs must be evaluated
         int n_tcovar = ode_tcovar_inds.size();   // number of time-varying covariates or parameters
-
+        int n_forcings = forcing_tcov_inds.n_elem;   // number of forcings
+        
+        // for use with forcings
+        double forcing_flow = 0;
+        arma::vec forcing_distvec(n_comps, arma::fill::zeros);
+        
         // initialize the objects used in each time interval
         double t_L = 0;
         double t_R = 0;
@@ -70,7 +77,14 @@ Rcpp::List integrate_odes(const arma::rowvec& ode_times,
 
         // apply forcings if called for - applied after censusing at the first time
         if(forcing_inds[0]) {
-                init_volumes += forcing_matrix.col(0);
+              
+              // distribute the forcings proportionally to the compartment counts in the applicable states
+              for(int j=0; j < n_forcings; ++j) {
+                    
+                    forcing_flow       = ode_pars(0, forcing_tcov_inds[j]);
+                    forcing_distvec    = arma::round(forcing_flow * normalise(forcings_out.col(j) % init_volumes, 1));
+                    init_volumes      += forcing_transfers.slice(j) * forcing_distvec;
+              }
         }
 
         // iterate over the time sequence, solving the ODEs over each interval
@@ -93,7 +107,14 @@ Rcpp::List integrate_odes(const arma::rowvec& ode_times,
 
                 // apply forcings if called for - applied after censusing the path
                 if(forcing_inds[j+1]) {
-                        init_volumes += forcing_matrix.col(j+1);
+                      
+                      // distribute the forcings proportionally to the compartment counts in the applicable states
+                      for(int s=0; s < n_forcings; ++s) {
+                            
+                            forcing_flow       = ode_pars(j+1, forcing_tcov_inds[s]);
+                            forcing_distvec    = arma::round(forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1));
+                            init_volumes      += forcing_transfers.slice(s) * forcing_distvec;
+                      }
                 }
 
                 // ensure the initial volumes are non-negative

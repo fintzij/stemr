@@ -3,6 +3,7 @@
 
 #include <RcppArmadillo.h>
 #include <algorithm>
+#include <math.h>
 #include <boost/numeric/odeint.hpp>
 
 using namespace Rcpp;
@@ -155,10 +156,6 @@ void mat_2_arr(arma::cube& dest, const arma::mat& orig, int ind);
 void pars2lnapars(arma::mat& lnapars, const arma::rowvec& parameters);
 void pars2lnapars2(arma::mat& lnapars, const arma::rowvec& parameters, int c_start);
 void reset_vec(arma::vec& v, double value = 0);
-
-// normalise
-void normalise(arma::vec& v, int p);
-arma::vec normalise2(arma::vec& v, int p);
 
 // comp_chol
 void comp_chol(arma::mat& C, arma::mat& M);

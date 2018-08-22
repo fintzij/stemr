@@ -169,7 +169,7 @@ stem_inference_lna <- function(stem_object,
             tparam_angle_var   <- pi^2 / 3
             tparam_angle_resid <- 0
       }
-
+      
       # indices of parameters, constants, and time-varying covariates in the lna_params_* matrices
       lna_param_inds  <- 
             setdiff(stem_object$dynamics$param_codes, 
@@ -275,7 +275,7 @@ stem_inference_lna <- function(stem_object,
       
       # check that the functions to and from the estimation scale are 1:1
       if(!all.equal(unname(model_params_nat),
-               unname(from_estimation_scale(to_estimation_scale(model_params_nat))))) {
+                    unname(from_estimation_scale(to_estimation_scale(model_params_nat))))) {
             stop("The functions that transform parameters to and from their estimation scales must be inverses of one another.")
       }
       
@@ -462,7 +462,7 @@ stem_inference_lna <- function(stem_object,
                         
                         factor_update_interval <- afss_setting_list$factor_update_interval
                         factor_update_interval_fcn <- NULL
-                  
+                        
                   } else {
                         factor_update_interval_fcn <-
                               afss_setting_list$factor_update_interval
@@ -522,12 +522,12 @@ stem_inference_lna <- function(stem_object,
             
             # objects for saving the adaptation history
             kernel_cov_record <-
-                        array(0.0,
-                              dim = c(
-                                    n_model_params,
-                                    n_model_params,
-                                    floor(iterations / thin_params) + 1
-                              ))
+                  array(0.0,
+                        dim = c(
+                              n_model_params,
+                              n_model_params,
+                              floor(iterations / thin_params) + 1
+                        ))
             
             # save initial values for factors, weight
             kernel_cov_record[,,1]   <- kernel_cov
@@ -637,7 +637,7 @@ stem_inference_lna <- function(stem_object,
             
             # nugget
             nugget <- mcmc_kernel$kernel_settings$nugget
-
+            
             # basic parse parameter blocks
             if(is.null(mcmc_kernel$kernel_settings$parameter_blocks)) {
                   parameter_blocks <- 

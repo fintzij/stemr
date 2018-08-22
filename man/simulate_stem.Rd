@@ -5,11 +5,11 @@
 \title{Simulations from a stochastic epidemic model.}
 \usage{
 simulate_stem(stem_object, nsim = 1, simulation_parameters = NULL,
-  lna_draws = NULL, paths = FALSE, full_paths = FALSE,
-  observations = FALSE, subject_paths = FALSE, method = "gillespie",
-  tmax = NULL, census_times = NULL, max_attempts = 500,
-  lna_method = "exact", lna_bracket_width = 2 * pi, ess_warmup = 100,
-  messages = TRUE)
+  lna_draws = NULL, tparam_draws = NULL, tparam_values = NULL,
+  paths = FALSE, full_paths = FALSE, observations = FALSE,
+  subject_paths = FALSE, method = "gillespie", tmax = NULL,
+  census_times = NULL, max_attempts = 500, lna_method = "exact",
+  lna_bracket_width = 2 * pi, ess_warmup = 100, messages = TRUE)
 }
 \arguments{
 \item{stem_object}{stem object list}
@@ -21,6 +21,8 @@ parameters. If NULL, paths are simulated using the parameters specified in
 the stem object.}
 
 \item{lna_draws}{optional list of matrices of lna draws}
+
+\item{tparam_draws}{optional list of lists of time-varying parameter draws}
 
 \item{paths}{Should population-level paths at census times be returned?}
 

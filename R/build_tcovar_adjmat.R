@@ -14,6 +14,7 @@
 #'   time-varying covariate changes.
 #' @export
 build_tcovar_adjmat <- function(rates, tcovar_codes = NULL, forcings = NULL) {
+      
         tcovar_adjmat <- matrix(FALSE, ncol = length(tcovar_codes), nrow = length(rates))
         colnames(tcovar_adjmat) <- adjmat_names <- names(tcovar_codes)
         rownames(tcovar_adjmat) <- unlist(lapply(rates, function(x) paste0(x$from,"2",x$to)))
@@ -28,9 +29,11 @@ build_tcovar_adjmat <- function(rates, tcovar_codes = NULL, forcings = NULL) {
         if(!is.null(forcings)) {
               for(s in seq_along(forcings)) {
                     adj_col  <- which(colnames(tcovar_adjmat) == forcings[[s]]$tcovar_name)
-                    affected <- grepl(forcings[[s]]$from, rownames(tcovar_adjmat)) |
-                          grepl(forcings[[s]]$to, rownames(tcovar_adjmat))
-                    tcovar_adjmat[affected, adj_col] <- TRUE
+                    affected <- 
+                          sapply(forcings[[s]]$from, grepl, rownames(tcovar_adjmat)) | 
+                          sapply(forcings[[s]]$to, grepl, rownames(tcovar_adjmat))
+                          
+                    tcovar_adjmat[apply(affected, 1, any), adj_col] <- TRUE
               }
         }
 

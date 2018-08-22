@@ -471,8 +471,8 @@ insert_tparam <- function(tcovar, values, col_ind, tpar_inds) {
 #' @return List containing the ODE incidence and prevalence paths.
 #'
 #' @export
-integrate_odes <- function(ode_times, ode_pars, ode_param_inds, ode_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer) {
-    .Call(`_stemr_integrate_odes`, ode_times, ode_pars, ode_param_inds, ode_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer)
+integrate_odes <- function(ode_times, ode_pars, ode_param_inds, ode_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, step_size, ode_pointer, set_pars_pointer) {
+    .Call(`_stemr_integrate_odes`, ode_times, ode_pars, ode_param_inds, ode_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, step_size, ode_pointer, set_pars_pointer)
 }
 
 #' Convert an LNA path from the counting process on transition events to the
@@ -674,8 +674,8 @@ normalise2 <- function(v, p) {
 #' the LNA path on its natural scale which is determined by the perturbations.
 #'
 #' @export
-propose_lna_approx <- function(lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, ess_updates, ess_warmup, lna_bracket_width, step_size, lna_pointer, set_pars_pointer) {
-    .Call(`_stemr_propose_lna_approx`, lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, ess_updates, ess_warmup, lna_bracket_width, step_size, lna_pointer, set_pars_pointer)
+propose_lna_approx <- function(lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, max_attempts, ess_updates, ess_warmup, lna_bracket_width, step_size, lna_pointer, set_pars_pointer) {
+    .Call(`_stemr_propose_lna_approx`, lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, max_attempts, ess_updates, ess_warmup, lna_bracket_width, step_size, lna_pointer, set_pars_pointer)
 }
 
 #' Simulate an LNA path using a non-centered parameterization for the
@@ -703,8 +703,8 @@ propose_lna_approx <- function(lna_times, lna_draws, lna_pars, lna_param_inds, l
 #' the LNA path on its natural scale which is determined by the perturbations.
 #'
 #' @export
-propose_lna <- function(lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, step_size, lna_pointer, set_pars_pointer) {
-    .Call(`_stemr_propose_lna`, lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, max_attempts, step_size, lna_pointer, set_pars_pointer)
+propose_lna <- function(lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, max_attempts, step_size, lna_pointer, set_pars_pointer) {
+    .Call(`_stemr_propose_lna`, lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, max_attempts, step_size, lna_pointer, set_pars_pointer)
 }
 
 #' Identify which rates to update when a state transition event occurs.
@@ -784,8 +784,8 @@ retrieve_census_path <- function(censusmat, path, census_times, census_columns) 
 #'
 #' @return matrix with a simulated path from a stochastic epidemic model.
 #' @export
-simulate_gillespie <- function(flow, parameters, constants, tcovar, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, forcing_inds, forcing_matrix, rate_ptr) {
-    .Call(`_stemr_simulate_gillespie`, flow, parameters, constants, tcovar, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, forcing_inds, forcing_matrix, rate_ptr)
+simulate_gillespie <- function(flow, parameters, constants, tcovar, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, rate_ptr) {
+    .Call(`_stemr_simulate_gillespie`, flow, parameters, constants, tcovar, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, rate_ptr)
 }
 
 #' Simulate a data matrix from the measurement process of a stochastic epidemic

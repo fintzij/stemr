@@ -5,6 +5,7 @@
 #'   parameters. If NULL, paths are simulated using the parameters specified in
 #'   the stem object.
 #' @param lna_draws optional list of matrices of lna draws
+#' @param tparam_draws optional list of lists of time-varying parameter draws
 #' @param paths Should population-level paths at census times be returned?
 #' @param full_paths Should complete population level paths be returned (only
 #'   for Gillespie), defaults to FALSE
@@ -56,6 +57,8 @@ simulate_stem <-
                nsim = 1,
                simulation_parameters = NULL,
                lna_draws = NULL,
+               tparam_draws = NULL,
+               tparam_values = NULL,
                paths = FALSE,
                full_paths = FALSE,
                observations = FALSE,
@@ -104,6 +107,18 @@ simulate_stem <-
                   if(!all(sapply(simulation_parameters, function(x) all(names(x) == names(stem_object$dynamics$parameters))))) {
                         stop("The simulation parameters list must consist of named vectors with elements given in the same order as the parameters in the stem object.")
                   }
+            }
+            
+            if(!is.null(tparam_draws) & !is.null(tparam_values)) {
+                  warning("Draws and values for time varying parameters were both specified. Values will take precedence.")
+            }
+            
+            if(!is.null(tparam_draws) & length(tparam_draws) != nsim) {
+                  stop("The number of time varying parameter draw lists must be equal to the number of simulations.")
+            }
+            
+            if(!is.null(tparam_values) & length(tparam_values) != nsim) {
+                  stop("The number of time varying parameter value lists must be equal to the number of simulations.")
             }
             
             if(paths == observations) {
@@ -296,26 +311,43 @@ simulate_stem <-
                               names(stem_object$dynamics$incidence_codes)
                         ))
                   
-                  # generate forcings if they are specified
-                  forcing_matrix <- matrix(0.0,
-                                           nrow = nrow(stem_object$dynamics$tcovar),
-                                           ncol = length(path_colnames)-2,
-                                           dimnames = list(NULL, path_colnames[-c(1:2)]))
-                  
+                  # generate forcing matrix
                   if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
                         
-                        for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
+                        # names and indices
+                        forcing_tcovars   <- sapply(forcings, function(x) x$tcovar_name)
+                        forcing_tcov_inds <- match(forcing_tcovars, colnames(stem_object$dynamics$tcovar)) - 1
+                        forcing_events    <- c(sapply(forcings, function(x) paste0(x$from, "2", x$to)))
+                        
+                        # matrix indicating which compartments are involved in which forcings in and out
+                        forcings_out <- matrix(0.0, 
+                                               nrow = length(path_colnames) - 2, ncol = length(forcings),
+                                               dimnames = list(path_colnames[-c(1:2)], forcing_tcovars))
+                        
+                        forcing_transfers <- array(0.0, 
+                                                   dim = c(length(path_colnames)-2, length(path_colnames)-2, length(forcings)),
+                                                   dimnames = list(path_colnames[-c(1:2)], path_colnames[-c(1:2)], forcing_tcovars))
+                        
+                        for(s in seq_along(forcings)) {
                               
-                              # insert the flow into the forcing matrix
-                              forcing_matrix[forcing_inds, stem_object$dynamics$forcings[[l]]$from] <-
-                                    forcing_matrix[forcing_inds, stem_object$dynamics$forcings[[l]]$from] -
-                                    stem_object$dynamics$tcovar[forcing_inds, stem_object$dynamics$forcings[[l]]$tcovar_name]
+                              forcings_out[forcings[[s]]$from, s] <- 1
                               
-                              forcing_matrix[forcing_inds, stem_object$dynamics$forcings[[l]]$to] <-
-                                    forcing_matrix[forcing_inds, stem_object$dynamics$forcings[[l]]$to] +
-                                    stem_object$dynamics$tcovar[forcing_inds, stem_object$dynamics$forcings[[l]]$tcovar_name]
+                              for(t in seq_along(forcings[[s]]$from)) {
+                                    forcing_transfers[forcings[[s]]$from[t], forcings[[s]]$from[t], s] <- -1
+                                    forcing_transfers[forcings[[s]]$to[t], forcings[[s]]$from[t], s]    <- 1
+                              }
                         }
+                        
+                  } else {
+                        forcing_tcovars   <- character(0L)
+                        forcing_tcov_inds <- integer(0L)
+                        forcing_events    <- character(0L)
+                        forcings_out      <- matrix(0.0, nrow = 0, ncol = 0)
+                        forcing_transfers <- array(0.0, nrow = 0, ncol = 0)
                   }
+                  
+                  # vector of model parameters
+                  sim_pars <- stem_object$dynamics$parameters
                   
                   # tparam indices and initial values
                   if(!is.null(stem_object$dynamics$tparam)) {
@@ -330,9 +362,64 @@ simulate_stem <-
                         }
                         
                         # list for saving the time varying parameters for reuse in simulating a dataset in necessary
-                        tparam_draws <- vector("list", length = nsim)
                         tparam_times <- sort(unique(unlist(lapply(stem_object$dynamics$tparam, function(x) x$times))))
                         tparam_times <- tparam_times[tparam_times >= t0 & tparam_times <= tmax]
+                        
+                        if(is.null(tparam_values) & is.null(tparam_draws)) {
+                              
+                              tpar_list <- 
+                                    lapply(stem_object$dynamics$tparam, 
+                                           function(x) list(numeric(length(x$values))))
+                              tparam_draws  <- rep(tpar_list, nsim) 
+                              tparam_values <- rep(tpar_list, nsim)
+                              
+                              # compute the tparam values
+                              for(n in seq_len(nsim)) {
+                                    for(m in seq_along(stem_object$dynamics$tparam)) {
+                                          
+                                          # grab parameters
+                                          if(!is.null(simulation_parameters)) {
+                                                sim_pars <- as.numeric(simulation_parameters[[n]])
+                                          }
+                                          
+                                          # draw values
+                                          draw_normals(tparam_draws[[n]][[m]])
+                                          
+                                          # compute values
+                                          tparam_values[[n]][[m]] <- 
+                                                stem_object$dynamics$tparam[[m]]$draws2par(
+                                                      sim_pars,
+                                                      tparam_draws[[m]][[n]]
+                                                )
+                                    }
+                              }
+                              
+                        } else if(is.null(tparam_values) & !is.null(tparam_draws)) {
+                              
+                              tpar_list <- 
+                                    lapply(stem_object$dynamics$tparam, 
+                                           function(x) list(numeric(length(x$values))))
+                              tparam_values <- rep(tpar_list, nsim)
+                              
+                              # compute the tparam values
+                              for(n in seq_len(nsim)) {
+                                    for(m in seq_along(stem_object$dynamics$tparam)) {
+                                          
+                                          # grab parameters
+                                          if(!is.null(simulation_parameters)) {
+                                                sim_pars <- as.numeric(simulation_parameters[[n]])
+                                          }
+                                          
+                                          # compute values
+                                          tparam_values[[n]][[m]] <- 
+                                                stem_object$dynamics$tparam[[m]]$draws2par(
+                                                      sim_pars,
+                                                      tparam_draws[[m]][[n]]
+                                                )
+                                    }
+                              }
+                        }
+                        
                   } else {
                         tparam_draws <- NULL
                         tparam_times <- NULL
@@ -355,9 +442,6 @@ simulate_stem <-
                                                      length(stem_object$dynamics$incidence_codes))
                   }
                   
-                  # vector of model parameters
-                  sim_pars <- stem_object$dynamics$parameters
-                  
                   for(k in seq_len(nsim)) {
                         
                         attempt <- 0
@@ -371,36 +455,31 @@ simulate_stem <-
                         if(!is.null(stem_object$dynamics$tparam)) {
                               for(s in seq_along(stem_object$dynamics$tparam)) {
                                     
-                                    #draw new values
-                                    draw_normals(stem_object$dynamics$tparam[[s]]$values)
-                                    
                                     # insert the new values into the tcovar matrix
                                     insert_tparam(tcovar = stem_object$dynamics$tcovar, 
-                                                  values = stem_object$dynamics$tparam[[s]]$draws2par(
-                                                        sim_pars, 
-                                                        stem_object$dynamics$tparam[[s]]$values),
+                                                  values = tparam_values[[k]][[s]],
                                                   col_ind   = stem_object$dynamics$tparam[[s]]$col_ind,
                                                   tpar_inds = stem_object$dynamics$tparam[[s]]$tpar_inds)
                                     
                               }
-                              
-                              tparam_draws[[k]] <- lapply(stem_object$dynamics$tparam, function(x) x$values)
                         }
                         
                         while(is.null(path_full) & attempt < max_attempts) {
                               try({
-                                    path_full <- simulate_gillespie(flow             = stem_object$dynamics$flow_matrix,
-                                                                    parameters       = sim_pars,
-                                                                    constants        = stem_object$dynamics$constants,
-                                                                    tcovar           = stem_object$dynamics$tcovar,
-                                                                    init_states      = init_states[k,],
-                                                                    rate_adjmat      = stem_object$dynamics$rate_adjmat,
-                                                                    tcovar_adjmat    = stem_object$dynamics$tcovar_adjmat,
-                                                                    tcovar_changemat = stem_object$dynamics$tcovar_changemat,
-                                                                    init_dims        = init_dims,
-                                                                    forcing_inds     = forcing_inds,
-                                                                    forcing_matrix   = forcing_matrix,
-                                                                    rate_ptr         = stem_object$dynamics$rate_ptrs[[1]])
+                                    path_full <- simulate_gillespie(flow              = stem_object$dynamics$flow_matrix,
+                                                                    parameters        = sim_pars,
+                                                                    constants         = stem_object$dynamics$constants,
+                                                                    tcovar            = stem_object$dynamics$tcovar,
+                                                                    init_states       = init_states[k,],
+                                                                    rate_adjmat       = stem_object$dynamics$rate_adjmat,
+                                                                    tcovar_adjmat     = stem_object$dynamics$tcovar_adjmat,
+                                                                    tcovar_changemat  = stem_object$dynamics$tcovar_changemat,
+                                                                    init_dims         = init_dims,
+                                                                    forcing_inds      = forcing_inds,
+                                                                    forcing_tcov_inds = forcing_tcov_inds,
+                                                                    forcings_out      = forcings_out,
+                                                                    forcing_transfers = forcing_transfers,
+                                                                    rate_ptr          = stem_object$dynamics$rate_ptrs[[1]])
                               }, silent = TRUE)
                               attempt <- attempt + 1
                         }
@@ -482,11 +561,12 @@ simulate_stem <-
 
                           # zero out forcings if necessary
                           if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
-
+                                
                                   # get the forcing indices (supplied in the original tcovar matrix)
-                                  forcing_inds <- as.logical(match(round(lna_times, digits = 8),
-                                                                   round(stem_object$dynamics$dynamics_args$tcovar[,1], digits = 8),
-                                                                   nomatch = FALSE))
+                                  for(f in seq_along(stem_object$dynamics$forcings)) {
+                                        forcing_inds <- forcing_inds | stem_object$dynamics$tcovar[,stem_object$dynamics$forcings[[f]]$tcovar_name] != 0
+                                  }
+
                                   zero_inds    <- !forcing_inds
 
                                   # zero out the tcovar elements corresponding to times with no forcings
@@ -495,6 +575,9 @@ simulate_stem <-
                                   }
                           }
                   }
+                  
+                  # grab parameters
+                  sim_pars  <- stem_object$dynamics$parameters[parameter_inds+1]
                   
                   # tparam indices and initial values
                   if(!is.null(stem_object$dynamics$tparam)) {
@@ -509,12 +592,67 @@ simulate_stem <-
                         }
                         
                         # list for saving the time varying parameters for reuse in simulating a dataset in necessary
-                        tparam_draws <- vector("list", length = nsim)
                         tparam_times <- sort(unique(unlist(lapply(stem_object$dynamics$tparam, function(x) x$times))))
                         tparam_times <- tparam_times[tparam_times >= t0 & tparam_times <= tmax]
                         
+                        if(is.null(tparam_values) & is.null(tparam_draws)) {
+                              
+                              tpar_list <- 
+                                    lapply(stem_object$dynamics$tparam, 
+                                           function(x) list(numeric(length(x$values))))
+                              tparam_draws  <- rep(tpar_list, nsim) 
+                              tparam_values <- rep(tpar_list, nsim)
+                              
+                              # compute the tparam values
+                              for(n in seq_len(nsim)) {
+                                    for(m in seq_along(stem_object$dynamics$tparam)) {
+                                          
+                                          # grab parameters
+                                          if(!is.null(simulation_parameters)) {
+                                                sim_pars <- as.numeric(simulation_parameters[[n]])
+                                          }
+                                          
+                                          # draw values
+                                          draw_normals(tparam_draws[[n]][[m]])
+                                          
+                                          # compute values
+                                          tparam_values[[n]][[m]] <- 
+                                                stem_object$dynamics$tparam[[m]]$draws2par(
+                                                      sim_pars,
+                                                      tparam_draws[[m]][[n]]
+                                                )
+                                    }
+                              }
+                              
+                        } else if(is.null(tparam_values) & !is.null(tparam_draws)) {
+                              
+                              tpar_list <- 
+                                    lapply(stem_object$dynamics$tparam, 
+                                           function(x) list(numeric(length(x$values))))
+                              tparam_values <- rep(tpar_list, nsim)
+                              
+                              # compute the tparam values
+                              for(n in seq_len(nsim)) {
+                                    for(m in seq_along(stem_object$dynamics$tparam)) {
+                                          
+                                          # grab parameters
+                                          if(!is.null(simulation_parameters)) {
+                                                sim_pars <- as.numeric(simulation_parameters[[n]])
+                                          }
+                                          
+                                          # compute values
+                                          tparam_values[[n]][[m]] <- 
+                                                stem_object$dynamics$tparam[[m]]$draws2par(
+                                                      sim_pars,
+                                                      tparam_draws[[m]][[n]]
+                                                )
+                                    }
+                              }
+                        }
+                        
                   } else {
                         tparam_draws <- NULL
+                        tparam_values <- NULL
                         tparam_times <- NULL
                   }
 
@@ -536,93 +674,150 @@ simulate_stem <-
                   
                   # retrieve the initial state
                   init_state <- lna_pars[1, stem_object$dynamics$lna_initdist_inds + 1]
+                  
+                  # object for sampling initial states
+                  n_strata <- stem_object$dynamics$n_strata
+                  initializer <- stem_object$dynamics$initializer
+                  initdist_objects <- vector("list", length = stem_object$dynamics$n_strata)
+                  
+                  if(n_strata == 1) {
+                        comp_size_vec <- stem_object$dynamics$constants["popsize"]
+                  } else {
+                        comp_size_vec <- stem_object$dynamics$constants[paste0("popsize_", sapply(initializer,"[[","strata"))]
+                  }
+                  
+                  for(t in seq_len(stem_object$dynamics$n_strata)) {
+                        
+                        comp_probs <- 
+                              if(!initializer[[t]]$fixed & !is.null(initializer[[t]]$prior)) {
+                                    if(comp_size_vec[t] != 0) {
+                                          initializer[[t]]$prior / comp_size_vec[t]
+                                    } else {
+                                          rep(0.0, length(initializer[[t]]$prior))
+                                    }
+                              } else {
+                                    if(comp_size_vec[t] != 0) {
+                                          initializer[[t]]$prior / comp_size_vec[t]
+                                    } else {
+                                          rep(0.0, length(initializer[[t]]$init_states))
+                                    }
+                              }
+                        
+                        comp_mean <- comp_size_vec[t] * comp_probs
+                        comp_cov <- comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs))
+                        comp_cov_svd <- svd(comp_cov)
+                        comp_cov_svd$d[length(comp_cov_svd$d)] <- 0
+                        comp_sqrt_cov <- comp_cov_svd$u %*% diag(sqrt(comp_cov_svd$d))
+                        
+                        initdist_objects[[t]] <- 
+                              list(
+                                    fixed         = initializer[[t]]$fixed,
+                                    comp_size     = comp_size_vec[t],
+                                    comp_mean     = comp_mean,
+                                    comp_sqrt_cov = comp_sqrt_cov[,-length(comp_mean)],
+                                    draws_cur     = rep(0.0, length(comp_mean) - 1),
+                                    draws_prop    = rep(0.0, length(comp_mean) - 1),
+                                    draws_ess     = rep(0.0, length(comp_mean) - 1),
+                                    comp_inds_R   = initializer[[t]]$codes,
+                                    comp_inds_Cpp = initializer[[t]]$codes - 1
+                              )
+                  }
+                  
+                  # matrix of initial states
+                  if(stem_object$dynamics$n_strata == 1) {
+                        init_states <- matrix(rep(as.numeric(stem_object$dynamics$initializer$init_states), nsim), nrow = nsim, byrow = T)
+                        
+                  } else {
+                        init_states <- matrix(0.0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
+                        colnames(init_states) <- names(stem_object$dynamics$comp_codes)
+                        
+                        for(s in seq_len(stem_object$dynamics$n_strata)) {
+                              init_states[,stem_object$dynamics$initializer[[s]]$codes] <-
+                                    matrix(as.numeric(stem_object$dynamics$initializer[[s]]$init_states),
+                                           nrow = nsim,
+                                           ncol = length(stem_object$dynamics$initializer[[s]]$init_states),
+                                           byrow = TRUE)
+                        }
+                  }
 
                   # if the initial state is not fixed, sample the collection of initial states
                   if(!stem_object$dynamics$fixed_inits) {
-                          if(stem_object$dynamics$n_strata == 1) {
-
-                                  # simulate the initial compartment counts
-                                  init_states <- stem_object$dynamics$popsize * extraDistr::rdirichlet(nsim, stem_object$dynamics$initdist_priors)
-                                  colnames(init_states) <- names(stem_object$dynamics$comp_codes)
-
-                          } else if(stem_object$dynamics$n_strata > 1) {
-
-                                  # generate the matrix of initial compartment counts
-                                  init_states <- matrix(0.0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
-                                  colnames(init_states) <- names(stem_object$dynamics$comp_codes)
-
-                                  for(s in seq_len(stem_object$dynamics$n_strata)) {
-
-                                          if(!stem_object$dynamics$initializer[[s]]$fixed) {
-
-                                                  init_states[,stem_object$dynamics$initializer[[s]]$codes] <-
-                                                          stem_object$dynamics$strata_sizes[s] * extraDistr::rdirichlet(nsim, stem_object$dynamics$initializer[[s]]$prior)
-
-                                          } else {
-                                                  init_states[,stem_object$dynamics$initializer[[s]]$codes] <-
-                                                          matrix(as.numeric(stem_object$dynamics$initializer[[s]]$init_states),
-                                                                 nrow = nsim,
-                                                                 ncol = length(stem_object$dynamics$initializer[[s]]$init_states),
-                                                                 byrow = TRUE)
+                              
+                        for(n in seq_len(nsim)) {
+                              
+                              for(s in seq_along(initdist_objects)) {
+                                    
+                                    if(!initdist_objects[[s]]$fixed) {
+                                          
+                                          # N(0,1) draws
+                                          draw_normals(initdist_objects[[s]]$draws_cur)
+                                          
+                                          # map to volumes
+                                          copy_vec2(dest = init_state,
+                                                    orig = initdist_objects[[s]]$comp_mean + 
+                                                          initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur,
+                                                    inds = initdist_objects[[s]]$comp_inds_Cpp) 
+                                          
+                                          while(any(init_state[initdist_objects[[s]]$comp_inds_R] < 0) | 
+                                                any(init_state[initdist_objects[[s]]$comp_inds_R] > initdist_objects[[s]]$comp_size)) {
+                                                
+                                                # N(0,1) draws
+                                                draw_normals(initdist_objects[[s]]$draws_cur)
+                                                
+                                                # map to volumes
+                                                copy_vec2(dest = init_state,
+                                                          orig = initdist_objects[[s]]$comp_mean + 
+                                                                 initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur,
+                                                          inds = initdist_objects[[s]]$comp_inds_Cpp) 
                                           }
-                                  }
-                          }
-                  } else {
-                          if(stem_object$dynamics$n_strata == 1) {
-                                  init_states <- matrix(rep(as.numeric(stem_object$dynamics$initializer$init_states), nsim), nrow = nsim, byrow = T)
-
-                          } else {
-                                  init_states <- matrix(0.0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
-                                  colnames(init_states) <- names(stem_object$dynamics$comp_codes)
-
-                                  for(s in seq_len(stem_object$dynamics$n_strata)) {
-                                          init_states[,stem_object$dynamics$initializer[[s]]$codes] <-
-                                                  matrix(as.numeric(stem_object$dynamics$initializer[[s]]$init_states),
-                                                         nrow = nsim,
-                                                         ncol = length(stem_object$dynamics$initializer[[s]]$init_states),
-                                                         byrow = TRUE)
-                                  }
-                          }
-                  }
-
-                  # generate forcings if they are specified
-                  forcing_matrix <- matrix(0.0,
-                                           nrow = length(lna_times),
-                                           ncol = length(stem_object$dynamics$comp_codes),
-                                           dimnames = list(NULL, names(stem_object$dynamics$comp_codes)))
-
+                                    }
+                              }  
+                              
+                              # save to initdist matrix
+                              init_states[n, ] <- c(init_state)
+                        }
+                  } 
+                  
+                  # generate forcing matrix
                   if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
-
-                          for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
-
-                                  # insert the flow into the forcing matrix
-                                  forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$from] <-
-                                          forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$from] -
-                                          stem_object$dynamics$dynamics_args$tcovar[, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]
-
-                                  forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$to] <-
-                                          forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$to] +
-                                          stem_object$dynamics$dynamics_args$tcovar[, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]
-
-                                  # update the adjacency matrix to indicate which rates need to be updated
-                                  affected_rates <- rep(FALSE, nrow(stem_object$dynamics$tcovar_adjmat))
-
-                                  for(n in seq_along(stem_object$dynamics$rates)) {
-                                          affected_rates[n] = grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$from,
-                                                                    stem_object$dynamics$rates[[n]]$unparsed) |
-                                                  grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$to,
-                                                        stem_object$dynamics$rates[[n]]$unparsed)
-                                  }
-
-                                  stem_object$dynamics$tcovar_adjmat[,stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] <-
-                                          xor(stem_object$dynamics$tcovar_adjmat[,stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name],
-                                              affected_rates)
-                          }
+                        
+                        # names and indices
+                        forcing_tcovars   <- sapply(forcings, function(x) x$tcovar_name)
+                        forcing_tcov_inds <- match(forcing_tcovars, colnames(lna_pars)) - 1
+                        forcing_events    <- c(sapply(forcings, function(x) paste0(x$from, "2", x$to)))
+                        
+                        # matrix indicating which compartments are involved in which forcings in and out
+                        forcings_out <- matrix(0.0, 
+                                               nrow = ncol(stem_object$dynamics$flow_matrix_lna), ncol = length(forcings),
+                                               dimnames = list(colnames(stem_object$dynamics$flow_matrix_lna), forcing_tcovars))
+                        
+                        forcing_transfers <- array(0.0, 
+                                                   dim = c(ncol(stem_object$dynamics$flow_matrix_lna),
+                                                           ncol(stem_object$dynamics$flow_matrix_lna),
+                                                           length(forcings)),
+                                                   dimnames = list(colnames(stem_object$dynamics$flow_matrix_lna),
+                                                                   colnames(stem_object$dynamics$flow_matrix_lna),
+                                                                   forcing_tcovars))
+                        
+                        for(s in seq_along(forcings)) {
+                              
+                              forcings_out[forcings[[s]]$from, s] <- 1
+                              
+                              for(t in seq_along(forcings[[s]]$from)) {
+                                    forcing_transfers[forcings[[s]]$from[t], forcings[[s]]$from[t], s] <- -1
+                                    forcing_transfers[forcings[[s]]$to[t], forcings[[s]]$from[t], s]    <- 1
+                              }
+                        }
+                        
+                  } else {
+                        forcing_tcovars   <- character(0L)
+                        forcing_tcov_inds <- integer(0L)
+                        forcing_events    <- character(0L)
+                        forcings_out      <- matrix(0.0, nrow = 0, ncol = 0)
+                        forcing_transfers <- array(0.0, nrow = 0, ncol = 0)
                   }
 
-                  forcing_matrix <- t(forcing_matrix)
-
-                  sim_pars  <- stem_object$dynamics$parameters[parameter_inds+1]
+                  # initialize the volumes and prevalence indices
                   init_vols <- init_states[1,]
                   prev_inds <- match(round(census_times, digits = 8), round(lna_times, digits = 8))
                   
@@ -643,18 +838,12 @@ simulate_stem <-
                         if(!is.null(stem_object$dynamics$tparam)) {
                               for(s in seq_along(stem_object$dynamics$tparam)) {
                                     
-                                    #draw new values
-                                    draw_normals(stem_object$dynamics$tparam[[s]]$values)
-                                    
                                     # insert the new values into the tcovar matrix
                                     insert_tparam(tcovar    = lna_pars, 
-                                                  values    = stem_object$dynamics$tparam[[s]]$draws2par(stem_object$dynamics$parameters,
-                                                                                                         stem_object$dynamics$tparam[[s]]$values),
+                                                  values    = tparam_values[[k]][[s]],
                                                   col_ind   = stem_object$dynamics$tparam[[s]]$col_ind,
                                                   tpar_inds = stem_object$dynamics$tparam[[s]]$tpar_inds)
                               }
-                              
-                              tparam_draws[[k]] <- lapply(stem_object$dynamics$tparam, function(x) x$values)
                         }
                         
                         attempt <- 0
@@ -672,7 +861,9 @@ simulate_stem <-
                                                               param_update_inds = param_update_inds,
                                                               stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
                                                               forcing_inds      = forcing_inds,
-                                                              forcing_matrix    = forcing_matrix,
+                                                              forcing_tcov_inds = forcing_tcov_inds,
+                                                              forcings_out      = forcings_out,
+                                                              forcing_transfers = forcing_transfers,
                                                               step_size         = stem_object$dynamics$dynamics_args$step_size,
                                                               max_attempts      = max_attempts,
                                                               lna_pointer       = stem_object$dynamics$lna_pointers$lna_ptr,
@@ -691,6 +882,7 @@ simulate_stem <-
                                     }
                                     
                               } else if(lna_method == "approx") {
+                                    
                                     try({
                                           path <- propose_lna_approx(lna_times         = lna_times,
                                                                      lna_draws         = lna_draws[[k]],
@@ -701,7 +893,9 @@ simulate_stem <-
                                                                      param_update_inds = param_update_inds,
                                                                      stoich_matrix     = stem_object$dynamics$stoich_matrix_lna,
                                                                      forcing_inds      = forcing_inds,
-                                                                     forcing_matrix    = forcing_matrix,
+                                                                     forcing_tcov_inds = forcing_tcov_inds,
+                                                                     forcings_out      = forcings_out,
+                                                                     forcing_transfers = forcing_transfers,
                                                                      step_size         = stem_object$dynamics$dynamics_args$step_size,
                                                                      max_attempts      = max_attempts,
                                                                      ess_updates       = 1, 
@@ -779,19 +973,23 @@ simulate_stem <-
 
                           # zero out forcings if necessary
                           if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
-
-                                  # get the forcing indices (supplied in the original tcovar matrix)
-                                  forcing_inds <- as.logical(match(round(ode_times, digits = 8),
-                                                                   round(stem_object$dynamics$dynamics_args$tcovar[,1], digits = 8),
-                                                                   nomatch = FALSE))
-                                  zero_inds    <- !forcing_inds
-
-                                  # zero out the tcovar elements corresponding to times with no forcings
-                                  for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
-                                          ode_pars[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] = 0
-                                  }
+                                
+                                # get the forcing indices (supplied in the original tcovar matrix)
+                                for(f in seq_along(stem_object$dynamics$forcings)) {
+                                      forcing_inds <- forcing_inds | stem_object$dynamics$tcovar[,stem_object$dynamics$forcings[[f]]$tcovar_name] != 0
+                                }
+                                
+                                zero_inds    <- !forcing_inds
+                                
+                                # zero out the tcovar elements corresponding to times with no forcings
+                                for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
+                                      ode_pars[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] = 0
+                                }
                           }
                   }
+                  
+                  # get parameters
+                  sim_pars  <- stem_object$dynamics$parameters[parameter_inds+1]
                   
                   # tparam indices and initial values
                   if(!is.null(stem_object$dynamics$tparam)) {
@@ -806,9 +1004,64 @@ simulate_stem <-
                         }
                         
                         # list for saving the time varying parameters for reuse in simulating a dataset in necessary
-                        tparam_draws <- vector("list", length = nsim)
                         tparam_times <- sort(unique(unlist(lapply(stem_object$dynamics$tparam, function(x) x$times))))
                         tparam_times <- tparam_times[tparam_times >= t0 & tparam_times <= tmax]
+                        
+                        if(is.null(tparam_values) & is.null(tparam_draws)) {
+                              
+                              tpar_list <- 
+                                    lapply(stem_object$dynamics$tparam, 
+                                           function(x) list(numeric(length(x$values))))
+                              tparam_draws  <- rep(tpar_list, nsim) 
+                              tparam_values <- rep(tpar_list, nsim)
+                              
+                              # compute the tparam values
+                              for(n in seq_len(nsim)) {
+                                    for(m in seq_along(stem_object$dynamics$tparam)) {
+                                          
+                                          # grab parameters
+                                          if(!is.null(simulation_parameters)) {
+                                                sim_pars <- as.numeric(simulation_parameters[[n]])
+                                          }
+                                          
+                                          # draw values
+                                          draw_normals(tparam_draws[[n]][[m]])
+                                          
+                                          # compute values
+                                          tparam_values[[n]][[m]] <- 
+                                                stem_object$dynamics$tparam[[m]]$draws2par(
+                                                      sim_pars,
+                                                      tparam_draws[[m]][[n]]
+                                                )
+                                    }
+                              }
+                              
+                        } else if(is.null(tparam_values) & !is.null(tparam_draws)) {
+                              
+                              tpar_list <- 
+                                    lapply(stem_object$dynamics$tparam, 
+                                           function(x) list(numeric(length(x$values))))
+                              tparam_values <- rep(tpar_list, nsim)
+                              
+                              # compute the tparam values
+                              for(n in seq_len(nsim)) {
+                                    for(m in seq_along(stem_object$dynamics$tparam)) {
+                                          
+                                          # grab parameters
+                                          if(!is.null(simulation_parameters)) {
+                                                sim_pars <- as.numeric(simulation_parameters[[n]])
+                                          }
+                                          
+                                          # compute values
+                                          tparam_values[[n]][[m]] <- 
+                                                stem_object$dynamics$tparam[[m]]$draws2par(
+                                                      sim_pars,
+                                                      tparam_draws[[m]][[n]]
+                                                )
+                                    }
+                              }
+                        }
+                        
                   } else {
                         tparam_draws <- NULL
                         tparam_times <- NULL
@@ -831,91 +1084,148 @@ simulate_stem <-
 
                   # retrieve the initial state
                   init_state <- ode_pars[1, stem_object$dynamics$ode_initdist_inds + 1]
-
+                  
+                  # object for sampling initial states
+                  n_strata <- stem_object$dynamics$n_strata
+                  initializer <- stem_object$dynamics$initializer
+                  initdist_objects <- vector("list", length = stem_object$dynamics$n_strata)
+                  
+                  if(n_strata == 1) {
+                        comp_size_vec <- stem_object$dynamics$constants["popsize"]
+                  } else {
+                        comp_size_vec <- stem_object$dynamics$constants[paste0("popsize_", sapply(initializer,"[[","strata"))]
+                  }
+                  
+                  for(t in seq_len(stem_object$dynamics$n_strata)) {
+                        
+                        comp_probs <- 
+                              if(!initializer[[t]]$fixed & !is.null(initializer[[t]]$prior)) {
+                                    if(comp_size_vec[t] != 0) {
+                                          initializer[[t]]$prior / comp_size_vec[t]
+                                    } else {
+                                          rep(0.0, length(initializer[[t]]$prior))
+                                    }
+                              } else {
+                                    if(comp_size_vec[t] != 0) {
+                                          initializer[[t]]$prior / comp_size_vec[t]
+                                    } else {
+                                          rep(0.0, length(initializer[[t]]$init_states))
+                                    }
+                              }
+                        
+                        comp_mean <- comp_size_vec[t] * comp_probs
+                        comp_cov <- comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs))
+                        comp_cov_svd <- svd(comp_cov)
+                        comp_cov_svd$d[length(comp_cov_svd$d)] <- 0
+                        comp_sqrt_cov <- comp_cov_svd$u %*% diag(sqrt(comp_cov_svd$d))
+                        
+                        initdist_objects[[t]] <- 
+                              list(
+                                    fixed         = initializer[[t]]$fixed,
+                                    comp_size     = comp_size_vec[t],
+                                    comp_mean     = comp_mean,
+                                    comp_sqrt_cov = comp_sqrt_cov[,-length(comp_mean)],
+                                    draws_cur     = rep(0.0, length(comp_mean) - 1),
+                                    draws_prop    = rep(0.0, length(comp_mean) - 1),
+                                    draws_ess     = rep(0.0, length(comp_mean) - 1),
+                                    comp_inds_R   = initializer[[t]]$codes,
+                                    comp_inds_Cpp = initializer[[t]]$codes - 1
+                              )
+                  }
+                  
+                  # matrix of initial states
+                  if(stem_object$dynamics$n_strata == 1) {
+                        init_states <- matrix(rep(as.numeric(stem_object$dynamics$initializer$init_states), nsim), nrow = nsim, byrow = T)
+                        
+                  } else {
+                        init_states <- matrix(0.0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
+                        colnames(init_states) <- names(stem_object$dynamics$comp_codes)
+                        
+                        for(s in seq_len(stem_object$dynamics$n_strata)) {
+                              init_states[,stem_object$dynamics$initializer[[s]]$codes] <-
+                                    matrix(as.numeric(stem_object$dynamics$initializer[[s]]$init_states),
+                                           nrow = nsim,
+                                           ncol = length(stem_object$dynamics$initializer[[s]]$init_states),
+                                           byrow = TRUE)
+                        }
+                  }
+                  
                   # if the initial state is not fixed, sample the collection of initial states
                   if(!stem_object$dynamics$fixed_inits) {
-                          if(stem_object$dynamics$n_strata == 1) {
-
-                                  # simulate the initial compartment counts
-                                  init_states <- stem_object$dynamics$popsize * extraDistr::rdirichlet(nsim, stem_object$dynamics$initdist_priors)
-                                  colnames(init_states) <- names(stem_object$dynamics$comp_codes)
-
-                          } else if(stem_object$dynamics$n_strata > 1) {
-
-                                  # generate the matrix of initial compartment counts
-                                  init_states <- matrix(0.0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
-                                  colnames(init_states) <- names(stem_object$dynamics$comp_codes)
-
-                                  for(s in seq_len(stem_object$dynamics$n_strata)) {
-
-                                          if(!stem_object$dynamics$initializer[[s]]$fixed) {
-
-                                                  init_states[,stem_object$dynamics$initializer[[s]]$codes] <-
-                                                          stem_object$dynamics$strata_sizes[s] * extraDistr::rdirichlet(nsim, stem_object$dynamics$initializer[[s]]$prior)
-
-                                          } else {
-                                                  init_states[,stem_object$dynamics$initializer[[s]]$codes] <-
-                                                          matrix(as.numeric(stem_object$dynamics$initializer[[s]]$init_states),
-                                                                 nrow = nsim,
-                                                                 ncol = length(stem_object$dynamics$initializer[[s]]$init_states),
-                                                                 byrow = TRUE)
+                        
+                        for(n in seq_len(nsim)) {
+                              
+                              for(s in seq_along(initdist_objects)) {
+                                    
+                                    if(!initdist_objects[[s]]$fixed) {
+                                          
+                                          # N(0,1) draws
+                                          draw_normals(initdist_objects[[s]]$draws_cur)
+                                          
+                                          # map to volumes
+                                          copy_vec2(dest = init_state,
+                                                    orig = initdist_objects[[s]]$comp_mean + 
+                                                          initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur,
+                                                    inds = initdist_objects[[s]]$comp_inds_Cpp) 
+                                          
+                                          while(any(init_state[initdist_objects[[s]]$comp_inds_R] < 0) | 
+                                                any(init_state[initdist_objects[[s]]$comp_inds_R] > initdist_objects[[s]]$comp_size)) {
+                                                
+                                                # N(0,1) draws
+                                                draw_normals(initdist_objects[[s]]$draws_cur)
+                                                
+                                                # map to volumes
+                                                copy_vec2(dest = init_state,
+                                                          orig = initdist_objects[[s]]$comp_mean + 
+                                                                initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur,
+                                                          inds = initdist_objects[[s]]$comp_inds_Cpp) 
                                           }
-                                  }
-                          }
-                  } else {
-                          if(stem_object$dynamics$n_strata == 1) {
-                                  init_states <- matrix(rep(as.numeric(stem_object$dynamics$initializer$init_states), nsim), nrow = nsim, byrow = T)
+                                    }
+                              }  
+                              
+                              # save to initdist matrix
+                              init_states[n, ] <- c(init_state)
+                        }
+                  } 
 
-                          } else {
-                                  init_states <- matrix(0.0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
-                                  colnames(init_states) <- names(stem_object$dynamics$comp_codes)
-
-                                  for(s in seq_len(stem_object$dynamics$n_strata)) {
-                                          init_states[,stem_object$dynamics$initializer[[s]]$codes] <-
-                                                  matrix(as.numeric(stem_object$dynamics$initializer[[s]]$init_states),
-                                                         nrow = nsim,
-                                                         ncol = length(stem_object$dynamics$initializer[[s]]$init_states),
-                                                         byrow = TRUE)
-                                  }
-                          }
-                  }
-
-                  # generate forcings if they are specified
-                  forcing_matrix <- matrix(0.0,
-                                           nrow = length(ode_times),
-                                           ncol = length(stem_object$dynamics$comp_codes),
-                                           dimnames = list(NULL, names(stem_object$dynamics$comp_codes)))
-
+                  # generate forcing matrix
                   if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
-
-                          for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
-
-                                  # insert the flow into the forcing matrix
-                                  forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$from] <-
-                                          forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$from] -
-                                          stem_object$dynamics$dynamics_args$tcovar[, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]
-
-                                  forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$to] <-
-                                          forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$to] +
-                                          stem_object$dynamics$dynamics_args$tcovar[, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]
-
-                                  # update the adjacency matrix to indicate which rates need to be updated
-                                  affected_rates <- rep(FALSE, nrow(stem_object$dynamics$tcovar_adjmat))
-
-                                  for(n in seq_along(stem_object$dynamics$rates)) {
-                                          affected_rates[n] = grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$from,
-                                                                    stem_object$dynamics$rates[[n]]$unparsed) |
-                                                  grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$to,
-                                                        stem_object$dynamics$rates[[n]]$unparsed)
-                                  }
-
-                                  stem_object$dynamics$tcovar_adjmat[,stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] <-
-                                          xor(stem_object$dynamics$tcovar_adjmat[,stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name],
-                                              affected_rates)
-                          }
+                        
+                        # names and indices
+                        forcing_tcovars   <- sapply(forcings, function(x) x$tcovar_name)
+                        forcing_tcov_inds <- match(forcing_tcovars, colnames(ode_pars)) - 1
+                        forcing_events    <- c(sapply(forcings, function(x) paste0(x$from, "2", x$to)))
+                        
+                        # matrix indicating which compartments are involved in which forcings in and out
+                        forcings_out <- matrix(0.0, 
+                                               nrow = ncol(stem_object$dynamics$flow_matrix_ode), ncol = length(forcings),
+                                               dimnames = list(colnames(stem_object$dynamics$flow_matrix_ode), forcing_tcovars))
+                        
+                        forcing_transfers <- array(0.0, 
+                                                   dim = c(ncol(stem_object$dynamics$flow_matrix_ode),
+                                                           ncol(stem_object$dynamics$flow_matrix_ode),
+                                                           length(forcings)),
+                                                   dimnames = list(colnames(stem_object$dynamics$flow_matrix_ode),
+                                                                   colnames(stem_object$dynamics$flow_matrix_ode),
+                                                                   forcing_tcovars))
+                        
+                        for(s in seq_along(forcings)) {
+                              
+                              forcings_out[forcings[[s]]$from, s] <- 1
+                              
+                              for(t in seq_along(forcings[[s]]$from)) {
+                                    forcing_transfers[forcings[[s]]$from[t], forcings[[s]]$from[t], s] <- -1
+                                    forcing_transfers[forcings[[s]]$to[t], forcings[[s]]$from[t], s]    <- 1
+                              }
+                        }
+                        
+                  } else {
+                        forcing_tcovars   <- character(0L)
+                        forcing_tcov_inds <- integer(0L)
+                        forcing_events    <- character(0L)
+                        forcings_out      <- matrix(0.0, nrow = 0, ncol = 0)
+                        forcing_transfers <- array(0.0, nrow = 0, ncol = 0)
                   }
-
-                  forcing_matrix <- t(forcing_matrix)
 
                   sim_pars  <- stem_object$dynamics$parameters[parameter_inds+1]
                   init_vols <- init_states[1,]
@@ -945,13 +1255,10 @@ simulate_stem <-
                                       
                                       # insert the new values into the tcovar matrix
                                       insert_tparam(tcovar    = ode_pars, 
-                                                    values    = stem_object$dynamics$tparam[[s]]$draws2par(stem_object$dynamics$parameters,
-                                                                                                           stem_object$dynamics$tparam[[s]]$values),
+                                                    values    = tparam_values[[k]][[s]],
                                                     col_ind   = stem_object$dynamics$tparam[[s]]$col_ind,
                                                     tpar_inds = stem_object$dynamics$tparam[[s]]$tpar_inds)
                                 }
-                                
-                                tparam_draws[[k]] <- lapply(stem_object$dynamics$tparam, function(x) x$values)
                           }
 
                           path <- NULL
@@ -965,7 +1272,9 @@ simulate_stem <-
                                                          param_update_inds = param_update_inds,
                                                          stoich_matrix     = stem_object$dynamics$stoich_matrix_ode,
                                                          forcing_inds      = forcing_inds,
-                                                         forcing_matrix    = forcing_matrix,
+                                                         forcing_tcov_inds = forcing_tcov_inds,
+                                                         forcings_out      = forcings_out,
+                                                         forcing_transfers = forcing_transfers,
                                                          step_size         = stem_object$dynamics$dynamics_args$step_size,
                                                          ode_pointer       = stem_object$dynamics$ode_pointers$ode_ptr,
                                                          set_pars_pointer  = stem_object$dynamics$ode_pointers$set_ode_params_ptr)
@@ -1047,9 +1356,7 @@ simulate_stem <-
                                                   
                                                   # insert the tparam values into the tcovar matrix
                                                   insert_tparam(tcovar = stem_object$dynamics$tcovar, 
-                                                                values = stem_object$dynamics$tparam[[s]]$draws2par(
-                                                                      sim_pars, 
-                                                                      tparam_draws[[k]][[s]]),
+                                                                values = tparam_values[[k]][[s]],
                                                                 col_ind   = stem_object$dynamics$tparam[[s]]$col_ind,
                                                                 tpar_inds = stem_object$dynamics$tparam[[s]]$tpar_inds)
                                                   
@@ -1122,9 +1429,7 @@ simulate_stem <-
                                               
                                               # insert the tparam values into the tcovar matrix
                                               insert_tparam(tcovar = stem_object$dynamics$tcovar, 
-                                                            values = stem_object$dynamics$tparam[[s]]$draws2par(
-                                                                  sim_pars, 
-                                                                  tparam_draws[[k]][[s]]),
+                                                            values = tparam_values[[k]][[s]],
                                                             col_ind   = stem_object$dynamics$tparam[[s]]$col_ind,
                                                             tpar_inds = stem_object$dynamics$tparam[[s]]$tpar_inds)
                                               
@@ -1197,9 +1502,7 @@ simulate_stem <-
                                                       
                                                       # insert the tparam values into the tcovar matrix
                                                       insert_tparam(tcovar = stem_object$dynamics$tcovar, 
-                                                                    values = stem_object$dynamics$tparam[[s]]$draws2par(
-                                                                          sim_pars, 
-                                                                          tparam_draws[[k]][[s]]),
+                                                                    values = tparam_values[[k]][[s]],
                                                                     col_ind   = stem_object$dynamics$tparam[[s]]$col_ind,
                                                                     tpar_inds = stem_object$dynamics$tparam[[s]]$tpar_inds)
                                                       
@@ -1240,9 +1543,7 @@ simulate_stem <-
                                                     
                                                     # insert the tparam values into the tcovar matrix
                                                     insert_tparam(tcovar = stem_object$dynamics$tcovar, 
-                                                                  values = stem_object$dynamics$tparam[[s]]$draws2par(
-                                                                        sim_pars, 
-                                                                        tparam_draws[[k]][[s]]),
+                                                                  values = tparam_values[[k]][[s]],
                                                                   col_ind   = stem_object$dynamics$tparam[[s]]$col_ind,
                                                                   tpar_inds = stem_object$dynamics$tparam[[s]]$tpar_inds)
                                                     
@@ -1291,4 +1592,4 @@ simulate_stem <-
           stem_simulations$failed_runs <- failed_runs
 
           return(stem_simulations)
-  }
+      }
