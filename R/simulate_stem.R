@@ -343,7 +343,7 @@ simulate_stem <-
                         forcing_tcov_inds <- integer(0L)
                         forcing_events    <- character(0L)
                         forcings_out      <- matrix(0.0, nrow = 0, ncol = 0)
-                        forcing_transfers <- array(0.0, nrow = 0, ncol = 0)
+                        forcing_transfers <- array(0.0, dim = c(0,0,0))
                   }
                   
                   # vector of model parameters
@@ -814,7 +814,7 @@ simulate_stem <-
                         forcing_tcov_inds <- integer(0L)
                         forcing_events    <- character(0L)
                         forcings_out      <- matrix(0.0, nrow = 0, ncol = 0)
-                        forcing_transfers <- array(0.0, nrow = 0, ncol = 0)
+                        forcing_transfers <- array(0.0, dim = c(0,0,0))
                   }
                   
                   # initialize the volumes and prevalence indices
@@ -1224,7 +1224,7 @@ simulate_stem <-
                         forcing_tcov_inds <- integer(0L)
                         forcing_events    <- character(0L)
                         forcings_out      <- matrix(0.0, nrow = 0, ncol = 0)
-                        forcing_transfers <- array(0.0, nrow = 0, ncol = 0)
+                        forcing_transfers <- array(0.0, dim = c(0,0,0))
                   }
                   
                   sim_pars  <- stem_object$dynamics$parameters[parameter_inds+1]

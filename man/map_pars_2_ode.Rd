@@ -7,7 +7,8 @@ epidemic model.}
 \usage{
 map_pars_2_ode(pathmat, ode_times, ode_pars, ode_param_inds,
   ode_tcovar_inds, init_start, param_update_inds, stoich_matrix,
-  forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer)
+  forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers,
+  step_size, ode_pointer, set_pars_pointer)
 }
 \arguments{
 \item{pathmat}{matrix where the ODE path should be stored}
@@ -29,8 +30,6 @@ from each reaction}
 \item{forcing_inds}{logical vector of indicating at which times in the
 time-varying covariance matrix a forcing is applied.}
 
-\item{forcing_matrix}{matrix containing the forcings.}
-
 \item{step_size}{initial step size for the ODE solver (adapted internally,
 but too large of an initial step can lead to failure in stiff systems).}
 
@@ -38,6 +37,8 @@ but too large of an initial step can lead to failure in stiff systems).}
 
 \item{set_pars_pointer}{external pointer to the function for setting the ode
 parameters.}
+
+\item{forcing_matrix}{matrix containing the forcings.}
 }
 \value{
 List containing the ODE incidence and prevalence paths.

@@ -6,11 +6,12 @@
 \usage{
 update_tparam_ode(tparam, path_cur, data, ode_parameters, ode_param_vec,
   pathmat_prop, censusmat, emitmat, flow_matrix, stoich_matrix, ode_times,
-  forcing_inds, forcing_matrix, ode_param_inds, ode_const_inds,
-  ode_tcovar_inds, ode_initdist_inds, param_update_inds, census_indices,
-  ode_event_inds, measproc_indmat, ode_pointer, ode_set_pars_pointer,
-  d_meas_pointer, do_prevalence, step_size, tparam_steps, tparam_angle,
-  tparam_bracket_width, n_tparam_updates)
+  forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers,
+  ode_param_inds, ode_const_inds, ode_tcovar_inds, ode_initdist_inds,
+  param_update_inds, census_indices, ode_event_inds, measproc_indmat,
+  ode_pointer, ode_set_pars_pointer, d_meas_pointer, do_prevalence,
+  step_size, tparam_steps, tparam_angle, tparam_bracket_width,
+  n_tparam_updates)
 }
 \arguments{
 \item{tparam}{list containing the time-varying parameters}
@@ -28,8 +29,6 @@ observation times}
 
 \item{forcing_inds}{logical vector of indicating at which times in the
 time-varying covariance matrix a forcing is applied.}
-
-\item{forcing_matrix}{matrix containing the forcings.}
 
 \item{param_update_inds}{logical vector indicating when to update the
 parameters}

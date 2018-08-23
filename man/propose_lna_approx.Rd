@@ -8,8 +8,9 @@ update with elliptical slice sampling.}
 \usage{
 propose_lna_approx(lna_times, lna_draws, lna_pars, lna_param_inds,
   lna_tcovar_inds, init_start, param_update_inds, stoich_matrix,
-  forcing_inds, forcing_matrix, max_attempts, ess_updates, ess_warmup,
-  lna_bracket_width, step_size, lna_pointer, set_pars_pointer)
+  forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers,
+  max_attempts, ess_updates, ess_warmup, lna_bracket_width, step_size,
+  lna_pointer, set_pars_pointer)
 }
 \arguments{
 \item{lna_times}{vector of interval endpoint times}
@@ -29,8 +30,6 @@ from each reaction}
 \item{forcing_inds}{logical vector of indicating at which times in the
 time-varying covariance matrix a forcing is applied.}
 
-\item{forcing_matrix}{matrix containing the forcings.}
-
 \item{max_attempts}{maximum number of tries to restart negative increments if 
 reject_negatives is false.}
 
@@ -45,6 +44,8 @@ but too large of an initial step can lead to failure in stiff systems).}
 \item{lna_pointer}{external pointer to the compiled LNA integration function.}
 
 \item{set_pars_pointer}{external pointer to the function for setting LNA pars.}
+
+\item{forcing_matrix}{matrix containing the forcings.}
 }
 \value{
 list containing the stochastic perturbations (i.i.d. N(0,1) draws) and

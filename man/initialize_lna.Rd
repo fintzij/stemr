@@ -9,8 +9,9 @@ initialize_lna(data, lna_parameters, tparam, censusmat, emitmat,
   lna_param_vec, lna_param_inds, lna_const_inds, lna_tcovar_inds,
   lna_initdist_inds, param_update_inds, census_indices, lna_event_inds,
   measproc_indmat, d_meas_pointer, do_prevalence, forcing_inds,
-  forcing_matrix, initialization_attempts, step_size, fixed_inits,
-  initdist_objects, init_volumes_cur, par_init_fcn = NULL, ess_warmup)
+  forcing_tcov_inds, forcings_out, forcing_transfers,
+  initialization_attempts, step_size, fixed_inits, initdist_objects,
+  init_volumes_cur, par_init_fcn = NULL, ess_warmup)
 }
 \arguments{
 \item{data}{matrix containing the dataset}
@@ -63,8 +64,6 @@ incidence will be computed.}
 \item{forcing_inds}{logical vector of indicating at which times in the
 time-varying covariance matrix a forcing is applied.}
 
-\item{forcing_matrix}{matrix containing the forcings.}
-
 \item{initialization_attempts}{number of initialization attempts}
 
 \item{step_size}{initial step size for the ODE solver (adapted internally,
@@ -75,6 +74,8 @@ but too large of an initial step can lead to failure in stiff systems).}
 \item{ess_warmup}{number of elliptical slice sampling updates where
 likelihood is over indicators for monotonicity and non-negativity of LNA
 increments}
+
+\item{forcing_matrix}{matrix containing the forcings.}
 }
 \value{
 LNA path along with its stochastic perturbations

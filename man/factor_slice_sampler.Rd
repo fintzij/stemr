@@ -9,11 +9,11 @@ factor_slice_sampler(model_params_est, model_params_nat, params_prop_est,
   c_contractions_afss, c_expansions_afss, slice_eigenvecs, slice_probs,
   n_afss_updates, path, pathmat_prop, data, priors, params_logprior_cur,
   lna_params_cur, lna_param_vec, tparam, censusmat, emitmat, flow_matrix,
-  stoich_matrix, lna_times, forcing_inds, forcing_matrix, lna_param_inds,
-  lna_const_inds, lna_tcovar_inds, lna_initdist_inds, param_update_inds,
-  lna_event_inds, census_indices, measproc_indmat, svd_d, svd_U, svd_V,
-  lna_pointer, lna_set_pars_pointer, d_meas_pointer, do_prevalence,
-  step_size)
+  stoich_matrix, lna_times, forcing_inds, forcing_tcov_inds, forcings_out,
+  forcing_transfers, lna_param_inds, lna_const_inds, lna_tcovar_inds,
+  lna_initdist_inds, param_update_inds, lna_event_inds, census_indices,
+  measproc_indmat, svd_d, svd_U, svd_V, lna_pointer, lna_set_pars_pointer,
+  d_meas_pointer, do_prevalence, step_size)
 }
 \arguments{
 \item{model_params_est}{vector of model parameters on the estimation scale}
@@ -68,8 +68,6 @@ etc.}
 
 \item{forcing_inds}{indices at which forcings are applied}
 
-\item{forcing_matrix}{matrix containing forcings}
-
 \item{lna_param_inds}{indices for LNA parameters for computing emission probs}
 
 \item{lna_const_inds}{indices for constants used in computing emission probs}
@@ -103,6 +101,8 @@ contributions}
 \item{do_prevalence}{should prevalence be computed}
 
 \item{step_size}{initial step size for ODE stepper}
+
+\item{forcing_matrix}{matrix containing forcings}
 }
 \value{
 update the model parameters, path, and likelihood terms in place

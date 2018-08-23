@@ -6,8 +6,9 @@
 \usage{
 map_draws_2_lna(pathmat, draws, lna_times, lna_pars, lna_param_vec,
   lna_param_inds, lna_tcovar_inds, init_start, param_update_inds,
-  stoich_matrix, forcing_inds, forcing_matrix, svd_d, svd_U, svd_V,
-  step_size, lna_pointer, set_pars_pointer)
+  stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out,
+  forcing_transfers, svd_d, svd_U, svd_V, step_size, lna_pointer,
+  set_pars_pointer)
 }
 \arguments{
 \item{pathmat}{matrix where the LNA path should be stored}
@@ -31,8 +32,6 @@ from each reaction}
 \item{forcing_inds}{logical vector of indicating at which times in the
 time-varying covariance matrix a forcing is applied.}
 
-\item{forcing_matrix}{matrix containing the forcings.}
-
 \item{svd_d}{vector in which to store SVD singular values}
 
 \item{svd_U}{matrix in which to store the U matrix of the SVD}
@@ -46,6 +45,8 @@ but too large of an initial step can lead to failure in stiff systems).}
 
 \item{set_pars_pointer}{external pointer to the function for setting the LNA
 parameters.}
+
+\item{forcing_matrix}{matrix containing the forcings.}
 }
 \value{
 fill out pathmat with the LNA path corresponding to the stochastic

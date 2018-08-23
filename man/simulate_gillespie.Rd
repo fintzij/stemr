@@ -8,7 +8,7 @@ model.}
 \usage{
 simulate_gillespie(flow, parameters, constants, tcovar, init_states,
   rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, forcing_inds,
-  forcing_matrix, rate_ptr)
+  forcing_tcov_inds, forcings_out, forcing_transfers, rate_ptr)
 }
 \arguments{
 \item{flow}{Flow matrix}
@@ -36,9 +36,9 @@ next greatest power of 2.}
 \item{forcing_inds}{logical vector of indicating at which times in the
 time-varying covariance matrix a forcing is applied.}
 
-\item{forcing_matrix}{matrix containing the forcings.}
-
 \item{rate_ptr}{external function pointer to the lumped rate functions.}
+
+\item{forcing_matrix}{matrix containing the forcings.}
 }
 \value{
 matrix with a simulated path from a stochastic epidemic model.
