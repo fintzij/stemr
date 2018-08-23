@@ -783,11 +783,32 @@ stem_inference_lna <- function(stem_object,
                                               nrow = nrow(lna_params_cur),
                                               ncol = length(const_inds), byrow = T)
       
+      # generate forcing indices and other objects
+      forcing_inds   <- rep(FALSE, length(lna_times))
+      
       # insert time varying covariates
       if (!is.null(stem_object$dynamics$tcovar)) {
+            
             tcovar_rowinds <- findInterval(lna_times, stem_object$dynamics$tcovar[, 1], left.open = F)
             lna_params_cur[tcovar_rowinds, tcovar_inds]  <- stem_object$dynamics$tcovar[tcovar_rowinds, -1]
             lna_params_prop[tcovar_rowinds, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds, -1]
+            
+            # zero out forcings if necessary
+            if(!is.null(stem_object$dynamics$forcings)) {
+                  
+                  # get the forcing indices (supplied in the original tcovar matrix)
+                  for(f in seq_along(stem_object$dynamics$forcings)) {
+                        forcing_inds <- forcing_inds | stem_object$dynamics$tcovar[,stem_object$dynamics$forcings[[f]]$tcovar_name] != 0
+                  }
+                  
+                  zero_inds    <- !forcing_inds
+                  
+                  # zero out the tcovar elements corresponding to times with no forcings
+                  for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
+                        lna_params_cur[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]  = 0
+                        lna_params_prop[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] = 0
+                  }
+            }
       }
       
       # get indices for time-varying parameters
@@ -875,70 +896,58 @@ stem_inference_lna <- function(stem_object,
                   param_update_inds[lna_times %in% tparam[[s]]$times] <- TRUE
             }      
       }
-
+      
       if(length(param_update_inds) == nrow(stem_object$dynamics$tcovar_changemat)) {
             param_update_inds <- 
                   param_update_inds | apply(stem_object$dynamics$tcovar_changemat, 1, any)
       }
       
-      # generate forcing indices and forcing matrix if required
-      forcing_matrix <- matrix(0.0,
-                               nrow = length(lna_times),
-                               ncol = length(stem_object$dynamics$comp_codes),
-                               dimnames = list(NULL, names(stem_object$dynamics$comp_codes)))
       
-      forcing_inds   <- rep(FALSE, length(lna_times))
-      
-      if (!is.null(stem_object$dynamics$dynamics_args$forcings)) {
+      # generate forcing objects
+      if(!is.null(stem_object$dynamics$forcings)) {
             
-            # get the forcing indices (supplied in the original tcovar matrix)
-            forcing_inds <- as.logical(match(round(lna_times, digits = 8),
-                                             round(stem_object$dynamics$dynamics_args$tcovar[, 1], digits = 8),
-                                             nomatch = FALSE))
-            zero_inds    <- !forcing_inds
+            # names and indices
+            forcing_tcovars   <- sapply(forcings, function(x) x$tcovar_name)
+            forcing_tcov_inds <- match(forcing_tcovars, colnames(lna_params_cur)) - 1
+            forcing_events    <- c(sapply(forcings, function(x) paste0(x$from, "2", x$to)))
             
-            # zero out the tcovar elements corresponding to times with no forcings
-            for (l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
-                  lna_params_cur[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]  = 0
-                  lna_params_prop[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] = 0
-            }
+            # matrix indicating which compartments are involved in which forcings in and out
+            forcings_out <- matrix(0.0, 
+                                   nrow = ncol(stem_object$dynamics$flow_matrix_lna), ncol = length(forcings),
+                                   dimnames = list(colnames(stem_object$dynamics$flow_matrix_lna), forcing_tcovars))
             
-            for (l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
+            forcing_transfers <- array(0.0, 
+                                       dim = c(ncol(stem_object$dynamics$flow_matrix_lna),
+                                               ncol(stem_object$dynamics$flow_matrix_lna),
+                                               length(forcings)),
+                                       dimnames = list(colnames(stem_object$dynamics$flow_matrix_lna),
+                                                       colnames(stem_object$dynamics$flow_matrix_lna),
+                                                       forcing_tcovars))
+            
+            for(s in seq_along(forcings)) {
                   
-                  # insert the flow into the forcing matrix
-                  forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$from] <-
-                        forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$from] -
-                        stem_object$dynamics$dynamics_args$tcovar[, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]
+                  forcings_out[forcings[[s]]$from, s] <- 1
                   
-                  forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$to] <-
-                        forcing_matrix[forcing_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$to] +
-                        stem_object$dynamics$dynamics_args$tcovar[, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]
-                  
-                  # update the adjacency matrix to indicate which rates need to be updated
-                  affected_rates <- rep(FALSE, nrow(stem_object$dynamics$tcovar_adjmat))
-                  
-                  for (n in seq_along(stem_object$dynamics$rates)) {
-                        affected_rates[n] = 
-                              grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$from,
-                                    stem_object$dynamics$rates[[n]]$unparsed) |
-                              grepl(stem_object$dynamics$dynamics_args$forcings[[l]]$to,
-                                    stem_object$dynamics$rates[[n]]$unparsed)
+                  for(t in seq_along(forcings[[s]]$from)) {
+                        forcing_transfers[forcings[[s]]$from[t], forcings[[s]]$from[t], s] <- -1
+                        forcing_transfers[forcings[[s]]$to[t], forcings[[s]]$from[t], s]    <- 1
                   }
-                  
-                  stem_object$dynamics$tcovar_adjmat[, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] <-
-                        xor(stem_object$dynamics$tcovar_adjmat[, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name],
-                            affected_rates)
             }
             
-            forcing_matrix <- t(forcing_matrix)
+      } else {
+            forcing_tcovars   <- character(0L)
+            forcing_tcov_inds <- integer(0L)
+            forcing_events    <- character(0L)
+            forcings_out      <- matrix(0.0, nrow = 0, ncol = 0)
+            forcing_transfers <- array(0.0, nrow = 0, ncol = 0)
       }
       
       # matrix in which to store the emission probabilities
       emitmat <- cbind(data[, 1, drop = F],
                        matrix(0.0,
-                             nrow = nrow(measproc_indmat),
-                             ncol = ncol(measproc_indmat),
-                             dimnames = list(NULL, colnames(measproc_indmat))))
+                              nrow = nrow(measproc_indmat),
+                              ncol = ncol(measproc_indmat),
+                              dimnames = list(NULL, colnames(measproc_indmat))))
       
       pathmat_prop <- cbind(lna_times,
                             matrix(0.0,
@@ -1029,7 +1038,11 @@ stem_inference_lna <- function(stem_object,
                         flow_matrix_lna     = t(stoich_matrix),
                         do_prevalence       = do_prevalence,
                         init_state          = init_volumes_cur,
-                        forcing_matrix      = forcing_matrix
+                        lna_pars            = lna_params_cur,
+                        forcing_inds        = forcing_inds,
+                        forcing_tcov_inds   = forcing_tcov_inds,
+                        forcings_out        = forcings_out,
+                        forcing_transfers   = forcing_transfers
                   )
                   
                   # evaluate the density of the incidence counts
@@ -1083,7 +1096,9 @@ stem_inference_lna <- function(stem_object,
                   d_meas_pointer          = d_meas_pointer,
                   do_prevalence           = do_prevalence,
                   forcing_inds            = forcing_inds,
-                  forcing_matrix          = forcing_matrix,
+                  forcing_tcov_inds       = forcing_tcov_inds,
+                  forcings_out            = forcings_out,
+                  forcing_transfers       = forcing_transfers,
                   initialization_attempts = initialization_attempts,
                   step_size               = step_size,
                   par_init_fcn            = par_init_fcn,
@@ -1140,7 +1155,9 @@ stem_inference_lna <- function(stem_object,
                         stoich_matrix           = stoich_matrix,
                         lna_times               = lna_times,
                         forcing_inds            = forcing_inds,
-                        forcing_matrix          = forcing_matrix,
+                        forcing_tcov_inds       = forcing_tcov_inds,
+                        forcings_out            = forcings_out,
+                        forcing_transfers       = forcing_transfers,
                         lna_param_inds          = lna_param_inds,
                         lna_const_inds          = lna_const_inds,
                         lna_tcovar_inds         = lna_tcovar_inds,
@@ -1181,7 +1198,9 @@ stem_inference_lna <- function(stem_object,
                               stoich_matrix          = stoich_matrix,
                               lna_times              = lna_times,
                               forcing_inds           = forcing_inds,
-                              forcing_matrix         = forcing_matrix,
+                              forcing_tcov_inds      = forcing_tcov_inds,
+                              forcings_out           = forcings_out,
+                              forcing_transfers      = forcing_transfers,
                               lna_param_inds         = lna_param_inds,
                               lna_const_inds         = lna_const_inds,
                               lna_tcovar_inds        = lna_tcovar_inds,
@@ -1220,7 +1239,9 @@ stem_inference_lna <- function(stem_object,
                               stoich_matrix        = stoich_matrix,
                               lna_times            = lna_times,
                               forcing_inds         = forcing_inds,
-                              forcing_matrix       = forcing_matrix,
+                              forcing_tcov_inds    = forcing_tcov_inds,
+                              forcings_out         = forcings_out,
+                              forcing_transfers    = forcing_transfers,
                               lna_param_inds       = lna_param_inds,
                               lna_const_inds       = lna_const_inds,
                               lna_tcovar_inds      = lna_tcovar_inds,
@@ -1270,7 +1291,9 @@ stem_inference_lna <- function(stem_object,
                               stoich_matrix        = stoich_matrix,
                               lna_times            = lna_times,
                               forcing_inds         = forcing_inds,
-                              forcing_matrix       = forcing_matrix,
+                              forcing_tcov_inds    = forcing_tcov_inds,
+                              forcings_out         = forcings_out,
+                              forcing_transfers    = forcing_transfers,
                               lna_param_inds       = lna_param_inds,
                               lna_const_inds       = lna_const_inds,
                               lna_tcovar_inds      = lna_tcovar_inds,
@@ -1358,7 +1381,7 @@ stem_inference_lna <- function(stem_object,
       # begin the MCMC
       start.time <- Sys.time()
       for (iter in (seq_len(iterations) + 1)) {
-
+            
             # Sample new parameter values
             if (mcmc_kernel$method == "mvn_rw") {
                   
@@ -1405,7 +1428,9 @@ stem_inference_lna <- function(stem_object,
                               param_update_inds = param_update_inds,
                               stoich_matrix     = stoich_matrix,
                               forcing_inds      = forcing_inds,
-                              forcing_matrix    = forcing_matrix,
+                              forcing_tcov_inds = forcing_tcov_inds,
+                              forcings_out      = forcings_out,
+                              forcing_transfers = forcing_transfers,
                               svd_d             = svd_d,
                               svd_U             = svd_U,
                               svd_V             = svd_V,
@@ -1422,7 +1447,11 @@ stem_inference_lna <- function(stem_object,
                               flow_matrix_lna     = flow_matrix,
                               do_prevalence       = do_prevalence,
                               init_state          = init_volumes_cur,
-                              forcing_matrix      = forcing_matrix
+                              lna_pars            = lna_params_prop,
+                              forcing_inds        = forcing_inds,
+                              forcing_tcov_inds   = forcing_tcov_inds,
+                              forcings_out        = forcings_out,
+                              forcing_transfers   = forcing_transfers
                         )
                         
                         # evaluate the density of the incidence counts
@@ -1536,7 +1565,9 @@ stem_inference_lna <- function(stem_object,
                               param_update_inds = param_update_inds,
                               stoich_matrix     = stoich_matrix,
                               forcing_inds      = forcing_inds,
-                              forcing_matrix    = forcing_matrix,
+                              forcing_tcov_inds = forcing_tcov_inds,
+                              forcings_out      = forcings_out,
+                              forcing_transfers = forcing_transfers,
                               svd_d             = svd_d,
                               svd_U             = svd_U,
                               svd_V             = svd_V,
@@ -1553,7 +1584,11 @@ stem_inference_lna <- function(stem_object,
                               flow_matrix_lna     = flow_matrix,
                               do_prevalence       = do_prevalence,
                               init_state          = init_volumes_cur,
-                              forcing_matrix      = forcing_matrix
+                              lna_pars            = lna_params_prop,
+                              forcing_inds        = forcing_inds,
+                              forcing_tcov_inds   = forcing_tcov_inds,
+                              forcings_out        = forcings_out,
+                              forcing_transfers   = forcing_transfers
                         )
                         
                         # evaluate the density of the incidence counts
@@ -1685,7 +1720,9 @@ stem_inference_lna <- function(stem_object,
                         stoich_matrix        = stoich_matrix,
                         lna_times            = lna_times,
                         forcing_inds         = forcing_inds,
-                        forcing_matrix       = forcing_matrix,
+                        forcing_tcov_inds    = forcing_tcov_inds,
+                        forcings_out         = forcings_out,
+                        forcing_transfers    = forcing_transfers,
                         lna_param_inds       = lna_param_inds,
                         lna_const_inds       = lna_const_inds,
                         lna_tcovar_inds      = lna_tcovar_inds,
@@ -1731,7 +1768,9 @@ stem_inference_lna <- function(stem_object,
                               stoich_matrix        = stoich_matrix,
                               lna_times            = lna_times,
                               forcing_inds         = forcing_inds,
-                              forcing_matrix       = forcing_matrix,
+                              forcing_tcov_inds    = forcing_tcov_inds,
+                              forcings_out         = forcings_out,
+                              forcing_transfers    = forcing_transfers,
                               lna_param_inds       = lna_param_inds,
                               lna_const_inds       = lna_const_inds,
                               lna_tcovar_inds      = lna_tcovar_inds,
@@ -1868,7 +1907,9 @@ stem_inference_lna <- function(stem_object,
                         stoich_matrix        = stoich_matrix,
                         lna_times            = lna_times,
                         forcing_inds         = forcing_inds,
-                        forcing_matrix       = forcing_matrix,
+                        forcing_tcov_inds    = forcing_tcov_inds,
+                        forcings_out         = forcings_out,
+                        forcing_transfers    = forcing_transfers,
                         lna_param_inds       = lna_param_inds,
                         lna_const_inds       = lna_const_inds,
                         lna_tcovar_inds      = lna_tcovar_inds,
@@ -1988,7 +2029,9 @@ stem_inference_lna <- function(stem_object,
                               stoich_matrix        = stoich_matrix,
                               lna_times            = lna_times,
                               forcing_inds         = forcing_inds,
-                              forcing_matrix       = forcing_matrix,
+                              forcing_tcov_inds    = forcing_tcov_inds,
+                              forcings_out         = forcings_out,
+                              forcing_transfers    = forcing_transfers,
                               lna_param_inds       = lna_param_inds,
                               lna_const_inds       = lna_const_inds,
                               lna_tcovar_inds      = lna_tcovar_inds,
@@ -2093,7 +2136,9 @@ stem_inference_lna <- function(stem_object,
                         stoich_matrix          = stoich_matrix,
                         lna_times              = lna_times,
                         forcing_inds           = forcing_inds,
-                        forcing_matrix         = forcing_matrix,
+                        forcing_tcov_inds      = forcing_tcov_inds,
+                        forcings_out           = forcings_out,
+                        forcing_transfers      = forcing_transfers,
                         lna_param_inds         = lna_param_inds,
                         lna_const_inds         = lna_const_inds,
                         lna_tcovar_inds        = lna_tcovar_inds,
@@ -2154,7 +2199,9 @@ stem_inference_lna <- function(stem_object,
                         stoich_matrix        = stoich_matrix,
                         lna_times            = lna_times,
                         forcing_inds         = forcing_inds,
-                        forcing_matrix       = forcing_matrix,
+                        forcing_tcov_inds    = forcing_tcov_inds,
+                        forcings_out         = forcings_out,
+                        forcing_transfers    = forcing_transfers,
                         lna_param_inds       = lna_param_inds,
                         lna_const_inds       = lna_const_inds,
                         lna_tcovar_inds      = lna_tcovar_inds,
@@ -2280,7 +2327,9 @@ stem_inference_lna <- function(stem_object,
                               param_update_inds = param_update_inds,
                               stoich_matrix     = stoich_matrix,
                               forcing_inds      = forcing_inds,
-                              forcing_matrix    = forcing_matrix,
+                              forcing_tcov_inds = forcing_tcov_inds,
+                              forcings_out      = forcings_out,
+                              forcing_transfers = forcing_transfers,
                               svd_d             = svd_d,
                               svd_U             = svd_U,
                               svd_V             = svd_V,
@@ -2297,7 +2346,11 @@ stem_inference_lna <- function(stem_object,
                               flow_matrix_lna     = flow_matrix,
                               do_prevalence       = do_prevalence,
                               init_state          = init_volumes_cur,
-                              forcing_matrix      = forcing_matrix
+                              lna_pars            = lna_params_prop,
+                              forcing_inds        = forcing_inds,
+                              forcing_tcov_inds   = forcing_tcov_inds,
+                              forcings_out        = forcings_out,
+                              forcing_transfers   = forcing_transfers
                         )
                         
                         # evaluate the density of the incidence counts
@@ -2372,7 +2425,9 @@ stem_inference_lna <- function(stem_object,
                   stoich_matrix           = stoich_matrix,
                   lna_times               = lna_times,
                   forcing_inds            = forcing_inds,
-                  forcing_matrix          = forcing_matrix,
+                  forcing_tcov_inds       = forcing_tcov_inds,
+                  forcings_out            = forcings_out,
+                  forcing_transfers       = forcing_transfers,
                   lna_param_inds          = lna_param_inds,
                   lna_const_inds          = lna_const_inds,
                   lna_tcovar_inds         = lna_tcovar_inds,

@@ -82,7 +82,7 @@ Rcpp::List integrate_odes(const arma::rowvec& ode_times,
               for(int j=0; j < n_forcings; ++j) {
                     
                     forcing_flow       = ode_pars(0, forcing_tcov_inds[j]);
-                    forcing_distvec    = arma::round(forcing_flow * normalise(forcings_out.col(j) % init_volumes, 1));
+                    forcing_distvec    = forcing_flow * normalise(forcings_out.col(j) % init_volumes, 1);
                     init_volumes      += forcing_transfers.slice(j) * forcing_distvec;
               }
         }
@@ -112,7 +112,7 @@ Rcpp::List integrate_odes(const arma::rowvec& ode_times,
                       for(int s=0; s < n_forcings; ++s) {
                             
                             forcing_flow       = ode_pars(j+1, forcing_tcov_inds[s]);
-                            forcing_distvec    = arma::round(forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1));
+                            forcing_distvec    = forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1);
                             init_volumes      += forcing_transfers.slice(s) * forcing_distvec;
                       }
                 }
@@ -122,14 +122,14 @@ Rcpp::List integrate_odes(const arma::rowvec& ode_times,
                         if(any(init_volumes < 0)) {
                                 throw std::runtime_error("Negative compartment volumes.");
                         }
-
+                        
                 } catch(std::runtime_error &err) {
-                        forward_exception_to_r(err);
-
+                      forward_exception_to_r(err);
+                      
                 } catch(...) {
-                        ::Rf_error("c++ exception (unknown reason)");
+                      ::Rf_error("c++ exception (unknown reason)");
                 }
-
+                
                 // update the parameters if they need to be updated
                 if(param_update_inds[j+1]) {
                       
@@ -139,14 +139,14 @@ Rcpp::List integrate_odes(const arma::rowvec& ode_times,
                                 current_params .end() - n_tcovar);
                       
                 }
-
+                
                 // copy the compartment volumes to the current parameters
                 std::copy(init_volumes.begin(), init_volumes.end(), current_params.begin() + init_start);
-
+                
                 // set the ODE parameters and reset the ODE state vector
                 CALL_SET_ODE_PARAMS(current_params, set_pars_pointer);
         }
-
+        
         // return the paths
         return Rcpp::List::create(Rcpp::Named("incid_path") = incid_path.t(),
                                   Rcpp::Named("prev_path")  = prev_path.t());

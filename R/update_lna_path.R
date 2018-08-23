@@ -31,7 +31,9 @@ update_lna_path <-
                  stoich_matrix,
                  lna_times,
                  forcing_inds,
-                 forcing_matrix,
+                 forcing_tcov_inds,
+                 forcings_out,
+                 forcing_transfers,
                  lna_param_inds,
                  lna_const_inds,
                  lna_tcovar_inds,
@@ -171,7 +173,9 @@ update_lna_path <-
                               param_update_inds = param_update_inds,
                               stoich_matrix     = stoich_matrix,
                               forcing_inds      = forcing_inds,
-                              forcing_matrix    = forcing_matrix,
+                              forcing_tcov_inds = forcing_tcov_inds,
+                              forcings_out      = forcings_out,
+                              forcing_transfers = forcing_transfers,
                               svd_d             = svd_d,
                               svd_U             = svd_U,
                               svd_V             = svd_V,
@@ -188,7 +192,11 @@ update_lna_path <-
                               flow_matrix_lna     = flow_matrix,
                               do_prevalence       = do_prevalence,
                               init_state          = lna_parameters[1, lna_initdist_inds + 1, drop = TRUE],
-                              forcing_matrix      = forcing_matrix
+                              lna_pars            = lna_parameters,
+                              forcing_inds        = forcing_inds,
+                              forcing_tcov_inds   = forcing_tcov_inds,
+                              forcings_out        = forcings_out,
+                              forcing_transfers   = forcing_transfers
                         )
                         
                         # evaluate the density of the incidence counts
@@ -317,7 +325,9 @@ update_lna_path <-
                                       param_update_inds = param_update_inds,
                                       stoich_matrix     = stoich_matrix,
                                       forcing_inds      = forcing_inds,
-                                      forcing_matrix    = forcing_matrix,
+                                      forcing_tcov_inds = forcing_tcov_inds,
+                                      forcings_out      = forcings_out,
+                                      forcing_transfers = forcing_transfers,
                                       svd_d             = svd_d,
                                       svd_U             = svd_U,
                                       svd_V             = svd_V,
@@ -334,7 +344,11 @@ update_lna_path <-
                                       flow_matrix_lna     = flow_matrix,
                                       do_prevalence       = do_prevalence,
                                       init_state          = lna_parameters[1, lna_initdist_inds + 1, drop = TRUE],
-                                      forcing_matrix      = forcing_matrix
+                                      lna_pars            = lna_parameters,
+                                      forcing_inds        = forcing_inds,
+                                      forcing_tcov_inds   = forcing_tcov_inds,
+                                      forcings_out        = forcings_out,
+                                      forcing_transfers   = forcing_transfers
                                 )
                                 
                                 # evaluate the density of the incidence counts

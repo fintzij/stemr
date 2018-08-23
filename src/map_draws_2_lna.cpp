@@ -47,7 +47,9 @@ void map_draws_2_lna(arma::mat& pathmat,
                      const Rcpp::LogicalVector& param_update_inds,
                      const arma::mat& stoich_matrix,
                      const Rcpp::LogicalVector& forcing_inds,
-                     const arma::mat& forcing_matrix,
+                     const arma::uvec& forcing_tcov_inds,
+                     const arma::mat& forcings_out,
+                     const arma::cube& forcing_transfers,
                      arma::vec& svd_d,
                      arma::mat& svd_U,
                      arma::mat& svd_V,
@@ -61,7 +63,12 @@ void map_draws_2_lna(arma::mat& pathmat,
         int n_odes   = n_events + n_events*n_events; // number of ODEs
         int n_times  = lna_times.n_elem;             // number of times at which the LNA must be evaluated
         int n_tcovar     = lna_tcovar_inds.size();   // number of time-varying covariates or parameters
-
+        int n_forcings = forcing_tcov_inds.n_elem;   // number of forcings
+        
+        // for use with forcings
+        double forcing_flow = 0;
+        arma::vec forcing_distvec(n_comps, arma::fill::zeros);
+        
         // initialize the objects used in each time interval
         double t_L = 0;
         double t_R = 0;
@@ -87,7 +94,14 @@ void map_draws_2_lna(arma::mat& pathmat,
 
         // apply forcings if called for - applied after censusing at the first time
         if(forcing_inds[0]) {
-                init_volumes += forcing_matrix.col(0);
+              
+              // distribute the forcings proportionally to the compartment counts in the applicable states
+              for(int j=0; j < n_forcings; ++j) {
+                    
+                    forcing_flow       = lna_pars(0, forcing_tcov_inds[j]);
+                    forcing_distvec    = forcing_flow * normalise(forcings_out.col(j) % init_volumes, 1);
+                    init_volumes      += forcing_transfers.slice(j) * forcing_distvec;
+              }
         }
 
         // iterate over the time sequence, solving the LNA over each interval
@@ -173,15 +187,21 @@ void map_draws_2_lna(arma::mat& pathmat,
                 // apply forcings if called for - applied after censusing the path
                 if(forcing_inds[j+1]) {
                       
-                      init_volumes += forcing_matrix.col(j+1);
+                      // distribute the forcings proportionally to the compartment counts in the applicable states
+                      for(int s=0; s < n_forcings; ++s) {
+                            
+                            forcing_flow       = lna_pars(j+1, forcing_tcov_inds[s]);
+                            forcing_distvec    = forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1);
+                            init_volumes      += forcing_transfers.slice(s) * forcing_distvec;
+                      }
                       
-                      // Check for positivity
+                      // throw errors for negative negative volumes
                       try{
                             if(any(init_volumes < 0)) {
                                   throw std::runtime_error("Negative compartment volumes.");
                             }
                             
-                      } catch(std::runtime_error &err) {
+                      } catch(std::exception &err) {
                             
                             forward_exception_to_r(err);
                             
@@ -197,7 +217,6 @@ void map_draws_2_lna(arma::mat& pathmat,
                       std::copy(lna_pars.row(j+1).end() - n_tcovar,
                                 lna_pars.row(j+1).end(),
                                 lna_param_vec.end() - n_tcovar);
-                      
                 }
 
                 // copy the new initial volumes into the vector of parameters

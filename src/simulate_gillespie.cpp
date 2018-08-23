@@ -127,8 +127,8 @@ arma::mat simulate_gillespie(const arma::mat& flow,
                         keep_going = false;
                         
                   } else {
-                        // increment the time-homogeneous interval and the rates
                         
+                        // increment the time-homogeneous interval and the rates
                         tcov_ind += 1;                       // increment the index in the time-varying covariate matrix
                         tcovs     = tcovar.row(tcov_ind);    // time-varying covariate vector
                         t_L       = t_R;                     // set left endpoint to right endpoint
@@ -164,6 +164,20 @@ arma::mat simulate_gillespie(const arma::mat& flow,
                               }
                         }
                         
+                        // insert the time, event, and new state vector into the path matrix
+                        path(ind_cur, 0) = t_cur;                             // insert new time
+                        path(ind_cur, 1) = -1;                                // event code
+                        path(ind_cur, arma::span(2,init_dims[1]-1)) = state;  // state
+                        
+                        // increment the index
+                        ind_cur += 1;
+                        
+                        // if there are no empty rows in the path matrix, add some
+                        if(ind_cur == path_nrows) {
+                              path.insert_rows(ind_cur, init_dims[0]);
+                              path_nrows = path.n_rows;
+                        }
+                        
                         // update the rate functions
                         CALL_RATE_FCN(rates, rate_inds, state, parameters, constants, tcovs, rate_ptr);
                         
@@ -172,6 +186,7 @@ arma::mat simulate_gillespie(const arma::mat& flow,
                   }
                   
             } else {
+                  
                   // sample the next event
                   next_event = Rcpp::RcppArmadillo::sample(events, 1, false, event_probs);
                   
@@ -199,7 +214,7 @@ arma::mat simulate_gillespie(const arma::mat& flow,
                   event_probs = rates / sum(rates); // update the event probabilities
                   
                   // if all rates equal zero, stop simulating
-                  keep_going = Rcpp::is_true(any(rates != 0));
+                  // keep_going = Rcpp::is_true(any(rates != 0));
             }
       }
       

@@ -68,7 +68,9 @@ hit_and_run_slice_sampler_ode <-
                stoich_matrix,
                ode_times,
                forcing_inds,
-               forcing_matrix,
+               forcing_tcov_inds,
+               forcings_out,
+               forcing_transfers,
                ode_param_inds,
                ode_const_inds,
                ode_tcovar_inds,
@@ -149,7 +151,9 @@ hit_and_run_slice_sampler_ode <-
                                     param_update_inds = param_update_inds,
                                     stoich_matrix     = stoich_matrix,
                                     forcing_inds      = forcing_inds,
-                                    forcing_matrix    = forcing_matrix,
+                                    forcing_tcov_inds = forcing_tcov_inds,
+                                    forcings_out      = forcings_out,
+                                    forcing_transfers = forcing_transfers,
                                     ode_pointer       = ode_pointer,
                                     set_pars_pointer  = ode_set_pars_pointer,
                                     step_size         = step_size
@@ -163,7 +167,11 @@ hit_and_run_slice_sampler_ode <-
                                     flow_matrix_lna     = flow_matrix,
                                     do_prevalence       = do_prevalence,
                                     init_state          = ode_params_cur[1, ode_initdist_inds + 1],
-                                    forcing_matrix      = forcing_matrix
+                                    lna_pars            = ode_params_cur,
+                                    forcing_inds        = forcing_inds,
+                                    forcing_tcov_inds   = forcing_tcov_inds,
+                                    forcings_out        = forcings_out,
+                                    forcing_transfers   = forcing_transfers
                               )
                               
                               # evaluate the density of the incidence counts
@@ -192,30 +200,30 @@ hit_and_run_slice_sampler_ode <-
                   } else {
                         loglik_lower <- -Inf
                   }
-
+                  
                   # compute log-posterior
                   logpost_lower <- loglik_lower + logprior_lower
-
+                  
                   # step out the bracket if necessary
                   if(threshold < logpost_lower) {
-
+                        
                         # decrease the lower endpoint of the bracket
                         lower <- lower - harss_bracket_width
-
+                        
                         # increment the number of expansions
                         increment_elem(n_expansions_harss, 0)
                   }
             }
-
+            
             # step out upper
             while(is.null(logpost_upper) || threshold < logpost_upper) {
-
+                  
                   # upper end of the bracket on the estimation scale
                   copy_vec(params_prop_est, model_params_est + upper * har_direction)
-
+                  
                   # get the parameters on the natural scale
                   copy_vec(params_prop_nat, priors$from_estimation_scale(params_prop_est))
-
+                  
                   # compute the prior density
                   logprior_upper <- priors$prior_density(params_nat = params_prop_nat,
                                                          params_est = params_prop_est)
@@ -255,7 +263,9 @@ hit_and_run_slice_sampler_ode <-
                                     param_update_inds = param_update_inds,
                                     stoich_matrix     = stoich_matrix,
                                     forcing_inds      = forcing_inds,
-                                    forcing_matrix    = forcing_matrix,
+                                    forcing_tcov_inds = forcing_tcov_inds,
+                                    forcings_out      = forcings_out,
+                                    forcing_transfers = forcing_transfers,
                                     ode_pointer       = ode_pointer,
                                     set_pars_pointer  = ode_set_pars_pointer,
                                     step_size         = step_size
@@ -269,7 +279,11 @@ hit_and_run_slice_sampler_ode <-
                                     flow_matrix_lna     = flow_matrix,
                                     do_prevalence       = do_prevalence,
                                     init_state          = ode_params_cur[1, ode_initdist_inds + 1],
-                                    forcing_matrix      = forcing_matrix
+                                    lna_pars            = ode_params_cur,
+                                    forcing_inds        = forcing_inds,
+                                    forcing_tcov_inds   = forcing_tcov_inds,
+                                    forcings_out        = forcings_out,
+                                    forcing_transfers   = forcing_transfers
                               )
                               
                               # evaluate the density of the incidence counts
@@ -298,21 +312,21 @@ hit_and_run_slice_sampler_ode <-
                   } else {
                         loglik_upper <- -Inf
                   }
-
+                  
                   # compute log-posterior
                   logpost_upper <- loglik_upper + logprior_upper
-
+                  
                   # step out the bracket if necessary
                   if(threshold < logpost_upper) {
-
+                        
                         # increase the upper endpoint of the bracket
                         upper <- upper + harss_bracket_width
-
+                        
                         # increment the number of expansions
                         increment_elem(n_expansions_harss, 0)
                   }
             }
-
+            
             # sample from the bracket
             while((upper - lower) > sqrt(.Machine$double.eps) && (logpost_prop < threshold)) {
                   
@@ -331,7 +345,7 @@ hit_and_run_slice_sampler_ode <-
                   
                   # if the log prior is not -Inf, find the path
                   if(logprior_prop != -Inf) {
-                    
+                        
                         # insert the parameters into the lna_parameters matrix
                         pars2lnapars2(lnapars    = ode_params_cur,
                                       parameters = params_prop_nat, 
@@ -364,7 +378,9 @@ hit_and_run_slice_sampler_ode <-
                                     param_update_inds = param_update_inds,
                                     stoich_matrix     = stoich_matrix,
                                     forcing_inds      = forcing_inds,
-                                    forcing_matrix    = forcing_matrix,
+                                    forcing_tcov_inds = forcing_tcov_inds,
+                                    forcings_out      = forcings_out,
+                                    forcing_transfers = forcing_transfers,
                                     ode_pointer       = ode_pointer,
                                     set_pars_pointer  = ode_set_pars_pointer,
                                     step_size         = step_size
@@ -378,7 +394,11 @@ hit_and_run_slice_sampler_ode <-
                                     flow_matrix_lna     = flow_matrix,
                                     do_prevalence       = do_prevalence,
                                     init_state          = ode_params_cur[1, ode_initdist_inds + 1],
-                                    forcing_matrix      = forcing_matrix
+                                    lna_pars            = ode_params_cur,
+                                    forcing_inds        = forcing_inds,
+                                    forcing_tcov_inds   = forcing_tcov_inds,
+                                    forcings_out        = forcings_out,
+                                    forcing_transfers   = forcing_transfers
                               )
                               
                               # evaluate the density of the incidence counts

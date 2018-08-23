@@ -111,12 +111,13 @@ census_incidence <- function(incid_mat, census_times, interval_inds) {
 #' @param init_state the initial compartment counts
 #' @param forcing_inds logical vector of indicating at which times in the
 #'   time-varying covariance matrix a forcing is applied.
-#' @param forcing_matrix matrix containing the forcings.
+#' @param lna_pars matrix with parameters, constants, and time varying 
+#'   covariates and parameters.
 #'
 #' @return matrix containing the compartment counts at census times.
 #' @export
-census_lna <- function(path, census_path, census_inds, lna_event_inds, flow_matrix_lna, do_prevalence, init_state, forcing_matrix) {
-    invisible(.Call(`_stemr_census_lna`, path, census_path, census_inds, lna_event_inds, flow_matrix_lna, do_prevalence, init_state, forcing_matrix))
+census_lna <- function(path, census_path, census_inds, lna_event_inds, flow_matrix_lna, do_prevalence, init_state, lna_pars, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers) {
+    invisible(.Call(`_stemr_census_lna`, path, census_path, census_inds, lna_event_inds, flow_matrix_lna, do_prevalence, init_state, lna_pars, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers))
 }
 
 #' Difference an incidence variable in a census matrix.
@@ -523,8 +524,8 @@ lna_incid2prev <- function(path, flow_matrix, init_state, forcing_inds, forcing_
 #'   perturbations.
 #'
 #' @export
-map_draws_2_lna <- function(pathmat, draws, lna_times, lna_pars, lna_param_vec, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer) {
-    invisible(.Call(`_stemr_map_draws_2_lna`, pathmat, draws, lna_times, lna_pars, lna_param_vec, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer))
+map_draws_2_lna <- function(pathmat, draws, lna_times, lna_pars, lna_param_vec, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer) {
+    invisible(.Call(`_stemr_map_draws_2_lna`, pathmat, draws, lna_times, lna_pars, lna_param_vec, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, svd_d, svd_U, svd_V, step_size, lna_pointer, set_pars_pointer))
 }
 
 #' Map parameters to the deterministic mean incidence increments for a stochastic
@@ -552,8 +553,8 @@ map_draws_2_lna <- function(pathmat, draws, lna_times, lna_pars, lna_param_vec, 
 #' @return List containing the ODE incidence and prevalence paths.
 #'
 #' @export
-map_pars_2_ode <- function(pathmat, ode_times, ode_pars, ode_param_inds, ode_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer) {
-    invisible(.Call(`_stemr_map_pars_2_ode`, pathmat, ode_times, ode_pars, ode_param_inds, ode_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_matrix, step_size, ode_pointer, set_pars_pointer))
+map_pars_2_ode <- function(pathmat, ode_times, ode_pars, ode_param_inds, ode_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, step_size, ode_pointer, set_pars_pointer) {
+    invisible(.Call(`_stemr_map_pars_2_ode`, pathmat, ode_times, ode_pars, ode_param_inds, ode_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, step_size, ode_pointer, set_pars_pointer))
 }
 
 #' Cholesky decomposition

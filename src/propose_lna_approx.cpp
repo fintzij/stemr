@@ -108,7 +108,7 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
               for(int s=0; s < n_forcings; ++s) {
                     
                     forcing_flow       = lna_pars(0, forcing_tcov_inds[s]);
-                    forcing_distvec    = arma::round(forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1));
+                    forcing_distvec    = forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1);
                     init_volumes      += forcing_transfers.slice(s) * forcing_distvec;
                     init_volumes_prop += forcing_transfers.slice(s) * forcing_distvec;
               }
@@ -232,7 +232,7 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
                     for(int s=0; s < n_forcings; ++s) {
                           
                           forcing_flow       = lna_pars(j+1, forcing_tcov_inds[s]);
-                          forcing_distvec    = arma::round(forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1));
+                          forcing_distvec    = forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1);
                           init_volumes      += forcing_transfers.slice(s) * forcing_distvec;
                     }
                     
@@ -285,7 +285,7 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
                     for(int s=0; s < n_forcings; ++s) {
                           
                           forcing_flow       = lna_pars(0, forcing_tcov_inds[s]);
-                          forcing_distvec    = arma::round(forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1));
+                          forcing_distvec    = forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1);
                           init_volumes      += forcing_transfers.slice(s) * forcing_distvec;
                           init_volumes_prop += forcing_transfers.slice(s) * forcing_distvec;
                     }
@@ -382,7 +382,7 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
                           for(int s=0; s < n_forcings; ++s) {
                                 
                                 forcing_flow       = lna_pars(j+1, forcing_tcov_inds[s]);
-                                forcing_distvec    = arma::round(forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1));
+                                forcing_distvec    = forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1);
                                 init_volumes      += forcing_transfers.slice(s) * forcing_distvec;
                           }
                           
@@ -427,7 +427,7 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
                           for(int s=0; s < n_forcings; ++s) {
                                 
                                 forcing_flow       = lna_pars(0, forcing_tcov_inds[s]);
-                                forcing_distvec    = arma::round(forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1));
+                                forcing_distvec    = forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1);
                                 init_volumes      += forcing_transfers.slice(s) * forcing_distvec;
                                 init_volumes_prop += forcing_transfers.slice(s) * forcing_distvec;
                           }
@@ -524,7 +524,7 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
                                 for(int s=0; s < n_forcings; ++s) {
                                       
                                       forcing_flow       = lna_pars(j+1, forcing_tcov_inds[s]);
-                                      forcing_distvec    = arma::round(forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1));
+                                      forcing_distvec    = forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1);
                                       init_volumes      += forcing_transfers.slice(s) * forcing_distvec;
                                 }
                                 
@@ -577,7 +577,7 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
                     for(int s=0; s < n_forcings; ++s) {
                           
                           forcing_flow       = lna_pars(0, forcing_tcov_inds[s]);
-                          forcing_distvec    = arma::round(forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1));
+                          forcing_distvec    = forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1);
                           init_volumes      += forcing_transfers.slice(s) * forcing_distvec;
                           init_volumes_prop += forcing_transfers.slice(s) * forcing_distvec;
                     }
@@ -681,7 +681,7 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
                           for(int s=0; s < n_forcings; ++s) {
                                 
                                 forcing_flow       = lna_pars(j+1, forcing_tcov_inds[s]);
-                                forcing_distvec    = arma::round(forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1));
+                                forcing_distvec    = forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1);
                                 init_volumes      += forcing_transfers.slice(s) * forcing_distvec;
                           }
                           
@@ -726,7 +726,7 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
                           for(int s=0; s < n_forcings; ++s) {
                                 
                                 forcing_flow       = lna_pars(0, forcing_tcov_inds[s]);
-                                forcing_distvec    = arma::round(forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1));
+                                forcing_distvec    = forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1);
                                 init_volumes      += forcing_transfers.slice(s) * forcing_distvec;
                                 init_volumes_prop += forcing_transfers.slice(s) * forcing_distvec;
                           }
@@ -829,7 +829,7 @@ Rcpp::List propose_lna_approx(const arma::rowvec& lna_times,
                                 for(int s=0; s < n_forcings; ++s) {
                                       
                                       forcing_flow       = lna_pars(j+1, forcing_tcov_inds[s]);
-                                      forcing_distvec    = arma::round(forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1));
+                                      forcing_distvec    = forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1);
                                       init_volumes      += forcing_transfers.slice(s) * forcing_distvec;
                                 }
                                 

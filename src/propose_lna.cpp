@@ -71,26 +71,26 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
 
         // initialize the LNA objects - the vector for storing the current state
         Rcpp::NumericVector lna_state_vec(n_odes);   // vector to store the results of the ODEs
-
+        
         arma::vec lna_drift(n_events, arma::fill::zeros); // incidence mean vector (natural scale)
         arma::mat lna_diffusion(n_events, n_events, arma::fill::zeros); // diffusion matrix
-
+        
         arma::vec log_lna(n_events, arma::fill::zeros);  // LNA increment, log scale
         arma::vec nat_lna(n_events, arma::fill::zeros);  // LNA increment, natural scale
-
+        
         // Objects for computing the eigen decomposition of the LNA covariance matrices
         arma::vec svd_d(n_events, arma::fill::zeros);
         arma::mat svd_U(n_events, n_events, arma::fill::zeros);
         arma::mat svd_V(n_events, n_events, arma::fill::zeros);
         bool good_svd = true;
-
+        
         // matrix in which to store the LNA path
         arma::mat lna_path(n_events+1, n_times, arma::fill::zeros); // incidence path
         arma::mat prev_path(n_comps+1, n_times, arma::fill::zeros); // prevalence path (compartment volumes)
         lna_path.row(0) = lna_times;
         prev_path.row(0) = lna_times;
         prev_path(arma::span(1,n_comps), 0) = init_volumes;
-
+        
         // apply forcings if called for - applied after censusing at the first time
         if(forcing_inds[0]) {
               
@@ -98,11 +98,11 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
               for(int j=0; j < n_forcings; ++j) {
                     
                     forcing_flow       = lna_pars(0, forcing_tcov_inds[j]);
-                    forcing_distvec    = arma::round(forcing_flow * normalise(forcings_out.col(j) % init_volumes, 1));
+                    forcing_distvec    = forcing_flow * normalise(forcings_out.col(j) % init_volumes, 1);
                     init_volumes      += forcing_transfers.slice(j) * forcing_distvec;
               }
         }
-
+        
         // sample the stochastic perturbations - use Rcpp RNG for safety
         Rcpp::NumericVector draws_rcpp(Rcpp::clone(lna_draws));
         arma::mat draws(draws_rcpp.begin(), n_events, n_times-1, true);
@@ -192,7 +192,7 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                     for(int s=0; s < n_forcings; ++s) {
                           
                           forcing_flow       = lna_pars(j+1, forcing_tcov_inds[s]);
-                          forcing_distvec    = arma::round(forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1));
+                          forcing_distvec    = forcing_flow * normalise(forcings_out.col(s) % init_volumes, 1);
                           init_volumes      += forcing_transfers.slice(s) * forcing_distvec;
                     }
                     
@@ -202,13 +202,13 @@ Rcpp::List propose_lna(const arma::rowvec& lna_times,
                                 throw std::runtime_error("Negative compartment volumes.");
                           }
                           
-                      } catch(std::exception &err) {
-                            
-                            forward_exception_to_r(err);
-                            
-                      } catch(...) {
-                            ::Rf_error("c++ exception (unknown reason)");
-                      }
+                    } catch(std::exception &err) {
+                          
+                          forward_exception_to_r(err);
+                          
+                    } catch(...) {
+                          ::Rf_error("c++ exception (unknown reason)");
+                    }
               }
               
               // update the parameters if they need to be updated

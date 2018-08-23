@@ -16,7 +16,8 @@ using namespace Rcpp;
 //' @param init_state the initial compartment counts
 //' @param forcing_inds logical vector of indicating at which times in the
 //'   time-varying covariance matrix a forcing is applied.
-//' @param forcing_matrix matrix containing the forcings.
+//' @param lna_pars matrix with parameters, constants, and time varying 
+//'   covariates and parameters.
 //'
 //' @return matrix containing the compartment counts at census times.
 //' @export
@@ -28,43 +29,65 @@ void census_lna(const arma::mat& path,
                 const arma::mat& flow_matrix_lna,
                 bool do_prevalence,
                 const arma::rowvec& init_state,
-                const arma::mat& forcing_matrix) {
+                const arma::mat& lna_pars,
+                const Rcpp::LogicalVector& forcing_inds,
+                const arma::uvec& forcing_tcov_inds,
+                const arma::mat& forcings_out,
+                const arma::cube& forcing_transfers) {
 
         // get dimensions
         int n_census_times  = census_inds.n_elem;
         int n_census_events = lna_event_inds.n_elem;
         int n_comps         = flow_matrix_lna.n_cols;
         int n_rates         = flow_matrix_lna.n_rows;
-
+        int n_forcings      = forcing_tcov_inds.n_elem;
+        
+        // for use with forcings
+        double forcing_flow = 0;
+        arma::vec forcing_distvec(n_comps, arma::fill::zeros);
+        
         // get indices in the census_path matrix to keep incidence
         int incid_start = flow_matrix_lna.n_cols + 1;
-
+        
         // census the incidence increments
         for(int k = 1; k < n_census_times; ++k) {
-
-                for(int j = 0; j < n_census_events; ++j) {
-                        census_path(k-1, incid_start + j) = arma::sum(path(arma::span(census_inds[k-1]+1, census_inds[k]),
-                                                                           lna_event_inds[j]));
-                }
-
+              
+              for(int j = 0; j < n_census_events; ++j) {
+                    census_path(k-1, incid_start + j) = arma::sum(path(arma::span(census_inds[k-1]+1, census_inds[k]),
+                                                                  lna_event_inds[j]));
+              }
+              
         }
-
+        
         // compute the prevalence if called for
         if(do_prevalence) {
-
-                // initialize the state and increment vectors
-                arma::rowvec state(init_state);
-                arma::rowvec increment(n_rates, arma::fill::zeros);
-
-                for(int k=1; k < n_census_times-1; ++k) {
-
-                        increment = arma::sum(path(arma::span(census_inds[k-1] + 1, census_inds[k]),
-                                                   arma::span(1, n_rates)), 0);
-
-                        state += increment * flow_matrix_lna +
-                                 arma::sum(forcing_matrix.cols(census_inds[k], census_inds[k+1] - 1), 1).t();
-
-                        census_path(k-1, arma::span(1, n_comps)) = state;
-                }
+              
+              // initialize the state and increment vectors
+              arma::rowvec state(init_state);
+              arma::rowvec increment(n_rates, arma::fill::zeros);
+              
+              for(int k=1; k < n_census_times-1; ++k) {
+                    
+                    // numbers of transitions
+                    increment = arma::sum(path(arma::span(census_inds[k-1] + 1, census_inds[k]),
+                                               arma::span(1, n_rates)), 0);
+                    
+                    // new state
+                    state += increment * flow_matrix_lna;
+                    
+                    // save state
+                    census_path(k-1, arma::span(1, n_comps)) = state;
+                    
+                    // apply forcings if called for - applied after censusing the path
+                    if(forcing_inds[k]) {
+                          
+                          // distribute the forcings proportionally to the compartment counts in the applicable states
+                          for(int s=0; s < n_forcings; ++s) {
+                                forcing_flow     = lna_pars(k, forcing_tcov_inds[s]);
+                                forcing_distvec  = forcing_flow * normalise(forcings_out.col(s) % state, 1);
+                                state           += forcing_transfers.slice(s) * forcing_distvec;
+                          }
+                    }
+              }
         }
 }

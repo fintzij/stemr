@@ -20,7 +20,9 @@ update_tparam_ode <-
                  stoich_matrix,
                  ode_times,
                  forcing_inds,
-                 forcing_matrix,
+                 forcing_tcov_inds,
+                 forcings_out,
+                 forcing_transfers,
                  ode_param_inds,
                  ode_const_inds,
                  ode_tcovar_inds,
@@ -88,7 +90,9 @@ update_tparam_ode <-
                         param_update_inds = param_update_inds,
                         stoich_matrix     = stoich_matrix,
                         forcing_inds      = forcing_inds,
-                        forcing_matrix    = forcing_matrix,
+                        forcing_tcov_inds = forcing_tcov_inds,
+                        forcings_out      = forcings_out,
+                        forcing_transfers = forcing_transfers,
                         ode_pointer       = ode_pointer,
                         set_pars_pointer  = ode_set_pars_pointer,
                         step_size         = step_size
@@ -102,7 +106,11 @@ update_tparam_ode <-
                         flow_matrix_lna     = flow_matrix,
                         do_prevalence       = do_prevalence,
                         init_state          = init_state,
-                        forcing_matrix      = forcing_matrix
+                        lna_pars            = ode_parameters,
+                        forcing_inds        = forcing_inds,
+                        forcing_tcov_inds   = forcing_tcov_inds,
+                        forcings_out        = forcings_out,
+                        forcing_transfers   = forcing_transfers
                   )
                   
                   # evaluate the density of the incidence counts
@@ -172,7 +180,9 @@ update_tparam_ode <-
                               param_update_inds = param_update_inds,
                               stoich_matrix     = stoich_matrix,
                               forcing_inds      = forcing_inds,
-                              forcing_matrix    = forcing_matrix,
+                              forcing_tcov_inds = forcing_tcov_inds,
+                              forcings_out      = forcings_out,
+                              forcing_transfers = forcing_transfers,
                               ode_pointer       = ode_pointer,
                               set_pars_pointer  = ode_set_pars_pointer,
                               step_size         = step_size
@@ -186,7 +196,10 @@ update_tparam_ode <-
                               flow_matrix_lna     = flow_matrix,
                               do_prevalence       = do_prevalence,
                               init_state          = init_state,
-                              forcing_matrix      = forcing_matrix
+                              forcing_inds        = forcing_inds,
+                              forcing_tcov_inds   = forcing_tcov_inds,
+                              forcings_out        = forcings_out,
+                              forcing_transfers   = forcing_transfers
                         )
                         
                         # evaluate the density of the incidence counts

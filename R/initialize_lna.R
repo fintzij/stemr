@@ -62,7 +62,9 @@ initialize_lna <-
                  d_meas_pointer,
                  do_prevalence,
                  forcing_inds,
-                 forcing_matrix,
+                 forcing_tcov_inds,
+                 forcings_out,
+                 forcing_transfers,
                  initialization_attempts,
                  step_size,
                  fixed_inits,
@@ -91,7 +93,9 @@ initialize_lna <-
                                   param_update_inds = param_update_inds,
                                   stoich_matrix     = stoich_matrix,
                                   forcing_inds      = forcing_inds,
-                                  forcing_matrix    = forcing_matrix,
+                                  forcing_tcov_inds = forcing_tcov_inds,
+                                  forcings_out      = forcings_out,
+                                  forcing_transfers = forcing_transfers,
                                   max_attempts      = initialization_attempts,
                                   step_size         = step_size, 
                                   lna_pointer       = lna_pointer,
@@ -109,7 +113,11 @@ initialize_lna <-
                                   flow_matrix_lna     = t(stoich_matrix),
                                   do_prevalence       = do_prevalence,
                                   init_state          = init_state,
-                                  forcing_matrix      = forcing_matrix
+                                  lna_pars            = lna_parameters,
+                                  forcing_inds        = forcing_inds,
+                                  forcing_tcov_inds   = forcing_tcov_inds,
+                                  forcings_out        = forcings_out,
+                                  forcing_transfers   = forcing_transfers
                             )
                             
                             # evaluate the density of the incidence counts
@@ -174,7 +182,7 @@ initialize_lna <-
                                                 c_start    = lna_initdist_inds[1])
                             }
                             
-                              # draw new parameter values if called for
+                            # draw new parameter values if called for
                             if(!is.null(par_init_fcn)) {
                                   pars2lnapars2(lnapars    = lna_parameters,
                                                 parameters = par_init_fcn(),
@@ -198,83 +206,89 @@ initialize_lna <-
                 }
                 
                 if(keep_going) attempt <- 1
-
+                
                 while(keep_going && (attempt <= initialization_attempts)) {
                       
-                        try({
-                                # propose another LNA path - includes ESS warmup
-                                path_init <- propose_lna_approx(
-                                        lna_times         = lna_times,
-                                        lna_draws         = rnorm(ncol(stoich_matrix) * (length(lna_times) - 1)),
-                                        lna_pars          = lna_parameters,
-                                        init_start        = lna_initdist_inds[1],
-                                        lna_param_inds    = lna_param_inds, 
-                                        lna_tcovar_inds   = lna_tcovar_inds,
-                                        param_update_inds = param_update_inds,
-                                        stoich_matrix     = stoich_matrix,
-                                        forcing_inds      = forcing_inds,
-                                        forcing_matrix    = forcing_matrix,
-                                        max_attempts      = initialization_attempts,
-                                        step_size         = step_size, 
-                                        ess_updates       = 1, 
-                                        ess_warmup        = ess_warmup,
-                                        lna_bracket_width = 2*pi,
-                                        lna_pointer       = lna_pointer,
-                                        set_pars_pointer  = lna_set_pars_pointer
-                                )
-                                
-                                path <- list(draws    = t(path_init$draws),
-                                             lna_path = path_init$incid_paths)
-
-                                census_lna(
-                                        path                = path$lna_path,
-                                        census_path         = censusmat,
-                                        census_inds         = census_indices,
-                                        lna_event_inds      = lna_event_inds,
-                                        flow_matrix_lna     = t(stoich_matrix),
-                                        do_prevalence       = do_prevalence,
-                                        init_state          = init_state,
-                                        forcing_matrix      = forcing_matrix
-                                )
-
-                                # evaluate the density of the incidence counts
-                                evaluate_d_measure_LNA(
-                                        emitmat           = emitmat,
-                                        obsmat            = data,
-                                        censusmat         = censusmat,
-                                        measproc_indmat   = measproc_indmat,
-                                        lna_parameters    = lna_parameters,
-                                        lna_param_inds    = lna_param_inds,
-                                        lna_const_inds    = lna_const_inds,
-                                        lna_tcovar_inds   = lna_tcovar_inds,
-                                        param_update_inds = param_update_inds,
-                                        census_indices    = census_indices,
-                                        lna_param_vec     = lna_param_vec,
-                                        d_meas_ptr        = d_meas_pointer
-                                )
-
-                                # compute the data log likelihood
-                                data_log_lik <- sum(emitmat[,-1][measproc_indmat])
-                                if(is.nan(data_log_lik)) data_log_lik <- -Inf
-                        }, silent = TRUE)
-
-                        keep_going <- is.nan(data_log_lik) || data_log_lik == -Inf
-                        attempt    <- attempt + 1
-
-                        # try new parameters
-                        if(keep_going) {
-                              
-                              if(!fixed_inits) {
-                                    for(s in seq_along(initdist_objects)) {
-                                          
-                                          if(!initdist_objects[[s]]$fixed) {
-                                                
-                                                # N(0,1) draws
-                                                draw_normals(initdist_objects[[s]]$draws_cur)
-                                                
-                                                # map to volumes
-                                                copy_vec2(dest = init_volumes_cur,
-                                                          orig = initdist_objects[[s]]$comp_mean + 
+                      try({
+                            # propose another LNA path - includes ESS warmup
+                            path_init <- propose_lna_approx(
+                                  lna_times         = lna_times,
+                                  lna_draws         = rnorm(ncol(stoich_matrix) * (length(lna_times) - 1)),
+                                  lna_pars          = lna_parameters,
+                                  init_start        = lna_initdist_inds[1],
+                                  lna_param_inds    = lna_param_inds, 
+                                  lna_tcovar_inds   = lna_tcovar_inds,
+                                  param_update_inds = param_update_inds,
+                                  stoich_matrix     = stoich_matrix,
+                                  forcing_inds      = forcing_inds,
+                                  forcing_tcov_inds = forcing_tcov_inds,
+                                  forcings_out      = forcings_out,
+                                  forcing_transfers = forcing_transfers,
+                                  max_attempts      = initialization_attempts,
+                                  step_size         = step_size, 
+                                  ess_updates       = 1, 
+                                  ess_warmup        = ess_warmup,
+                                  lna_bracket_width = 2*pi,
+                                  lna_pointer       = lna_pointer,
+                                  set_pars_pointer  = lna_set_pars_pointer
+                            )
+                            
+                            path <- list(draws    = t(path_init$draws),
+                                         lna_path = path_init$incid_paths)
+                            
+                            census_lna(
+                                  path                = path$lna_path,
+                                  census_path         = censusmat,
+                                  census_inds         = census_indices,
+                                  lna_event_inds      = lna_event_inds,
+                                  flow_matrix_lna     = t(stoich_matrix),
+                                  do_prevalence       = do_prevalence,
+                                  init_state          = init_state,
+                                  lna_pars            = lna_parameters,
+                                  forcing_inds        = forcing_inds,
+                                  forcing_tcov_inds   = forcing_tcov_inds,
+                                  forcings_out        = forcings_out,
+                                  forcing_transfers   = forcing_transfers
+                            )
+                            
+                            # evaluate the density of the incidence counts
+                            evaluate_d_measure_LNA(
+                                  emitmat           = emitmat,
+                                  obsmat            = data,
+                                  censusmat         = censusmat,
+                                  measproc_indmat   = measproc_indmat,
+                                  lna_parameters    = lna_parameters,
+                                  lna_param_inds    = lna_param_inds,
+                                  lna_const_inds    = lna_const_inds,
+                                  lna_tcovar_inds   = lna_tcovar_inds,
+                                  param_update_inds = param_update_inds,
+                                  census_indices    = census_indices,
+                                  lna_param_vec     = lna_param_vec,
+                                  d_meas_ptr        = d_meas_pointer
+                            )
+                            
+                            # compute the data log likelihood
+                            data_log_lik <- sum(emitmat[,-1][measproc_indmat])
+                            if(is.nan(data_log_lik)) data_log_lik <- -Inf
+                      }, silent = TRUE)
+                      
+                      keep_going <- is.nan(data_log_lik) || data_log_lik == -Inf
+                      attempt    <- attempt + 1
+                      
+                      # try new parameters
+                      if(keep_going) {
+                            
+                            if(!fixed_inits) {
+                                  for(s in seq_along(initdist_objects)) {
+                                        
+                                        if(!initdist_objects[[s]]$fixed) {
+                                              
+                                              # N(0,1) draws
+                                              draw_normals(initdist_objects[[s]]$draws_cur)
+                                              
+                                              # map to volumes
+                                              copy_vec2(dest = init_volumes_cur,
+                                                        orig = initdist_objects[[s]]$comp_mean + 
                                                                 initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur,
                                                           inds = initdist_objects[[s]]$comp_inds_Cpp) 
                                                 
