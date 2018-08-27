@@ -38,7 +38,7 @@ build_tcovar_matrix <- function(tcovar = NULL, tparam = NULL, forcings = NULL, t
                       tparam_times <- tparam_times[tparam_times >= t0 & tparam_times <= tmax]
                 } else {
                       tparam_times <- NULL
-                } 
+                }
                 
                 # get tcovar times and parameters
                 TCOVAR_TIMES <- sort(unique(c(tcovar[,1, drop = FALSE], tparam_times, timeseq)))

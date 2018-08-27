@@ -368,8 +368,8 @@ simulate_stem <-
                         if(is.null(tparam_values) & is.null(tparam_draws)) {
                               
                               tpar_list <- 
-                                    lapply(stem_object$dynamics$tparam, 
-                                           function(x) list(numeric(length(x$values))))
+                                    list(lapply(stem_object$dynamics$tparam, function(x) numeric(length(x$values))))
+                                  
                               tparam_draws  <- rep(tpar_list, nsim) 
                               tparam_values <- rep(tpar_list, nsim)
                               
@@ -389,7 +389,7 @@ simulate_stem <-
                                           tparam_values[[n]][[m]] <- 
                                                 stem_object$dynamics$tparam[[m]]$draws2par(
                                                       sim_pars,
-                                                      tparam_draws[[m]][[n]]
+                                                      tparam_draws[[n]][[m]]
                                                 )
                                     }
                               }
@@ -397,8 +397,8 @@ simulate_stem <-
                         } else if(is.null(tparam_values) & !is.null(tparam_draws)) {
                               
                               tpar_list <- 
-                                    lapply(stem_object$dynamics$tparam, 
-                                           function(x) list(numeric(length(x$values))))
+                                    list(lapply(stem_object$dynamics$tparam, function(x) numeric(length(x$values))))
+                              
                               tparam_values <- rep(tpar_list, nsim)
                               
                               # compute the tparam values
@@ -414,7 +414,7 @@ simulate_stem <-
                                           tparam_values[[n]][[m]] <- 
                                                 stem_object$dynamics$tparam[[m]]$draws2par(
                                                       sim_pars,
-                                                      tparam_draws[[m]][[n]]
+                                                      tparam_draws[[n]][[m]]
                                                 )
                                     }
                               }
@@ -598,8 +598,8 @@ simulate_stem <-
                         if(is.null(tparam_values) & is.null(tparam_draws)) {
                               
                               tpar_list <- 
-                                    lapply(stem_object$dynamics$tparam, 
-                                           function(x) list(numeric(length(x$values))))
+                                    list(lapply(stem_object$dynamics$tparam, function(x) numeric(length(x$values))))
+                              
                               tparam_draws  <- rep(tpar_list, nsim) 
                               tparam_values <- rep(tpar_list, nsim)
                               
@@ -619,7 +619,7 @@ simulate_stem <-
                                           tparam_values[[n]][[m]] <- 
                                                 stem_object$dynamics$tparam[[m]]$draws2par(
                                                       sim_pars,
-                                                      tparam_draws[[m]][[n]]
+                                                      tparam_draws[[n]][[m]]
                                                 )
                                     }
                               }
@@ -627,8 +627,8 @@ simulate_stem <-
                         } else if(is.null(tparam_values) & !is.null(tparam_draws)) {
                               
                               tpar_list <- 
-                                    lapply(stem_object$dynamics$tparam, 
-                                           function(x) list(numeric(length(x$values))))
+                                    list(lapply(stem_object$dynamics$tparam, function(x) numeric(length(x$values))))
+                              
                               tparam_values <- rep(tpar_list, nsim)
                               
                               # compute the tparam values
@@ -644,7 +644,7 @@ simulate_stem <-
                                           tparam_values[[n]][[m]] <- 
                                                 stem_object$dynamics$tparam[[m]]$draws2par(
                                                       sim_pars,
-                                                      tparam_draws[[m]][[n]]
+                                                      tparam_draws[[n]][[m]]
                                                 )
                                     }
                               }
@@ -1010,8 +1010,8 @@ simulate_stem <-
                         if(is.null(tparam_values) & is.null(tparam_draws)) {
                               
                               tpar_list <- 
-                                    lapply(stem_object$dynamics$tparam, 
-                                           function(x) list(numeric(length(x$values))))
+                                    list(lapply(stem_object$dynamics$tparam, function(x) numeric(length(x$values))))
+                              
                               tparam_draws  <- rep(tpar_list, nsim) 
                               tparam_values <- rep(tpar_list, nsim)
                               
@@ -1031,7 +1031,7 @@ simulate_stem <-
                                           tparam_values[[n]][[m]] <- 
                                                 stem_object$dynamics$tparam[[m]]$draws2par(
                                                       sim_pars,
-                                                      tparam_draws[[m]][[n]]
+                                                      tparam_draws[[n]][[m]]
                                                 )
                                     }
                               }
@@ -1039,8 +1039,8 @@ simulate_stem <-
                         } else if(is.null(tparam_values) & !is.null(tparam_draws)) {
                               
                               tpar_list <- 
-                                    lapply(stem_object$dynamics$tparam, 
-                                           function(x) list(numeric(length(x$values))))
+                                    list(lapply(stem_object$dynamics$tparam, function(x) numeric(length(x$values))))
+                              
                               tparam_values <- rep(tpar_list, nsim)
                               
                               # compute the tparam values
@@ -1056,7 +1056,7 @@ simulate_stem <-
                                           tparam_values[[n]][[m]] <- 
                                                 stem_object$dynamics$tparam[[m]]$draws2par(
                                                       sim_pars,
-                                                      tparam_draws[[m]][[n]]
+                                                      tparam_draws[[n]][[m]]
                                                 )
                                     }
                               }

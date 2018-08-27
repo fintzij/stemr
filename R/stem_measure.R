@@ -47,7 +47,6 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
               if(is.data.frame(data)) data <- as.matrix(data)
         }
       
-      
         # determine whether the measurement process should be compiled for the LNA/ODE and/or for gillespie
         do_exact  <- !is.null(dynamics$rate_ptrs$lumped_ptr)
         do_approx <- !is.null(dynamics$lna_pointers$lna_ptr) | !is.null(dynamics$ode_pointers$ode_ptr)
@@ -150,6 +149,9 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
 
         # if a dataset or list of datasets is supplied, extract the observation times, combine them and generate the indicator matrix
         if(!is.null(data)) {
+              
+                if(class(data) == "data.frame") data <- as.matrix(data)
+                
                 if(!is.list(data)) {
                         obstimes <- data[,1]
                         for(s in seq_along(meas_procs)){
@@ -164,7 +166,7 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                                 }
                         }
                 }
-
+              
                 obsmat          <- build_obsmat(datasets = data)                # observation matrix
                 obstimes        <- obsmat[,"time"]                              # vector of observation times
                 measproc_indmat <- build_measproc_indmat(obsmat = obsmat)       # indicator matrix for which measurment variables are observed at which times

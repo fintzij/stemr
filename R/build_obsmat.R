@@ -36,6 +36,7 @@ build_obsmat <- function(meas_procs = NULL, datasets = NULL) {
                                 stop("if the observation times are not the same for all of the observed variables, the datasets must be supplied as a list.")
                         }
                         obsmat <- datasets
+                        colnames(obsmat) <- c("time", colnames(obsmat)[-1])
 
                 } else {
                         # get the observation times

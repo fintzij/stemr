@@ -462,17 +462,20 @@ BEGIN_RCPP
 END_RCPP
 }
 // lna_incid2prev
-arma::mat lna_incid2prev(const arma::mat& path, const arma::mat& flow_matrix, const arma::rowvec& init_state, const Rcpp::LogicalVector& forcing_inds, const arma::mat& forcing_matrix);
-RcppExport SEXP _stemr_lna_incid2prev(SEXP pathSEXP, SEXP flow_matrixSEXP, SEXP init_stateSEXP, SEXP forcing_indsSEXP, SEXP forcing_matrixSEXP) {
+arma::mat lna_incid2prev(const arma::mat& path, const arma::mat& flow_matrix, const arma::rowvec& init_state, const arma::mat& forcing_matrix, const Rcpp::LogicalVector& forcing_inds, const arma::uvec& forcing_tcov_inds, const arma::mat& forcings_out, const arma::cube& forcing_transfers);
+RcppExport SEXP _stemr_lna_incid2prev(SEXP pathSEXP, SEXP flow_matrixSEXP, SEXP init_stateSEXP, SEXP forcing_matrixSEXP, SEXP forcing_indsSEXP, SEXP forcing_tcov_indsSEXP, SEXP forcings_outSEXP, SEXP forcing_transfersSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::mat& >::type path(pathSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type flow_matrix(flow_matrixSEXP);
     Rcpp::traits::input_parameter< const arma::rowvec& >::type init_state(init_stateSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type forcing_inds(forcing_indsSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type forcing_matrix(forcing_matrixSEXP);
-    rcpp_result_gen = Rcpp::wrap(lna_incid2prev(path, flow_matrix, init_state, forcing_inds, forcing_matrix));
+    Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type forcing_inds(forcing_indsSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type forcing_tcov_inds(forcing_tcov_indsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type forcings_out(forcings_outSEXP);
+    Rcpp::traits::input_parameter< const arma::cube& >::type forcing_transfers(forcing_transfersSEXP);
+    rcpp_result_gen = Rcpp::wrap(lna_incid2prev(path, flow_matrix, init_state, forcing_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -826,7 +829,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_g_prop2c_prop", (DL_FUNC) &_stemr_g_prop2c_prop, 3},
     {"_stemr_insert_tparam", (DL_FUNC) &_stemr_insert_tparam, 4},
     {"_stemr_integrate_odes", (DL_FUNC) &_stemr_integrate_odes, 14},
-    {"_stemr_lna_incid2prev", (DL_FUNC) &_stemr_lna_incid2prev, 5},
+    {"_stemr_lna_incid2prev", (DL_FUNC) &_stemr_lna_incid2prev, 8},
     {"_stemr_map_draws_2_lna", (DL_FUNC) &_stemr_map_draws_2_lna, 20},
     {"_stemr_map_pars_2_ode", (DL_FUNC) &_stemr_map_pars_2_ode, 15},
     {"_stemr_comp_chol", (DL_FUNC) &_stemr_comp_chol, 2},

@@ -43,7 +43,7 @@ to the \code{tparam} function. Time-varying parameters are defined by
 mapping vectors of N(0,1) draws to parameter values and are updated jointly 
 via elliptical slice sampling.}
 
-\item{tcovar}{Matrix or data frame of time varying covariates, the first 
+\item{tcovar}{Matrix of time varying covariates, the first 
 column of which contains the times at which covariates change. Note that if 
 a covariate modifies the model compartment counts (e.g., vaccination), the 
 flow between model compartments must also be declared using a list of 

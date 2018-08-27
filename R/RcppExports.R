@@ -491,8 +491,8 @@ integrate_odes <- function(ode_times, ode_pars, ode_param_inds, ode_tcovar_inds,
 #' matrix by the stoichiometry matrix: \eqn{X_t = X_0 + A'N_t}.
 #'
 #' @export
-lna_incid2prev <- function(path, flow_matrix, init_state, forcing_inds, forcing_matrix) {
-    .Call(`_stemr_lna_incid2prev`, path, flow_matrix, init_state, forcing_inds, forcing_matrix)
+lna_incid2prev <- function(path, flow_matrix, init_state, forcing_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers) {
+    .Call(`_stemr_lna_incid2prev`, path, flow_matrix, init_state, forcing_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers)
 }
 
 #' Map N(0,1) stochastic perturbations to an LNA path.

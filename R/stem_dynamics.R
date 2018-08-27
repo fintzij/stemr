@@ -23,7 +23,7 @@
 #'  to the \code{tparam} function. Time-varying parameters are defined by
 #'  mapping vectors of N(0,1) draws to parameter values and are updated jointly 
 #'  via elliptical slice sampling.
-#'@param tcovar Matrix or data frame of time varying covariates, the first 
+#'@param tcovar Matrix of time varying covariates, the first 
 #'  column of which contains the times at which covariates change. Note that if 
 #'  a covariate modifies the model compartment counts (e.g., vaccination), the 
 #'  flow between model compartments must also be declared using a list of 
@@ -162,8 +162,8 @@ stem_dynamics <-
                 stop("The state_initializer argument must be a list of lists.")
         }
         
-        if(!any(sapply(rates, function(x) is.null(x$strata)))) {
-              if(any(sapply(rates, function(x) is.null(x$strata)))) {
+        if(any(sapply(rates, function(x) !is.null(x$strata)))) {
+              if(!all(sapply(rates, function(x) !is.null(x$strata)))) {
                     stop("Strata must be supplied for all rates if they are supplied for any rates.")
               }
               
@@ -264,6 +264,9 @@ stem_dynamics <-
         # ensure that time and time-varying covariates will be properly accounted for
         timevarying <- any(sapply(rates, function(x) grepl("TIME", x[["rate"]]))) ||
                                 !is.null(tcovar) || !is.null(tparam)
+        
+        # make sure tcovar is a matrix, not a data frame
+        if(!is.null(tcovar)) tcovar <- as.matrix(tcovar)
 
         # tcovar and tparam codes
         if(!timevarying) {

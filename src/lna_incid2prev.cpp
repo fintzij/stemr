@@ -22,26 +22,57 @@ using namespace Rcpp;
 arma::mat lna_incid2prev(const arma::mat& path,
                          const arma::mat& flow_matrix,
                          const arma::rowvec& init_state,
+                         const arma::mat& forcing_matrix,
                          const Rcpp::LogicalVector& forcing_inds,
-                         const arma::mat& forcing_matrix) {
-
-        int n_times = path.n_rows;
-        int n_comps = flow_matrix.n_cols;
-        int n_rates = flow_matrix.n_rows;
-
-        // initialize an object for the coverted path
-        arma::mat conv_path(n_times, n_comps+1);
-        conv_path.col(0) = path.col(0);
-
-        // set the initial state
-        conv_path(0, arma::span(1,n_comps)) = init_state;
-
-        // Loop through the path to compute the compartment counts
-        for(int k = 1; k < n_times; ++k) {
-                conv_path(k, arma::span(1, n_comps)) =
-                        conv_path(k-1, arma::span(1, n_comps)) + path(k, arma::span(1, n_rates)) * flow_matrix +
-                        forcing_matrix.col(k-1).t();
-        }
-
-        return conv_path;
+                         const arma::uvec& forcing_tcov_inds,
+                         const arma::mat& forcings_out,
+                         const arma::cube& forcing_transfers) {
+      
+      int n_times = path.n_rows;
+      int n_comps = flow_matrix.n_cols;
+      int n_rates = flow_matrix.n_rows;
+      int n_forcings = forcing_tcov_inds.n_elem;
+      
+      // for use with forcings
+      double forcing_flow = 0;
+      arma::rowvec forcing_distvec(n_comps, arma::fill::zeros);
+      
+      // initialize an object for the coverted path
+      arma::mat conv_path(n_times, n_comps+1, arma::fill::zeros);
+      conv_path.col(0) = path.col(0);
+      
+      // set the initial state
+      arma::rowvec volumes = init_state + conv_path(0, arma::span(1, n_rates)) * flow_matrix;
+      conv_path(0, arma::span(1,n_comps)) = volumes;
+      
+      if(forcing_inds[0]) {
+            
+            // distribute the forcings proportionally to the compartment counts in the applicable states
+            for(int s=0; s < n_forcings; ++s) {
+                  
+                  forcing_flow     = forcing_matrix(0, forcing_tcov_inds[s]);
+                  forcing_distvec  = forcing_flow * normalise(forcings_out.col(s) % volumes.t(), 1);
+                  volumes         += forcing_transfers.slice(s) * forcing_distvec;
+            }
+      }
+      
+      // Loop through the path to compute the compartment counts
+      for(int k = 1; k < n_times; ++k) {
+            
+            volumes += path(k, arma::span(1, n_rates)) * flow_matrix; 
+            conv_path(k, arma::span(1, n_comps)) = volumes; 
+            
+            // apply forcings if called for - applied after censusing the path
+            if(forcing_inds[k]) {
+                  
+                  // distribute the forcings proportionally to the compartment counts in the applicable states
+                  for(int s=0; s < n_forcings; ++s) {
+                        forcing_flow     = forcing_matrix(k, forcing_tcov_inds[s]);
+                        forcing_distvec  = (forcing_flow * normalise(forcings_out.col(s) % volumes.t(), 1)).t();
+                        volumes         += (forcing_transfers.slice(s) * forcing_distvec.t()).t();
+                  }
+            }
+      }
+      
+      return conv_path;
 }
