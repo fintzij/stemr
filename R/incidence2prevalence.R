@@ -106,7 +106,8 @@ incidence2prevalence <- function(path, flow_matrix, init_state, forcings = NULL,
             conv_path <- conv_path[conv_path[,1] == path_times,]
       }
       
-      colnames(conv_path) <- c(colnames(path)[1], colnames(flow_matrix))
+      timename <- ifelse(is.null(colnames(path)), "time", colnames(path)[1]) 
+      colnames(conv_path) <- c(timename, colnames(flow_matrix))
       
       return(conv_path)
 }

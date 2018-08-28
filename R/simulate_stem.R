@@ -724,20 +724,15 @@ simulate_stem <-
                   }
                   
                   # matrix of initial states
-                  if(stem_object$dynamics$n_strata == 1) {
-                        init_states <- matrix(rep(as.numeric(stem_object$dynamics$initializer$init_states), nsim), nrow = nsim, byrow = T)
-                        
-                  } else {
-                        init_states <- matrix(0.0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
-                        colnames(init_states) <- names(stem_object$dynamics$comp_codes)
-                        
-                        for(s in seq_len(stem_object$dynamics$n_strata)) {
-                              init_states[,stem_object$dynamics$initializer[[s]]$codes] <-
-                                    matrix(as.numeric(stem_object$dynamics$initializer[[s]]$init_states),
-                                           nrow = nsim,
-                                           ncol = length(stem_object$dynamics$initializer[[s]]$init_states),
-                                           byrow = TRUE)
-                        }
+                  init_states <- matrix(0.0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
+                  colnames(init_states) <- names(stem_object$dynamics$comp_codes)
+                  
+                  for(s in seq_len(stem_object$dynamics$n_strata)) {
+                        init_states[,stem_object$dynamics$initializer[[s]]$codes] <-
+                              matrix(as.numeric(stem_object$dynamics$initializer[[s]]$init_states),
+                                     nrow = nsim,
+                                     ncol = length(stem_object$dynamics$initializer[[s]]$init_states),
+                                     byrow = TRUE)
                   }
                   
                   # if the initial state is not fixed, sample the collection of initial states
@@ -776,7 +771,16 @@ simulate_stem <-
                               # save to initdist matrix
                               init_states[n, ] <- c(init_state)
                         }
-                  } 
+                        
+                  } else {
+                        # if all initial states are fixed, just copy the initial compartment counts
+                        init_states <- matrix(
+                              rep(as.numeric(stem_object$dynamics$initdist_params), nsim),
+                              nrow = nsim,
+                              byrow = TRUE
+                        )
+                        colnames(init_states) <- names(stem_object$dynamics$comp_codes)
+                  }
                   
                   # generate forcing matrix
                   if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
@@ -1134,20 +1138,15 @@ simulate_stem <-
                   }
                   
                   # matrix of initial states
-                  if(stem_object$dynamics$n_strata == 1) {
-                        init_states <- matrix(rep(as.numeric(stem_object$dynamics$initializer$init_states), nsim), nrow = nsim, byrow = T)
+                  init_states <- matrix(0.0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
+                  colnames(init_states) <- names(stem_object$dynamics$comp_codes)
                         
-                  } else {
-                        init_states <- matrix(0.0, nrow = nsim, ncol = length(stem_object$dynamics$comp_codes))
-                        colnames(init_states) <- names(stem_object$dynamics$comp_codes)
-                        
-                        for(s in seq_len(stem_object$dynamics$n_strata)) {
-                              init_states[,stem_object$dynamics$initializer[[s]]$codes] <-
-                                    matrix(as.numeric(stem_object$dynamics$initializer[[s]]$init_states),
-                                           nrow = nsim,
-                                           ncol = length(stem_object$dynamics$initializer[[s]]$init_states),
-                                           byrow = TRUE)
-                        }
+                  for(s in seq_len(stem_object$dynamics$n_strata)) {
+                        init_states[,stem_object$dynamics$initializer[[s]]$codes] <-
+                              matrix(as.numeric(stem_object$dynamics$initializer[[s]]$init_states),
+                                     nrow = nsim,
+                                     ncol = length(stem_object$dynamics$initializer[[s]]$init_states),
+                                     byrow = TRUE)
                   }
                   
                   # if the initial state is not fixed, sample the collection of initial states

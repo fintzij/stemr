@@ -39,11 +39,6 @@
 #'  independent and may either be updated jointly or sequentially
 #'@param joint_block_update should parameter blocks be updated jointly, defaults
 #'  to TRUE.
-#'@param ignore_blocks vector of logicals of the same length as the list of
-#'  parameter blocks indicating whether each block should be ignored and thus
-#'  not updated in the MCMC kernel, defaults to FALSE for all blocks. This is
-#'  useful if coercing the ESS updates for random effects by specifying them as
-#'  time varying parameters.
 #'
 #'@details Specifies a Metropolis transition kernel wtih symmetric Gaussian
 #'  proposals. The options for the method are as follows: 1) mvn_rw: global
@@ -98,16 +93,6 @@ kernel <-
       if(target_g < 0 || target_g >1) {
             stop("The target acceptance rate must be between 0 and 1.")
       }
-              
-      if(!is.null(parameter_blocks)) {
-            if(is.null(ignore_blocks)) {
-                  ignore_blocks <- rep(FALSE, length(parameter_blocks))
-            } else {
-                  if(length(parameter_blocks) != length(ignore_blocks)) {
-                        stop("The ignore_blocks argument must be the same length as the paramter_blocks argument.")
-                  }
-            }
-      }
       
       if(is.null(nugget)) {
         
@@ -139,7 +124,6 @@ kernel <-
                           harss_setting_list = harss_setting_list,
                           mvnss_setting_list = mvnss_setting_list,
                           parameter_blocks   = parameter_blocks,
-                          ignore_blocks      = ignore_blocks,
                           joint_block_update = joint_block_update)
       
       return(list(method = method, sigma = sigma, kernel_settings = kernel_settings))

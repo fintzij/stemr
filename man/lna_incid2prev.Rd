@@ -5,7 +5,8 @@
 \title{Convert an LNA path from the counting process on transition events to the
 compartment densities on their natural scale.}
 \usage{
-lna_incid2prev(path, flow_matrix, init_state, forcing_inds, forcing_matrix)
+lna_incid2prev(path, flow_matrix, init_state, forcing_matrix, forcing_inds,
+  forcing_tcov_inds, forcings_out, forcing_transfers)
 }
 \arguments{
 \item{path}{matrix containing the LNA path in terms of the counting
@@ -15,13 +16,13 @@ processes on transition events (incidence)}
 
 \item{init_state}{initial compartment counts on the natural scale}
 
-\item{forcing_inds}{logical vector of indicating at which times in the
-time-varying covariance matrix a forcing is applied.}
-
 \item{forcing_matrix}{matrix containing the forcings.
 
 The process can be re-expressed by left-multiplying each row in the path
 matrix by the stoichiometry matrix: \eqn{X_t = X_0 + A'N_t}.}
+
+\item{forcing_inds}{logical vector of indicating at which times in the
+time-varying covariance matrix a forcing is applied.}
 }
 \description{
 Convert an LNA path from the counting process on transition events to the
