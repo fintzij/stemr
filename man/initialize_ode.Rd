@@ -63,8 +63,6 @@ time-varying covariance matrix a forcing is applied.}
 
 \item{step_size}{initial step size for the ODE solver (adapted internally,
 but too large of an initial step can lead to failure in stiff systems).}
-
-\item{forcing_matrix}{matrix containing the forcings.}
 }
 \value{
 ODE path

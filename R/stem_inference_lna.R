@@ -250,6 +250,10 @@ stem_inference_lna <- function(stem_object,
             }
             
             initdist_log_lik <- rep(0.0, floor(iterations / thin_params) + 1)
+            
+      } else {
+            # no joint initdist update
+            joint_initdist_update <- FALSE
       }
       
       # names of initial compartment volumes

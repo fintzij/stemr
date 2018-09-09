@@ -51,8 +51,8 @@ arma::mat lna_incid2prev(const arma::mat& path,
             for(int s=0; s < n_forcings; ++s) {
                   
                   forcing_flow     = forcing_matrix(0, forcing_tcov_inds[s]);
-                  forcing_distvec  = forcing_flow * normalise(forcings_out.col(s) % volumes.t(), 1);
-                  volumes         += forcing_transfers.slice(s) * forcing_distvec;
+                  forcing_distvec  = (forcing_flow * normalise(forcings_out.col(s) % volumes.t(), 1)).t();
+                  volumes         += (forcing_transfers.slice(s) * forcing_distvec.t()).t();
             }
       }
       

@@ -26,7 +26,6 @@
 #' @param do_prevalence should prevalence be computed?
 #' @param forcing_inds logical vector of indicating at which times in the
 #'   time-varying covariance matrix a forcing is applied.
-#' @param forcing_matrix matrix containing the forcings.
 #' @param initialization_attempts number of initialization attempts
 #' @param step_size initial step size for the ODE solver (adapted internally,
 #'   but too large of an initial step can lead to failure in stiff systems).

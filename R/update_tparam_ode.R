@@ -196,6 +196,7 @@ update_tparam_ode <-
                               flow_matrix_lna     = flow_matrix,
                               do_prevalence       = do_prevalence,
                               init_state          = init_state,
+                              lna_pars            = ode_parameters,
                               forcing_inds        = forcing_inds,
                               forcing_tcov_inds   = forcing_tcov_inds,
                               forcings_out        = forcings_out,

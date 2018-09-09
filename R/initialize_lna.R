@@ -27,7 +27,6 @@
 #' @param do_prevalence should prevalence be computed?
 #' @param forcing_inds logical vector of indicating at which times in the
 #'   time-varying covariance matrix a forcing is applied.
-#' @param forcing_matrix matrix containing the forcings.
 #' @param initialization_attempts number of initialization attempts
 #' @param step_size initial step size for the ODE solver (adapted internally,
 #'   but too large of an initial step can lead to failure in stiff systems).
@@ -79,13 +78,15 @@ initialize_lna <-
                 attempt      <- 0
                 keep_going   <- TRUE
                 
+                draws <- rep(0.0, ncol(stoich_matrix) * (length(lna_times) - 1))
+                
                 while(keep_going && (attempt <= initialization_attempts)) {
                 
                       try({
                             # propose another LNA path
                             path_init <- propose_lna(
                                   lna_times         = lna_times,
-                                  lna_draws         = rnorm(ncol(stoich_matrix) * (length(lna_times) - 1)),
+                                  lna_draws         = draws,
                                   lna_pars          = lna_parameters,
                                   init_start        = lna_initdist_inds[1],
                                   lna_param_inds    = lna_param_inds,
@@ -147,6 +148,9 @@ initialize_lna <-
                       # try new parameters
                       if(keep_going) {
                             
+                            # new LNA draws
+                            draws <- rnorm(ncol(stoich_matrix) * (length(lna_times) - 1))
+                            
                             if(!fixed_inits) {
                                   for(s in seq_along(initdist_objects)) {
                                         
@@ -205,7 +209,10 @@ initialize_lna <-
                       }
                 }
                 
-                if(keep_going) attempt <- 1
+                if(keep_going) {
+                      attempt <- 1
+                      draws <- numeric(ncol(stoich_matrix) * (length(lna_times) - 1))
+                } 
                 
                 while(keep_going && (attempt <= initialization_attempts)) {
                       
@@ -213,7 +220,7 @@ initialize_lna <-
                             # propose another LNA path - includes ESS warmup
                             path_init <- propose_lna_approx(
                                   lna_times         = lna_times,
-                                  lna_draws         = rnorm(ncol(stoich_matrix) * (length(lna_times) - 1)),
+                                  lna_draws         = draws,
                                   lna_pars          = lna_parameters,
                                   init_start        = lna_initdist_inds[1],
                                   lna_param_inds    = lna_param_inds, 
@@ -277,6 +284,9 @@ initialize_lna <-
                       
                       # try new parameters
                       if(keep_going) {
+                            
+                            # new LNA draws
+                            draws <- rnorm(ncol(stoich_matrix) * (length(lna_times) - 1))
                             
                             if(!fixed_inits) {
                                   for(s in seq_along(initdist_objects)) {

@@ -19,7 +19,6 @@ using namespace arma;
 //'   from each reaction
 //' @param forcing_inds logical vector of indicating at which times in the
 //'   time-varying covariance matrix a forcing is applied.
-//' @param forcing_matrix matrix containing the forcings.
 //' @param step_size initial step size for the ODE solver (adapted internally,
 //' but too large of an initial step can lead to failure in stiff systems).
 //' @param ode_pointer external pointer to ode integration function.

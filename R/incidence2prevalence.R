@@ -29,24 +29,30 @@ incidence2prevalence <- function(path, flow_matrix, init_state, forcings = NULL,
                   # all times, sorted
                   census_times <- sort(unique(c(path_times, forcing_times)))
                   
-                  # indices of path and forcing indices
-                  path_inds    <- census_times %in% path_times
-                  forcing_inds <- census_times %in% forcing_times
-                  
                   # create matrices and insert times
                   path_mtx     <- matrix(0.0, nrow = length(census_times), ncol = ncol(path))
                   forcing_mtx  <- matrix(0.0, nrow = length(census_times), ncol = ncol(forcing_matrix))
                   path_mtx[,1] <- census_times
                   forcing_mtx[,1] <- census_times
                   
+                  # indices of path and forcing indices
+                  path_inds    <- census_times %in% path_times
+                  forcing_inds <- census_times %in% forcing_times
+                  
                   # insert path and forcings
                   path_mtx[path_inds,-1]       <- path[,-1]
                   forcing_mtx[forcing_inds,-1] <- forcing_matrix[,-1]
+                  
+                  # zero out forcings indices for zero forcings
+                  forcing_inds <- forcing_inds & apply(forcing_mtx[,-1, drop = FALSE], 1, function(x) any(x != 0))
                   
             } else {
                   path_mtx     <- path
                   forcing_mtx  <- forcing_matrix
                   forcing_inds <- rep(TRUE, nrow(path))
+                  
+                  # zero out forcings indices for zero forcings
+                  forcing_inds <- forcing_inds & apply(forcing_mtx[,-1, drop = FALSE], 1, function(x) any(x != 0))
             }
             
             colnames(path_mtx)   <- colnames(path)

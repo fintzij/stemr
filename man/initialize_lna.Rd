@@ -74,8 +74,6 @@ but too large of an initial step can lead to failure in stiff systems).}
 \item{ess_warmup}{number of elliptical slice sampling updates where
 likelihood is over indicators for monotonicity and non-negativity of LNA
 increments}
-
-\item{forcing_matrix}{matrix containing the forcings.}
 }
 \value{
 LNA path along with its stochastic perturbations

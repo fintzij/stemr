@@ -35,8 +35,6 @@ but too large of an initial step can lead to failure in stiff systems).}
 
 \item{set_pars_pointer}{external pointer to the function for setting the ode
 parameters.}
-
-\item{forcing_matrix}{matrix containing the forcings.}
 }
 \value{
 List containing the ODE incidence and prevalence paths.
