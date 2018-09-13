@@ -176,15 +176,16 @@ simulate_stem <-
                   if(rebuild_tcovar) {
                         
                         # rebuild the time-varying covariate matrix so that it contains the census intervals
-                        stem_object$dynamics$tcovar <- build_tcovar_matrix(tcovar       = stem_object$dynamics$dynamics_args$tcovar, 
-                                                                           tparam       = stem_object$dynamics$tparam,
-                                                                           forcings     = stem_object$dynamics$forcings,
-                                                                           parameters   = stem_object$dynamics$parameters,
-                                                                           timestep     = timestep, 
-                                                                           census_times = census_times,
-                                                                           t0           = t0, 
-                                                                           tmax         = tmax, 
-                                                                           messages     = messages)
+                        stem_object$dynamics$tcovar <- 
+                              build_tcovar_matrix(tcovar       = stem_object$dynamics$dynamics_args$tcovar,
+                                                  tparam       = stem_object$dynamics$tparam,
+                                                  forcings     = stem_object$dynamics$forcings,
+                                                  parameters   = stem_object$dynamics$parameters,
+                                                  timestep     = timestep, 
+                                                  census_times = census_times,
+                                                  t0           = t0, 
+                                                  tmax         = tmax, 
+                                                  messages     = messages)
                         
                         stem_object$dynamics$tcovar_codes        <- seq_len(ncol(stem_object$dynamics$tcovar) - 1)
                         names(stem_object$dynamics$tcovar_codes) <- colnames(stem_object$dynamics$tcovar)[2:ncol(stem_object$dynamics$tcovar)]
@@ -210,6 +211,7 @@ simulate_stem <-
                         }
                         
                   } else {
+                        
                         # Get the forcing indices if there are forcings
                         if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
                               
@@ -297,9 +299,12 @@ simulate_stem <-
                         }
                   }
                   
+                  # not too big
+                  init_dims[1] <- pmin(init_dims[1], 2^23)
+                  
                   # make the initial dimensions a little bigger (round up to nearest power of 2)
                   p <- 1
-                  while(2^p < init_dims[1] & p < 1e7) {
+                  while(2^p < init_dims[1] & p < 1e6) {
                         p <- p+1
                         if(2^p > init_dims[1]) init_dims[1] <- 2^p
                   }
@@ -470,6 +475,7 @@ simulate_stem <-
                                                                     parameters        = sim_pars,
                                                                     constants         = stem_object$dynamics$constants,
                                                                     tcovar            = stem_object$dynamics$tcovar,
+                                                                    t_max             = max(census_times),
                                                                     init_states       = init_states[k,],
                                                                     rate_adjmat       = stem_object$dynamics$rate_adjmat,
                                                                     tcovar_adjmat     = stem_object$dynamics$tcovar_adjmat,
@@ -524,6 +530,8 @@ simulate_stem <-
                           seq(t0, tmax, by = stem_object$dynamics$timestep),
                           stem_object$dynamics$tcovar[, 1],
                           tmax)))
+                  
+                  lna_census_times <- lna_times[lna_times >= t0 & lna_times <= tmax]
                   
                   # generate the matrix of parameters, constants, and time-varying covariates
                   lna_pars  <- matrix(0.0,
@@ -856,7 +864,7 @@ simulate_stem <-
                               
                               if(lna_method == "exact") {
                                     try({
-                                          path <- propose_lna(lna_times         = lna_times,
+                                          path <- propose_lna(lna_times         = lna_census_times,
                                                               lna_draws         = lna_draws[[k]],
                                                               lna_pars          = lna_pars,
                                                               init_start        = stem_object$dynamics$lna_initdist_inds[1],
@@ -888,7 +896,7 @@ simulate_stem <-
                               } else if(lna_method == "approx") {
                                     
                                     try({
-                                          path <- propose_lna_approx(lna_times         = lna_times,
+                                          path <- propose_lna_approx(lna_times         = lna_census_times,
                                                                      lna_draws         = lna_draws[[k]],
                                                                      lna_pars          = lna_pars,
                                                                      init_start        = stem_object$dynamics$lna_initdist_inds[1],
@@ -940,6 +948,7 @@ simulate_stem <-
                   
                   # set the vectors of times when the ODE is evaluated and censused
                   ode_times <- sort(unique(c(t0, census_times, stem_object$dynamics$tcovar[,1], tmax)))
+                  ode_census_times <- ode_times[ode_times >= t0 & ode_times <= tmax]
                   
                   # generate the matrix of parameters, constants, and time-varying covariates
                   ode_pars  <- matrix(0.0,

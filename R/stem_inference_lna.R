@@ -289,6 +289,7 @@ stem_inference_lna <- function(stem_object,
       names(params_prop_est) <- names(params_prop_nat) <- param_names_nat
       
       # generate other derived objects
+      # full vector of times
       lna_times <- 
             sort(unique(c(obstimes,
                           stem_object$dynamics$tcovar[, 1],
@@ -296,9 +297,11 @@ stem_inference_lna <- function(stem_object,
                               stem_object$dynamics$tmax,
                               by = stem_object$dynamics$timestep),
                           stem_object$dynamics$tmax)))
+      n_times <- length(lna_times)
       
-      n_times           <- length(lna_times)
-      census_indices    <- unique(c(0, findInterval(obstimes, lna_times) - 1))
+      # vector of times, constrained between t0 and tmax
+      lna_census_times <- lna_times[lna_times >= stem_object$dynamics$t0 & lna_times <= stem_object$dynamics$tmax]
+      census_indices    <- unique(c(0, findInterval(obstimes, lna_census_times) - 1))
       
       # objects for computing the SVD of the LNA diffusion matrix
       svd_U    <- diag(0.0, n_rates)
@@ -685,9 +688,7 @@ stem_inference_lna <- function(stem_object,
                                       parameter_blocks[[b]]$block_size,
                                       floor(iterations / thin_params) + 1))
                   
-                  mat_2_arr(dest = kernel_cov_record[[b]],
-                            orig = mvnss_objects[[b]]$kernel_cov,
-                            ind  = 0)
+                  kernel_cov_record[[b]][,,1] <-  mvnss_objects[[b]]$kernel_cov
             }
             
             # update_sequence
@@ -906,7 +907,6 @@ stem_inference_lna <- function(stem_object,
                   param_update_inds | apply(stem_object$dynamics$tcovar_changemat, 1, any)
       }
       
-      
       # generate forcing objects
       if(!is.null(stem_object$dynamics$forcings)) {
             
@@ -1003,10 +1003,10 @@ stem_inference_lna <- function(stem_object,
       
       lna_paths <-
             array(0.0, 
-                  dim = c(n_times, 1 + n_rates, 1 + floor(iterations / thin_latent_proc)))
+                  dim = c(length(lna_census_times), 1 + n_rates, 1 + floor(iterations / thin_latent_proc)))
       lna_draws <-
             array(0.0, 
-                  dim = c(n_rates, n_times - 1, 1 + floor(iterations / thin_latent_proc)))
+                  dim = c(n_rates, length(lna_census_times) - 1, 1 + floor(iterations / thin_latent_proc)))
       
       colnames(lna_paths) <- c("time", rownames(flow_matrix))
       rownames(lna_draws) <- rownames(flow_matrix)
@@ -1087,7 +1087,7 @@ stem_inference_lna <- function(stem_object,
                   stoich_matrix           = stoich_matrix,
                   lna_pointer             = lna_pointer,
                   lna_set_pars_pointer    = lna_set_pars_pointer,
-                  lna_times               = lna_times,
+                  lna_times               = lna_census_times,
                   lna_param_vec           = lna_param_vec,
                   lna_param_inds          = lna_param_inds,
                   lna_const_inds          = lna_const_inds,
@@ -1123,7 +1123,7 @@ stem_inference_lna <- function(stem_object,
       draws_prop <-
             matrix(0.0,
                    nrow = nrow(flow_matrix),
-                   ncol = length(lna_times) - 1)
+                   ncol = length(lna_census_times) - 1)
       copy_mat(draws_prop, path$draws)
       
       # add a vector for the ESS record to the path
@@ -1157,7 +1157,7 @@ stem_inference_lna <- function(stem_object,
                         emitmat                 = emitmat,
                         flow_matrix             = flow_matrix,
                         stoich_matrix           = stoich_matrix,
-                        lna_times               = lna_times,
+                        lna_times               = lna_census_times,
                         forcing_inds            = forcing_inds,
                         forcing_tcov_inds       = forcing_tcov_inds,
                         forcings_out            = forcings_out,
@@ -1200,7 +1200,7 @@ stem_inference_lna <- function(stem_object,
                               emitmat                = emitmat,
                               flow_matrix            = flow_matrix,
                               stoich_matrix          = stoich_matrix,
-                              lna_times              = lna_times,
+                              lna_times              = lna_census_times,
                               forcing_inds           = forcing_inds,
                               forcing_tcov_inds      = forcing_tcov_inds,
                               forcings_out           = forcings_out,
@@ -1241,7 +1241,7 @@ stem_inference_lna <- function(stem_object,
                               emitmat              = emitmat,
                               flow_matrix          = flow_matrix,
                               stoich_matrix        = stoich_matrix,
-                              lna_times            = lna_times,
+                              lna_times            = lna_census_times,
                               forcing_inds         = forcing_inds,
                               forcing_tcov_inds    = forcing_tcov_inds,
                               forcings_out         = forcings_out,
@@ -1293,7 +1293,7 @@ stem_inference_lna <- function(stem_object,
                               emitmat              = emitmat,
                               flow_matrix          = flow_matrix,
                               stoich_matrix        = stoich_matrix,
-                              lna_times            = lna_times,
+                              lna_times            = lna_census_times,
                               forcing_inds         = forcing_inds,
                               forcing_tcov_inds    = forcing_tcov_inds,
                               forcings_out         = forcings_out,
@@ -1351,8 +1351,8 @@ stem_inference_lna <- function(stem_object,
       param_rec_ind         <- 2 # index for recording the parameters
       parameter_samples_nat[1, ] <- c(model_params_nat, t0, init_volumes_cur)
       parameter_samples_est[1, ] <- c(model_params_est, t0)
-      mat_2_arr(lna_paths, path$lna_path, 0)
-      mat_2_arr(lna_draws, path$draws, 0)
+      lna_paths[,,1]        <- path$lna_path
+      lna_draws[,,1]        <- path$draws
       data_log_lik[1]       <- path$data_log_lik
       lna_log_lik[1]        <- sum(dnorm(path$draws, log = T))
       params_log_prior[1]   <- params_logprior_cur
@@ -1365,7 +1365,7 @@ stem_inference_lna <- function(stem_object,
       if (!is.null(tparam)) {
             for (p in seq_along(tparam)) tparam[[p]]$log_lik <- sum(dnorm(tparam[[p]]$draws_cur, log = T))
             tparam_log_lik[1, ] <- sapply(tparam, "[[", "log_lik")
-            mat_2_arr(tparam_samples, lna_params_cur[, tparam_inds + 1, drop = FALSE], 0)
+            tparam_samples[,,1] <- lna_params_cur[, tparam_inds + 1, drop = FALSE]
       }
       
       # initialize the status file if status updates are required
@@ -1423,7 +1423,7 @@ stem_inference_lna <- function(stem_object,
                         map_draws_2_lna(
                               pathmat           = pathmat_prop,
                               draws             = path$draws,
-                              lna_times         = lna_times,
+                              lna_times         = lna_census_times,
                               lna_pars          = lna_params_prop,
                               lna_param_vec     = lna_param_vec,
                               lna_param_inds    = lna_param_inds,
@@ -1503,7 +1503,8 @@ stem_inference_lna <- function(stem_object,
                   
             } else if (mcmc_kernel$method == "mvn_g_adaptive") {
                   
-                  if (iter == stop_adaptation) {
+                  if (iter == stop_adaptation | iter == (iterations+1)) {
+                        
                         mcmc_kernel$sigma = proposal_scaling * kernel_cov
                         colnames(mcmc_kernel$sigma) <- 
                               rownames(mcmc_kernel$sigma) <- param_names_est
@@ -1560,7 +1561,7 @@ stem_inference_lna <- function(stem_object,
                         map_draws_2_lna(
                               pathmat           = pathmat_prop,
                               draws             = path$draws,
-                              lna_times         = lna_times,
+                              lna_times         = lna_census_times,
                               lna_pars          = lna_params_prop,
                               lna_param_vec     = lna_param_vec,
                               lna_param_inds    = lna_param_inds,
@@ -1657,7 +1658,8 @@ stem_inference_lna <- function(stem_object,
                   
             } else if (mcmc_kernel$method == "afss") {
                   
-                  if (iter == stop_adaptation) {
+                  if (iter == stop_adaptation | iter == (iterations+1)) {
+                        
                         mcmc_kernel$sigma = kernel_cov
                         colnames(mcmc_kernel$sigma) <- 
                               rownames(mcmc_kernel$sigma) <- param_names_est
@@ -1722,7 +1724,7 @@ stem_inference_lna <- function(stem_object,
                         emitmat              = emitmat,
                         flow_matrix          = flow_matrix,
                         stoich_matrix        = stoich_matrix,
-                        lna_times            = lna_times,
+                        lna_times            = lna_census_times,
                         forcing_inds         = forcing_inds,
                         forcing_tcov_inds    = forcing_tcov_inds,
                         forcings_out         = forcings_out,
@@ -1770,7 +1772,7 @@ stem_inference_lna <- function(stem_object,
                               emitmat              = emitmat,
                               flow_matrix          = flow_matrix,
                               stoich_matrix        = stoich_matrix,
-                              lna_times            = lna_times,
+                              lna_times            = lna_census_times,
                               forcing_inds         = forcing_inds,
                               forcing_tcov_inds    = forcing_tcov_inds,
                               forcings_out         = forcings_out,
@@ -1880,7 +1882,8 @@ stem_inference_lna <- function(stem_object,
                   
             } else if (mcmc_kernel$method == "harss") {
                   
-                  if (iter == stop_adaptation) {
+                  if (iter == stop_adaptation | iter == (iterations+1)) {
+                        
                         mcmc_kernel$sigma = kernel_cov
                         colnames(mcmc_kernel$sigma) <- 
                               rownames(mcmc_kernel$sigma) <- param_names_est
@@ -1909,7 +1912,7 @@ stem_inference_lna <- function(stem_object,
                         emitmat              = emitmat,
                         flow_matrix          = flow_matrix,
                         stoich_matrix        = stoich_matrix,
-                        lna_times            = lna_times,
+                        lna_times            = lna_census_times,
                         forcing_inds         = forcing_inds,
                         forcing_tcov_inds    = forcing_tcov_inds,
                         forcings_out         = forcings_out,
@@ -1949,7 +1952,7 @@ stem_inference_lna <- function(stem_object,
                   
             } else if (mcmc_kernel$method == "mvnss") {
                   
-                  if (iter == stop_adaptation) {
+                  if (iter == stop_adaptation | iter == (iterations+1)) {
                         
                         # reconstitute covariance matrix
                         mcmc_kernel$sigma <- 
@@ -2031,7 +2034,7 @@ stem_inference_lna <- function(stem_object,
                               emitmat              = emitmat,
                               flow_matrix          = flow_matrix,
                               stoich_matrix        = stoich_matrix,
-                              lna_times            = lna_times,
+                              lna_times            = lna_census_times,
                               forcing_inds         = forcing_inds,
                               forcing_tcov_inds    = forcing_tcov_inds,
                               forcings_out         = forcings_out,
@@ -2138,7 +2141,7 @@ stem_inference_lna <- function(stem_object,
                         emitmat                = emitmat,
                         flow_matrix            = flow_matrix,
                         stoich_matrix          = stoich_matrix,
-                        lna_times              = lna_times,
+                        lna_times              = lna_census_times,
                         forcing_inds           = forcing_inds,
                         forcing_tcov_inds      = forcing_tcov_inds,
                         forcings_out           = forcings_out,
@@ -2201,7 +2204,7 @@ stem_inference_lna <- function(stem_object,
                         emitmat              = emitmat,
                         flow_matrix          = flow_matrix,
                         stoich_matrix        = stoich_matrix,
-                        lna_times            = lna_times,
+                        lna_times            = lna_census_times,
                         forcing_inds         = forcing_inds,
                         forcing_tcov_inds    = forcing_tcov_inds,
                         forcings_out         = forcings_out,
@@ -2322,7 +2325,7 @@ stem_inference_lna <- function(stem_object,
                         map_draws_2_lna(
                               pathmat           = pathmat_prop,
                               draws             = path$draws,
-                              lna_times         = lna_times,
+                              lna_times         = lna_census_times,
                               lna_pars          = lna_params_prop,
                               lna_param_vec     = lna_param_vec,
                               lna_param_inds    = lna_param_inds,
@@ -2427,7 +2430,7 @@ stem_inference_lna <- function(stem_object,
                   emitmat                 = emitmat,
                   flow_matrix             = flow_matrix,
                   stoich_matrix           = stoich_matrix,
-                  lna_times               = lna_times,
+                  lna_times               = lna_census_times,
                   forcing_inds            = forcing_inds,
                   forcing_tcov_inds       = forcing_tcov_inds,
                   forcings_out            = forcings_out,
@@ -2480,11 +2483,11 @@ stem_inference_lna <- function(stem_object,
             
             # Save the latent process if called for in this iteration
             if ((iter-1) %% thin_latent_proc == 0) {
-                  ess_step_record[, param_rec_ind - 1]  <- path$step_record # save the number of steps
+                  ess_step_record[, param_rec_ind - 1]  <- path$step_record  # save the number of steps
                   ess_angle_record[, param_rec_ind - 1] <- path$angle_record # save the angle
-                  mat_2_arr(lna_paths, path$lna_path, path_rec_ind - 1) # save the path
-                  mat_2_arr(lna_draws, path$draws, path_rec_ind - 1)    # save the N(0,1) draws
-                  path_rec_ind <- path_rec_ind + 1                      # increment the path record index
+                  lna_paths[,,path_rec_ind] <- path$lna_path                 # save the path
+                  lna_draws[,,path_rec_ind] <- path$draws                    # save the N(0,1) draws
+                  path_rec_ind <- path_rec_ind + 1                           # increment the path record index
             }
             
             # Save the parameters if called for in this iteration
@@ -2519,7 +2522,7 @@ stem_inference_lna <- function(stem_object,
                         for (p in seq_along(tparam)) tparam[[p]]$log_lik <- sum(dnorm(tparam[[p]]$draws_cur, log = T))
                         
                         tparam_log_lik[param_rec_ind, ] <- sapply(tparam, "[[", "log_lik")
-                        mat_2_arr(tparam_samples, lna_params_cur[, tparam_inds + 1, drop = FALSE], param_rec_ind - 1)
+                        tparam_samples[,,param_rec_ind] <- lna_params_cur[, tparam_inds + 1, drop = FALSE]
                   }
                   
                   # Store the parameter sample
@@ -2539,7 +2542,7 @@ stem_inference_lna <- function(stem_object,
                   } else if(mcmc_kernel$method == "mvnss") {
                         
                         for(b in seq_along(parameter_blocks)) {
-                              mat_2_arr(dest = kernel_cov_record[[b]], orig = mvnss_objects[[b]]$kernel_cov, ind = param_rec_ind - 1)
+                              kernel_cov_record[[b]][,,param_rec_ind] <- mvnss_objects[[b]]$kernel_cov
                         }
                   }
                   

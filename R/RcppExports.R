@@ -784,8 +784,8 @@ retrieve_census_path <- function(censusmat, path, census_times, census_columns) 
 #'
 #' @return matrix with a simulated path from a stochastic epidemic model.
 #' @export
-simulate_gillespie <- function(flow, parameters, constants, tcovar, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, rate_ptr) {
-    .Call(`_stemr_simulate_gillespie`, flow, parameters, constants, tcovar, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, rate_ptr)
+simulate_gillespie <- function(flow, parameters, constants, tcovar, t_max, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, rate_ptr) {
+    .Call(`_stemr_simulate_gillespie`, flow, parameters, constants, tcovar, t_max, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, rate_ptr)
 }
 
 #' Simulate a data matrix from the measurement process of a stochastic epidemic

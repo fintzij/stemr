@@ -41,7 +41,7 @@ build_tcovar_matrix <- function(tcovar = NULL, tparam = NULL, forcings = NULL, t
                 }
                 
                 # get tcovar times and parameters
-                TCOVAR_TIMES <- sort(unique(c(tcovar[,1, drop = FALSE], tparam_times, timeseq)))
+                TCOVAR_TIMES <- sort(unique(c(tcovar[,1], tparam_times, timeseq)))
 
                 TCOVAR <- matrix(0, nrow = length(TCOVAR_TIMES), 
                                  ncol = 1 + 
@@ -60,7 +60,7 @@ build_tcovar_matrix <- function(tcovar = NULL, tparam = NULL, forcings = NULL, t
                       if(!is.null(tcovar)) {
                             tcovar_inds <- findInterval(TCOVAR_TIMES, tcovar[,1], left.open = T) + 1
                             tcovar_inds[tcovar_inds > nrow(tcovar)] <- nrow(tcovar)
-                            TCOVAR[,seq(2,1 + (ncol(tcovar)-1))] <- tcovar[tcovar_inds, seq(2,ncol(tcovar))]
+                            TCOVAR[,seq(2,1 + (ncol(tcovar)-1))] <- as.matrix(tcovar[tcovar_inds, seq(2,ncol(tcovar))])
                             tcovar_names <- colnames(tcovar)[2:ncol(tcovar)]
                       } else {
                             tcovar_names <- NULL
@@ -94,7 +94,9 @@ build_tcovar_matrix <- function(tcovar = NULL, tparam = NULL, forcings = NULL, t
                             inds[inds==0] <- 1
                             vals <- tparam[[s]]$draws2par(parameters = parameters, draws = tparam[[s]]$values)
                             
-                            if(length(vals) != length(tparam[[s]]$times)) stop("The draws2pars argument must return as many values as there are times at which the time-varying parameter is evaluated.")
+                            if(length(vals) != length(tparam[[s]]$times)) {
+                                  stop(paste0("The draws2pars argument in tparam function number ",s," must return as many values as there are times at which the time-varying parameter is evaluated."))
+                            } 
                             
                             TCOVAR[, tparam[[s]]$tparam_name] <- vals[inds]
                       }

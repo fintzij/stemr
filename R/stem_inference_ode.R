@@ -267,9 +267,11 @@ stem_inference_ode <- function(stem_object,
                               stem_object$dynamics$tmax,
                               by = stem_object$dynamics$timestep),
                           stem_object$dynamics$tmax)))
+      n_times <- length(ode_times)
       
-      n_times           <- length(ode_times)
-      census_indices    <- unique(c(0, findInterval(obstimes, ode_times) - 1))
+      # vector of times, constrained between t0 and tmax
+      ode_census_times <- ode_times[ode_times >= stem_object$dynamics$t0 & ode_times <= stem_object$dynamics$tmax]
+      census_indices <- unique(c(0, findInterval(obstimes, ode_census_times) - 1))
       
       # harss warmup
       harss_warmup <- as.logical(mcmc_kernel$kernel_settings$harss_warmup > 0)
@@ -651,9 +653,7 @@ stem_inference_ode <- function(stem_object,
                                       parameter_blocks[[b]]$block_size,
                                       floor(iterations / thin_params) + 1))
                   
-                  mat_2_arr(dest = kernel_cov_record[[b]],
-                            orig = mvnss_objects[[b]]$kernel_cov,
-                            ind  = 0)
+                  kernel_cov_record[[b]][,,1] <- mvnss_objects[[b]]$kernel_cov
             }
             
             # update_sequence
@@ -912,9 +912,9 @@ stem_inference_ode <- function(stem_object,
                               dimnames = list(NULL, colnames(measproc_indmat))
                        ))
       
-      pathmat_prop <- cbind(ode_times,
+      pathmat_prop <- cbind(ode_census_times,
                             matrix(0.0, 
-                                   nrow = length(ode_times), 
+                                   nrow = length(ode_census_times), 
                                    ncol = nrow(flow_matrix),
                                    dimnames = list(NULL, c(rownames(flow_matrix)))))
       
@@ -960,7 +960,7 @@ stem_inference_ode <- function(stem_object,
       
       ode_paths <- 
             array(0.0, 
-                  dim = c(n_times, 1 + n_rates, 1 + floor(iterations / thin_latent_proc)))
+                  dim = c(length(ode_census_times), 1 + n_rates, 1 + floor(iterations / thin_latent_proc)))
       
       colnames(ode_paths) <- c("time", rownames(flow_matrix))
       
@@ -1033,7 +1033,7 @@ stem_inference_ode <- function(stem_object,
                   stoich_matrix           = stoich_matrix,
                   ode_pointer             = ode_pointer,
                   ode_set_pars_pointer    = ode_set_pars_pointer,
-                  ode_times               = ode_times,
+                  ode_times               = ode_census_times,
                   ode_param_vec           = ode_param_vec,
                   ode_param_inds          = ode_param_inds,
                   ode_const_inds          = ode_const_inds,
@@ -1086,7 +1086,7 @@ stem_inference_ode <- function(stem_object,
                               emitmat              = emitmat,
                               flow_matrix          = flow_matrix,
                               stoich_matrix        = stoich_matrix,
-                              ode_times            = ode_times,
+                              ode_times            = ode_census_times,
                               forcing_inds         = forcing_inds,
                               forcing_tcov_inds    = forcing_tcov_inds,
                               forcings_out         = forcings_out,
@@ -1125,7 +1125,7 @@ stem_inference_ode <- function(stem_object,
                               emitmat              = emitmat,
                               flow_matrix          = flow_matrix,
                               stoich_matrix        = stoich_matrix,
-                              ode_times            = ode_times,
+                              ode_times            = ode_census_times,
                               forcing_inds         = forcing_inds,
                               forcing_tcov_inds    = forcing_tcov_inds,
                               forcings_out         = forcings_out,
@@ -1174,7 +1174,7 @@ stem_inference_ode <- function(stem_object,
                               emitmat              = emitmat,
                               flow_matrix          = flow_matrix,
                               stoich_matrix        = stoich_matrix,
-                              ode_times            = ode_times,
+                              ode_times            = ode_census_times,
                               forcing_inds         = forcing_inds,
                               forcing_tcov_inds    = forcing_tcov_inds,
                               forcings_out         = forcings_out,
@@ -1229,7 +1229,7 @@ stem_inference_ode <- function(stem_object,
       param_rec_ind         <- 2 # index for recording the parameters
       parameter_samples_nat[1, ] <- c(model_params_nat, t0, init_volumes_cur)
       parameter_samples_est[1, ] <- c(model_params_est, t0)
-      mat_2_arr(ode_paths, path$ode_path, 0)
+      ode_paths[,,1]        <- path$ode_path
       data_log_lik[1]       <- path$data_log_lik
       params_log_prior[1]   <- params_logprior_cur
       
@@ -1241,7 +1241,7 @@ stem_inference_ode <- function(stem_object,
       if (!is.null(tparam)) {
             for (p in seq_along(tparam)) tparam[[p]]$log_lik <- sum(dnorm(tparam[[p]]$draws_cur, log = T))
             tparam_log_lik[1, ] <- sapply(tparam, "[[", "log_lik")
-            mat_2_arr(tparam_samples, ode_params_cur[, tparam_inds + 1, drop = FALSE], 0)
+            tparam_samples[,,1] <- ode_params_cur[, tparam_inds + 1, drop = FALSE]
       }
       
       # initialize the status file if status updates are required
@@ -1297,7 +1297,7 @@ stem_inference_ode <- function(stem_object,
                   try({
                         map_pars_2_ode(
                               pathmat           = pathmat_prop,
-                              ode_times         = ode_times,
+                              ode_times         = ode_census_times,
                               ode_pars          = ode_params_prop,
                               ode_param_inds    = ode_param_inds,
                               ode_tcovar_inds   = ode_tcovar_inds,
@@ -1373,7 +1373,8 @@ stem_inference_ode <- function(stem_object,
                   
             } else if(mcmc_kernel$method == "mvn_g_adaptive") {
                   
-                  if (iter == stop_adaptation) {
+                  if (iter == stop_adaptation | iter == (iterations+1)) {
+                        
                         mcmc_kernel$sigma = proposal_scaling * kernel_cov
                         colnames(mcmc_kernel$sigma) <- 
                               rownames(mcmc_kernel$sigma) <- param_names_est
@@ -1429,7 +1430,7 @@ stem_inference_ode <- function(stem_object,
                   try({
                         map_pars_2_ode(
                               pathmat           = pathmat_prop,
-                              ode_times         = ode_times,
+                              ode_times         = ode_census_times,
                               ode_pars          = ode_params_prop,
                               ode_param_inds    = ode_param_inds,
                               ode_tcovar_inds   = ode_tcovar_inds,
@@ -1521,7 +1522,8 @@ stem_inference_ode <- function(stem_object,
                   
             } else if (mcmc_kernel$method == "afss") {
                   
-                  if (iter == stop_adaptation) {
+                  if (iter == stop_adaptation | iter == (iterations+1)) {
+                        
                         mcmc_kernel$sigma = kernel_cov
                         colnames(mcmc_kernel$sigma) <- 
                               rownames(mcmc_kernel$sigma) <- param_names_est
@@ -1586,7 +1588,7 @@ stem_inference_ode <- function(stem_object,
                         emitmat              = emitmat,
                         flow_matrix          = flow_matrix,
                         stoich_matrix        = stoich_matrix,
-                        ode_times            = ode_times,
+                        ode_times            = ode_census_times,
                         forcing_inds         = forcing_inds,
                         forcing_tcov_inds    = forcing_tcov_inds,
                         forcings_out         = forcings_out,
@@ -1631,7 +1633,7 @@ stem_inference_ode <- function(stem_object,
                               emitmat              = emitmat,
                               flow_matrix          = flow_matrix,
                               stoich_matrix        = stoich_matrix,
-                              ode_times            = ode_times,
+                              ode_times            = ode_census_times,
                               forcing_inds         = forcing_inds,
                               forcing_tcov_inds    = forcing_tcov_inds,
                               forcings_out         = forcings_out,
@@ -1737,7 +1739,8 @@ stem_inference_ode <- function(stem_object,
                   
             } else if (mcmc_kernel$method == "harss") {
                   
-                  if (iter == stop_adaptation) {
+                  if (iter == stop_adaptation | iter == (iterations+1)) {
+                        
                         mcmc_kernel$sigma = kernel_cov
                         colnames(mcmc_kernel$sigma) <- 
                               rownames(mcmc_kernel$sigma) <- param_names_est
@@ -1766,7 +1769,7 @@ stem_inference_ode <- function(stem_object,
                         emitmat              = emitmat,
                         flow_matrix          = flow_matrix,
                         stoich_matrix        = stoich_matrix,
-                        ode_times            = ode_times,
+                        ode_times            = ode_census_times,
                         forcing_inds         = forcing_inds,
                         forcing_tcov_inds    = forcing_tcov_inds,
                         forcings_out         = forcings_out,
@@ -1804,7 +1807,7 @@ stem_inference_ode <- function(stem_object,
                   
             } else if (mcmc_kernel$method == "mvnss") {
                   
-                  if (iter == stop_adaptation) {
+                  if (iter == stop_adaptation | iter == (iterations+1)) {
                         
                         # reconstitute covariance matrix
                         mcmc_kernel$sigma <- 
@@ -1886,7 +1889,7 @@ stem_inference_ode <- function(stem_object,
                               emitmat              = emitmat,
                               flow_matrix          = flow_matrix,
                               stoich_matrix        = stoich_matrix,
-                              ode_times            = ode_times,
+                              ode_times            = ode_census_times,
                               forcing_inds         = forcing_inds,
                               forcing_tcov_inds    = forcing_tcov_inds,
                               forcings_out         = forcings_out,
@@ -1989,7 +1992,7 @@ stem_inference_ode <- function(stem_object,
                         emitmat              = emitmat,
                         flow_matrix          = flow_matrix,
                         stoich_matrix        = stoich_matrix,
-                        ode_times            = ode_times,
+                        ode_times            = ode_census_times,
                         forcing_inds         = forcing_inds,
                         forcing_tcov_inds    = forcing_tcov_inds,
                         forcings_out         = forcings_out,
@@ -2046,7 +2049,7 @@ stem_inference_ode <- function(stem_object,
                         emitmat              = emitmat,
                         flow_matrix          = flow_matrix,
                         stoich_matrix        = stoich_matrix,
-                        ode_times            = ode_times,
+                        ode_times            = ode_census_times,
                         forcing_inds         = forcing_inds,
                         forcing_tcov_inds    = forcing_tcov_inds,
                         forcings_out         = forcings_out,
@@ -2151,7 +2154,7 @@ stem_inference_ode <- function(stem_object,
                   try({
                         map_pars_2_ode(
                               pathmat           = pathmat_prop,
-                              ode_times         = ode_times,
+                              ode_times         = ode_census_times,
                               ode_pars          = ode_params_prop,
                               ode_param_inds    = ode_param_inds,
                               ode_tcovar_inds   = ode_tcovar_inds,
@@ -2268,7 +2271,7 @@ stem_inference_ode <- function(stem_object,
                         for (p in seq_along(tparam)) tparam[[p]]$log_lik <- sum(dnorm(tparam[[p]]$draws_cur, log = T))
                         
                         tparam_log_lik[param_rec_ind, ] <- sapply(tparam, "[[", "log_lik")
-                        mat_2_arr(tparam_samples, ode_params_cur[, tparam_inds + 1, drop = FALSE], param_rec_ind - 1)
+                        tparam_samples[,,param_rec_ind] <- ode_params_cur[, tparam_inds + 1, drop = FALSE]
                   }
                   
                   # Store the parameter sample
@@ -2288,7 +2291,7 @@ stem_inference_ode <- function(stem_object,
                   } else if(mcmc_kernel$method == "mvnss") {
                         
                         for(b in seq_along(parameter_blocks)) {
-                              mat_2_arr(dest = kernel_cov_record[[b]], orig = mvnss_objects[[b]]$kernel_cov, ind = param_rec_ind - 1)
+                              kernel_cov_record[[b]][,,param_rec_ind] <- mvnss_objects[[b]]$kernel_cov
                         }
                   }
                   

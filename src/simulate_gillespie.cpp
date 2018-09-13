@@ -35,6 +35,7 @@ arma::mat simulate_gillespie(const arma::mat& flow,
                              const Rcpp::NumericVector& parameters,
                              const Rcpp::NumericVector& constants,
                              const arma::mat& tcovar,
+                             double t_max,
                              const arma::rowvec& init_states,
                              const Rcpp::LogicalMatrix& rate_adjmat,
                              const arma::mat& tcovar_adjmat,
@@ -75,7 +76,6 @@ arma::mat simulate_gillespie(const arma::mat& flow,
       double t_L = tcovar(tcov_ind,0);                // left-endpoint of first interval
       double t_R = tcovar(tcov_ind + 1,0);            // right-endpoint of first interval
       double t_cur = t_L;                             // current time
-      double t_max = tcovar(tcovar_dims[0] - 1, 0);   // maximum time
       Rcpp::NumericVector dt(1);                      // time increment
       
       // insert the initial compartment counts
@@ -220,7 +220,7 @@ arma::mat simulate_gillespie(const arma::mat& flow,
       
       path.shed_rows(ind_cur, path.n_rows - 1);
       
-      // ensure that tmax is the time of the last row in path. if not, add it
+      // ensure that t_max is the time of the last row in path. if not, add it
       if(path(path.n_rows-1, 0) != t_max) {
             arma::rowvec last_row = path.row(path.n_rows - 1);
             last_row(0) = t_max;

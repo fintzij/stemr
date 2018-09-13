@@ -725,8 +725,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // simulate_gillespie
-arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::mat& tcovar, const arma::rowvec& init_states, const Rcpp::LogicalMatrix& rate_adjmat, const arma::mat& tcovar_adjmat, const arma::mat& tcovar_changemat, const Rcpp::IntegerVector init_dims, const Rcpp::LogicalVector& forcing_inds, const arma::uvec& forcing_tcov_inds, const arma::mat& forcings_out, const arma::cube& forcing_transfers, SEXP rate_ptr);
-RcppExport SEXP _stemr_simulate_gillespie(SEXP flowSEXP, SEXP parametersSEXP, SEXP constantsSEXP, SEXP tcovarSEXP, SEXP init_statesSEXP, SEXP rate_adjmatSEXP, SEXP tcovar_adjmatSEXP, SEXP tcovar_changematSEXP, SEXP init_dimsSEXP, SEXP forcing_indsSEXP, SEXP forcing_tcov_indsSEXP, SEXP forcings_outSEXP, SEXP forcing_transfersSEXP, SEXP rate_ptrSEXP) {
+arma::mat simulate_gillespie(const arma::mat& flow, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::mat& tcovar, double t_max, const arma::rowvec& init_states, const Rcpp::LogicalMatrix& rate_adjmat, const arma::mat& tcovar_adjmat, const arma::mat& tcovar_changemat, const Rcpp::IntegerVector init_dims, const Rcpp::LogicalVector& forcing_inds, const arma::uvec& forcing_tcov_inds, const arma::mat& forcings_out, const arma::cube& forcing_transfers, SEXP rate_ptr);
+RcppExport SEXP _stemr_simulate_gillespie(SEXP flowSEXP, SEXP parametersSEXP, SEXP constantsSEXP, SEXP tcovarSEXP, SEXP t_maxSEXP, SEXP init_statesSEXP, SEXP rate_adjmatSEXP, SEXP tcovar_adjmatSEXP, SEXP tcovar_changematSEXP, SEXP init_dimsSEXP, SEXP forcing_indsSEXP, SEXP forcing_tcov_indsSEXP, SEXP forcings_outSEXP, SEXP forcing_transfersSEXP, SEXP rate_ptrSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -734,6 +734,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type parameters(parametersSEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type constants(constantsSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type tcovar(tcovarSEXP);
+    Rcpp::traits::input_parameter< double >::type t_max(t_maxSEXP);
     Rcpp::traits::input_parameter< const arma::rowvec& >::type init_states(init_statesSEXP);
     Rcpp::traits::input_parameter< const Rcpp::LogicalMatrix& >::type rate_adjmat(rate_adjmatSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type tcovar_adjmat(tcovar_adjmatSEXP);
@@ -744,7 +745,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type forcings_out(forcings_outSEXP);
     Rcpp::traits::input_parameter< const arma::cube& >::type forcing_transfers(forcing_transfersSEXP);
     Rcpp::traits::input_parameter< SEXP >::type rate_ptr(rate_ptrSEXP);
-    rcpp_result_gen = Rcpp::wrap(simulate_gillespie(flow, parameters, constants, tcovar, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, rate_ptr));
+    rcpp_result_gen = Rcpp::wrap(simulate_gillespie(flow, parameters, constants, tcovar, t_max, init_states, rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, rate_ptr));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -845,7 +846,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_rate_update_tcovar", (DL_FUNC) &_stemr_rate_update_tcovar, 3},
     {"_stemr_reset_slice_ratios", (DL_FUNC) &_stemr_reset_slice_ratios, 5},
     {"_stemr_retrieve_census_path", (DL_FUNC) &_stemr_retrieve_census_path, 4},
-    {"_stemr_simulate_gillespie", (DL_FUNC) &_stemr_simulate_gillespie, 14},
+    {"_stemr_simulate_gillespie", (DL_FUNC) &_stemr_simulate_gillespie, 15},
     {"_stemr_simulate_r_measure", (DL_FUNC) &_stemr_simulate_r_measure, 6},
     {"_stemr_update_factors", (DL_FUNC) &_stemr_update_factors, 3},
     {"_stemr_update_interval_widths", (DL_FUNC) &_stemr_update_interval_widths, 8},
