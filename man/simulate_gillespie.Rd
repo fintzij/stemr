@@ -6,7 +6,7 @@
 returns a matrix containing a simulated path from a stochastic epidemic
 model.}
 \usage{
-simulate_gillespie(flow, parameters, constants, tcovar, init_states,
+simulate_gillespie(flow, parameters, constants, tcovar, t_max, init_states,
   rate_adjmat, tcovar_adjmat, tcovar_changemat, init_dims, forcing_inds,
   forcing_tcov_inds, forcings_out, forcing_transfers, rate_ptr)
 }
