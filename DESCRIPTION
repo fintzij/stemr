@@ -25,6 +25,7 @@ Imports:
     numDeriv,
     mrds,
     extraDistr,
+    tmvtnorm,
     stats,
     Rcpp (>= 0.12.16)
 LinkingTo: Rcpp,

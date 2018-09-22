@@ -138,10 +138,7 @@ stem_dynamics <-
         for(p in seq_along(parameters)) {
                 param_match[p] <- any(grepl(pattern = paste0('\\<', param_names[p], '\\>'), param_names[-p]))
         }
-        if(any(param_match)) {
-                stop(paste("Parameter(s)", paste(which(param_match), collapse = ", "), "have a partial name match with another parameter. Give unique names to resolve ambiguities."))
-        }
-
+        
         # check that none of the strata are named "TIME", "ALL", "ADJ", or "SELF", and
         # that these strings do not appear in subscripts
         if(any(c("TIME", "ALL", "ADJ", "SELF") %in% strata)){
@@ -250,10 +247,6 @@ stem_dynamics <-
         for(p in seq_along(compartments)) {
                 comp_match[p] <- any(grepl(paste0('\\<', compartment_names[p], '\\>'), compartment_names[-p]))
         }
-        
-        if(any(comp_match)) {
-                stop(paste("Compartment(s)", paste(which(comp_match), collapse = ", "), "have a partial name match with another compartment. Give unique names to resolve ambiguities."))
-        }
 
         # get the number of strata, the number of compartments, number of parameters, and number of time-varying covariates (plus time)
         n_strata        <- max(1,length(strata));
@@ -321,9 +314,6 @@ stem_dynamics <-
                 for(p in seq_along(tcovar_match)) {
                         tcovar_match[p] <- any(grepl(paste0('\\<', tcovar_names[p], '\\>'), tcovar_names[-p]))
                 }
-                if(any(tcovar_match)) {
-                        stop(paste("Time-varying covariates or parameters have a partial name match. Give unique names to resolve ambiguities."))
-                }
         }
 
         # construct the mapping for the compartment_strata to the columns in the bookkeeping matrix
@@ -354,10 +344,7 @@ stem_dynamics <-
                 # ensure that there are no partial matches amongst names of constants
                 const_match <- rep(FALSE, length(const_names))
                 for(p in seq_along(const_match)) {
-                        const_match[p] <- any(grepl(const_names[p], const_names[-p]))
-                }
-                if(any(const_match)) {
-                        stop(paste("Constant(s)", paste(which(param_match), collapse = ", "), "have a partial name match with another constant or a generated constant corresponding to the population size or one of the stratum sizes. Give unique names to resolve ambiguities."))
+                        const_match[p] <- any(grepl(pattern = paste0('\\<',const_names[p], '\\>'), const_names[-p]))
                 }
         }
 
@@ -602,6 +589,8 @@ stem_dynamics <-
                                         initializer[[k]][[j]]$prior <- state_initializer[[k]]$prior
                                         initdist_priors[[k]][[j]]   <- state_initializer[[k]]$prior
                                 }
+                                
+                                initializer[[k]][[j]]$dist <- state_initializer[[k]]$dist
                         }
                 }
 

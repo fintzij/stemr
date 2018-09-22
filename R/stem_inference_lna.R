@@ -204,38 +204,52 @@ stem_inference_lna <- function(stem_object,
       initdist_objects <- vector("list", length = n_strata)
       for(t in seq_len(n_strata)) {
             
-            comp_probs <- 
-                  if(!initializer[[t]]$fixed & !is.null(initializer[[t]]$prior)) {
-                        if(comp_size_vec[t] != 0) {
-                              initializer[[t]]$prior / comp_size_vec[t]
+            comp_prior <- 
+                  if(!initializer[[t]]$fixed) {
+                        if(!is.null(initializer[[t]]$prior)) {
+                              if(comp_size_vec[t] != 0) {
+                                    initializer[[t]]$prior
+                              } else {
+                                    rep(0.0, length(initializer[[t]]$init_states))
+                              }
                         } else {
-                              rep(0.0, length(initializer[[t]]$prior))
+                              if(comp_size_vec[t] != 0) {
+                                    initializer[[t]]$init_states
+                              } else {
+                                    rep(0.0, length(initializer[[t]]$init_states))     
+                              }
                         }
                   } else {
                         if(comp_size_vec[t] != 0) {
-                              initializer[[t]]$prior / comp_size_vec[t]
+                              initializer[[t]]$init_states
                         } else {
-                              rep(0.0, length(initializer[[t]]$init_states))
+                              rep(0.0, length(initializer[[t]]$init_states))     
                         }
                   }
             
-            comp_mean <- comp_size_vec[t] * comp_probs
-            comp_cov <- comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs))
+            # unconstrained moments
+            comp_probs <- comp_prior / sum(comp_prior)
+            comp_mean  <- comp_size_vec[t] * comp_probs
+            comp_cov   <- comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs)) 
+            
+            if(initializer[[t]]$dist == "dirmultinom") 
+                  comp_cov <- comp_cov * ((comp_size_vec[t] + sum(comp_prior))/(1 + sum(comp_prior))) 
+            
             comp_cov_svd <- svd(comp_cov)
             comp_cov_svd$d[length(comp_cov_svd$d)] <- 0
             comp_sqrt_cov <- comp_cov_svd$u %*% diag(sqrt(comp_cov_svd$d))
             
             initdist_objects[[t]] <- 
                   list(
-                        fixed         = initializer[[t]]$fixed,
-                        comp_size     = comp_size_vec[t],
-                        comp_mean     = comp_mean,
-                        comp_sqrt_cov = comp_sqrt_cov[,-length(comp_mean)],
-                        draws_cur     = rep(0.0, length(comp_mean) - 1),
-                        draws_prop    = rep(0.0, length(comp_mean) - 1),
-                        draws_ess     = rep(0.0, length(comp_mean) - 1),
-                        comp_inds_R   = initializer[[t]]$codes,
-                        comp_inds_Cpp = initializer[[t]]$codes - 1
+                        fixed              = initializer[[t]]$fixed,
+                        comp_size          = comp_size_vec[t],
+                        comp_mean          = comp_mean,
+                        comp_sqrt_cov      = comp_sqrt_cov[,-length(comp_mean)],
+                        draws_cur          = rep(0.0, length(comp_mean) - 1),
+                        draws_prop         = rep(0.0, length(comp_mean) - 1),
+                        draws_ess          = rep(0.0, length(comp_mean) - 1),
+                        comp_inds_R        = initializer[[t]]$codes,
+                        comp_inds_Cpp      = initializer[[t]]$codes - 1
                   )
       }
       

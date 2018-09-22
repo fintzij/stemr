@@ -6,14 +6,15 @@
 #'
 #' The initial state of the system is initialized at the first observation time,
 #' either with a fixed vector of compartment counts, or is sampled by drawing
-#' the initial compartment counts from a multinomial distribution for a Markov
-#' jump process (MJP), or by the normal approximation to the multinomial
-#' (LNA/ODE). If the initial state is not fixed and no prior is specified, then
-#' the hyperparameters are handled internally as follows: For the MJP, if the
-#' multinomial hyperprior parameters are not specified, the normalized
-#' probabilities are computed from the init_states vector and used in the prior
-#' slot. For the LNA or ODE, the init_state vector is used to construct the
-#' multivariate normal approximation of the multinomial.
+#' the initial compartment counts from a dirichlet-multinomial distribution for
+#' a Markov jump process (MJP), or by the normal approximation to the
+#' dirichlet-multinomial (LNA/ODE). If the initial state is not fixed and no
+#' prior is specified, then the hyperparameters are handled internally as
+#' follows: For the MJP, if the multinomial hyperprior parameters are not
+#' specified, the normalized probabilities are computed from the init_states
+#' vector and used in the prior slot. For the LNA or ODE, the init_state vector
+#' is used to construct the multivariate normal approximation of the
+#' multinomial.
 #'
 #' @param init_states named vector of initial compartment counts (MJP) or
 #'   volumes (LNA).
@@ -21,6 +22,8 @@
 #' @param strata character vector strata to which the vector of initial
 #'   compartment counts or probabilities applies, possibly "ALL".
 #' @param prior hyperparameters for state probabilities at time t0.
+#' @param dist one of "multinom" if the initial distribution (or its normal
+#'   approximation) is multinomial or "dirmultinom" if dirichlet-multinomial.
 #'
 #' @return list of settings used to initialize the initial state at the first
 #'   observation time.
@@ -41,11 +44,11 @@
 #' list(stem_initializer(c(S=200,I=100,R=700), fixed = TRUE, strata = "adults"),
 #'      stem_initializer(c(S=900,I=50,R=50), fixed=TRUE, strata = c("children",
 #'      "elderly")))
-stem_initializer <- function(init_states, fixed, strata = NULL, prior = NULL) {
+stem_initializer <- function(init_states, fixed, strata = NULL, prior = NULL, dist = "multinom") {
 
         if(is.null(names(init_states))) {
                 stop("Compartment names must be specified in each initial probability vector.")
         }
 
-        list(init_states = init_states, fixed = fixed, strata = strata, prior = prior)
+        list(init_states = init_states, fixed = fixed, strata = strata, prior = prior, dist = dist)
 }

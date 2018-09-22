@@ -254,10 +254,19 @@ simulate_stem <-
                               for(s in seq_len(stem_object$dynamics$n_strata)) {
                                     
                                     if(!stem_object$dynamics$initializer[[s]]$fixed) {
-                                          init_states[, stem_object$dynamics$initializer[[s]]$codes] <-
-                                                as.matrix(t(rmultinom(nsim,
-                                                                      stem_object$dynamics$strata_sizes[s],
-                                                                      stem_object$dynamics$initializer[[s]]$prior)))
+                                          if(stem_object$dynamics$iniitializer[[s]]$dist == "multinom") {
+                                                init_states[, stem_object$dynamics$initializer[[s]]$codes] <-
+                                                      as.matrix(t(rmultinom(nsim,
+                                                                            stem_object$dynamics$strata_sizes[s],
+                                                                            stem_object$dynamics$initializer[[s]]$prior)))      
+                                          } else {
+                                                init_states[, stem_object$dynamics$initializer[[s]]$codes] <-
+                                                      extraDistr::rdirmnom(nsim,
+                                                                           stem_object$dynamics$strata_sizes[s],
+                                                                           ifelse(stem_object$dynamics$initializer[[s]]$prior != 0,
+                                                                                  stem_object$dynamics$initializer[[s]]$prior,
+                                                                                  .Machine$double.eps))
+                                          }
                                           
                                     } else {
                                           init_states[, stem_object$dynamics$initializer[[s]]$codes] <-
@@ -694,40 +703,55 @@ simulate_stem <-
                         comp_size_vec <- stem_object$dynamics$constants[paste0("popsize_", sapply(initializer,"[[","strata"))]
                   }
                   
-                  for(t in seq_len(stem_object$dynamics$n_strata)) {
+                  # list for initial compartment volume objects
+                  for(t in seq_len(n_strata)) {
                         
-                        comp_probs <- 
-                              if(!initializer[[t]]$fixed & !is.null(initializer[[t]]$prior)) {
-                                    if(comp_size_vec[t] != 0) {
-                                          initializer[[t]]$prior / comp_size_vec[t]
+                        comp_prior <- 
+                              if(!initializer[[t]]$fixed) {
+                                    if(!is.null(initializer[[t]]$prior)) {
+                                          if(comp_size_vec[t] != 0) {
+                                                initializer[[t]]$prior
+                                          } else {
+                                                rep(0.0, length(initializer[[t]]$init_states))
+                                          }
                                     } else {
-                                          rep(0.0, length(initializer[[t]]$prior))
+                                          if(comp_size_vec[t] != 0) {
+                                                initializer[[t]]$init_states
+                                          } else {
+                                                rep(0.0, length(initializer[[t]]$init_states))     
+                                          }
                                     }
                               } else {
                                     if(comp_size_vec[t] != 0) {
-                                          initializer[[t]]$prior / comp_size_vec[t]
+                                          initializer[[t]]$init_states
                                     } else {
-                                          rep(0.0, length(initializer[[t]]$init_states))
+                                          rep(0.0, length(initializer[[t]]$init_states))     
                                     }
                               }
                         
-                        comp_mean <- comp_size_vec[t] * comp_probs
-                        comp_cov <- comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs))
+                        # unconstrained moments
+                        comp_probs <- comp_prior / sum(comp_prior)
+                        comp_mean  <- comp_size_vec[t] * comp_probs
+                        comp_cov   <- comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs)) 
+                        
+                        if(initializer[[t]]$dist == "dirmultinom") 
+                              comp_cov <- comp_cov * ((comp_size_vec[t] + sum(comp_prior))/(1 + sum(comp_prior))) 
+                        
                         comp_cov_svd <- svd(comp_cov)
                         comp_cov_svd$d[length(comp_cov_svd$d)] <- 0
                         comp_sqrt_cov <- comp_cov_svd$u %*% diag(sqrt(comp_cov_svd$d))
                         
                         initdist_objects[[t]] <- 
                               list(
-                                    fixed         = initializer[[t]]$fixed,
-                                    comp_size     = comp_size_vec[t],
-                                    comp_mean     = comp_mean,
-                                    comp_sqrt_cov = comp_sqrt_cov[,-length(comp_mean)],
-                                    draws_cur     = rep(0.0, length(comp_mean) - 1),
-                                    draws_prop    = rep(0.0, length(comp_mean) - 1),
-                                    draws_ess     = rep(0.0, length(comp_mean) - 1),
-                                    comp_inds_R   = initializer[[t]]$codes,
-                                    comp_inds_Cpp = initializer[[t]]$codes - 1
+                                    fixed              = initializer[[t]]$fixed,
+                                    comp_size          = comp_size_vec[t],
+                                    comp_mean          = comp_mean,
+                                    comp_sqrt_cov      = comp_sqrt_cov[,-length(comp_mean)],
+                                    draws_cur          = rep(0.0, length(comp_mean) - 1),
+                                    draws_prop         = rep(0.0, length(comp_mean) - 1),
+                                    draws_ess          = rep(0.0, length(comp_mean) - 1),
+                                    comp_inds_R        = initializer[[t]]$codes,
+                                    comp_inds_Cpp      = initializer[[t]]$codes - 1
                               )
                   }
                   
@@ -1109,40 +1133,63 @@ simulate_stem <-
                         comp_size_vec <- stem_object$dynamics$constants[paste0("popsize_", sapply(initializer,"[[","strata"))]
                   }
                   
-                  for(t in seq_len(stem_object$dynamics$n_strata)) {
+                  initdist_objects <- vector("list", length = stem_object$dynamics$n_strata)
+                  
+                  if(n_strata == 1) {
+                        comp_size_vec <- stem_object$dynamics$constants["popsize"]
+                  } else {
+                        comp_size_vec <- stem_object$dynamics$constants[paste0("popsize_", sapply(initializer,"[[","strata"))]
+                  }
+                  
+                  # list for initial compartment volume objects
+                  for(t in seq_len(n_strata)) {
                         
-                        comp_probs <- 
-                              if(!initializer[[t]]$fixed & !is.null(initializer[[t]]$prior)) {
-                                    if(comp_size_vec[t] != 0) {
-                                          initializer[[t]]$prior / comp_size_vec[t]
+                        comp_prior <- 
+                              if(!initializer[[t]]$fixed) {
+                                    if(!is.null(initializer[[t]]$prior)) {
+                                          if(comp_size_vec[t] != 0) {
+                                                initializer[[t]]$prior
+                                          } else {
+                                                rep(0.0, length(initializer[[t]]$init_states))
+                                          }
                                     } else {
-                                          rep(0.0, length(initializer[[t]]$prior))
+                                          if(comp_size_vec[t] != 0) {
+                                                initializer[[t]]$init_states
+                                          } else {
+                                                rep(0.0, length(initializer[[t]]$init_states))     
+                                          }
                                     }
                               } else {
                                     if(comp_size_vec[t] != 0) {
-                                          initializer[[t]]$prior / comp_size_vec[t]
+                                          initializer[[t]]$init_states
                                     } else {
-                                          rep(0.0, length(initializer[[t]]$init_states))
+                                          rep(0.0, length(initializer[[t]]$init_states))     
                                     }
                               }
                         
-                        comp_mean <- comp_size_vec[t] * comp_probs
-                        comp_cov <- comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs))
+                        # unconstrained moments
+                        comp_probs <- comp_prior / sum(comp_prior)
+                        comp_mean  <- comp_size_vec[t] * comp_probs
+                        comp_cov   <- comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs)) 
+                        
+                        if(initializer[[t]]$dist == "dirmultinom") 
+                              comp_cov <- comp_cov * ((comp_size_vec[t] + sum(comp_prior))/(1 + sum(comp_prior))) 
+                        
                         comp_cov_svd <- svd(comp_cov)
                         comp_cov_svd$d[length(comp_cov_svd$d)] <- 0
                         comp_sqrt_cov <- comp_cov_svd$u %*% diag(sqrt(comp_cov_svd$d))
                         
                         initdist_objects[[t]] <- 
                               list(
-                                    fixed         = initializer[[t]]$fixed,
-                                    comp_size     = comp_size_vec[t],
-                                    comp_mean     = comp_mean,
-                                    comp_sqrt_cov = comp_sqrt_cov[,-length(comp_mean)],
-                                    draws_cur     = rep(0.0, length(comp_mean) - 1),
-                                    draws_prop    = rep(0.0, length(comp_mean) - 1),
-                                    draws_ess     = rep(0.0, length(comp_mean) - 1),
-                                    comp_inds_R   = initializer[[t]]$codes,
-                                    comp_inds_Cpp = initializer[[t]]$codes - 1
+                                    fixed              = initializer[[t]]$fixed,
+                                    comp_size          = comp_size_vec[t],
+                                    comp_mean          = comp_mean,
+                                    comp_sqrt_cov      = comp_sqrt_cov[,-length(comp_mean)],
+                                    draws_cur          = rep(0.0, length(comp_mean) - 1),
+                                    draws_prop         = rep(0.0, length(comp_mean) - 1),
+                                    draws_ess          = rep(0.0, length(comp_mean) - 1),
+                                    comp_inds_R        = initializer[[t]]$codes,
+                                    comp_inds_Cpp      = initializer[[t]]$codes - 1
                               )
                   }
                   
