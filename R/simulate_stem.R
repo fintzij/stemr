@@ -729,8 +729,14 @@ simulate_stem <-
                                     }
                               }
                         
+                        # compartment probabilities
+                        comp_probs <- if(sum(comp_prior) != 0) {
+                              comp_prior / sum(comp_prior)
+                        } else {
+                              rep(0.0, length(comp_prior))
+                        }
+                        
                         # unconstrained moments
-                        comp_probs <- comp_prior / sum(comp_prior)
                         comp_mean  <- comp_size_vec[t] * comp_probs
                         comp_cov   <- comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs)) 
                         
@@ -1167,8 +1173,14 @@ simulate_stem <-
                                     }
                               }
                         
+                        # compartment probabilities
+                        comp_probs <- if(sum(comp_prior) != 0) {
+                              comp_prior / sum(comp_prior)
+                        } else {
+                              rep(0.0, length(comp_prior))
+                        }
+                        
                         # unconstrained moments
-                        comp_probs <- comp_prior / sum(comp_prior)
                         comp_mean  <- comp_size_vec[t] * comp_probs
                         comp_cov   <- comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs)) 
                         
