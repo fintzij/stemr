@@ -321,8 +321,9 @@ stem_inference_lna <- function(stem_object,
       n_times <- length(lna_times)
       
       # vector of times, constrained between t0 and tmax
-      lna_census_times <- lna_times[lna_times >= stem_object$dynamics$t0 & lna_times <= stem_object$dynamics$tmax]
-      census_indices    <- unique(c(0, findInterval(obstimes, lna_census_times) - 1))
+      lna_census_times <- lna_times[lna_times >= min(stem_object$dynamics$t0, min(obstimes)) & 
+                                          lna_times <= max(stem_object$dynamics$tmax, max(obstimes))]
+      census_indices   <- unique(c(0, findInterval(obstimes, lna_census_times) - 1))
       
       # objects for computing the SVD of the LNA diffusion matrix
       svd_U    <- diag(0.0, n_rates)
@@ -974,9 +975,9 @@ stem_inference_lna <- function(stem_object,
                               ncol = ncol(measproc_indmat),
                               dimnames = list(NULL, colnames(measproc_indmat))))
       
-      pathmat_prop <- cbind(lna_times,
+      pathmat_prop <- cbind(lna_census_times,
                             matrix(0.0,
-                                   nrow = length(lna_times),
+                                   nrow = length(lna_census_times),
                                    ncol = nrow(flow_matrix),
                                    dimnames = list(NULL, c(rownames(flow_matrix)))))
       

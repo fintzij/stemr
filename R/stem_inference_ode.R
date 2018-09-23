@@ -290,7 +290,8 @@ stem_inference_ode <- function(stem_object,
       n_times <- length(ode_times)
       
       # vector of times, constrained between t0 and tmax
-      ode_census_times <- ode_times[ode_times >= stem_object$dynamics$t0 & ode_times <= stem_object$dynamics$tmax]
+      ode_census_times <- ode_times[ode_times >= min(stem_object$dynamics$t0, min(obstimes)) & 
+                                          ode_times <= max(stem_object$dynamics$tmax, max(obstimes))]
       census_indices <- unique(c(0, findInterval(obstimes, ode_census_times) - 1))
       
       # harss warmup
