@@ -258,6 +258,8 @@ stem_dynamics <-
         timevarying <- any(sapply(rates, function(x) grepl("TIME", x[["rate"]]))) ||
                                 !is.null(tcovar) || !is.null(tparam)
         
+        no_TIME_ref <- !any(sapply(rates, function(x) grepl("TIME", x[["rate"]])))
+        
         # make sure tcovar is a matrix, not a data frame
         if(!is.null(tcovar)) tcovar <- as.matrix(tcovar)
 
@@ -781,7 +783,8 @@ stem_dynamics <-
         n_tcovar            <- ncol(tcovar) - 1
         tcovar_changemat    <- build_tcovar_changemat(tcovar   = tcovar, 
                                                       tparam   = tparam, 
-                                                      forcings = forcings)
+                                                      forcings = forcings,
+                                                      no_TIME_ref = no_TIME_ref)
         tcovar_adjmat       <- build_tcovar_adjmat(rates        = rate_fcns, 
                                                    tcovar_codes = tcovar_codes, 
                                                    forcings     = forcings)

@@ -289,6 +289,15 @@ stem_inference_ode <- function(stem_object,
                           stem_object$dynamics$tmax)))
       n_times <- length(ode_times)
       
+      # make sure no times are less than t0
+      if(any(obstimes < stem_object$dynamics$t0)) {
+            stop("Cannot have observations before time t0.")
+      }
+      
+      if(any(stem_object$dynamics$tcovar[,1] < stem_object$dynamics$t0)) {
+            stop("Cannot have time-varying covariates specified before time t0.")
+      }
+      
       # vector of times, constrained between t0 and tmax
       ode_census_times <- ode_times[ode_times >= min(stem_object$dynamics$t0, min(obstimes)) & 
                                           ode_times <= max(stem_object$dynamics$tmax, max(obstimes))]
@@ -774,7 +783,7 @@ stem_inference_ode <- function(stem_object,
                                              ncol = length(const_inds), byrow = T)
       
       # generate forcing indices and other objects
-      forcing_inds   <- rep(FALSE, length(ode_times))
+      forcing_inds   <- rep(FALSE, length(ode_census_times))
       
       # insert time varying covariates
       if (!is.null(stem_object$dynamics$tcovar)) {
@@ -869,15 +878,15 @@ stem_inference_ode <- function(stem_object,
       }
       
       # indices for when to update the parameters
-      param_update_inds <- rep(FALSE, length(ode_times)); param_update_inds[1] <- TRUE
+      param_update_inds <- rep(FALSE, length(ode_census_times)); param_update_inds[1] <- TRUE
       
       if(!is.null(stem_object$dynamics$tcovar)) {
-            param_update_inds[ode_times %in% stem_object$dynamics$tcovar[,1]] <- TRUE
+            param_update_inds[ode_census_times %in% stem_object$dynamics$tcovar[,1]] <- TRUE
       }
       
       if(!is.null(tparam)) {
             for(s in seq_along(tparam)) {
-                  param_update_inds[ode_times %in% tparam[[s]]$times] <- TRUE
+                  param_update_inds[ode_census_times %in% tparam[[s]]$times] <- TRUE
             }      
       }
       
@@ -2133,7 +2142,7 @@ stem_inference_ode <- function(stem_object,
                                                               upper    = t0_kernel$upper,
                                                               log_prob = TRUE)
                   # insert the new time
-                  ode_times[1]       <- t0_prop
+                  ode_census_times[1]<- t0_prop
                   path$ode_path[1,1] <- t0_prop
                   pathmat_prop[1,1]  <- t0_prop
                   

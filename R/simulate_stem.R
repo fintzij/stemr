@@ -175,6 +175,9 @@ simulate_stem <-
                   
                   if(rebuild_tcovar) {
                         
+                        # check for explicit time reference
+                        no_TIME_ref <- !any(sapply(stem_object$dynamics$rates, function(x) grepl("TIME", x[["unparsed"]])))
+                        
                         # rebuild the time-varying covariate matrix so that it contains the census intervals
                         stem_object$dynamics$tcovar <- 
                               build_tcovar_matrix(tcovar       = stem_object$dynamics$dynamics_args$tcovar,
@@ -192,7 +195,8 @@ simulate_stem <-
                         stem_object$dynamics$n_tcovar            <- ncol(stem_object$dynamics$tcovar) - 1
                         stem_object$dynamics$tcovar_changemat    <- build_tcovar_changemat(tcovar = stem_object$dynamics$tcovar,
                                                                                            tparam = stem_object$dynamics$tparam,
-                                                                                           forcings = stem_object$dynamics$forcings)
+                                                                                           forcings = stem_object$dynamics$forcings,
+                                                                                           no_TIME_ref = no_TIME_ref)
                         stem_object$dynamics$tcovar_adjmat       <- build_tcovar_adjmat(rates        = stem_object$dynamics$rates, 
                                                                                         tcovar_codes = stem_object$dynamics$tcovar_codes,
                                                                                         forcings     = stem_object$dynamics$forcings)

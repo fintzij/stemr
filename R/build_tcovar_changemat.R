@@ -8,7 +8,7 @@
 #' @return indicator matrix for which time-varying covariates or parameters
 #'   change at each time in a time-varying covariate matrix.
 #' @export
-build_tcovar_changemat <- function(tcovar, tparam = NULL, forcings = NULL) {
+build_tcovar_changemat <- function(tcovar, tparam = NULL, forcings = NULL, no_TIME_ref = TRUE) {
       
         changemat <- matrix(FALSE, nrow = nrow(tcovar), ncol = ncol(tcovar) - 1)
         colnames(changemat) <- colnames(tcovar)[-1]
@@ -29,6 +29,8 @@ build_tcovar_changemat <- function(tcovar, tparam = NULL, forcings = NULL) {
                     changemat[tcovar[,forcings[[s]]$tcovar_name] == 0, forcings[[s]]$tcovar_name] <- FALSE
               }
         }
+        
+        if(no_TIME_ref) changemat[,"TIME"] <- FALSE
 
         return(changemat)
 }
