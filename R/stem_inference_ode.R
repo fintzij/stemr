@@ -797,7 +797,10 @@ stem_inference_ode <- function(stem_object,
                   
                   # get the forcing indices (supplied in the original tcovar matrix)
                   for(f in seq_along(stem_object$dynamics$forcings)) {
-                        forcing_inds <- forcing_inds | stem_object$dynamics$tcovar[,stem_object$dynamics$forcings[[f]]$tcovar_name] != 0
+                        forcing_inds <- 
+                              forcing_inds | 
+                              stem_object$dynamics$tcovar[stem_object$dynamics$tcovar[,1] %in% ode_census_times,
+                                                          stem_object$dynamics$forcings[[f]]$tcovar_name] != 0
                   }
                   
                   zero_inds    <- !forcing_inds
