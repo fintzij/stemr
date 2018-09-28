@@ -6,9 +6,6 @@
 #' @export
 sub_powers <- function(string) {
 
-        # remove any white spaces
-        string <- gsub(" ", "", string)
-
         while(grepl(pattern = "\\^", x = string)) {
 
                 # get the number of powers to replace
@@ -19,22 +16,31 @@ sub_powers <- function(string) {
 
                 # get the power
                 m_start <- psym + 1
-                n_open <- 0; len <- 0
-                while(n_open >= 0) {
-                        if(substr(string, m_start + len, m_start + len) == "(") {
-                                n_open <- n_open + 1
-                        } else if(substr(string, m_start + len, m_start + len) == ")") {
-                                n_open <- n_open - 1
-                        }
-                      
-                        if(n_open != 0) {
-                                len <- len + 1
-                        } else if(n_open == 0) {
-                                m_end <- m_start + len
-                        }
+                if(substr(string, m_start, m_start) == "(") {
+                      n_open <- 0; len <- 0
+                      while(n_open >= 0) {
+                            if(substr(string, m_start + len, m_start + len) == "(") {
+                                  n_open <- n_open + 1
+                            } else if(substr(string, m_start + len, m_start + len) == ")") {
+                                  n_open <- n_open - 1
+                            }
+                            
+                            if(n_open != 0) {
+                                  len <- len + 1
+                            } else if(n_open == 0) {
+                                  m_end <- m_start + len
+                            }
+                      }      
+                      m_start_pow <- m_start+1; m_end_pow <- m_end-1
+                } else {
+                      m_start_pow <- m_start
+                      len <- 0
+                      while(substr(string, m_start + len, m_start + len) != " ") {
+                            len <- len+1
+                      }
+                      m_end_pow <- m_start_pow + len - 1
                 }
 
-                m_start_pow <- m_start+1; m_end_pow <- m_end-1
                 m_fcn_pow <- unlist(strsplit(gsub(" ", "", substr(string, m_start_pow, m_end_pow)), ","))
 
                 # get the base
@@ -61,6 +67,9 @@ sub_powers <- function(string) {
                 string      <- sub(pattern = substr(string, m_start_base-1, m_end_pow+1),
                                     replacement = replacement, x = string, fixed = TRUE)
         }
+        
+        # remove any white spaces
+        string <- gsub(" ", "", string)
 
         return(string)
 }
