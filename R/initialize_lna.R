@@ -78,7 +78,7 @@ initialize_lna <-
                 attempt      <- 0
                 keep_going   <- TRUE
                 
-                draws <- rep(0.0, ncol(stoich_matrix) * (length(lna_times) - 1))
+                draws <- rnorm(ncol(stoich_matrix) * (length(lna_times) - 1))
                 
                 while(keep_going && (attempt <= initialization_attempts)) {
                 

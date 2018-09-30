@@ -585,7 +585,10 @@ simulate_stem <-
                               
                               # get the forcing indices (supplied in the original tcovar matrix)
                               for(f in seq_along(stem_object$dynamics$forcings)) {
-                                    forcing_inds <- forcing_inds | stem_object$dynamics$tcovar[,stem_object$dynamics$forcings[[f]]$tcovar_name] != 0
+                                    forcing_inds <- 
+                                          forcing_inds | 
+                                          stem_object$dynamics$tcovar[stem_object$dynamics$tcovar[,1] %in% lna_census_times, 
+                                                                      stem_object$dynamics$forcings[[f]]$tcovar_name] != 0
                               }
                               
                               zero_inds    <- !forcing_inds
@@ -1011,7 +1014,7 @@ simulate_stem <-
                                 c_start = constant_inds[1])
                   
                   # Generate forcing indices and update the ODE parameter matrix with forcings
-                  forcing_inds <- rep(FALSE, length(ode_times))
+                  forcing_inds <- rep(FALSE, length(ode_census_times))
                   
                   if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
                         tcovar_rowinds <- match(round(ode_times, digits = 8),
@@ -1023,7 +1026,9 @@ simulate_stem <-
                               
                               # get the forcing indices (supplied in the original tcovar matrix)
                               for(f in seq_along(stem_object$dynamics$forcings)) {
-                                    forcing_inds <- forcing_inds | stem_object$dynamics$tcovar[,stem_object$dynamics$forcings[[f]]$tcovar_name] != 0
+                                    forcing_inds | 
+                                          stem_object$dynamics$tcovar[stem_object$dynamics$tcovar[,1] %in% ode_census_times,
+                                                                      stem_object$dynamics$forcings[[f]]$tcovar_name] != 0
                               }
                               
                               zero_inds    <- !forcing_inds
