@@ -252,13 +252,21 @@ stem_inference_lna <- function(stem_object,
                         comp_size          = comp_size_vec[t],
                         comp_mean          = comp_mean,
                         comp_sqrt_cov      = comp_sqrt_cov[,-length(comp_mean)],
-                        draws_cur          = rep(0.0, length(comp_mean) - 1),
-                        draws_prop         = rep(0.0, length(comp_mean) - 1),
-                        draws_ess          = rep(0.0, length(comp_mean) - 1),
+                        draws_cur          = rnorm(length(comp_mean)-1),
+                        draws_prop         = rnorm(length(comp_mean)-1),
+                        draws_ess          = rnorm(length(comp_mean)-1),
                         comp_inds_R        = initializer[[t]]$codes,
                         comp_inds_Cpp      = initializer[[t]]$codes - 1
                   )
       }
+      
+      # names of initial compartment volumes
+      convrec_initvol_names <- names(stem_object$dynamics$initdist_params)
+      
+      # vector for the initial compartment volumes
+      init_volumes_cur  <- rep(0.0, n_compartments); copy_vec(init_volumes_cur, initdist_params_cur)
+      init_volumes_prop <- rep(0.0, n_compartments); copy_vec(init_volumes_prop, initdist_params_cur)
+      names(init_volumes_prop) <- names(init_volumes_cur) <- names(initdist_params_cur)
       
       # for recording the ess initdist updates
       if(!fixed_inits) {
@@ -270,20 +278,33 @@ stem_inference_lna <- function(stem_object,
                   initdist_angle_record <- rep(1, floor(iterations / thin_params))
             }
             
+            bad_draws             <- rep(TRUE, length(initdist_objects))
             initdist_log_lik <- rep(0.0, floor(iterations / thin_params) + 1)
+            
+            # map draws to initial volumes
+            while(any(bad_draws)) {
+                  for(s in seq_along(initdist_objects)) {
+                        
+                        # map draws
+                        copy_vec2(dest = init_volumes_cur,
+                                  orig = c(initdist_objects[[s]]$comp_mean + 
+                                                 initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur),
+                                  inds = initdist_objects[[s]]$comp_inds_Cpp)
+                        
+                        # check boundary conditions
+                        bad_draws[s] <- 
+                              any(init_volumes_cur[initdist_objects[[s]]$comp_inds_R] < 0) | 
+                              any(init_volumes_cur[initdist_objects[[s]]$comp_inds_R] > initdist_objects[[s]]$comp_size)
+                        
+                        # if outside boundaries, resample
+                        if(bad_draws[s]) initdist_objects[[s]]$draws_cur <- rnorm(initdist_objects[[s]]$draws_cur)
+                  }      
+            }
             
       } else {
             # no joint initdist update
             joint_initdist_update <- FALSE
       }
-      
-      # names of initial compartment volumes
-      convrec_initvol_names <- names(stem_object$dynamics$initdist_params)
-      
-      # vector for the initial compartment volumes
-      init_volumes_cur  <- rep(0.0, n_compartments); copy_vec(init_volumes_cur, initdist_params_cur)
-      init_volumes_prop <- rep(0.0, n_compartments); copy_vec(init_volumes_prop, initdist_params_cur)
-      names(init_volumes_prop) <- names(init_volumes_cur) <- names(initdist_params_cur)
       
       # grab the names of parameters on their natural and estimation scales
       param_names_nat <- 

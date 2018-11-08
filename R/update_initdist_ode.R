@@ -48,6 +48,7 @@ update_initdist_ode <-
       step_count <- 1.0
       
       for(k in seq_len(n_initdist_updates)) {
+            
             # choose a likelihood threshold
             threshold <- path_cur$data_log_lik + log(runif(1))
             

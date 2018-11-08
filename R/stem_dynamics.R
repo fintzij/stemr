@@ -705,7 +705,7 @@ stem_dynamics <-
                 initializer[[1]]$param_inds <- seq_along(initdist_params)
                 initializer[[1]]$codes      <- match(names(initializer[[1]]$init_states), names(compartment_codes))
 
-                if(is.null(initializer$prior)) {
+                if(is.null(initializer[[1]]$prior)) {
                         if(is.character(compile_lna)||compile_lna) {
                                 prior <- initializer[[1]]$init_states
                                 prior <- pmax(prior, 1e-16)

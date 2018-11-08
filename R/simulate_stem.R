@@ -573,11 +573,11 @@ simulate_stem <-
                                 c_start = constant_inds[1])
                   
                   # Generate forcing indices and update the LNA parameter matrix with forcings
-                  forcing_inds <- rep(FALSE, length(lna_times))
+                  forcing_inds <- rep(FALSE, length(lna_census_times))
                   
                   if(!is.null(stem_object$dynamics$dynamics_args$tcovar)) {
                         
-                        tcovar_rowinds <- match(round(lna_times, digits = 8), round(stem_object$dynamics$tcovar[,1], digits = 8))
+                        tcovar_rowinds <- findInterval(lna_times, stem_object$dynamics$tcovar[, 1], left.open = F)
                         lna_pars[tcovar_rowinds, tcovar_inds+1] <- stem_object$dynamics$tcovar[tcovar_rowinds,-1]
                         
                         # zero out forcings if necessary
@@ -594,8 +594,9 @@ simulate_stem <-
                               zero_inds    <- !forcing_inds
                               
                               # zero out the tcovar elements corresponding to times with no forcings
+                              # zero out the tcovar elements corresponding to times with no forcings
                               for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
-                                    lna_pars[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] = 0
+                                    lna_pars[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]  = 0
                               }
                         }
                   }

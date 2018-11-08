@@ -9,11 +9,11 @@
 set_params <- function(stem_object, ...) {
 
         newpars      <- list(...)
-        newpar_names <- names(newpars)
+        newpar_names <- lapply(newpars, names)
         oldpar_names <- names(stem_object$dynamics$parameters)
 
         for(l in seq_along(newpars)) {
-                stem_object$dynamics$parameters[match(newpar_names[l], oldpar_names)] <- newpars[[l]]
+                stem_object$dynamics$parameters[match(newpar_names[[l]], oldpar_names)] <- newpars[[l]]
         }
 
         return(stem_object)

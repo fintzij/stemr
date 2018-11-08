@@ -5,7 +5,8 @@
 \title{Indicator matrix for determining which time-varying covariates change at each
 row of a time-varying covariate matrix.}
 \usage{
-build_tcovar_changemat(tcovar, tparam = NULL, forcings = NULL)
+build_tcovar_changemat(tcovar, tparam = NULL, forcings = NULL,
+  no_TIME_ref = TRUE)
 }
 \arguments{
 \item{tcovar}{time-varying covariate matrix}

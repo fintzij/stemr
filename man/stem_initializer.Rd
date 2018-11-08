@@ -8,7 +8,8 @@ depending on whether inference (or simulation) is accomplished using the LNA
 or using Bayesian data augmentation (Gillespie's direct algorithm for
 simulation).}
 \usage{
-stem_initializer(init_states, fixed, strata = NULL, prior = NULL)
+stem_initializer(init_states, fixed, strata = NULL, prior = NULL,
+  dist = "multinom")
 }
 \arguments{
 \item{init_states}{named vector of initial compartment counts (MJP) or
@@ -20,6 +21,9 @@ volumes (LNA).}
 compartment counts or probabilities applies, possibly "ALL".}
 
 \item{prior}{hyperparameters for state probabilities at time t0.}
+
+\item{dist}{one of "multinom" if the initial distribution (or its normal
+approximation) is multinomial or "dirmultinom" if dirichlet-multinomial.}
 }
 \value{
 list of settings used to initialize the initial state at the first
@@ -28,14 +32,15 @@ list of settings used to initialize the initial state at the first
 \description{
 The initial state of the system is initialized at the first observation time,
 either with a fixed vector of compartment counts, or is sampled by drawing
-the initial compartment counts from a multinomial distribution for a Markov
-jump process (MJP), or by the normal approximation to the multinomial
-(LNA/ODE). If the initial state is not fixed and no prior is specified, then
-the hyperparameters are handled internally as follows: For the MJP, if the
-multinomial hyperprior parameters are not specified, the normalized
-probabilities are computed from the init_states vector and used in the prior
-slot. For the LNA or ODE, the init_state vector is used to construct the
-multivariate normal approximation of the multinomial.
+the initial compartment counts from a dirichlet-multinomial distribution for
+a Markov jump process (MJP), or by the normal approximation to the
+dirichlet-multinomial (LNA/ODE). If the initial state is not fixed and no
+prior is specified, then the hyperparameters are handled internally as
+follows: For the MJP, if the multinomial hyperprior parameters are not
+specified, the normalized probabilities are computed from the init_states
+vector and used in the prior slot. For the LNA or ODE, the init_state vector
+is used to construct the multivariate normal approximation of the
+multinomial.
 }
 \examples{
 Fixed initial state, all strata are of size 1000:
