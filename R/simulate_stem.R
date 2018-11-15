@@ -1027,7 +1027,7 @@ simulate_stem <-
                               
                               # get the forcing indices (supplied in the original tcovar matrix)
                               for(f in seq_along(stem_object$dynamics$forcings)) {
-                                    forcing_inds | 
+                                    forcing_inds <- forcing_inds | 
                                           stem_object$dynamics$tcovar[stem_object$dynamics$tcovar[,1] %in% ode_census_times,
                                                                       stem_object$dynamics$forcings[[f]]$tcovar_name] != 0
                               }
@@ -1058,7 +1058,7 @@ simulate_stem <-
                         
                         # list for saving the time varying parameters for reuse in simulating a dataset in necessary
                         tparam_times <- sort(unique(unlist(lapply(stem_object$dynamics$tparam, function(x) x$times))))
-                        tparam_times <- tparam_times[tparam_times >= t0 & tparam_times <= tmax]
+                        tparam_census_times <- tparam_times[tparam_times >= t0 & tparam_times <= tmax]
                         
                         if(is.null(tparam_values) & is.null(tparam_draws)) {
                               
@@ -1327,9 +1327,6 @@ simulate_stem <-
                         if(!is.null(stem_object$dynamics$tparam)) {
                               for(s in seq_along(stem_object$dynamics$tparam)) {
                                     
-                                    #draw new values
-                                    draw_normals(stem_object$dynamics$tparam[[s]]$values)
-                                    
                                     # insert the new values into the tcovar matrix
                                     insert_tparam(tcovar    = ode_pars, 
                                                   values    = tparam_values[[k]][[s]],
@@ -1462,7 +1459,7 @@ simulate_stem <-
                         measproc_indmat  <- stem_object$measurement_process$measproc_indmat
                         sim_pars         <- as.numeric(stem_object$dynamics$parameters)
                         constants        <- as.numeric(stem_object$dynamics$constants)
-                        tcovar           <- tcovar_obstimes
+                        tcovar           <- stem_object$dynamics$tcovar
                         r_measure_ptr    <- stem_object$measurement_process$meas_pointers_lna$r_measure_ptr
                         cens_inds        <- c(0,match(round(stem_object$measurement_process$obstimes, digits = 8),
                                                       round(census_times, digits = 8)) - 1)
@@ -1538,7 +1535,7 @@ simulate_stem <-
                           measproc_indmat  <- stem_object$measurement_process$measproc_indmat
                           sim_pars         <- as.numeric(stem_object$dynamics$parameters)
                           constants        <- as.numeric(stem_object$dynamics$constants)
-                          tcovar           <- tcovar_obstimes
+                          tcovar           <- stem_object$dynamics$tcovar
                           r_measure_ptr    <- stem_object$measurement_process$meas_pointers_lna$r_measure_ptr
                           cens_inds        <- c(0,match(round(stem_object$measurement_process$obstimes, digits = 8),
                                                         round(census_times, digits = 8)) - 1)
@@ -1581,7 +1578,7 @@ simulate_stem <-
                                           if(!is.null(simulation_parameters)) sim_pars <- as.numeric(simulation_parameters[[k]])
 
                                           # insert the time-varying parameters into the tcovar matrix
-                                          if(!is.null(tparam_draws)) {
+                                          if(!is.null(tparam_values)) {
                                                 
                                                 for(s in seq_along(stem_object$dynamics$tparam)) {
                                                       
