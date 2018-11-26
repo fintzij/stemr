@@ -45,6 +45,7 @@ stem_inference_lna <- function(stem_object,
                                initialization_attempts = 500,
                                ess_args = NULL,
                                print_progress = 0,
+                               status_filename = "LNA",
                                messages) {
       
       # if the MCMC is being restarted, save the existing results
@@ -901,15 +902,15 @@ stem_inference_lna <- function(stem_object,
                         tparam[[s]]$tpar_inds[tparam[[s]]$tpar_inds == -1] <- 0
                         
                         # values
-                        tparam[[s]]$draws_cur  <- rep(0.0, length(tparam[[s]]$times))
-                        tparam[[s]]$draws_prop <- rep(0.0, length(tparam[[s]]$times))
-                        tparam[[s]]$draws_ess  <- rep(0.0, length(tparam[[s]]$times))
+                        tparam[[s]]$draws_cur  <- rnorm(length(tparam[[s]]$times))
+                        tparam[[s]]$draws_prop <- rnorm(length(tparam[[s]]$times))
+                        tparam[[s]]$draws_ess  <- rnorm(length(tparam[[s]]$times))
                         tparam[[s]]$log_lik    <- sum(dnorm(tparam[[s]]$draws_cur, log = TRUE))
                         
                         # get values
                         insert_tparam(tcovar    = lna_params_cur,
                                       values    = tparam[[s]]$draws2par(
-                                            parameters = model_params_nat,
+                                            parameters = lna_params_cur[1,],
                                             draws = tparam[[s]]$draws_cur),
                                       col_ind   = tparam[[s]]$col_ind,
                                       tpar_inds = tparam[[s]]$tpar_inds)
@@ -929,7 +930,7 @@ stem_inference_lna <- function(stem_object,
                         # get values
                         insert_tparam(tcovar    = lna_params_cur,
                                       values    = tparam[[s]]$draws2par(
-                                            parameters = model_params_nat,
+                                            parameters = lna_params_cur[1,],
                                             draws = tparam[[s]]$draws_cur),
                                       col_ind   = tparam[[s]]$col_ind,
                                       tpar_inds = tparam[[s]]$tpar_inds)
@@ -1426,7 +1427,8 @@ stem_inference_lna <- function(stem_object,
       # initialize the status file if status updates are required
       if (messages | print_progress) {
             status_file <-
-                  paste0("LNA_inference_status_",
+                  paste0(status_filename,
+                         "_inference_status_",
                          as.numeric(Sys.time()),
                          ".txt")
             cat(
@@ -1464,7 +1466,7 @@ stem_inference_lna <- function(stem_object,
                               insert_tparam(
                                     tcovar    = lna_params_prop,
                                     values    = tparam[[p]]$draws2par(
-                                          parameters = params_prop_nat,
+                                          parameters = lna_params_prop[1,],
                                           draws = tparam[[p]]$draws_cur),
                                     col_ind   = tparam[[p]]$col_ind,
                                     tpar_inds = tparam[[p]]$tpar_inds)
@@ -1554,6 +1556,14 @@ stem_inference_lna <- function(stem_object,
                         copy_mat(lna_params_cur, lna_params_prop)   # update the model parameter
                         copy_vec(model_params_nat, params_prop_nat) # update LNA parameters on their natural scales
                         copy_vec(model_params_est, params_prop_est) # update LNA parameters on their estimation scales
+                        
+                        if(!is.null(tparam)) {
+                              for (s in seq_along(tparam)) {
+                                    copy_col(dest = lna_params_cur,
+                                             orig = lna_params_prop,
+                                             ind  = tparam[[s]]$col_ind)
+                              }
+                        }
                   }
                   
             } else if (mcmc_kernel$method == "mvn_g_adaptive") {
@@ -1588,19 +1598,6 @@ stem_inference_lna <- function(stem_object,
                   # Convert the proposed parameters to their natural scale
                   params_prop_nat <- from_estimation_scale(params_prop_est)
                   
-                  # update time-varying parameters if necessary
-                  if (!is.null(tparam)) {
-                        for (p in seq_along(tparam)) {
-                              insert_tparam(
-                                    tcovar    = lna_params_prop,
-                                    values    = tparam[[p]]$draws2par(
-                                                      parameters = params_prop_nat,
-                                                      draws = tparam[[p]]$draws_cur),
-                                    col_ind   = tparam[[p]]$col_ind,
-                                    tpar_inds = tparam[[p]]$tpar_inds)
-                        }
-                  }
-                  
                   # Compute the log prior for the proposed parameters
                   params_logprior_prop <- prior_density(params_prop_nat, params_prop_est)
                   
@@ -1608,6 +1605,19 @@ stem_inference_lna <- function(stem_object,
                   pars2lnapars2(lnapars    = lna_params_prop, 
                                 parameters = c(params_prop_nat, t0, init_volumes_cur),
                                 c_start    = 0)
+                  
+                  # update time-varying parameters if necessary
+                  if (!is.null(tparam)) {
+                        for (p in seq_along(tparam)) {
+                              insert_tparam(
+                                    tcovar    = lna_params_prop,
+                                    values    = tparam[[p]]$draws2par(
+                                          parameters = lna_params_prop[1,],
+                                          draws = tparam[[p]]$draws_cur),
+                                    col_ind   = tparam[[p]]$col_ind,
+                                    tpar_inds = tparam[[p]]$tpar_inds)
+                        }
+                  }
                   
                   # set the data log likelihood for the proposal to NULL
                   data_log_lik_prop <- NULL
@@ -1691,6 +1701,14 @@ stem_inference_lna <- function(stem_object,
                         copy_mat(lna_params_cur, lna_params_prop)   # update the model parameter
                         copy_vec(model_params_nat, params_prop_nat) # update LNA parameters on their natural scales
                         copy_vec(model_params_est, params_prop_est) # update LNA parameters on their estimation scales
+                        
+                        if(!is.null(tparam)) {
+                              for (s in seq_along(tparam)) {
+                                    copy_col(dest = lna_params_cur,
+                                             orig = lna_params_prop,
+                                             ind  = tparam[[s]]$col_ind)
+                              }
+                        }
                   }
                   
                   if (iter < stop_adaptation) {
@@ -1698,9 +1716,8 @@ stem_inference_lna <- function(stem_object,
                         # Adapt the proposal kernel
                         proposal_scaling <-
                               min(exp(log(proposal_scaling) +
-                                            adaptations[iter] * (min(exp(acceptance_prob), 1) - target_g)
-                              ),
-                              max_scaling)
+                                            adaptations[iter] * (min(exp(acceptance_prob), 1) - target_g)),
+                                  max_scaling)
                         
                         # update the covariance matrix
                         kernel_resid <- model_params_est - kernel_mean

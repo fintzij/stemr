@@ -192,7 +192,9 @@ initialize_ode <-
                                             
                                             # get values
                                             insert_tparam(tcovar    = ode_parameters,
-                                                          values    = tparam[[s]]$draws2par(parameters = ode_parameters[1,], draws = tparam[[s]]$draws_cur),
+                                                          values    = 
+                                                                tparam[[s]]$draws2par(parameters = ode_parameters[1,], 
+                                                                                      draws = tparam[[s]]$draws_cur),
                                                           col_ind   = tparam[[s]]$col_ind,
                                                           tpar_inds = tparam[[s]]$tpar_inds)
                                       }

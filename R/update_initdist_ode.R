@@ -107,7 +107,9 @@ update_initdist_ode <-
                         for(p in seq_along(tparam)) {
                               # map to parameter
                               insert_tparam(tcovar    = ode_parameters,
-                                            values    = tparam[[p]]$draws2par(parameters = ode_parameters[1,], draws = tparam[[p]]$draws_cur),
+                                            values    = 
+                                                  tparam[[p]]$draws2par(parameters = ode_parameters[1,], 
+                                                                        draws = tparam[[p]]$draws_cur),
                                             col_ind   = tparam[[p]]$col_ind,
                                             tpar_inds = tparam[[p]]$tpar_inds)
                         }      
@@ -227,7 +229,9 @@ update_initdist_ode <-
                               for(p in seq_along(tparam)) {
                                     # map to parameter
                                     insert_tparam(tcovar    = ode_parameters,
-                                                  values    = tparam[[p]]$draws2par(parameters = ode_parameters[1,], draws = tparam[[p]]$draws_cur),
+                                                  values    = 
+                                                        tparam[[p]]$draws2par(parameters = ode_parameters[1,], 
+                                                                              draws = tparam[[p]]$draws_cur),
                                                   col_ind   = tparam[[p]]$col_ind,
                                                   tpar_inds = tparam[[p]]$tpar_inds)
                               }      
@@ -326,7 +330,9 @@ update_initdist_ode <-
                   if(!is.null(tparam)) {
                         for(p in seq_along(tparam)) {
                               insert_tparam(tcovar    = ode_parameters,
-                                            values    = tparam[[p]]$draws2par(parameters = ode_parameters[1,], draws = tparam[[p]]$draws_cur),
+                                            values    = 
+                                                  tparam[[p]]$draws2par(parameters = ode_parameters[1,], 
+                                                                        draws = tparam[[p]]$draws_cur),
                                             col_ind   = tparam[[p]]$col_ind,
                                             tpar_inds = tparam[[p]]$tpar_inds)
                         }     

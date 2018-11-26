@@ -72,7 +72,8 @@ update_tparam_lna <-
                   
                   # map to parameter
                   insert_tparam(tcovar    = lna_parameters,
-                                values    = tparam[[p]]$draws2par(parameters = lna_parameters[1,], draws = tparam[[p]]$draws_ess),
+                                values    = tparam[[p]]$draws2par(parameters = lna_parameters[1,], 
+                                                                  draws = tparam[[p]]$draws_ess),
                                 col_ind   = tparam[[p]]$col_ind,
                                 tpar_inds = tparam[[p]]$tpar_inds)
             }
@@ -167,7 +168,8 @@ update_tparam_lna <-
                         
                         # map to parameter
                         insert_tparam(tcovar    = lna_parameters,
-                                      values    = tparam[[p]]$draws2par(parameters = lna_parameters[1,], draws = tparam[[p]]$draws_ess),
+                                      values    = tparam[[p]]$draws2par(parameters = lna_parameters[1,], 
+                                                                        draws = tparam[[p]]$draws_ess),
                                       col_ind   = tparam[[p]]$col_ind,
                                       tpar_inds = tparam[[p]]$tpar_inds)
                   }
@@ -255,7 +257,8 @@ update_tparam_lna <-
                   # recover the original time-varying parameter values
                   for(p in seq_along(tparam)) {
                         insert_tparam(tcovar    = lna_parameters,
-                                      values    = tparam[[p]]$draws2par(parameters = lna_parameters[1,], draws = tparam[[p]]$draws_cur),
+                                      values    = tparam[[p]]$draws2par(parameters = lna_parameters[1,], 
+                                                                        draws = tparam[[p]]$draws_cur),
                                       col_ind   = tparam[[p]]$col_ind,
                                       tpar_inds = tparam[[p]]$tpar_inds)
                   }

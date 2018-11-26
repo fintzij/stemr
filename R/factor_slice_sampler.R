@@ -138,7 +138,7 @@ factor_slice_sampler <-
                               for(p in seq_along(tparam)) {
                                     insert_tparam(tcovar    = lna_params_cur,
                                                   values    = tparam[[p]]$draws2par(
-                                                        parameters = params_prop_nat,
+                                                        parameters = lna_params_cur[1,],
                                                         draws      = tparam[[p]]$draws_cur),
                                                   col_ind   = tparam[[p]]$col_ind,
                                                   tpar_inds = tparam[[p]]$tpar_inds)
@@ -256,7 +256,7 @@ factor_slice_sampler <-
                               for(p in seq_along(tparam)) {
                                     insert_tparam(tcovar    = lna_params_cur,
                                                   values    = tparam[[p]]$draws2par(
-                                                        parameters = params_prop_nat,
+                                                        parameters = lna_params_cur[1,],
                                                         draws      = tparam[[p]]$draws_cur),
                                                   col_ind   = tparam[[p]]$col_ind,
                                                   tpar_inds = tparam[[p]]$tpar_inds)
@@ -380,7 +380,7 @@ factor_slice_sampler <-
                               for(p in seq_along(tparam)) {
                                     insert_tparam(tcovar    = lna_params_cur,
                                                   values    = tparam[[p]]$draws2par(
-                                                        parameters = params_prop_nat,
+                                                        parameters = lna_params_cur[1,],
                                                         draws      = tparam[[p]]$draws_cur),
                                                   col_ind   = tparam[[p]]$col_ind,
                                                   tpar_inds = tparam[[p]]$tpar_inds)
@@ -501,7 +501,7 @@ factor_slice_sampler <-
                   if(!is.null(tparam)) {
                         for(p in seq_along(tparam)) {
                               insert_tparam(tcovar    = lna_params_cur,
-                                            values    = tparam[[p]]$draws2par(parameters = model_params_nat,
+                                            values    = tparam[[p]]$draws2par(parameters = lna_params_cur[1,],
                                                                               draws = tparam[[p]]$draws_cur),
                                             col_ind   = tparam[[p]]$col_ind,
                                             tpar_inds = tparam[[p]]$tpar_inds)

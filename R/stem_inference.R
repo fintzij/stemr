@@ -45,6 +45,7 @@ stem_inference <-
                  initialization_attempts = 500,
                  ess_args = NULL,
                  print_progress = 0,
+                 status_filename = NULL,
                  messages = FALSE) {
             
         # check that the data, dynamics and measurement process are all supplied
@@ -61,6 +62,8 @@ stem_inference <-
 
         if(method == "lna") {
 
+              if(is.null(status_filename)) status_filename <- "LNA"
+              
                 # get the results
               results <-
                     stem_inference_lna(
@@ -74,10 +77,13 @@ stem_inference <-
                           initialization_attempts = initialization_attempts,
                           ess_args = ess_args,
                           print_progress = print_progress,
+                          status_filename = status_filename,
                           messages = messages
                     )
               
         } else if(method == "ode") {
+              
+              if(is.null(status_filename)) status_filename <- "ODE"
 
                 # get the results
               results <-

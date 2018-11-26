@@ -132,7 +132,7 @@ factor_slice_sampler_ode <-
                               for(p in seq_along(tparam)) {
                                     insert_tparam(tcovar    = ode_params_cur,
                                                   values    = tparam[[p]]$draws2par(
-                                                        parameters = params_prop_nat,
+                                                        parameters = ode_params_cur[1,],
                                                         draws      = tparam[[p]]$draws_cur),
                                                   col_ind   = tparam[[p]]$col_ind,
                                                   tpar_inds = tparam[[p]]$tpar_inds)
@@ -245,7 +245,7 @@ factor_slice_sampler_ode <-
                               for(p in seq_along(tparam)) {
                                     insert_tparam(tcovar    = ode_params_cur,
                                                   values    = tparam[[p]]$draws2par(
-                                                        parameters = params_prop_nat,
+                                                        parameters = ode_params_cur[1,],
                                                         draws      = tparam[[p]]$draws_cur),
                                                   col_ind   = tparam[[p]]$col_ind,
                                                   tpar_inds = tparam[[p]]$tpar_inds)
@@ -364,7 +364,7 @@ factor_slice_sampler_ode <-
                               for(p in seq_along(tparam)) {
                                     insert_tparam(tcovar    = ode_params_cur,
                                                   values    = tparam[[p]]$draws2par(
-                                                        parameters = params_prop_nat,
+                                                        parameters = ode_params_cur[1,],
                                                         draws      = tparam[[p]]$draws_cur),
                                                   col_ind   = tparam[[p]]$col_ind,
                                                   tpar_inds = tparam[[p]]$tpar_inds)
@@ -480,8 +480,9 @@ factor_slice_sampler_ode <-
                   if(!is.null(tparam)) {
                         for(p in seq_along(tparam)) {
                               insert_tparam(tcovar    = ode_params_cur,
-                                            values    = tparam[[p]]$draws2par(parameters = model_params_nat,
-                                                                              draws = tparam[[p]]$draws_cur),
+                                            values    = 
+                                                  tparam[[p]]$draws2par(parameters = ode_params_cur[1,],
+                                                                        draws = tparam[[p]]$draws_cur),
                                             col_ind   = tparam[[p]]$col_ind,
                                             tpar_inds = tparam[[p]]$tpar_inds)
                         }

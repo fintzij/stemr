@@ -70,7 +70,9 @@ update_tparam_ode <-
                   
                   # map to parameter
                   insert_tparam(tcovar    = ode_parameters,
-                                values    = tparam[[p]]$draws2par(parameters = ode_parameters[1,], draws = tparam[[p]]$draws_ess),
+                                values    = 
+                                      tparam[[p]]$draws2par(parameters = ode_parameters[1,], 
+                                                            draws = tparam[[p]]$draws_ess),
                                 col_ind   = tparam[[p]]$col_ind,
                                 tpar_inds = tparam[[p]]$tpar_inds)
             }
@@ -160,7 +162,9 @@ update_tparam_ode <-
                         
                         # map to parameter
                         insert_tparam(tcovar    = ode_parameters,
-                                      values    = tparam[[p]]$draws2par(parameters = ode_parameters[1,], draws = tparam[[p]]$draws_ess),
+                                      values    = 
+                                            tparam[[p]]$draws2par(parameters = ode_parameters[1,], 
+                                                                  draws = tparam[[p]]$draws_ess),
                                       col_ind   = tparam[[p]]$col_ind,
                                       tpar_inds = tparam[[p]]$tpar_inds)
                   }
@@ -244,7 +248,9 @@ update_tparam_ode <-
                   # recover the original time-varying parameter values
                   for(p in seq_along(tparam)) {
                         insert_tparam(tcovar    = ode_parameters,
-                                      values    = tparam[[p]]$draws2par(parameters = ode_parameters[1,], draws = tparam[[p]]$draws_cur),
+                                      values    = 
+                                            tparam[[p]]$draws2par(parameters = ode_parameters[1,], 
+                                                                  draws = tparam[[p]]$draws_cur),
                                       col_ind   = tparam[[p]]$col_ind,
                                       tpar_inds = tparam[[p]]$tpar_inds)
                   }
