@@ -88,8 +88,8 @@ stem_inference_ode <- function(stem_object,
             print_progress <- FALSE
       }
       
-      flow_matrix            <- stem_object$dynamics$flow_matrix_lna
-      stoich_matrix          <- stem_object$dynamics$stoich_matrix_lna
+      flow_matrix            <- stem_object$dynamics$flow_matrix_ode
+      stoich_matrix          <- stem_object$dynamics$stoich_matrix_ode
       ode_pointer            <- stem_object$dynamics$ode_pointers$ode_ptr
       ode_set_pars_pointer   <- stem_object$dynamics$ode_pointers$set_ode_params_ptr
       censusmat              <- stem_object$measurement_process$censusmat
@@ -166,6 +166,7 @@ stem_inference_ode <- function(stem_object,
       measproc_indmat <- stem_object$measurement_process$measproc_indmat
       d_meas_pointer  <- stem_object$measurement_process$meas_pointers_lna$d_measure_ptr
       data            <- stem_object$measurement_process$data
+      if(is.list(data)) data <- stem_object$measurement_process$obsmat
       obstimes        <- stem_object$measurement_process$obstimes
       
       # construct prior density functions

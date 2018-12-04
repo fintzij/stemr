@@ -187,6 +187,7 @@ stem_inference_lna <- function(stem_object,
       measproc_indmat <- stem_object$measurement_process$measproc_indmat
       d_meas_pointer  <- stem_object$measurement_process$meas_pointers_lna$d_measure_ptr
       data            <- stem_object$measurement_process$data
+      if(is.list(data)) data <- stem_object$measurement_process$obsmat
       obstimes        <- stem_object$measurement_process$obstimes
       
       # construct prior density functions
