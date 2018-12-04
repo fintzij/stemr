@@ -41,7 +41,8 @@ sub_powers <- function(string) {
                       m_end_pow <- m_start_pow + len - 1
                 }
 
-                m_fcn_pow <- unlist(strsplit(gsub(" ", "", substr(string, m_start_pow, m_end_pow)), ","))
+                # m_fcn_pow <- unlist(strsplit(gsub(" ", "", substr(string, m_start_pow, m_end_pow)), ","))
+                m_fcn_pow <- gsub(" ", "", substr(string, m_start_pow, m_end_pow))
 
                 # get the base
                 m_start <- psym - 1
@@ -60,7 +61,8 @@ sub_powers <- function(string) {
                 }
 
                 m_start_base <- m_end+1; m_end_base <- m_start-1
-                m_fcn_base <- unlist(strsplit(gsub(" ", "", substr(string, m_start_base, m_end_base)), ","))
+                # m_fcn_base <- unlist(strsplit(gsub(" ", "", substr(string, m_start_base, m_end_base)), ","))
+                m_fcn_base <- gsub(" ", "", substr(string, m_start_base, m_end_base))
 
                 # construct and make the replacement
                 replacement <- paste0("pow(",m_fcn_base, ",", m_fcn_pow,")")
