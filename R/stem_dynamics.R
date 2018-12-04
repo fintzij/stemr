@@ -607,8 +607,12 @@ stem_dynamics <-
                 names(strata_sizes) <- paste0("popsize_", sapply(initializer, "[[", "strata"))
                 
                 # add the population and strata sizes to the vector of constants if not already there
-                popsize <- sum(strata_sizes)
-                if(!"popsize"%in% names(constants)) constants <- c(constants, popsize = popsize)
+                if(!"popsize"%in% names(constants)) {
+                      popsize <- sum(strata_sizes)
+                      constants <- c(constants, popsize)
+                } else {
+                      popsize <- constants["popsize"]
+                }
                 
                 for(p in seq_along(strata_sizes)) {
                       if(!names(strata_sizes)[p] %in% const_codes) {
@@ -616,7 +620,7 @@ stem_dynamics <-
                       }
                 } 
 
-                const_codes <- seq_along(c(const_codes, popsize, strata_sizes)) - 1
+                const_codes <- seq_along(constants) - 1
                 names(const_codes) <- names(constants)
 
         } else {
