@@ -30,6 +30,7 @@ Rcpp::NumericMatrix simulate_r_measure(Rcpp::NumericMatrix& censusmat, Rcpp::Log
 
         // simulate the dataset
         for(int j=0; j < obsmat_dims[0]; ++j) {
+              
                 // obsmat, emit_inds, record_ind, state, parameters, constants, tcovar, ptr
                 CALL_R_MEASURE(obsmat, measproc_indmat(j, _), j, censusmat.row(j), parameters, constants, tcovar(j, _), r_measure_ptr);
         }
