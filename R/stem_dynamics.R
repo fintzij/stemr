@@ -169,7 +169,7 @@ stem_dynamics <-
               }
         }
         
-        if(!is.null(strata) && length(state_initializer) != length(strata)) {
+        if(!is.null(strata) && !(state_initializer[[1]]$strata == "ALL" || length(state_initializer) == length(strata))) {
               stop("The state initializer must be the same length as the number of strata.")
         }
 
