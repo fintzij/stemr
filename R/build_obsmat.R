@@ -43,7 +43,7 @@ build_obsmat <- function(meas_procs = NULL, datasets = NULL) {
                         obstimes <- sort(unique(unlist(lapply(datasets, function(x) x[,1]))))
 
                         # get the names of the measurement variables
-                        meas_vars <- sapply(lapply(datasets, function(x) x[,-1]), colnames)
+                        meas_vars <- sapply(lapply(datasets, function(x) x[,-1,drop=FALSE]), colnames)
 
                         # initialize the matrix
                         obsmat           <- matrix(NA, nrow = length(obstimes), ncol = length(meas_vars) + 1)
@@ -51,7 +51,7 @@ build_obsmat <- function(meas_procs = NULL, datasets = NULL) {
                         obsmat[,"time"]  <- obstimes
 
                         for(s in seq_along(datasets)) {
-                                vars <- colnames(datasets[[s]][,-1])
+                                vars <- colnames(datasets[[s]][,-1, drop = FALSE])
                                 obsmat[match(datasets[[s]][,1], obstimes), vars] <- datasets[[s]][,-1]
                         }
                 }

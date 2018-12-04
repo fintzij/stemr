@@ -151,7 +151,7 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
         if(!is.null(data)) {
               
                 if(class(data) == "data.frame") data <- as.matrix(data)
-                
+
                 if(!is.list(data)) {
                         obstimes <- data[,1]
                         for(s in seq_along(meas_procs)){
@@ -160,7 +160,7 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
                 } else {
                         for(s in seq_along(meas_procs)) {
                                 for(t in seq_along(data)) {
-                                        if(emissions[[s]]$meas_var %in% colnames(data[[t]])) {
+                                        if(meas_procs[[s]]$meas_var %in% colnames(data[[t]])) {
                                                 meas_procs[[s]]$obstimes <- data[[t]][,1]
                                         }
                                 }
