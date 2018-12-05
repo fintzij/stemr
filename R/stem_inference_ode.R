@@ -176,9 +176,9 @@ stem_inference_ode <- function(stem_object,
       
       # function for converting concentrations to volumes
       if(n_strata == 1) {
-            comp_size_vec <- constants["popsize"]
+            comp_size_vec <- c(constants["popsize"])
       } else {
-            comp_size_vec <- constants[paste0("popsize_", sapply(initializer,"[[","strata"))]
+            comp_size_vec <- c(constants[paste0("popsize_", sapply(initializer,"[[","strata"))])
       }
       
       # list for initial compartment volume objects

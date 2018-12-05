@@ -332,23 +332,80 @@ stem_dynamics <-
         } else {
                 strata_codes <- NULL
         }
-
-        if(n_consts) {
-                const_codes             <- 0:(n_consts - 1)
-                const_names             <- names(constants)
-                names(const_codes)      <- const_names
+        
+        # make sure popsizes and stratum sizes in the contants are handled properly
+        if(is.null(strata)) {
+              
+              # if not supplied, constants will at least contain the population size
+              if(is.null(constants)) {
+                    constants <- c(popsize = sum(state_initializer[[1]]$init_states))
+              } 
+              
+              if(!"popsize" %in% names(constants)) {
+                    popsize   <- sum(state_initializer[[1]]$init_states)
+                    constants <- c(constants, popsize = popsize)
+              } else {
+                    # make sure popsize is at the end
+                    popsize <- constants["popsize"]
+                    constants <- c(constants[which(names(constants)!="popsize")], constants["popsize"])
+              }
+              
+              # generate const_codes
+              const_names        <- names(constants)
+              const_codes        <- seq_along(constants)-1
+              names(const_codes) <- const_names
+              n_consts           <- length(constants)
+              
         } else {
-                const_codes <- NULL
-                const_names <- NULL
+              
+              initializer_strata <- sapply(state_initializer, function(x) x[["strata"]])
+              
+              if(initializer_strata[1] == "ALL") {
+                    strata_sizes <- sapply(strata, function(x) sum(state_initializer[[1]]$init_states))
+                    names(strata_sizes) <- paste0("popsize_", strata)
+                    
+              } else {
+                    strata_sizes <- numeric(length(strata))
+                    names(strata_sizes) <- paste0("popsize_", strata)
+                    for(s in seq_along(state_initializer)){
+                          strata_sizes[paste0("popsize_",state_initializer[[s]]$strata)] <- 
+                                sum(state_initializer[[s]]$init_states)
+                    }
+              }
+              
+              # if not supplied, constants will at least contain the population and stratum sizes
+              if(is.null(constants)){
+                    constants <- c(popsize = sum(strata_sizes), strata_sizes)
+              }
+              
+              # add the population and strata sizes to the vector of constants if not already there
+              if(!"popsize" %in% names(constants)) {
+                    popsize <- sum(strata_sizes)
+                    constants <- c(constants, popsize = popsize)
+              } else {
+                    popsize <- constants["popsize"]
+              }
+              
+              for(p in seq_along(strata_sizes)) {
+                    if(!names(strata_sizes)[p] %in% names(constants)) {
+                          constants <- c(constants, strata_sizes[p])
+                    }
+              } 
+              
+              # generate const_codes
+              const_names        <- names(constants)
+              const_codes        <- seq_along(constants)-1
+              names(const_codes) <- const_names
+              n_consts           <- length(constants)
         }
-
+        
         if(!is.null(constants)) {
-                # ensure that there are no partial matches amongst names of constants
-                const_match <- rep(FALSE, length(const_names))
-                for(p in seq_along(const_match)) {
-                        const_match[p] <- any(grepl(pattern = paste0('\\<',const_names[p], '\\>'), const_names[-p]))
-                }
-        }
+              # ensure that there are no partial matches amongst names of constants
+              const_match <- rep(FALSE, length(const_names))
+              for(p in seq_along(const_match)) {
+                    const_match[p] <- any(grepl(pattern = paste0('\\<',const_names[p], '\\>'), const_names[-p]))
+              }
+        } 
 
         # if there are multiple strata, ensure that the rate functions are
         # specified for all compartments in their respective risk sets
@@ -603,26 +660,6 @@ stem_dynamics <-
                 # determine if initial states are fixed
                 fixed_inits <- all(sapply(initializer, "[[", "fixed") == TRUE)
 
-                strata_sizes <- sapply(initializer, function(x) sum(x[["init_states"]]));
-                names(strata_sizes) <- paste0("popsize_", sapply(initializer, "[[", "strata"))
-                
-                # add the population and strata sizes to the vector of constants if not already there
-                if(!"popsize"%in% names(constants)) {
-                      popsize <- sum(strata_sizes)
-                      constants <- c(constants, popsize)
-                } else {
-                      popsize <- constants["popsize"]
-                }
-                
-                for(p in seq_along(strata_sizes)) {
-                      if(!names(strata_sizes)[p] %in% const_codes) {
-                            constants <- c(constants, strata_sizes[p])
-                      }
-                } 
-
-                const_codes <- seq_along(constants) - 1
-                names(const_codes) <- names(constants)
-
         } else {
 
                 rate_fcns <- vector(mode = "list", length = length(rates))
@@ -732,12 +769,6 @@ stem_dynamics <-
 
                 fixed_inits  <- initializer[[1]]$fixed
                 strata_sizes <- NULL
-                popsize      <- sum(initializer[[1]]$init_states)
-
-                if(!"popsize" %in% names(constants)) constants <- c(constants, popsize = popsize)
-                
-                const_codes        <- c(const_codes, length(const_codes))
-                names(const_codes) <- names(constants)
         }
 
         # check that forcings are not referenced in the rates
