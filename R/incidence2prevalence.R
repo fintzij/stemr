@@ -92,6 +92,7 @@ incidence2prevalence <- function(path, flow_matrix, init_state, forcings = NULL,
             forcing_tcovars   <- character(0L)
             forcing_tcov_inds <- integer(0L)
             forcing_events    <- character(0L)
+            forcing_mtx       <- matrix(0.0, nrow = 0, ncol = 0)
             forcings_out      <- matrix(0.0, nrow = 0, ncol = 0)
             forcing_transfers <- array(0.0, dim = c(0,0,0))
       }
