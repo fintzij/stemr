@@ -77,6 +77,15 @@ simulate_stem <-
                   stop("The simulation method must either be 'gillespie', 'lna', or 'ode'.")
             }
             
+            # make sure the object was appropriately compiled
+            if(method == "gillespie" & is.null(stem_object$dynamics$rate_ptrs)) {
+                  stop("Exact rates not compiled.")
+            } else if(method == "lna" & is.null(stem_object$dynamics$lna_pointers)) {
+                  stop("LNA not compiled.")
+            } else if(method == "ode" & is.null(stem_object$dynamics$ode_pointers)) {
+                  stop("ODE not compiled.")
+            }
+            
             # if lna, subject paths are not available
             if(subject_paths && (method == "lna" | method == "ode")) {
                   warning("Subject-paths are only available when simulating paths when method='gillespie'.")
