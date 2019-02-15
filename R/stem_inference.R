@@ -98,6 +98,7 @@ stem_inference <-
                           initialization_attempts = initialization_attempts,
                           ess_args = ess_args,
                           print_progress = print_progress,
+                          status_filename = status_filename,
                           messages = messages
                 )
 

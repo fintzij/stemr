@@ -131,7 +131,8 @@ stem_inference_lna <- function(stem_object,
             initdist_bracket_scaling <- 2*sqrt(2*log(10))
             tparam_bracket_scaling   <- 2*sqrt(2*log(10))
             joint_initdist_update    <- TRUE
-            joint_tparam_update      <- TRUE
+            joint_tparam_update      <- FALSE
+            joint_strata_update      <- FALSE
             ess_warmup               <- 50
             
       } else {
@@ -149,14 +150,38 @@ stem_inference_lna <- function(stem_object,
             tparam_bracket_scaling   <- ess_args$tparam_bracket_scaling
             joint_initdist_update    <- ess_args$joint_initdist_update
             joint_tparam_update      <- ess_args$joint_tparam_update
+            joint_strata_update      <- ess_args$joint_strata_update
             ess_warmup               <- ess_args$ess_warmup
+            
+            # time-varying parameters are updated separately when not 
+            # jointly updating LNA paths for all strata
+            if(!joint_strata_update) joint_tparam_update <- FALSE
       }
+      
+      # generate the ess schedule - either all strata jointly, or by stratum
+      if(joint_strata_update | n_strata == 1) {
+            ess_schedule <- list(seq_len(nrow(flow_matrix)))
+            
+      } else {
+            ess_schedule <- 
+                  lapply(paste0("_",names(stem_object$dynamics$strata_codes)),
+                         function(x) grep(x, rownames(flow_matrix)))      
+      
+      }
+      
+      # get the complement indices for the elliptical slice sampling schedule
+      ess_schedule <- list(ess_schedule,
+                           lapply(ess_schedule, 
+                                  function(x) setdiff(seq_len(nrow(flow_matrix)), x)))
+      
+      # whether all strata are updated jointly
+      ess_schedule$joint_strata_update = joint_strata_update
       
       # objects for updating the brackets if necessary
       if(lna_bracket_update != Inf) {
-            lna_angle_mean  <- 0
-            lna_angle_var   <- pi^2 / 3
-            lna_angle_resid <- 0
+            lna_angle_mean  <- rep(0, length(ess_schedule[[1]]))
+            lna_angle_var   <- rep(pi^2 / 3, length(ess_schedule[[1]]))
+            lna_angle_resid <- rep(0, length(ess_schedule[[1]]))
       }
       
       if(initdist_bracket_update != Inf) {
@@ -1071,12 +1096,14 @@ stem_inference_lna <- function(stem_object,
       data_log_lik      <- double(1 + floor(iterations / thin_params))
       lna_log_lik       <- double(1 + floor(iterations / thin_params))
       params_log_prior  <- double(1 + floor(iterations / thin_params))
-      ess_step_record   <- matrix(1.0, 
-                                  nrow = n_ess_updates, 
-                                  ncol = floor(iterations / thin_params))
-      ess_angle_record  <- matrix(1.0, 
-                                  nrow = n_ess_updates, 
-                                  ncol = floor(iterations / thin_params))
+      ess_step_record   <- array(1.0, 
+                                 dim = c(n_ess_updates,
+                                         length(ess_schedule[[1]]),
+                                         floor(iterations / thin_params)))
+      ess_angle_record  <- array(1.0, 
+                                 dim = c(n_ess_updates,
+                                         length(ess_schedule[[1]]),
+                                         floor(iterations / thin_params)))
       
       # initialize the lna_param_vec for the measurement process
       lna_param_vec <- lna_params_cur[1,]
@@ -1184,11 +1211,12 @@ stem_inference_lna <- function(stem_object,
       copy_mat(draws_prop, path$draws)
       
       # add a vector for the ESS record to the path
-      path$step_record  <- rep(1.0, n_ess_updates)
-      path$angle_record <- rep(1.0, n_ess_updates)
+      path$step_record  <- matrix(1.0, nrow = n_ess_updates, ncol = length(ess_schedule[[1]]))
+      path$angle_record <- matrix(1.0, nrow = n_ess_updates, ncol = length(ess_schedule[[1]]))
       
       # instatiate matrix for elliptical slice sampling draws
       ess_draws_prop <- matrix(0.0, nrow = nrow(path$draws), ncol = ncol(path$draws))
+      copy_mat(ess_draws_prop, path$draws)
       
       # set the log posterior and prior log likelihood
       params_logprior_cur  <- prior_density(model_params_nat, model_params_est)
@@ -1235,6 +1263,7 @@ stem_inference_lna <- function(stem_object,
                         d_meas_pointer          = d_meas_pointer,
                         do_prevalence           = do_prevalence,
                         n_ess_updates           = 1,
+                        ess_schedule            = ess_schedule,
                         lna_bracket_width       = lna_bracket_width,
                         joint_tparam_update     = joint_tparam_update,
                         joint_initdist_update   = joint_initdist_update,

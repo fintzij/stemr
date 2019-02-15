@@ -613,83 +613,6 @@ simulate_stem <-
                   # grab parameters
                   sim_pars  <- stem_object$dynamics$parameters[parameter_inds+1]
                   
-                  # tparam indices and initial values
-                  if(!is.null(stem_object$dynamics$tparam)) {
-                        
-                        # generate indices for time-varying parameters
-                        for(s in seq_along(stem_object$dynamics$tparam)) {
-                              stem_object$dynamics$tparam[[s]]$col_ind  <- 
-                                    stem_object$dynamics$lna_rates$lna_param_codes[stem_object$dynamics$tparam[[s]]$tparam_name]
-                              stem_object$dynamics$tparam[[s]]$tpar_inds <- 
-                                    findInterval(lna_times, stem_object$dynamics$tparam[[s]]$times, left.open = F) - 1
-                              stem_object$dynamics$tparam[[s]]$tpar_inds[stem_object$dynamics$tparam[[s]]$tpar_inds == -1] <- 0
-                        }
-                        
-                        # list for saving the time varying parameters for reuse in simulating a dataset in necessary
-                        tparam_times <- sort(unique(unlist(lapply(stem_object$dynamics$tparam, function(x) x$times))))
-                        tparam_times <- tparam_times[tparam_times >= t0 & tparam_times <= tmax]
-                        
-                        if(is.null(tparam_values) & is.null(tparam_draws)) {
-                              
-                              tpar_list <- 
-                                    list(lapply(stem_object$dynamics$tparam, function(x) numeric(length(x$values))))
-                              
-                              tparam_draws  <- rep(tpar_list, nsim) 
-                              tparam_values <- rep(tpar_list, nsim)
-                              
-                              # compute the tparam values
-                              for(n in seq_len(nsim)) {
-                                    for(m in seq_along(stem_object$dynamics$tparam)) {
-                                          
-                                          # grab parameters
-                                          if(!is.null(simulation_parameters)) {
-                                                sim_pars <- as.numeric(simulation_parameters[[n]])
-                                          }
-                                          
-                                          # draw values
-                                          draw_normals(tparam_draws[[n]][[m]])
-                                          
-                                          # compute values
-                                          tparam_values[[n]][[m]] <- 
-                                                stem_object$dynamics$tparam[[m]]$draws2par(
-                                                      sim_pars,
-                                                      tparam_draws[[n]][[m]]
-                                                )
-                                    }
-                              }
-                              
-                        } else if(is.null(tparam_values) & !is.null(tparam_draws)) {
-                              
-                              tpar_list <- 
-                                    list(lapply(stem_object$dynamics$tparam, function(x) numeric(length(x$values))))
-                              
-                              tparam_values <- rep(tpar_list, nsim)
-                              
-                              # compute the tparam values
-                              for(n in seq_len(nsim)) {
-                                    for(m in seq_along(stem_object$dynamics$tparam)) {
-                                          
-                                          # grab parameters
-                                          if(!is.null(simulation_parameters)) {
-                                                sim_pars <- as.numeric(simulation_parameters[[n]])
-                                          }
-                                          
-                                          # compute values
-                                          tparam_values[[n]][[m]] <- 
-                                                stem_object$dynamics$tparam[[m]]$draws2par(
-                                                      sim_pars,
-                                                      tparam_draws[[n]][[m]]
-                                                )
-                                    }
-                              }
-                        }
-                        
-                  } else {
-                        tparam_draws <- NULL
-                        tparam_values <- NULL
-                        tparam_times <- NULL
-                  }
-                  
                   # generate some auxilliary objects
                   param_update_inds <- lna_times %in% 
                         sort(unique(c(t0, tmax, stem_object$dynamics$tcovar[,1], tparam_times))) 
@@ -837,6 +760,103 @@ simulate_stem <-
                         colnames(init_states) <- names(stem_object$dynamics$comp_codes)
                   }
                   
+                  # tparam indices and initial values
+                  if(!is.null(stem_object$dynamics$tparam)) {
+                        
+                        # generate indices for time-varying parameters
+                        for(s in seq_along(stem_object$dynamics$tparam)) {
+                              stem_object$dynamics$tparam[[s]]$col_ind  <- 
+                                    stem_object$dynamics$lna_rates$lna_param_codes[stem_object$dynamics$tparam[[s]]$tparam_name]
+                              stem_object$dynamics$tparam[[s]]$tpar_inds <- 
+                                    findInterval(lna_times, stem_object$dynamics$tparam[[s]]$times, left.open = F) - 1
+                              stem_object$dynamics$tparam[[s]]$tpar_inds[stem_object$dynamics$tparam[[s]]$tpar_inds == -1] <- 0
+                        }
+                        
+                        # list for saving the time varying parameters for reuse in simulating a dataset in necessary
+                        tparam_times <- sort(unique(unlist(lapply(stem_object$dynamics$tparam, function(x) x$times))))
+                        tparam_times <- tparam_times[tparam_times >= t0 & tparam_times <= tmax]
+                        
+                        if(is.null(tparam_values) & is.null(tparam_draws)) {
+                              
+                              tpar_list <- 
+                                    list(lapply(stem_object$dynamics$tparam, function(x) numeric(length(x$values))))
+                              
+                              tparam_draws  <- rep(tpar_list, nsim) 
+                              tparam_values <- rep(tpar_list, nsim)
+                              
+                              # compute the tparam values
+                              for(n in seq_len(nsim)) {
+                                    for(m in seq_along(stem_object$dynamics$tparam)) {
+                                          
+                                          # grab parameters
+                                          if(!is.null(simulation_parameters)) {
+                                                sim_pars <- as.numeric(simulation_parameters[[n]])
+                                                lna_pars[lna_param_inds+1,] <- sim_pars
+                                          }
+                                          
+                                          # draw values
+                                          draw_normals(tparam_draws[[n]][[m]])
+                                          
+                                          # map to parameter
+                                          insert_tparam(tcovar    = lna_pars,
+                                                        values    = 
+                                                              tparam[[m]]$draws2par(parameters = lna_pars[1,], 
+                                                                                    draws = tparam_draws[[n]][[m]]),
+                                                        col_ind   = stem_object$dynamics$tparam[[m]]$col_ind,
+                                                        tpar_inds = stem_object$dynamics$tparam[[m]]$tpar_inds)
+                                          
+                                          # copy_values
+                                          tparam_values[[n]][[m]] <- 
+                                                tparam[[m]]$draws2par(parameters = lna_pars[1,], 
+                                                                      draws = tparam_draws[[n]][[m]])
+                                    }
+                              }
+                              
+                        } else if(is.null(tparam_values) & !is.null(tparam_draws)) {
+                              
+                              tpar_list <- 
+                                    list(lapply(stem_object$dynamics$tparam, function(x) numeric(length(x$values))))
+                              
+                              tparam_values <- rep(tpar_list, nsim)
+                              
+                              # compute the tparam values
+                              for(n in seq_len(nsim)) {
+                                    for(m in seq_along(stem_object$dynamics$tparam)) {
+                                          
+                                          if(!is.null(simulation_parameters)) {
+                                                sim_pars <- as.numeric(simulation_parameters[[n]])
+                                                lna_pars[lna_param_inds+1,] <- sim_pars
+                                          }
+                                          
+                                          if(!stem_object$dynamics$fixed_inits) {
+                                                init_vols <- init_states[n,]
+                                          }
+                                          
+                                          # set the parameters and initial volumes
+                                          pars2lnapars2(lna_pars, as.numeric(c(sim_pars, init_vols)), 0)
+                                          
+                                          # map to parameter
+                                          insert_tparam(tcovar    = lna_pars,
+                                                        values    = 
+                                                              tparam[[m]]$draws2par(parameters = lna_pars[1,], 
+                                                                                    draws = tparam_draws[[n]][[m]]),
+                                                        col_ind   = stem_object$dynamics$tparam[[m]]$col_ind,
+                                                        tpar_inds = stem_object$dynamics$tparam[[m]]$tpar_inds)
+                                          
+                                          # copy_values
+                                          tparam_values[[n]][[m]] <- 
+                                                tparam[[m]]$draws2par(parameters = lna_pars[1,], 
+                                                                      draws = tparam_draws[[n]][[m]])
+                                    }
+                              }
+                        }
+                        
+                  } else {
+                        tparam_draws <- NULL
+                        tparam_values <- NULL
+                        tparam_times <- NULL
+                  }
+                  
                   # generate forcing matrix
                   if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
                         
@@ -884,6 +904,7 @@ simulate_stem <-
                         
                         if(!is.null(simulation_parameters)) {
                               sim_pars <- as.numeric(simulation_parameters[[k]])
+                              lna_pars[lna_param_inds+1,] <- sim_pars
                         }
                         
                         if(!stem_object$dynamics$fixed_inits) {
@@ -1053,82 +1074,6 @@ simulate_stem <-
                   # get parameters
                   sim_pars  <- stem_object$dynamics$parameters[parameter_inds+1]
                   
-                  # tparam indices and initial values
-                  if(!is.null(stem_object$dynamics$tparam)) {
-                        
-                        # generate indices for time-varying parameters
-                        for(s in seq_along(stem_object$dynamics$tparam)) {
-                              stem_object$dynamics$tparam[[s]]$col_ind  <- 
-                                    stem_object$dynamics$ode_rates$ode_param_codes[stem_object$dynamics$tparam[[s]]$tparam_name]
-                              stem_object$dynamics$tparam[[s]]$tpar_inds <- 
-                                    findInterval(ode_times, stem_object$dynamics$tparam[[s]]$times, left.open = F) - 1
-                              stem_object$dynamics$tparam[[s]]$tpar_inds[stem_object$dynamics$tparam[[s]]$tpar_inds == -1] <- 0
-                        }
-                        
-                        # list for saving the time varying parameters for reuse in simulating a dataset in necessary
-                        tparam_times <- sort(unique(unlist(lapply(stem_object$dynamics$tparam, function(x) x$times))))
-                        tparam_census_times <- tparam_times[tparam_times >= t0 & tparam_times <= tmax]
-                        
-                        if(is.null(tparam_values) & is.null(tparam_draws)) {
-                              
-                              tpar_list <- 
-                                    list(lapply(stem_object$dynamics$tparam, function(x) numeric(length(x$values))))
-                              
-                              tparam_draws  <- rep(tpar_list, nsim) 
-                              tparam_values <- rep(tpar_list, nsim)
-                              
-                              # compute the tparam values
-                              for(n in seq_len(nsim)) {
-                                    for(m in seq_along(stem_object$dynamics$tparam)) {
-                                          
-                                          # grab parameters
-                                          if(!is.null(simulation_parameters)) {
-                                                sim_pars <- as.numeric(simulation_parameters[[n]])
-                                          }
-                                          
-                                          # draw values
-                                          draw_normals(tparam_draws[[n]][[m]])
-                                          
-                                          # compute values
-                                          tparam_values[[n]][[m]] <- 
-                                                stem_object$dynamics$tparam[[m]]$draws2par(
-                                                      sim_pars,
-                                                      tparam_draws[[n]][[m]]
-                                                )
-                                    }
-                              }
-                              
-                        } else if(is.null(tparam_values) & !is.null(tparam_draws)) {
-                              
-                              tpar_list <- 
-                                    list(lapply(stem_object$dynamics$tparam, function(x) numeric(length(x$values))))
-                              
-                              tparam_values <- rep(tpar_list, nsim)
-                              
-                              # compute the tparam values
-                              for(n in seq_len(nsim)) {
-                                    for(m in seq_along(stem_object$dynamics$tparam)) {
-                                          
-                                          # grab parameters
-                                          if(!is.null(simulation_parameters)) {
-                                                sim_pars <- as.numeric(simulation_parameters[[n]])
-                                          }
-                                          
-                                          # compute values
-                                          tparam_values[[n]][[m]] <- 
-                                                stem_object$dynamics$tparam[[m]]$draws2par(
-                                                      sim_pars,
-                                                      tparam_draws[[n]][[m]]
-                                                )
-                                    }
-                              }
-                        }
-                        
-                  } else {
-                        tparam_draws <- NULL
-                        tparam_times <- NULL
-                  }
-                  
                   # generate some auxilliary objects
                   param_update_inds <- ode_times %in% unique(c(t0, tmax, stem_object$dynamics$tcovar[,1]))
                   census_interval_inds <- findInterval(ode_times, census_times, left.open = T)
@@ -1273,6 +1218,96 @@ simulate_stem <-
                               init_states[n, ] <- c(init_state)
                         }
                   } 
+                  
+                  # tparam indices and initial values
+                  if(!is.null(stem_object$dynamics$tparam)) {
+                        
+                        # generate indices for time-varying parameters
+                        for(s in seq_along(stem_object$dynamics$tparam)) {
+                              stem_object$dynamics$tparam[[s]]$col_ind  <- 
+                                    stem_object$dynamics$ode_rates$ode_param_codes[stem_object$dynamics$tparam[[s]]$tparam_name]
+                              stem_object$dynamics$tparam[[s]]$tpar_inds <- 
+                                    findInterval(ode_times, stem_object$dynamics$tparam[[s]]$times, left.open = F) - 1
+                              stem_object$dynamics$tparam[[s]]$tpar_inds[stem_object$dynamics$tparam[[s]]$tpar_inds == -1] <- 0
+                        }
+                        
+                        # list for saving the time varying parameters for reuse in simulating a dataset in necessary
+                        tparam_times <- sort(unique(unlist(lapply(stem_object$dynamics$tparam, function(x) x$times))))
+                        tparam_census_times <- tparam_times[tparam_times >= t0 & tparam_times <= tmax]
+                        
+                        if(is.null(tparam_values) & is.null(tparam_draws)) {
+                              
+                              tpar_list <- 
+                                    list(lapply(stem_object$dynamics$tparam, function(x) numeric(length(x$values))))
+                              
+                              tparam_draws  <- rep(tpar_list, nsim) 
+                              tparam_values <- rep(tpar_list, nsim)
+                              
+                              # compute the tparam values
+                              for(n in seq_len(nsim)) {
+                                    for(m in seq_along(stem_object$dynamics$tparam)) {
+                                          
+                                          if(!is.null(simulation_parameters)) {
+                                                sim_pars <- as.numeric(simulation_parameters[[n]])
+                                          }
+                                          
+                                          if(!stem_object$dynamics$fixed_inits) {
+                                                init_vols <- init_states[n,]
+                                          }
+                                          
+                                          # set the parameters and initial volumes
+                                          pars2lnapars2(lnapars = ode_pars, 
+                                                        parameters = as.numeric(c(sim_pars, init_vols)), 
+                                                        c_start = 0)
+                                          
+                                          # draw values
+                                          draw_normals(tparam_draws[[n]][[m]])
+                                          
+                                          # map to parameter
+                                          insert_tparam(tcovar    = ode_pars,
+                                                        values    = 
+                                                              tparam[[m]]$draws2par(parameters = ode_pars[1,], 
+                                                                                    draws = tparam_draws[[n]][[m]]),
+                                                        col_ind   = stem_object$dynamics$tparam[[m]]$col_ind,
+                                                        tpar_inds = stem_object$dynamics$tparam[[m]]$tpar_inds)
+                                          
+                                          # copy_values
+                                          tparam_values[[n]][[m]] <- 
+                                                tparam[[m]]$draws2par(parameters = ode_pars[1,], 
+                                                                      draws = tparam_draws[[n]][[m]])
+                                    }
+                              }
+                              
+                        } else if(is.null(tparam_values) & !is.null(tparam_draws)) {
+                              
+                              tpar_list <- 
+                                    list(lapply(stem_object$dynamics$tparam, function(x) numeric(length(x$values))))
+                              
+                              tparam_values <- rep(tpar_list, nsim)
+                              
+                              # compute the tparam values
+                              for(n in seq_len(nsim)) {
+                                    for(m in seq_along(stem_object$dynamics$tparam)) {
+                                          
+                                          # grab parameters
+                                          if(!is.null(simulation_parameters)) {
+                                                sim_pars <- as.numeric(simulation_parameters[[n]])
+                                          }
+                                          
+                                          # compute values
+                                          tparam_values[[n]][[m]] <- 
+                                                stem_object$dynamics$tparam[[m]]$draws2par(
+                                                      sim_pars,
+                                                      tparam_draws[[n]][[m]]
+                                                )
+                                    }
+                              }
+                        }
+                        
+                  } else {
+                        tparam_draws <- NULL
+                        tparam_times <- NULL
+                  }
                   
                   # generate forcing matrix
                   if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
