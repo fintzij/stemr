@@ -46,6 +46,11 @@
 #'      "elderly")))
 stem_initializer <- function(init_states, fixed, strata = NULL, prior = NULL, dist = "multinom") {
 
+        # make sure that strata is of length 1
+        if(!is.null(strata) && length(strata) != 1) {
+              stop("The strata argument must be either the name of a single stratum or the keywork ALL.")
+        }
+      
         if(is.null(names(init_states))) {
                 stop("Compartment names must be specified in each initial probability vector.")
         }

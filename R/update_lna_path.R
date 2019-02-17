@@ -54,7 +54,6 @@ update_lna_path <-
                  lna_bracket_width,
                  joint_tparam_update,
                  joint_initdist_update,
-                 joint_strata_update,
                  step_size) {
               
       step_count <- matrix(1.0, nrow = n_ess_updates, ncol = length(ess_schedule[[1]]))
@@ -90,12 +89,19 @@ update_lna_path <-
                         
                         bad_draws <- vector("logical", length(initdist_objects))
                         
-                        #################################################################
-                        ### Resume here - update initdists on same schedule as strata ###
-                        #################################################################
+                        # indices of strata to sample
+                        if(length(initdist_objects) == 1) {
+                              initdist_inds <- 1                              # no stratum, initdist_objects has length 1
+                              
+                        } else if(ess_schedule$joint_strata_update) {
+                              initdist_inds <- seq_along(initdist_objects)    # update initdists for all strata
+                              
+                        } else {
+                              initdist_inds <- ess_schedule$initdist_codes[j] # update initdist for current stratum
+                        }
                         
                         # choose an ellipse
-                        for(s in seq_along(initdist_objects)) {
+                        for(s in initdist_inds) {
                               
                               # if the state is not fixed draw new values
                               if(!initdist_objects[[s]]$fixed) {
@@ -110,7 +116,7 @@ update_lna_path <-
                                     # map to volumes
                                     copy_vec2(dest = init_volumes_prop,
                                               orig = initdist_objects[[s]]$comp_mean + 
-                                                    initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_ess,
+                                                     c(initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_ess),
                                               inds = initdist_objects[[s]]$comp_inds_Cpp)
                                     
                                     # check boundary conditions
@@ -126,13 +132,22 @@ update_lna_path <-
                         
                   } else {
                         
+                        # copy the initial volumes into the parameter matrix
                         if(joint_initdist_update) {
-                              # copy the initial volumes into the parameter matrix
                               pars2lnapars2(lna_parameters, init_volumes_prop, lna_initdist_inds[1])
                         }
                         
                         # construct the first proposal
-                        copy_mat(dest = draws_prop, orig = cos(theta) * path_cur$draws + sin(theta) * ess_draws_prop)
+                        # strata being sampled
+                        copy_2_rows(draws_prop,
+                                    cos(theta) * path_cur$draws[ess_schedule[[1]][[j]],] + 
+                                          sin(theta) * ess_draws_prop[ess_schedule[[1]][[j]],],
+                                    ess_schedule[[1]][[j]]-1)
+                        
+                        # strata not resampled
+                        copy_2_rows(draws_prop, path_cur$draws[ess_schedule[[2]][[j]],], ess_schedule[[2]][[j]]-1)
+                        
+                        # copy_mat(dest = draws_prop, orig = cos(theta) * path_cur$draws + sin(theta) * ess_draws_prop)
                         
                         # propose time-varying parameter values if called for
                         if(!is.null(tparam)) {
@@ -239,7 +254,7 @@ update_lna_path <-
                   while((upper - lower) > sqrt(.Machine$double.eps) && (data_log_lik_prop < threshold)) {
                         
                         # increment the number of ESS proposals for the current iteration
-                        step_count[k] <- step_count[k] + 1
+                        step_count[k,j] <- step_count[k,j] + 1
                         
                         # shrink the bracket
                         if(theta < 0) {
@@ -253,7 +268,9 @@ update_lna_path <-
                         
                         # construct the next initial distribution proposal
                         if(joint_initdist_update) {
-                              for(s in seq_along(initdist_objects)) {
+                              
+                              # choose an ellipse
+                              for(s in initdist_inds) {
                                     
                                     # if the state is not fixed draw new values
                                     if(!initdist_objects[[s]]$fixed) {
@@ -265,7 +282,7 @@ update_lna_path <-
                                           # map to volumes
                                           copy_vec2(dest = init_volumes_prop,
                                                     orig = initdist_objects[[s]]$comp_mean + 
-                                                          initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_ess,
+                                                          c(initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_ess),
                                                     inds = initdist_objects[[s]]$comp_inds_Cpp)
                                           
                                           # check boundary conditions
@@ -287,7 +304,16 @@ update_lna_path <-
                               }
                               
                               # construct the next path proposal
-                              copy_mat(dest = draws_prop, orig = cos(theta) * path_cur$draws + sin(theta) * ess_draws_prop)
+                              # strata being sampled
+                              copy_2_rows(draws_prop,
+                                          cos(theta) * path_cur$draws[ess_schedule[[1]][[j]],] + 
+                                                sin(theta) * ess_draws_prop[ess_schedule[[1]][[j]],],
+                                          ess_schedule[[1]][[j]]-1)
+                              
+                              # strata not resampled
+                              copy_2_rows(draws_prop, path_cur$draws[ess_schedule[[2]][[j]],], ess_schedule[[2]][[j]]-1)
+                              
+                              # copy_mat(dest = draws_prop, orig = cos(theta) * path_cur$draws + sin(theta) * ess_draws_prop)
                               
                               # propose time-varying parameter values if called for
                               if(!is.null(tparam)) {
@@ -393,7 +419,7 @@ update_lna_path <-
                         
                         # transfer the new initial volumes and draws (volumes already in parameter matrix)
                         if(joint_initdist_update) {
-                              for(s in seq_along(initdist_objects)) {
+                              for(s in initdist_inds) {
                                     if(!initdist_objects[[s]]$fixed) {
                                           
                                           # copy the N(0,1) draws
@@ -415,15 +441,17 @@ update_lna_path <-
                               }
                         }
                         
-                        # transfer the new path and residual path into the* sin(theta) path_prop list
-                        copy_mat(dest = path_cur$draws, orig = draws_prop)
+                        # transfer the new path and residual path into the path_cur list
+                        copy_2_rows(dest = path_cur$draws,
+                                    orig = draws_prop[ess_schedule[[1]][[j]],],
+                                    ess_schedule[[1]][[j]]-1)
                         
                         # copy the LNA path and the data log likelihood
                         copy_mat(dest = path_cur$lna_path, orig = pathmat_prop)
                         copy_vec(dest = path_cur$data_log_lik, orig = data_log_lik_prop)
                         
                         # record the final angle
-                        ess_angles[k] <- theta
+                        ess_angles[k,j] <- theta
                         
                   } else {
                         
@@ -448,6 +476,6 @@ update_lna_path <-
       }
       
       # copy the step and angle records
-      copy_vec(dest = path_cur$step_record, orig = step_count)
-      copy_vec(dest = path_cur$angle_record, orig = ess_angles)
+      copy_mat(dest = path_cur$step_record, orig = step_count)
+      copy_mat(dest = path_cur$angle_record, orig = ess_angles)
 }

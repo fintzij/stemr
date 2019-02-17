@@ -158,6 +158,9 @@ stem_inference_lna <- function(stem_object,
             if(!joint_strata_update) joint_tparam_update <- FALSE
       }
       
+      # make sure joint_initdist_update is false if fixed inits is true
+      if(fixed_inits) joint_initdist_update = FALSE
+      
       # generate the ess schedule - either all strata jointly, or by stratum
       if(joint_strata_update | n_strata == 1) {
             ess_schedule <- list(seq_len(nrow(flow_matrix)))
@@ -176,6 +179,15 @@ stem_inference_lna <- function(stem_object,
       
       # whether all strata are updated jointly
       ess_schedule$joint_strata_update = joint_strata_update
+      ess_schedule$strata_codes        = stem_object$dynamics$strata_codes + 1
+      
+      # get the corresponding initdist codes
+      if(joint_strata_update | n_strata == 1) {
+            ess_schedule$initdist_codes = c("ALL" = 1)
+      } else {
+            ess_schedule$initdist_codes = 
+                  match(names(ess_schedule$strata_codes), sapply(initializer, function(x) x$strata))
+      }
       
       # objects for updating the brackets if necessary
       if(lna_bracket_update != Inf) {
@@ -275,6 +287,7 @@ stem_inference_lna <- function(stem_object,
             
             initdist_objects[[t]] <- 
                   list(
+                        stratum            = initializer[[t]]$strata,
                         fixed              = initializer[[t]]$fixed,
                         comp_size          = comp_size_vec[t],
                         comp_mean          = comp_mean,
@@ -1220,6 +1233,9 @@ stem_inference_lna <- function(stem_object,
       
       # set the log posterior and prior log likelihood
       params_logprior_cur  <- prior_density(model_params_nat, model_params_est)
+      
+      # make sure init_volumes_prop matches the current vector
+      copy_vec(init_volumes_prop, init_volumes_cur)
       
       # warmup the latent path
       if (!mcmc_restart) {

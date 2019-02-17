@@ -81,7 +81,7 @@ update_initdist_lna <-
                         # map to volumes
                         copy_vec2(dest = init_volumes_prop,
                                   orig = initdist_objects[[s]]$comp_mean + 
-                                        initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_ess,
+                                         c(initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_ess),
                                   inds = initdist_objects[[s]]$comp_inds_Cpp)
                         
                         # check boundary conditions
@@ -207,7 +207,7 @@ update_initdist_lna <-
                               # map to volumes
                               copy_vec2(dest = init_volumes_prop,
                                         orig = initdist_objects[[s]]$comp_mean + 
-                                              initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_ess,
+                                               c(initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_ess),
                                         inds = initdist_objects[[s]]$comp_inds_Cpp)
                               
                               # check boundary conditions
