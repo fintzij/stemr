@@ -728,7 +728,7 @@ simulate_stem <-
                                           # map to volumes
                                           copy_vec2(dest = init_state,
                                                     orig = initdist_objects[[s]]$comp_mean + 
-                                                          initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur,
+                                                           c(initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur),
                                                     inds = initdist_objects[[s]]$comp_inds_Cpp) 
                                           
                                           while(any(init_state[initdist_objects[[s]]$comp_inds_R] < 0) | 
@@ -740,7 +740,7 @@ simulate_stem <-
                                                 # map to volumes
                                                 copy_vec2(dest = init_state,
                                                           orig = initdist_objects[[s]]$comp_mean + 
-                                                                initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur,
+                                                                 c(initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur),
                                                           inds = initdist_objects[[s]]$comp_inds_Cpp) 
                                           }
                                     }
@@ -1196,7 +1196,7 @@ simulate_stem <-
                                           # map to volumes
                                           copy_vec2(dest = init_state,
                                                     orig = initdist_objects[[s]]$comp_mean + 
-                                                          initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur,
+                                                           c(initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur),
                                                     inds = initdist_objects[[s]]$comp_inds_Cpp) 
                                           
                                           while(any(init_state[initdist_objects[[s]]$comp_inds_R] < 0) | 
@@ -1208,7 +1208,7 @@ simulate_stem <-
                                                 # map to volumes
                                                 copy_vec2(dest = init_state,
                                                           orig = initdist_objects[[s]]$comp_mean + 
-                                                                initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur,
+                                                                 c(initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur),
                                                           inds = initdist_objects[[s]]$comp_inds_Cpp) 
                                           }
                                     }

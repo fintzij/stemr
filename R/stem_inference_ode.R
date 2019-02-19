@@ -266,7 +266,7 @@ stem_inference_ode <- function(stem_object,
                         # map draws
                         copy_vec2(dest = init_volumes_cur,
                                   orig = c(initdist_objects[[s]]$comp_mean + 
-                                                 initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur),
+                                                 c(initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur)),
                                   inds = initdist_objects[[s]]$comp_inds_Cpp)
                         
                         # check boundary conditions
