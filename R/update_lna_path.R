@@ -78,7 +78,7 @@ update_lna_path <-
                   # theta <- runif(1, 0, ess_bracket_width)
                   # lower <- theta - ess_bracket_width; upper <- theta
                   pos <- runif(1) 
-                  lower <- -lna_bracket_width * pos; upper <- lower + lna_bracket_width
+                  lower <- -lna_bracket_width[j] * pos; upper <- lower + lna_bracket_width[j]
                   theta <- runif(1, lower, upper)
                   
                   # initialize the data log likelihood for the proposed path

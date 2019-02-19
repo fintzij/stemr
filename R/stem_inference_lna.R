@@ -122,8 +122,7 @@ stem_inference_lna <- function(stem_object,
             n_initdist_updates       <- 1
             n_tparam_updates         <- 1
             initdist_bracket_width   <- 2*pi
-            tparam_bracket_width     <- 2*pi     
-            lna_bracket_width        <- 2*pi
+            tparam_bracket_width     <- 2*pi
             initdist_bracket_update  <- 0
             tparam_bracket_update    <- 0
             lna_bracket_update       <- 0
@@ -135,11 +134,17 @@ stem_inference_lna <- function(stem_object,
             joint_strata_update      <- FALSE
             ess_warmup               <- 50
             
+            # lna bracket width
+            if(n_strata == 1) {
+                  lna_bracket_width <- 2*pi
+            } else {
+                  lna_bracket_width <- rep(2*pi, n_strata)
+            }
+            
       } else {
             n_ess_updates            <- ess_args$n_ess_updates
             n_initdist_updates       <- ess_args$n_initdist_updates
             n_tparam_updates         <- ess_args$n_tparam_updates
-            lna_bracket_width        <- ess_args$lna_bracket_width
             initdist_bracket_width   <- ess_args$initdist_bracket_width
             tparam_bracket_width     <- ess_args$tparam_bracket_width
             lna_bracket_update       <- ess_args$lna_bracket_update
@@ -156,6 +161,12 @@ stem_inference_lna <- function(stem_object,
             # time-varying parameters are updated separately when not 
             # jointly updating LNA paths for all strata
             if(!joint_strata_update) joint_tparam_update <- FALSE
+            
+            # lna_bracket_width
+            if(n_strata > 1 & !joint_strata_update & length(ess_args$lna_bracket_width) == 1) {
+                  lna_bracket_width <- rep(ess_args$lna_bracket_width, n_strata)
+                  names(lna_bracket_width) <- names(stem_object$dynamics$strata_codes)
+            }
       }
       
       # make sure joint_initdist_update is false if fixed inits is true
@@ -2569,6 +2580,7 @@ stem_inference_lna <- function(stem_object,
                   d_meas_pointer          = d_meas_pointer,
                   do_prevalence           = do_prevalence,
                   n_ess_updates           = n_ess_updates,
+                  ess_schedule            = ess_schedule,
                   lna_bracket_width       = lna_bracket_width,
                   joint_tparam_update     = joint_tparam_update,
                   joint_initdist_update   = joint_initdist_update,
@@ -2580,17 +2592,17 @@ stem_inference_lna <- function(stem_object,
                   
                   # angle residual
                   lna_angle_resid <- 
-                        path$angle_record - lna_angle_mean
+                        colMeans(path$angle_record) - lna_angle_mean
                   
                   # angle variance
                   lna_angle_var <- 
-                        (iter - 1 - n_ess_updates) / (iter - 1) * lna_angle_var + 
-                        sum(lna_angle_resid^2) / (iter - 1)
+                        (iter - 2) / (iter - 1) * lna_angle_var + 
+                        lna_angle_resid^2 / (iter - 1)
                   
                   # angle mean
                   lna_angle_mean  <- 
-                        (iter - 1 - n_ess_updates) / (iter - 1) * lna_angle_mean + 
-                        sum(path$angle_record) / (iter - 1)
+                        (iter - 2) / (iter - 1) * lna_angle_mean + 
+                        colMeans(path$angle_record) / (iter - 1)
                   
                   # set the new angle bracket
                   if(((iter-1) == lna_bracket_update)) {
@@ -2601,8 +2613,8 @@ stem_inference_lna <- function(stem_object,
             
             # Save the latent process if called for in this iteration
             if ((iter-1) %% thin_latent_proc == 0) {
-                  ess_step_record[, param_rec_ind - 1]  <- path$step_record  # save the number of steps
-                  ess_angle_record[, param_rec_ind - 1] <- path$angle_record # save the angle
+                  ess_step_record[, , param_rec_ind - 1]  <- path$step_record  # save the number of steps
+                  ess_angle_record[, , param_rec_ind - 1] <- path$angle_record # save the angle
                   lna_paths[,,path_rec_ind] <- path$lna_path                 # save the path
                   lna_draws[,,path_rec_ind] <- path$draws                    # save the N(0,1) draws
                   path_rec_ind <- path_rec_ind + 1                           # increment the path record index
