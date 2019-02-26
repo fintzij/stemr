@@ -422,7 +422,7 @@ stem_dynamics <-
                         if(identical(rates[[k]]$strata, "ALL")) {
                                 rel_strata <- strata
                         } else {
-                                rel_strata <-rates[[k]]$strata
+                                rel_strata <- rates[[k]]$strata
                         }
 
                         # ensure that there is one rate function per stratum

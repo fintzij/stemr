@@ -2607,7 +2607,7 @@ stem_inference_lna <- function(stem_object,
                   # set the new angle bracket
                   if(((iter-1) == lna_bracket_update)) {
                         lna_bracket_width <- 
-                              min(lna_bracket_scaling * sqrt(lna_angle_var), 2*pi)
+                              pmin(lna_bracket_scaling * sqrt(lna_angle_var), 2*pi)
                   }
             }
             
