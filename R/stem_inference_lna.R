@@ -2101,6 +2101,11 @@ stem_inference_lna <- function(stem_object,
                                              nugget_step_size      = nugget_step_size,
                                              bracket_limits        = c(mvnss_bracket_min, mvnss_bracket_max))
                   }
+                
+                # update_sequence
+                if(length(parameter_blocks) != 1 & !mcmc_kernel$kernel_settings$joint_block_update) {
+                    mvnss_update_seq <- c(replicate(n_mvnss_updates, sample.int(length(parameter_blocks))))
+                }
                   
                   for(b in mvnss_update_seq) {
                         
