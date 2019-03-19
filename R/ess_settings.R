@@ -47,16 +47,15 @@ ess_settings <-
                joint_initdist_update = TRUE,
                joint_strata_update = FALSE,
                ess_warmup = 50) {
-            if (lna_bracket_width <= 0 | lna_bracket_width > 2 * pi) {
+            if (any(lna_bracket_width <= 0 | lna_bracket_width > 2 * pi)) {
                   stop("The elliptical slice sampling bracket width must be in (0,2*pi].")
             }
             
-            if (initdist_bracket_width <= 0 |
-                initdist_bracket_width > 2 * pi) {
+            if (any(initdist_bracket_width <= 0 | initdist_bracket_width > 2 * pi)) {
                   stop("The initial distribution slice sampling bracket width must be in (0,2*pi].")
             }
             
-            if (lna_bracket_width <= 0 | lna_bracket_width > 2 * pi) {
+            if (any(lna_bracket_width <= 0 | lna_bracket_width > 2 * pi)) {
                   stop(
                         "The time varying parameter slice sampling bracket width must be in (0,2*pi]."
                   )
