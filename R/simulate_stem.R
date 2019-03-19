@@ -613,11 +613,6 @@ simulate_stem <-
                   # grab parameters
                   sim_pars  <- stem_object$dynamics$parameters[parameter_inds+1]
                   
-                  # generate some auxilliary objects
-                  param_update_inds <- lna_times %in% 
-                        sort(unique(c(t0, tmax, stem_object$dynamics$tcovar[,1], tparam_times))) 
-                  census_interval_inds <- findInterval(lna_times, census_times, left.open = T)
-                  
                   # simulate the LNA paths
                   census_paths <- vector(mode = "list", length = nsim)
                   lna_paths    <- vector(mode = "list", length = nsim)
@@ -895,6 +890,11 @@ simulate_stem <-
                         forcings_out      <- matrix(0.0, nrow = 0, ncol = 0)
                         forcing_transfers <- array(0.0, dim = c(0,0,0))
                   }
+                  
+                  # generate some auxilliary objects
+                  param_update_inds <- lna_times %in% 
+                        sort(unique(c(t0, tmax, stem_object$dynamics$tcovar[,1], tparam_times))) 
+                  census_interval_inds <- findInterval(lna_times, census_times, left.open = T)
                   
                   # initialize the volumes and prevalence indices
                   init_vols <- init_states[1,]
