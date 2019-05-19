@@ -166,6 +166,8 @@ stem_inference_lna <- function(stem_object,
             if(n_strata > 1 & !joint_strata_update & length(ess_args$lna_bracket_width) == 1) {
                   lna_bracket_width <- rep(ess_args$lna_bracket_width, n_strata)
                   names(lna_bracket_width) <- names(stem_object$dynamics$strata_codes)
+            } else {
+               lna_bracket_width = ess_args$lna_bracket_width
             }
       }
       
