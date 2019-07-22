@@ -13,7 +13,6 @@ Description: Fit stochastic epidemic models via the linear noise approximation.
 License: GPL-3
 LazyData: TRUE
 Imports:
-    ECctmc,
     Ryacas,
     odeintr,
     MASS,
