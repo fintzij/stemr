@@ -1,0 +1,272 @@
+---
+title: "stemr: Baysian Inference for Stochastic Epidemic Models via the Linear Noise Approximation"
+author: "Jonathan Fintz, Jon Wakefield, and Vladimir N. Minin"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{stemr: Baysian Inference for Stochastic Epidemic Models via the Linear Noise Approximation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  message = FALSE,
+  comment = "#>"
+)
+```
+
+# Overview
+
+This vignette demonstrates the basic functionalities of the  `stemr` package.
+Broadly, the package simulates and fits stochastic epidemic models to partially 
+observed incidence and prevalence data, and implements the Bayesian data 
+augmentation framework presented in Fintzi, Wakefield, and Minin (2019).
+Simulation can be conducted using ordinary  differential equations (ODEs), 
+Gillespie's direct algorithm (Gillespie, 1976), and using a restarting version 
+of the linear noise approximation (LNA; Fintzi et al., 2019). Inference is 
+conducted using ODEs or the LNA. This vignette, in particular, demonstrates how 
+to simulating partially observed incidence data from an outbreak with SIR 
+dyanmics and fit an SIR model to the data via the linear noise approximation. 
+This corresponds to the procedure used in the coverage simulation in Fintzi et 
+al., (2019).
+
+# Installing and loading the `stemr` package
+
+The `stemr` package may be installed using the following code. __IT IS CRITICAL THAT THE PACKAGE BE INSTALLED WITHOUT BYTE COMPILATION__. 
+```{r, eval = FALSE}
+library(devtools)
+install_github("fintzij/stemr", build_vignettes=TRUE, build_opts = c("--no-byte-compile")) 
+library(stemr)
+```
+
+```{r, include=FALSE}
+require(ggplot2)
+require(cowplot)
+set.seed(52787)
+```
+
+# Basic example: partially observed incidence from an outbreak with SIR dynamics
+
+As a basic example, we will simulate an outbreak with SIR dynamics and generate 
+negative binomial incidence counts with a mean case detection rate of 0.5. This
+corresponds to the coverage simulation conducted in Fintzi et al. (2019). 
+Briefly, the SIR model describes the time-evolution of an outbreak homogeneously
+mixing population where each individual exists in one of three states - 
+susceptible (S), infected (I), and recovered (R). Infection implies that an 
+individual is infectious with no latent period, while recovery confers lifelong 
+immunity. The waiting times between infection and recovery events are taken to 
+be exponentially distributed and the rates of state transition change every time 
+the population jumps to a different state. Hence, the transmission process is a
+Markov jump process. The rates at which infection and recovery events take place
+are $$\lambda_{SI} = \beta S I,\ \text{and}\ \lambda_{IR} = \mu I,$$
+where $\beta$ is the per-contact rate of infection, $\mu$ is the recovery rate,
+and $S$ and $I$ denote the numbers of susceptible and infectious individuals. 
+The basic reproduction number under SIR dynamics is $R_0 = \beta P/\mu$, where 
+$P=S+I+R$ is the population size. 
+
+We initialize parameters and instatiate the SIR model in the code block below. 
+The individual functions are documented and can be accessed in the usual way, 
+e.g., `help(rate)`. 
+
+```{r, echo = TRUE, warnings = FALSE}
+library(stemr)
+popsize = 1e4 # population size
+
+true_pars =
+      c(R0     = 1.5,  # basic reproduction number
+        mu_inv = 2,    # infectious period duration = 2 days
+        rho    = 0.5,  # case detection rate
+        phi    = 10)   # negative binomial overdispersion
+
+# initialize model compartments and rates
+strata <- NULL # no strata
+compartments <- c("S", "I", "R")
+
+# rates initialized as a list of rate lists
+rates <- 
+  list(rate(rate = "beta * I", # individual level rate (unlumped)
+            from = "S",        # source compartment
+            to   = "I",        # destination compartment
+            incidence = T),    # compute incidence of S2I transitions, required for simulating incidence data
+       rate(rate = "mu",       # individual level rate
+            from = "I",        # source compartment 
+            to   = "R",        # destination compartment
+            incidence = TRUE)) # compute incidence of I2R transitions (not required for simulating data)
+
+# list used for simulation/inference for the initial state, initial counts fixed.
+# state initializer a list of stem_initializer lists. 
+state_initializer <- 
+  list(stem_initializer(
+          init_states = c(S = popsize-10, I = 10, R = 0), # must match compartment names
+          fixed = T)) # initial state fixed for simulation, we'll change this later
+
+# set the parameter values - must be a named vector
+parameters = 
+  c(true_pars["R0"] / popsize / true_pars["mu_inv"], # R0 = beta * P / mu
+    1/true_pars["mu_inv"], 
+    true_pars["rho"], 
+    true_pars["phi"])
+names(parameters) <- c("beta", "mu", "rho", "phi")
+
+# declare the initial time to be constant
+constants <- c(t0 = 0)
+t0 <- 0; tmax <- 40
+
+# compile the model
+dynamics <-
+      stem_dynamics(
+            rates = rates,
+            tmax = tmax,
+            parameters = parameters,
+            state_initializer = state_initializer,
+            compartments = compartments,
+            constants = constants,
+            compile_ode = T,   # compile ODE functions
+            compile_rates = T, # compile MJP functions for Gillespie simulation
+            compile_lna = T,   # compile LNA functions
+            messages = T       # print messages
+      )
+
+# list of emission distribution lists (analogous to rate specification)
+emissions <- 
+  list(emission(meas_var = "S2I", # transition or compartment being measured (S->I transitions)
+                distribution    = "negbinomial",         # emission distribution
+                emission_params = c("phi", "S2I * rho"), # distribution pars, here overdispersion and mean
+                incidence       = TRUE,                  # is the data incidence
+                obstimes        = seq(1, tmax, by =1)))  # vector of observation times
+
+# compile the measurement process
+measurement_process <- 
+  stem_measure(emissions = emissions, 
+               dynamics  = dynamics, 
+               messages  = T)
+
+# put it all together into a stochastic epidemic model object
+stem_object <- 
+  stem(dynamics = dynamics, 
+       measurement_process = measurement_process)
+```
+
+## Simulating an outbreak and data
+
+Having compiled the model, we can simulate an outbreak and incidence (or 
+prevalence) data using Gillespie's direct algorith to simulate a MJP path, with
+the LNA, or deterministically with ODEs. Since we specified that the data should
+consist of incidence counts in instatiating the model, the simulation function 
+will produce incidence data. The prevalence and incidence curves are plotted 
+below. 
+
+```{r sim_paths, echo = TRUE}
+sim_mjp <- simulate_stem(stem_object = stem_object, method = "gillespie")
+sim_lna <- simulate_stem(stem_object = stem_object, method = "lna", lna_method = "approx")
+sim_ode <- simulate_stem(stem_object = stem_object, method = "ode")
+```
+
+```{r plot_sims, echo = FALSE}
+sim_paths = 
+    expand.grid(time = 0:tmax,
+                Method = c("Gillespie", "LNA", "ODE"),
+                Compartment = c("S","I","R","S2I","I2R"),
+                Type = c("Prevalence","Incidence"))
+sim_paths = 
+  sim_paths[!((sim_paths$Compartment %in% c("S","I","R") & sim_paths$Type == "Incidence") |
+                (sim_paths$Compartment %in% c("S2I", "I2R") & sim_paths$Type == "Prevalence")),]
+sim_paths$Compartment = factor(sim_paths$Compartment, levels = c("S", "I", "R", "S2I", "I2R"))
+sim_paths = sim_paths[with(sim_paths, order(Method, Compartment, Type, time)),]
+sim_paths$Count = 
+  c(sim_mjp$paths[[1]][,-1],
+    sim_lna$natural_paths[[1]][,-1],
+    sim_lna$paths[[1]][,-1],
+    sim_ode$natural_paths[[1]][,-1],
+    sim_ode$paths[[1]][,-1])
+
+mjp_prev = 
+  data.frame(time = sim_mjp$full_paths[[1]][,1],
+             Compartment = rep(c("S","I","R"), each = nrow(sim_mjp$full_paths[[1]])),
+             Count = c(sim_mjp$full_paths[[1]][,3:5]))
+
+mjp_counts = 
+  ggplot(mjp_prev, aes(x = time, y = Count,
+                       colour = Compartment, 
+                       group = Compartment)) + 
+  geom_step() + 
+  theme_minimal() + 
+  scale_color_brewer(type = "qual", palette = 6) + 
+  scale_y_continuous(trans = "sqrt", 
+                     breaks = c(0,50, 250, 1000, 2.5e3, 5e3,7.5e3,1e4),
+                     expand = c(0,0)) + 
+  labs(title = "MJP compartment counts")
+
+mjp_incid = 
+  ggplot(subset(sim_paths, Method == "Gillespie" & Type == "Incidence"),
+         aes(x = time, y = Count,
+             colour = Compartment,
+             group = Compartment)) + 
+  geom_point() + 
+  theme_minimal() + 
+  scale_color_brewer("Transition", type = "qual", palette = 2) + 
+  labs(title = "MJP weekly incidence counts")
+
+lna_prev = 
+  ggplot(subset(sim_paths, Method == "LNA" & Type == "Prevalence"),
+         aes(x = time, y = Count,
+             colour = Compartment,
+             group = Compartment)) + 
+  geom_line(linetype = 2) + 
+  theme_minimal() + 
+  scale_color_brewer("Compartment", type = "qual", palette = 6) + 
+  scale_y_continuous(trans = "sqrt", 
+                     breaks = c(0,50, 250, 1000, 2.5e3, 5e3,7.5e3,1e4),
+                     expand = c(0,0)) + 
+  labs(title = "LNA compartment volumes")
+
+lna_incid = 
+  ggplot(subset(sim_paths, Method == "LNA" & Type == "Incidence"),
+         aes(x = time, y = Count,
+             colour = Compartment,
+             group = Compartment)) + 
+  geom_point(shape = 2) + 
+  theme_minimal() + 
+  scale_color_brewer("Transition", type = "qual", palette = 2) + 
+  labs(title = "LNA weekly incidence counts")
+  
+ode_prev = 
+  ggplot(subset(sim_paths, Method == "ODE" & Type == "Prevalence"),
+         aes(x = time, y = Count,
+             colour = Compartment,
+             group = Compartment)) + 
+  geom_line(linetype = 2) + 
+  theme_minimal() + 
+  scale_color_brewer("Compartment", type = "qual", palette = 6) + 
+  scale_y_continuous(trans = "sqrt", 
+                     breaks = c(0,50, 250, 1000, 2.5e3, 5e3,7.5e3,1e4),
+                     expand = c(0,0)) + 
+  labs(title = "ODE compartment volumes")
+
+ode_incid = 
+  ggplot(subset(sim_paths, Method == "ODE" & Type == "Incidence"),
+         aes(x = time, y = Count,
+             colour = Compartment,
+             group = Compartment)) + 
+  geom_point(shape = 2) + 
+  theme_minimal() + 
+  scale_color_brewer("Transition", type = "qual", palette = 2) + 
+  labs(title = "ODE weekly incidence counts")
+
+cowplot::plot_grid(
+  mjp_prev, lna_prev, ode_prev, mjp_incid, lna_incid, ode_incid
+)
+```
+
+
+# References
+
+Fintzi et al. add reference...
+
+Gillespie, D. T. (1976). __A general method for numerically simulating the stochastic time__
+__evolution of coupled chemical reactions.__ Journal of Computational Physics 22, 403–434.
+
+Murray, I., Adams, R. P., and MacKay, D. J. C. (2010). __Elliptical slice sampling.__ JMLR:
+W&CP 9, 541–548.

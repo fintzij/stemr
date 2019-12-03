@@ -11,10 +11,6 @@
 #'   for Gillespie), defaults to FALSE
 #' @param observations Should simulated observations be returned? Requires that
 #'   a measurement process be defined in the stem object.
-#' @param subject_paths Should population-level paths be mapped to subject-level
-#'   paths and returned (e.g. for the purpose of initializing a subject-level
-#'   collection of disease histories)? Only available for exact simulation via
-#'   the Gillespie direct method.
 #' @param method either "gillespie" if simulating via Gillespie's direct method,
 #'   "lna" if simulating paths via the linear noise approximation, or "ode" if
 #'   simulating paths of the deterministic limit of the underlying Markov jump
@@ -40,14 +36,9 @@
 #'   datasets. If \code{paths = FALSE} and \code{observations = FALSE}, or if
 #'   \code{paths = TRUE} and \code{observations = TRUE}, a list \code{nsim stem}
 #'   paths and datasets, each returned either as a list or array, is returned.
-#'   If \code{subject_paths = TRUE} and \code{method = "gillespie"}, a list of
-#'   subject-level paths is also returned.
 #'
 #'   If \code{paths = TRUE} and \code{observations = FALSE}, a list or array of
-#'   simulated population-level paths is returned. If \code{method =
-#'   "gillespie"} and \code{subject_paths = TRUE}, an additional list is
-#'   returned, containing lists of subject-level mappings. Each sublist contains
-#'   a vector of subject states at t0, along with a mapped path.
+#'   simulated population-level paths is returned. 
 #'
 #'   If \code{paths = FALSE} and \code{observations = TRUE}, a list or array of
 #'   simulated datasets is returned.
@@ -62,7 +53,6 @@ simulate_stem <-
                paths = FALSE,
                full_paths = FALSE,
                observations = FALSE,
-               subject_paths = FALSE,
                method = "gillespie",
                tmax = NULL,
                census_times = NULL,
@@ -84,11 +74,6 @@ simulate_stem <-
                   stop("LNA not compiled.")
             } else if(method == "ode" & is.null(stem_object$dynamics$ode_pointers)) {
                   stop("ODE not compiled.")
-            }
-            
-            # if lna, subject paths are not available
-            if(subject_paths && (method == "lna" | method == "ode")) {
-                  warning("Subject-paths are only available when simulating paths when method='gillespie'.")
             }
             
             # check that the stem_dynamics are supplied
@@ -1700,7 +1685,7 @@ simulate_stem <-
                 datasets = list(NULL)
           }
 
-          stem_simulations <- list(paths = NULL, datasets = NULL, subject_paths = NULL)
+          stem_simulations <- list(paths = NULL, datasets = NULL)
 
           if(full_paths) 
                 stem_simulations$full_paths <- paths_full
@@ -1717,9 +1702,9 @@ simulate_stem <-
           }
           
           if(observations)  stem_simulations$datasets      <- datasets
-          if(subject_paths) stem_simulations$subject_paths <- subject_paths
           if(method == "lna") stem_simulations$lna_draws   <- lna_draws
           stem_simulations$failed_runs <- failed_runs
 
+          class(stem_simulations) <- "stemr_simulation_list"
           return(stem_simulations)
       }

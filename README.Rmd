@@ -21,18 +21,19 @@ The __stemr__ R package implements a Bayesian data augmentation algorithm for
 fitting stochastic epidemic models (SEMs) with arbitrary dynamics to partially 
 observed epidemic count data via the linear noise approximation (LNA). This 
 repository and package exist to expose and archive the code used in the paper, 
-"Outbreak Modeling via the Linear Noise Approximation: Fast Approximations
-for Stochastic Epidemic Models Fit to Partially Observed Incidence Counts" 
-by J. Fintzi, J. Wakefield, and V.N. Minin. The package provides facilities for 
-exact simulation of SEMs via Gillespie's direct algorithm, and for simulation of
-approximate epidemic paths via the LNA. Inference is carried out using a Bayesian
-data augmentation algorithm. LNA paths are sampled via the elliptical slice 
-sampling algorithm of Murray et al. (2010), and the package offers several choices
-for adaptive and fixed kernel MCMC algorithms for parameter updates. The package 
-also allows for time varying covariates, time varying parameters, and deterministic
-forcings. 
+"A Linear Noise Approximation for Stochastic Epidemic Models Fit to Partially 
+Observed Incidence Counts" by J. Fintzi, J. Wakefield, and V.N. Minin. The 
+package provides facilities for exact simulation of SEMs via Gillespie's direct 
+algorithm, and for simulation of approximate epidemic paths via the LNA. 
+Inference is carried out using a Bayesian data augmentation algorithm. LNA paths 
+are sampled via the elliptical slice sampling algorithm of Murray et al. (2010), 
+and the package  offers several choices for adaptive and fixed kernel MCMC 
+algorithms for parameter updates. The package also allows for time varying 
+covariates, time varying parameters, and deterministic forcings. These 
+functionalities are not yet fully documented, but sample code is available in 
+the '/inst' directory on the GitHub repository.
 
-## Getting started
+## Package installation
 This package may be installed directly from GitHub using the __devtools__ package. 
 __IMPORTANT__ It is critical that the package is installed with byte compilation 
 disabled. The package will not work properly when byte compiled, which is the 
@@ -44,14 +45,14 @@ install_github("fintzij/stemr", build_vignettes=TRUE, build_opts = c("--no-byte-
 library(stemr)
 ```
 
-There are several vignettes included in this package. The first diagrams the basic 
-functionality of the package. The others contain walk-throughs of the simulations 
-and analyses presented in the paper. These are accessible as follows:
+## Vignettes
+There are two vignettes included in this package to help familiarize users 
+with its basic functionality and that reproduce models the SEMs fit via the LNA 
+in Fintzi, et al. (2019). These are accessible as follows:
 
 ```
-vignette("stemr")
-vignette("sir_coverage")
-vignette("ebola_westafrica")
+vignette("stemr")             # Overview of the 'stemr' package
+vignette("ebola_westafrica")  # Multi-country SEIR model for Ebola transmission
 ```
 
 We also provide vignettes demonstrating how to use the `pomp` package to fit the

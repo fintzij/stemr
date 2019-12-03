@@ -235,12 +235,6 @@ stem_dynamics <-
                 compartment_names <- unlist(compartment_names)
         }
 
-        if(messages) {
-                if(any(sapply(c(compartment_names, names(parameters), colnames(tcovar), names(constants)), function(x) nchar(x) < 4))) {
-                        warning("It is highly suggested that all compartments, parameters, time-varying covariates, and constants have names that are at least four characters long to avoid errors when parsing the rate functions!")
-                }
-        }
-
         # check that there are no partial matches among compartment names
         comp_match <- rep(FALSE, length(compartments))
         

@@ -117,5 +117,6 @@ stem_inference <-
 #                                               messages)
         }
 
+        class(results) <- "stemr_inference_list"
         return(results)
 }

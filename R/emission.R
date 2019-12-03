@@ -9,7 +9,7 @@
 #' @param emission_params character vector of emission distribution parameters,
 #'   generally a function of model compartments and parameters.
 #' @param incidence do the data represent incidence counts (as opposed to
-#'   prevalence counts)? defaults to FALSE.
+#'   prevalence counts)? defaults to TRUE.
 #' @param obstimes numeric vector of observation times, required if the
 #'   measurement process is to be simulated from.
 #' @param strata strata to which the emission distribution applies, may be
@@ -69,7 +69,7 @@
 #' @return an emission list to be parsed in the \code{\link{stem_measure}}
 #'   function.
 #' @export
-emission <- function(meas_var, distribution, emission_params, incidence = FALSE, obstimes = NULL, strata = NULL) {
+emission <- function(meas_var, distribution, emission_params, incidence = TRUE, obstimes = NULL, strata = NULL) {
 
         if(!distribution %in% c("binomial", "poisson", "negbinomial", "gaussian")) {
                 stop("The emission distribution must be one of 'binomial', 'poisson', 'negbinomial', or 'gaussian'.")
