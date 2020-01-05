@@ -44,7 +44,7 @@ library(stemr)
 ```{r, include=FALSE}
 require(ggplot2)
 require(cowplot)
-set.seed(52787)
+set.seed(12511)
 ```
 
 # Basic example: partially observed incidence from an outbreak with SIR dynamics
@@ -67,8 +67,8 @@ The basic reproduction number under SIR dynamics is $R_0 = \beta P/\mu$, where
 $P=S+I+R$ is the population size. 
 
 We initialize parameters and instatiate the SIR model in the code block below. 
-The individual functions are documented and can be accessed in the usual way, 
-e.g., `help(rate)`. 
+The functions in the `stemr` package are documented and can be accessed in the usual way, 
+e.g., `help(rate)`.  
 
 ```{r, echo = TRUE, warnings = FALSE}
 library(stemr)
@@ -159,12 +159,12 @@ will produce incidence data. The prevalence and incidence curves are plotted
 below. 
 
 ```{r sim_paths, echo = TRUE}
-sim_mjp <- simulate_stem(stem_object = stem_object, method = "gillespie")
+sim_mjp <- simulate_stem(stem_object = stem_object, method = "gillespie", full_paths = TRUE)
 sim_lna <- simulate_stem(stem_object = stem_object, method = "lna", lna_method = "approx")
 sim_ode <- simulate_stem(stem_object = stem_object, method = "ode")
 ```
 
-```{r plot_sims, echo = FALSE}
+```{r plot_sims, echo = FALSE, fig.width=8, fig.height=4}
 sim_paths = 
     expand.grid(time = 0:tmax,
                 Method = c("Gillespie", "LNA", "ODE"),
@@ -197,7 +197,7 @@ mjp_counts =
   scale_y_continuous(trans = "sqrt", 
                      breaks = c(0,50, 250, 1000, 2.5e3, 5e3,7.5e3,1e4),
                      expand = c(0,0)) + 
-  labs(title = "MJP compartment counts")
+  labs(title = "Compartment counts", subtitle = "MJP")
 
 mjp_incid = 
   ggplot(subset(sim_paths, Method == "Gillespie" & Type == "Incidence"),
@@ -207,7 +207,7 @@ mjp_incid =
   geom_point() + 
   theme_minimal() + 
   scale_color_brewer("Transition", type = "qual", palette = 2) + 
-  labs(title = "MJP weekly incidence counts")
+  labs(title = "Incident transition events",subtitle = "MJP")
 
 lna_prev = 
   ggplot(subset(sim_paths, Method == "LNA" & Type == "Prevalence"),
@@ -220,7 +220,7 @@ lna_prev =
   scale_y_continuous(trans = "sqrt", 
                      breaks = c(0,50, 250, 1000, 2.5e3, 5e3,7.5e3,1e4),
                      expand = c(0,0)) + 
-  labs(title = "LNA compartment volumes")
+  labs(title = "", subtitle = "LNA")
 
 lna_incid = 
   ggplot(subset(sim_paths, Method == "LNA" & Type == "Incidence"),
@@ -230,38 +230,254 @@ lna_incid =
   geom_point(shape = 2) + 
   theme_minimal() + 
   scale_color_brewer("Transition", type = "qual", palette = 2) + 
-  labs(title = "LNA weekly incidence counts")
+  labs(title = "",subtitle = "LNA")
   
 ode_prev = 
   ggplot(subset(sim_paths, Method == "ODE" & Type == "Prevalence"),
          aes(x = time, y = Count,
              colour = Compartment,
              group = Compartment)) + 
-  geom_line(linetype = 2) + 
+  geom_line(linetype = 3) + 
   theme_minimal() + 
   scale_color_brewer("Compartment", type = "qual", palette = 6) + 
   scale_y_continuous(trans = "sqrt", 
                      breaks = c(0,50, 250, 1000, 2.5e3, 5e3,7.5e3,1e4),
                      expand = c(0,0)) + 
-  labs(title = "ODE compartment volumes")
+  labs(title = "", subtitle = "ODE")
 
 ode_incid = 
   ggplot(subset(sim_paths, Method == "ODE" & Type == "Incidence"),
          aes(x = time, y = Count,
              colour = Compartment,
              group = Compartment)) + 
-  geom_point(shape = 2) + 
+  geom_point(shape = 3) + 
   theme_minimal() + 
   scale_color_brewer("Transition", type = "qual", palette = 2) + 
-  labs(title = "ODE weekly incidence counts")
+  labs(title = "", subtitle = "ODE")
 
 cowplot::plot_grid(
-  mjp_prev, lna_prev, ode_prev, mjp_incid, lna_incid, ode_incid
+  mjp_counts, lna_prev, ode_prev, mjp_incid, lna_incid, ode_incid
 )
+```
+
+## Fitting the model to data
+
+We'll keep the dataset simulated under the MJP (shown below) and fit an SIR 
+model to the data. 
+
+```{r, plot_dat}
+ggplot(data = as.data.frame(sim_mjp$datasets[[1]]), 
+       aes(x=time, y = S2I)) + 
+  geom_point() + 
+  theme_minimal() + 
+  labs(x = "Week", y = "Count", title = "Observed Incidence")
+```
+
+We'll need to recompile the measurement process with the simulated data fed to 
+the data argument of the `stem_measure` function since the data was not present
+when the measurement process was originally compiled. There is no need to recompile
+the model dynamics object, although we'll have to regenerate the object with the 
+new measurement process. 
+
+```{r recompile_meas, echo = TRUE}
+measurement_process <- 
+  stem_measure(emissions = emissions, 
+               dynamics = dynamics, 
+               data = sim_mjp$datasets[[1]])
+stem_object <- stem(dynamics = dynamics, measurement_process = measurement_process)
+```
+
+In order to perform inference, we'll need to specify a function for transforming the model parameters from their natural scale to the estimation scale on which the MCMC explores the posterior, a function for transforming parameters on their estimation scale to the natural scale on which they enter the model dynamics and measurement process, and a function that returns the log prior. We'll parameterize the MCMC estimation scale in terms of the log basic reproduction number, log recovery rate, logit mean case detection rate, and log of the negative binomial overdispersion parameter. The functions are specified as follows and placed into a list of functions (note that it is critical that the function signatures follow the specification given below):
+
+```{r priors_est_scale_fcns, echo = TRUE}
+
+### Parameterization in terms of log(R0) and log(mu)
+## Priors for log(R0), log(mu), logit(rho), phi
+# Parameters (natural scale): beta, mu, rho, phi
+# Parameters (estimation scale): log(beta * N / mu), log(mu), logit(rho), log(phi)
+
+# function to take params_nat and return params_est
+to_estimation_scale = function(params_nat) {
+      c(log(params_nat[1] * popsize / params_nat[2] - 1), # (beta,mu,N) -> log(R0-1)
+        log(params_nat[2]),                     # mu -> log(mu)
+        logit(params_nat[3]),                   # rho -> logit(rho)
+        log(params_nat[4]))                     # phi -> log(phi)
+}
+
+# function to take params_est and return params_nat
+from_estimation_scale = function(params_est) {
+      c(exp(log(exp(params_est[1])+1) + params_est[2] - log(popsize)), # (log(R0), log(mu), N) -> beta = exp(log(R0) + log(mu) - log(N))
+        exp(params_est[2]), # log(mu) -> mu
+        expit(params_est[3]), # logit(rho) -> rho
+        exp(params_est[4])) # log(phi) -> phi
+}
+
+# calculate the log prior density. note the jacobian for phi
+prior_density = 
+      function(params_nat, params_est) {
+            sum(dnorm(params_est[1], 0, 0.5, log = TRUE),
+                dnorm(params_est[2], -0.7, 0.35, log = TRUE),
+                dnorm(params_est[3], 0, 1, log = TRUE),
+                dexp(exp(params_est[4]), 0.1, log = TRUE) + params_est[4]) 
+      }
+
+# return all three functions in a list
+priors <- list(prior_density = prior_density,
+               to_estimation_scale = to_estimation_scale,
+               from_estimation_scale = from_estimation_scale)
+
+```
+
+We now specify the MCMC transition kernel. In this simple example, we'll update 
+the model hyperparameters using a multivariate Metropolis algorithm. We'll tune 
+the algorithm using a global adaptive scheme (algorithm 4 in Andrieu and Thoms). We'll also initialize the parameters at random values, which is done by replacing the vector of parameters in the stem object with a function that returns a named vector of parameters. 
+
+```{r mcmc_kern, echo = TRUE}
+# specify the initial proposal covariance matrix with row and column names
+# corresponding to parameters on their estimation scales
+covmat <- diag(0.01, 4)
+rownames(covmat) <- colnames(covmat) <- c("log_R0", "log_mu", "logit_rho", "log_phi")
+
+# specify the kernel
+mcmc_kernel <-
+        kernel(
+                method = "mvn_g_adaptive",
+                stop_adaptation = 1e2, # number of iterations for adaptation,  1e4 in coverage simulation 
+                sigma = covmat,
+                scale_constant = 0.25,
+                scale_cooling = 0.5+1e-5,
+                step_size = 0.05,
+                nugget = 1e-5,
+                messages = FALSE
+        )
+
+# for initializing the parameters at random functions
+stem_object$dynamics$parameters <- function() {
+      priors$from_estimation_scale(priors$to_estimation_scale(parameters) + rnorm(4, 0, 0.1))
+}
+```
+
+We now run the MCMC algorithm to fit the model via ODEs. To perform inference with the LNA, simply change the `method` argument to `method="lna"`. 
+
+```{r fit_mod, echo = TRUE}
+res <- 
+  stem_inference(stem_object = stem_object,
+                 method = "ode", # or set to "lna"
+                 iterations = 3.5e2, # total number of iterations, set to 3.5e4 for the paper
+                 thin_params = 10,
+                 thin_latent_proc = 10,
+                 initialization_attempts = 500,
+                 priors = priors,
+                 mcmc_kernel = mcmc_kernel,
+                 messages = FALSE)
+```
+
+The `stem_inference` function returns a list of MCMC samples, latent epidemic paths, and MCMC tuning parameters (e.g., global scaling parameter adapted in the MCMC). These can be accessed as follows:
+
+```{r access_res, echo = TRUE}
+runtime = res$results$time
+mcmc_samples = res$results$MCMC_results
+ode_paths = res$results$ode_paths # or res$results$lna_paths if using the LNA for inference
+adapt_par = res$results$adaptation_record$adaptation_scale_record
+```
+
+# Fitting the SIR model with pomp
+
+We can fit the model using the `pomp` package as follows. Note that pomp version 1.17 was used as a benchmark method in the paper. 
+
+```{r pomp_fit, echo = TRUE, warning=FALSE}
+require(pomp)
+S0 <- 1e4 - 10
+I0 <- 10
+R0 <- 0
+cases <- sim_mjp$datasets[[1]][,2]
+
+# Set up pomp objects -----------------------------------------------------
+
+# Measurement process objects
+rmeas <- "
+  cases=rnbinom_mu(exp(log_phi),exp(logit_rho)*S2I/(1+exp(logit_rho)));    // simulates the data
+"
+
+dmeas<-"
+  lik=dnbinom_mu(cases,exp(log_phi),exp(logit_rho)*S2I/(1+exp(logit_rho)),give_log); // emission density
+"
+
+# define the stepper
+sir.step<-paste0("
+  double rate[2];
+  double dN[2];
+  rate[0]=exp(log(exp(log_R0)+1) + log_mu - log(",popsize,"))*I; // Infection rate
+  rate[1]=exp(log_mu);                         // recovery rate
+  reulermultinom(1,S,&rate[0],dt,&dN[0]);      // generate the number of newly infected people
+  reulermultinom(1,I,&rate[1],dt,&dN[1]);      // generate the number of newly recovered people
+  S+=-dN[0];                                   // update the number of Susceptibles
+  I+=dN[0]-dN[1];                              // update the number of Infections
+  R+=dN[1];                                    // update the number of Recoveries
+  S2I += dN[0];
+  I2R += dN[1];
+")
+
+# instatiate the euler stepper function
+SIR_sim <- euler.sim(step.fun = Csnippet(sir.step), delta.t = 1/7)
+
+# Define the priors
+sir.dprior <- function(params, ..., log) {
+  l <- dnorm(params["log_R0"], 0, 0.5, log = TRUE) +
+    dnorm(params["log_mu"], -0.7, 0.35, log = TRUE) +
+    dnorm(params["logit_rho"], log = T) +
+    dexp(exp(params["log_phi"]), 0.1, log = T) + params["log_phi"]
+  if(!log) l <- exp(l)
+  return(l)
+}
+
+# instatiate the pomp object
+sir_mod <- pomp(
+  data = data.frame(time = seq(1, tmax, by = 1), cases = cases),  #"cases" is the dataset, "time" is the observation time
+  times = "time",
+  t0 = 0,                      # initial time point
+  dmeasure = Csnippet(dmeas),  # evaluates the density of the measurement process
+  rmeasure = Csnippet(rmeas),  # simulates from the measurement process
+  rprocess = SIR_sim,          # simulates from the latent process
+  statenames = c("S", "I", "R", "S2I", "I2R"),  #state space variable name
+  paramnames = c("log_R0", "log_mu", "logit_rho", "log_phi"), #parameters name
+  zeronames = c("S2I", "I2R"),
+  initializer = function(params, t0, ...) {
+                        return(c(S = S0, I = I0, R = R0, S2I = 0, I2R = 0))
+                },
+  params = c(log_R0    = log(1.5),
+             log_mu    = log(1),
+             logit_rho = logit(0.5),
+             log_phi   = log(5)),
+  dprior = sir.dprior
+)
+
+# Metropolis kernel proposal covariance matrix
+init = c(log_R0 = log(true_pars[1]), log_mu = log(true_pars[2]), logit_rho = logit(true_pars[3]), log_phi = log(true_pars[4])) + rnorm(4, 0, c(0.1, 0.1, 0.1, 0.1))
+names(init) <- c("log_R0", "log_mu", "logit_rho", "log_phi")
+cov_init <- diag(1e-3, 4); colnames(cov_init) <- rownames(cov_init) <- names(init)
+
+# adaptive phase of MCMC
+res_adapt <- pmcmc(sir_mod, 
+                   Nmcmc = 1e2, # number of adaptive iterations
+                   Np = 50, # number of particles in pmmh (set to 500 in paper)
+                   start = init,
+                  proposal = mvn.rw.adaptive(rw.var = cov_init))
+
+# final sample
+sigma <- covmat(res_adapt)        
+res_pomp <- pmcmc(res_adapt, 
+                  Nmcmc = 2.5e2, #number of mcmc iterations
+                  Np = 50,  # number of particles in PMMH (set to 500 in paper)
+                  start = init,
+                  proposal = mvn.rw(rw.var = sigma))
+
 ```
 
 
 # References
+
+Andrieu, C., and Thoms, J.. "A tutorial on adaptive MCMC." __Statistics and Computing__ 18.4 (2008): 343-373.
 
 Fintzi et al. add reference...
 
