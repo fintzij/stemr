@@ -40,7 +40,7 @@ Vignettes
 
 There are two vignettes included in this package to help familiarize
 users with its basic functionality and that reproduce models the SEMs
-fit via the LNA in Fintzi, et al. (2019). The `stemr_sir` vignette
+fit via the LNA in Fintzi, et al. (2020). The `stemr_sir` vignette
 provides an introduction to the `stemr` package, and demonstrates how to
 simulate from and fit an SIR model via the LNA and ODE. The
 `ebola_westafrica` vignette demonstrates how to simulate from and fit a
