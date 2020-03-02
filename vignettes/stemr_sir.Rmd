@@ -126,7 +126,7 @@ dynamics <-
             compile_ode = T,   # compile ODE functions
             compile_rates = T, # compile MJP functions for Gillespie simulation
             compile_lna = T,   # compile LNA functions
-            messages = T       # print messages
+            messages = F       # don't print messages
       )
 
 # list of emission distribution lists (analogous to rate specification)
@@ -141,7 +141,7 @@ emissions <-
 measurement_process <- 
   stem_measure(emissions = emissions, 
                dynamics  = dynamics, 
-               messages  = T)
+               messages  = F)
 
 # put it all together into a stochastic epidemic model object
 stem_object <- 
