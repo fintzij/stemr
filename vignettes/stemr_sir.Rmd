@@ -34,12 +34,7 @@ al., (2019).
 
 # Installing and loading the `stemr` package
 
-The `stemr` package may be installed using the following code. __IT IS CRITICAL THAT THE PACKAGE BE INSTALLED WITHOUT BYTE COMPILATION__. 
-```{r, eval = FALSE}
-library(devtools)
-install_github("fintzij/stemr", build_vignettes=TRUE, build_opts = c("--no-byte-compile")) 
-library(stemr)
-```
+To install the `stemr` package, clone this repository and build the package from sources. There are two important things to note. First, the package depends on having version 0.4.1 of the `Ryacas` package installed. This can be accomplished, using the `devtools` package: `devtools::install_version("Ryacas", "0.4.1")`. It is also critical that the `stemr` package is installed without byte compilation. See [this page](https://support.rstudio.com/hc/en-us/articles/200486518-Customizing-Package-Build-Options) for how to do this. You should be able to rebuild in the usual way once you clone the package repo and install the other dependencies (odeintr, MASS, extraDistr, stats, ggplot2, cowplot, Rcpp, RcppArmadillo, and BH). 
 
 ```{r, include=FALSE}
 require(ggplot2)
