@@ -12,8 +12,8 @@ ess_settings(n_ess_updates = 1, n_initdist_updates = 1,
   tparam_bracket_update = 0, lna_bracket_scaling = 2 * sqrt(2 *
   log(10)), initdist_bracket_scaling = 2 * sqrt(2 * log(10)),
   tparam_bracket_scaling = 2 * sqrt(2 * log(10)),
-  joint_tparam_update = TRUE, joint_initdist_update = TRUE,
-  ess_warmup = 50)
+  joint_tparam_update = FALSE, joint_initdist_update = TRUE,
+  joint_strata_update = FALSE, ess_warmup = 50)
 }
 \arguments{
 \item{n_ess_updates, n_initdist_updates, n_tparam_updates}{number of elliptical
@@ -32,14 +32,19 @@ are to be shrunk, the new width is set to the minimum of 2*pi or the
 scaling multiplied by the standard deviation of the previous ESS angles.
 The scalings default to the full width at one tenth maximum for a gaussian.}
 
-\item{joint_tparam_update}{either TRUE (default) if time-varying parameter
-values should be updated in an ESS step jointly with the LNA path, or FALSE
-if time-varying parameters should be updated in their own block.}
+\item{joint_tparam_update}{either TRUE if time-varying parameter values
+should be updated in an ESS step jointly with the LNA path, or FALSE
+(default) if time-varying parameters should be updated in their own block.}
 
 \item{joint_initdist_update}{either TRUE (default) if initial compartment
 volumes should be updated in an ESS step jointly with the LNA path, or
 FALSE if initial compartment volumes should be updated in their own block.
 ess_bracket_step_size+1)^-ess_bracket_cooling.}
+
+\item{joint_strata_update}{if FALSE (default) the LNA path for each stratum
+is updated separately. If TRUE, the LNA paths for all strata are updated
+jointly. Time varying parameters are always updated separately when
+updating the LNA paths separately.}
 
 \item{ess_warmup}{ess_warmup ESS updates prior to starting MCMC}
 }

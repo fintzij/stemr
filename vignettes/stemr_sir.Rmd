@@ -159,8 +159,14 @@ will produce incidence data. The prevalence and incidence curves are plotted
 below. 
 
 ```{r sim_paths, echo = TRUE}
-sim_mjp <- simulate_stem(stem_object = stem_object, method = "gillespie", full_paths = TRUE)
-sim_lna <- simulate_stem(stem_object = stem_object, method = "lna", lna_method = "approx")
+sim_mjp <-
+  simulate_stem(stem_object = stem_object,
+                method = "gillespie",
+                full_paths = TRUE)
+sim_lna <-
+  simulate_stem(stem_object = stem_object,
+                method = "lna",
+                lna_method = "approx")
 sim_ode <- simulate_stem(stem_object = stem_object, method = "ode")
 ```
 
@@ -170,17 +176,26 @@ sim_paths =
                 Method = c("Gillespie", "LNA", "ODE"),
                 Compartment = c("S","I","R","S2I","I2R"),
                 Type = c("Prevalence","Incidence"))
-sim_paths = 
-  sim_paths[!((sim_paths$Compartment %in% c("S","I","R") & sim_paths$Type == "Incidence") |
-                (sim_paths$Compartment %in% c("S2I", "I2R") & sim_paths$Type == "Prevalence")),]
+sim_paths =
+  sim_paths[!((
+    sim_paths$Compartment %in% c("S", "I", "R") &
+      sim_paths$Type == "Incidence"
+  ) |
+    (
+      sim_paths$Compartment %in% c("S2I", "I2R") &
+        sim_paths$Type == "Prevalence"
+    )
+  ), ]
 sim_paths$Compartment = factor(sim_paths$Compartment, levels = c("S", "I", "R", "S2I", "I2R"))
-sim_paths = sim_paths[with(sim_paths, order(Method, Compartment, Type, time)),]
-sim_paths$Count = 
-  c(sim_mjp$paths[[1]][,-1],
-    sim_lna$natural_paths[[1]][,-1],
-    sim_lna$paths[[1]][,-1],
-    sim_ode$natural_paths[[1]][,-1],
-    sim_ode$paths[[1]][,-1])
+sim_paths = sim_paths[with(sim_paths, order(Method, Compartment, Type, time)), ]
+sim_paths$Count =
+  c(
+    sim_mjp$paths[[1]][, -1],
+    sim_lna$natural_paths[[1]][, -1],
+    sim_lna$paths[[1]][, -1],
+    sim_ode$natural_paths[[1]][, -1],
+    sim_ode$paths[[1]][, -1]
+  )
 
 mjp_prev = 
   data.frame(time = sim_mjp$full_paths[[1]][,1],
@@ -479,7 +494,7 @@ res_pomp <- pmcmc(res_adapt,
 
 Andrieu, C., and Thoms, J.. "A tutorial on adaptive MCMC." __Statistics and Computing__ 18.4 (2008): 343-373.
 
-Fintzi et al. add reference...
+Fintzi, J., Wakefield, J., & Minin, V. N. (2020). __A linear noise approximation for stochastic epidemic models fit to partially observed incidence counts.__ arXiv preprint arXiv:2001.05099.
 
 Gillespie, D. T. (1976). __A general method for numerically simulating the stochastic time__
 __evolution of coupled chemical reactions.__ Journal of Computational Physics 22, 403–434.

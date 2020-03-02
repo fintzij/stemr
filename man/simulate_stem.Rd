@@ -7,9 +7,9 @@
 simulate_stem(stem_object, nsim = 1, simulation_parameters = NULL,
   lna_draws = NULL, tparam_draws = NULL, tparam_values = NULL,
   paths = FALSE, full_paths = FALSE, observations = FALSE,
-  subject_paths = FALSE, method = "gillespie", tmax = NULL,
-  census_times = NULL, max_attempts = 500, lna_method = "exact",
-  lna_bracket_width = 2 * pi, ess_warmup = 100, messages = TRUE)
+  method = "gillespie", tmax = NULL, census_times = NULL,
+  max_attempts = 500, lna_method = "exact", lna_bracket_width = 2 *
+  pi, ess_warmup = 100, messages = TRUE)
 }
 \arguments{
 \item{stem_object}{stem object list}
@@ -31,11 +31,6 @@ for Gillespie), defaults to FALSE}
 
 \item{observations}{Should simulated observations be returned? Requires that
 a measurement process be defined in the stem object.}
-
-\item{subject_paths}{Should population-level paths be mapped to subject-level
-paths and returned (e.g. for the purpose of initializing a subject-level
-collection of disease histories)? Only available for exact simulation via
-the Gillespie direct method.}
 
 \item{method}{either "gillespie" if simulating via Gillespie's direct method,
 "lna" if simulating paths via the linear noise approximation, or "ode" if
@@ -69,14 +64,9 @@ Returns a list with the simulated paths, subject-level paths, and/or
   datasets. If \code{paths = FALSE} and \code{observations = FALSE}, or if
   \code{paths = TRUE} and \code{observations = TRUE}, a list \code{nsim stem}
   paths and datasets, each returned either as a list or array, is returned.
-  If \code{subject_paths = TRUE} and \code{method = "gillespie"}, a list of
-  subject-level paths is also returned.
 
   If \code{paths = TRUE} and \code{observations = FALSE}, a list or array of
-  simulated population-level paths is returned. If \code{method =
-  "gillespie"} and \code{subject_paths = TRUE}, an additional list is
-  returned, containing lists of subject-level mappings. Each sublist contains
-  a vector of subject states at t0, along with a mapped path.
+  simulated population-level paths is returned. 
 
   If \code{paths = FALSE} and \code{observations = TRUE}, a list or array of
   simulated datasets is returned.
