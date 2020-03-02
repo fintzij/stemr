@@ -41,7 +41,7 @@ default since R 3.4.
 
 ```
 library(devtools)
-install_github("fintzij/stemr", build_vignettes=TRUE, build_opts = c("--no-byte-compile")) 
+install_github("fintzij/stemr", build_vignettes=FALSE, build_opts = c("--no-byte-compile")) 
 library(stemr)
 ```
 
