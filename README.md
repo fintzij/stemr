@@ -32,7 +32,7 @@ installed with byte compilation disabled. The package will not work
 properly when byte compiled, which is the default since R 3.4.
 
     library(devtools)
-    install_github("fintzij/stemr", build_vignettes=TRUE, build_opts = c("--no-byte-compile")) 
+    install_github("fintzij/stemr", build_vignettes=FALSE, build_opts = c("--no-byte-compile")) 
     library(stemr)
 
 Vignettes
@@ -40,15 +40,14 @@ Vignettes
 
 There are two vignettes included in this package to help familiarize
 users with its basic functionality and that reproduce models the SEMs
-fit via the LNA in Fintzi, et al. (2020). The `stemr_sir` vignette
-provides an introduction to the `stemr` package, and demonstrates how to
-simulate from and fit an SIR model via the LNA and ODE. The
-`ebola_westafrica` vignette demonstrates how to simulate from and fit a
-multi-country model for Ebola transmission, and then provides code to
-fit the model to data from the 2014-2015 outbreak in West Africa. Both
-vignettes also include annotated `pomp` code for fitting the respective
-models (version 1.17 was used as a benchmark in the paper). The
-vignettes may be accessed as follows:
-
-    vignette("stemr_sir")         
-    vignette("ebola_westafrica")
+fit via the LNA in Fintzi, et al. (2020). The
+[stemr\_sir](https://github.com/fintzij/stemr/blob/master/vignettes/stemr_sir.Rmd)
+vignette provides an introduction to the `stemr` package, and
+demonstrates how to simulate from and fit an SIR model via the LNA and
+ODE. The
+[ebola\_westafrica](https://github.com/fintzij/stemr/blob/master/vignettes/ebola_westafrica.Rmd)
+vignette demonstrates how to simulate from and fit a multi-country model
+for Ebola transmission, and then provides code to fit the model to data
+from the 2014-2015 outbreak in West Africa. Both vignettes also include
+annotated `pomp` code for fitting the respective models (version 1.17
+was used as a benchmark in the paper).
