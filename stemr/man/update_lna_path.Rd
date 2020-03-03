@@ -12,7 +12,8 @@ update_lna_path(path_cur, data, lna_parameters, lna_param_vec,
   lna_tcovar_inds, lna_initdist_inds, param_update_inds, census_indices,
   lna_event_inds, measproc_indmat, svd_d, svd_U, svd_V, lna_pointer,
   lna_set_pars_pointer, d_meas_pointer, do_prevalence, n_ess_updates,
-  lna_bracket_width, joint_tparam_update, joint_initdist_update, step_size)
+  ess_schedule, lna_bracket_width, joint_tparam_update,
+  joint_initdist_update, step_size)
 }
 \arguments{
 \item{path_cur}{list with the current LNA path along with its ODE paths}

@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Jonathan Fintz, Jon Wakefield, and Vladimir N. Minin" />
+
+<meta name="date" content="2020-03-02" />
+
+<title>stemr: Baysian Inference for Stochastic Epidemic Models via the Linear Noise Approximation</title>
+
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css" data-origin="pandoc">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(title);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    for (var j = 0; j < rules.length; j++) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">stemr: Baysian Inference for Stochastic Epidemic Models via the Linear Noise Approximation</h1>
+<h4 class="author">Jonathan Fintz, Jon Wakefield, and Vladimir N. Minin</h4>
+<h4 class="date">2020-03-02</h4>
+
+
+
+<div id="overview" class="section level1">
+<h1>Overview</h1>
+<p>This vignette demonstrates the basic functionalities of the <code>stemr</code> package. Broadly, the package simulates and fits stochastic epidemic models to partially observed incidence and prevalence data, and implements the Bayesian data augmentation framework presented in Fintzi, Wakefield, and Minin (2019). Simulation can be conducted using ordinary differential equations (ODEs), Gillespie’s direct algorithm (Gillespie, 1976), and using a restarting version of the linear noise approximation (LNA; Fintzi et al., 2019). Inference is conducted using ODEs or the LNA. This vignette, in particular, demonstrates how to simulating partially observed incidence data from an outbreak with SIR dyanmics and fit an SIR model to the data via the linear noise approximation. This corresponds to the procedure used in the coverage simulation in Fintzi et al., (2019).</p>
+</div>
+<div id="installing-and-loading-the-stemr-package" class="section level1">
+<h1>Installing and loading the <code>stemr</code> package</h1>
+<p>To install the <code>stemr</code> package, clone this repository and build the package from sources. There are two important things to note. First, the package depends on having version 0.4.1 of the <code>Ryacas</code> package installed. This can be accomplished, using the <code>devtools</code> package: <code>devtools::install_version(&quot;Ryacas&quot;, &quot;0.4.1&quot;)</code>. It is also critical that the <code>stemr</code> package is installed without byte compilation. See <a href="https://support.rstudio.com/hc/en-us/articles/200486518-Customizing-Package-Build-Options">this page</a> for how to do this. You should be able to rebuild in the usual way once you clone the package repo and install the other dependencies (odeintr, MASS, extraDistr, stats, ggplot2, cowplot, Rcpp, RcppArmadillo, and BH).</p>
+</div>
+<div id="basic-example-partially-observed-incidence-from-an-outbreak-with-sir-dynamics" class="section level1">
+<h1>Basic example: partially observed incidence from an outbreak with SIR dynamics</h1>
+<p>As a basic example, we will simulate an outbreak with SIR dynamics and generate negative binomial incidence counts with a mean case detection rate of 0.5. This corresponds to the coverage simulation conducted in Fintzi et al. (2019). Briefly, the SIR model describes the time-evolution of an outbreak homogeneously mixing population where each individual exists in one of three states - susceptible (S), infected (I), and recovered (R). Infection implies that an individual is infectious with no latent period, while recovery confers lifelong immunity. The waiting times between infection and recovery events are taken to be exponentially distributed and the rates of state transition change every time the population jumps to a different state. Hence, the transmission process is a Markov jump process. The rates at which infection and recovery events take place are <span class="math display">\[\lambda_{SI} = \beta S I,\ \text{and}\ \lambda_{IR} = \mu I,\]</span> where <span class="math inline">\(\beta\)</span> is the per-contact rate of infection, <span class="math inline">\(\mu\)</span> is the recovery rate, and <span class="math inline">\(S\)</span> and <span class="math inline">\(I\)</span> denote the numbers of susceptible and infectious individuals. The basic reproduction number under SIR dynamics is <span class="math inline">\(R_0 = \beta P/\mu\)</span>, where <span class="math inline">\(P=S+I+R\)</span> is the population size.</p>
+<p>We initialize parameters and instatiate the SIR model in the code block below. The functions in the <code>stemr</code> package are documented and can be accessed in the usual way, e.g., <code>help(rate)</code>.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1"><span class="kw">library</span>(stemr)</a>
+<a class="sourceLine" id="cb1-2" title="2">popsize =<span class="st"> </span><span class="fl">1e4</span> <span class="co"># population size</span></a>
+<a class="sourceLine" id="cb1-3" title="3"></a>
+<a class="sourceLine" id="cb1-4" title="4">true_pars =</a>
+<a class="sourceLine" id="cb1-5" title="5"><span class="st">      </span><span class="kw">c</span>(<span class="dt">R0     =</span> <span class="fl">1.5</span>,  <span class="co"># basic reproduction number</span></a>
+<a class="sourceLine" id="cb1-6" title="6">        <span class="dt">mu_inv =</span> <span class="dv">2</span>,    <span class="co"># infectious period duration = 2 days</span></a>
+<a class="sourceLine" id="cb1-7" title="7">        <span class="dt">rho    =</span> <span class="fl">0.5</span>,  <span class="co"># case detection rate</span></a>
+<a class="sourceLine" id="cb1-8" title="8">        <span class="dt">phi    =</span> <span class="dv">10</span>)   <span class="co"># negative binomial overdispersion</span></a>
+<a class="sourceLine" id="cb1-9" title="9"></a>
+<a class="sourceLine" id="cb1-10" title="10"><span class="co"># initialize model compartments and rates</span></a>
+<a class="sourceLine" id="cb1-11" title="11">strata &lt;-<span class="st"> </span><span class="ot">NULL</span> <span class="co"># no strata</span></a>
+<a class="sourceLine" id="cb1-12" title="12">compartments &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;S&quot;</span>, <span class="st">&quot;I&quot;</span>, <span class="st">&quot;R&quot;</span>)</a>
+<a class="sourceLine" id="cb1-13" title="13"></a>
+<a class="sourceLine" id="cb1-14" title="14"><span class="co"># rates initialized as a list of rate lists</span></a>
+<a class="sourceLine" id="cb1-15" title="15">rates &lt;-</a>
+<a class="sourceLine" id="cb1-16" title="16"><span class="st">  </span><span class="kw">list</span>(<span class="kw">rate</span>(<span class="dt">rate =</span> <span class="st">&quot;beta * I&quot;</span>, <span class="co"># individual level rate (unlumped)</span></a>
+<a class="sourceLine" id="cb1-17" title="17">            <span class="dt">from =</span> <span class="st">&quot;S&quot;</span>,        <span class="co"># source compartment</span></a>
+<a class="sourceLine" id="cb1-18" title="18">            <span class="dt">to   =</span> <span class="st">&quot;I&quot;</span>,        <span class="co"># destination compartment</span></a>
+<a class="sourceLine" id="cb1-19" title="19">            <span class="dt">incidence =</span> T),    <span class="co"># compute incidence of S2I transitions, required for simulating incidence data</span></a>
+<a class="sourceLine" id="cb1-20" title="20">       <span class="kw">rate</span>(<span class="dt">rate =</span> <span class="st">&quot;mu&quot;</span>,       <span class="co"># individual level rate</span></a>
+<a class="sourceLine" id="cb1-21" title="21">            <span class="dt">from =</span> <span class="st">&quot;I&quot;</span>,        <span class="co"># source compartment</span></a>
+<a class="sourceLine" id="cb1-22" title="22">            <span class="dt">to   =</span> <span class="st">&quot;R&quot;</span>,        <span class="co"># destination compartment</span></a>
+<a class="sourceLine" id="cb1-23" title="23">            <span class="dt">incidence =</span> <span class="ot">TRUE</span>)) <span class="co"># compute incidence of I2R transitions (not required for simulating data)</span></a>
+<a class="sourceLine" id="cb1-24" title="24"></a>
+<a class="sourceLine" id="cb1-25" title="25"><span class="co"># list used for simulation/inference for the initial state, initial counts fixed.</span></a>
+<a class="sourceLine" id="cb1-26" title="26"><span class="co"># state initializer a list of stem_initializer lists.</span></a>
+<a class="sourceLine" id="cb1-27" title="27">state_initializer &lt;-</a>
+<a class="sourceLine" id="cb1-28" title="28"><span class="st">  </span><span class="kw">list</span>(<span class="kw">stem_initializer</span>(</a>
+<a class="sourceLine" id="cb1-29" title="29">          <span class="dt">init_states =</span> <span class="kw">c</span>(<span class="dt">S =</span> popsize<span class="dv">-10</span>, <span class="dt">I =</span> <span class="dv">10</span>, <span class="dt">R =</span> <span class="dv">0</span>), <span class="co"># must match compartment names</span></a>
+<a class="sourceLine" id="cb1-30" title="30">          <span class="dt">fixed =</span> T)) <span class="co"># initial state fixed for simulation, we&#39;ll change this later</span></a>
+<a class="sourceLine" id="cb1-31" title="31"></a>
+<a class="sourceLine" id="cb1-32" title="32"><span class="co"># set the parameter values - must be a named vector</span></a>
+<a class="sourceLine" id="cb1-33" title="33">parameters =</a>
+<a class="sourceLine" id="cb1-34" title="34"><span class="st">  </span><span class="kw">c</span>(true_pars[<span class="st">&quot;R0&quot;</span>] <span class="op">/</span><span class="st"> </span>popsize <span class="op">/</span><span class="st"> </span>true_pars[<span class="st">&quot;mu_inv&quot;</span>], <span class="co"># R0 = beta * P / mu</span></a>
+<a class="sourceLine" id="cb1-35" title="35">    <span class="dv">1</span><span class="op">/</span>true_pars[<span class="st">&quot;mu_inv&quot;</span>],</a>
+<a class="sourceLine" id="cb1-36" title="36">    true_pars[<span class="st">&quot;rho&quot;</span>],</a>
+<a class="sourceLine" id="cb1-37" title="37">    true_pars[<span class="st">&quot;phi&quot;</span>])</a>
+<a class="sourceLine" id="cb1-38" title="38"><span class="kw">names</span>(parameters) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;beta&quot;</span>, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;rho&quot;</span>, <span class="st">&quot;phi&quot;</span>)</a>
+<a class="sourceLine" id="cb1-39" title="39"></a>
+<a class="sourceLine" id="cb1-40" title="40"><span class="co"># declare the initial time to be constant</span></a>
+<a class="sourceLine" id="cb1-41" title="41">constants &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dt">t0 =</span> <span class="dv">0</span>)</a>
+<a class="sourceLine" id="cb1-42" title="42">t0 &lt;-<span class="st"> </span><span class="dv">0</span>; tmax &lt;-<span class="st"> </span><span class="dv">40</span></a>
+<a class="sourceLine" id="cb1-43" title="43"></a>
+<a class="sourceLine" id="cb1-44" title="44"><span class="co"># compile the model</span></a>
+<a class="sourceLine" id="cb1-45" title="45">dynamics &lt;-</a>
+<a class="sourceLine" id="cb1-46" title="46"><span class="st">      </span><span class="kw">stem_dynamics</span>(</a>
+<a class="sourceLine" id="cb1-47" title="47">            <span class="dt">rates =</span> rates,</a>
+<a class="sourceLine" id="cb1-48" title="48">            <span class="dt">tmax =</span> tmax,</a>
+<a class="sourceLine" id="cb1-49" title="49">            <span class="dt">parameters =</span> parameters,</a>
+<a class="sourceLine" id="cb1-50" title="50">            <span class="dt">state_initializer =</span> state_initializer,</a>
+<a class="sourceLine" id="cb1-51" title="51">            <span class="dt">compartments =</span> compartments,</a>
+<a class="sourceLine" id="cb1-52" title="52">            <span class="dt">constants =</span> constants,</a>
+<a class="sourceLine" id="cb1-53" title="53">            <span class="dt">compile_ode =</span> T,   <span class="co"># compile ODE functions</span></a>
+<a class="sourceLine" id="cb1-54" title="54">            <span class="dt">compile_rates =</span> T, <span class="co"># compile MJP functions for Gillespie simulation</span></a>
+<a class="sourceLine" id="cb1-55" title="55">            <span class="dt">compile_lna =</span> T,   <span class="co"># compile LNA functions</span></a>
+<a class="sourceLine" id="cb1-56" title="56">            <span class="dt">messages =</span> F       <span class="co"># don&#39;t print messages</span></a>
+<a class="sourceLine" id="cb1-57" title="57">      )</a>
+<a class="sourceLine" id="cb1-58" title="58"></a>
+<a class="sourceLine" id="cb1-59" title="59"><span class="co"># list of emission distribution lists (analogous to rate specification)</span></a>
+<a class="sourceLine" id="cb1-60" title="60">emissions &lt;-</a>
+<a class="sourceLine" id="cb1-61" title="61"><span class="st">  </span><span class="kw">list</span>(<span class="kw">emission</span>(<span class="dt">meas_var =</span> <span class="st">&quot;S2I&quot;</span>, <span class="co"># transition or compartment being measured (S-&gt;I transitions)</span></a>
+<a class="sourceLine" id="cb1-62" title="62">                <span class="dt">distribution    =</span> <span class="st">&quot;negbinomial&quot;</span>,         <span class="co"># emission distribution</span></a>
+<a class="sourceLine" id="cb1-63" title="63">                <span class="dt">emission_params =</span> <span class="kw">c</span>(<span class="st">&quot;phi&quot;</span>, <span class="st">&quot;S2I * rho&quot;</span>), <span class="co"># distribution pars, here overdispersion and mean</span></a>
+<a class="sourceLine" id="cb1-64" title="64">                <span class="dt">incidence       =</span> <span class="ot">TRUE</span>,                  <span class="co"># is the data incidence</span></a>
+<a class="sourceLine" id="cb1-65" title="65">                <span class="dt">obstimes        =</span> <span class="kw">seq</span>(<span class="dv">1</span>, tmax, <span class="dt">by =</span><span class="dv">1</span>)))  <span class="co"># vector of observation times</span></a>
+<a class="sourceLine" id="cb1-66" title="66"></a>
+<a class="sourceLine" id="cb1-67" title="67"><span class="co"># compile the measurement process</span></a>
+<a class="sourceLine" id="cb1-68" title="68">measurement_process &lt;-</a>
+<a class="sourceLine" id="cb1-69" title="69"><span class="st">  </span><span class="kw">stem_measure</span>(<span class="dt">emissions =</span> emissions,</a>
+<a class="sourceLine" id="cb1-70" title="70">               <span class="dt">dynamics  =</span> dynamics,</a>
+<a class="sourceLine" id="cb1-71" title="71">               <span class="dt">messages  =</span> F)</a>
+<a class="sourceLine" id="cb1-72" title="72"></a>
+<a class="sourceLine" id="cb1-73" title="73"><span class="co"># put it all together into a stochastic epidemic model object</span></a>
+<a class="sourceLine" id="cb1-74" title="74">stem_object &lt;-</a>
+<a class="sourceLine" id="cb1-75" title="75"><span class="st">  </span><span class="kw">stem</span>(<span class="dt">dynamics =</span> dynamics,</a>
+<a class="sourceLine" id="cb1-76" title="76">       <span class="dt">measurement_process =</span> measurement_process)</a></code></pre></div>
+<div id="simulating-an-outbreak-and-data" class="section level2">
+<h2>Simulating an outbreak and data</h2>
+<p>Having compiled the model, we can simulate an outbreak and incidence (or prevalence) data using Gillespie’s direct algorith to simulate a MJP path, with the LNA, or deterministically with ODEs. Since we specified that the data should consist of incidence counts in instatiating the model, the simulation function will produce incidence data. The prevalence and incidence curves are plotted below.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1">sim_mjp &lt;-<span class="st"> </span><span class="kw">simulate_stem</span>(<span class="dt">stem_object =</span> stem_object, <span class="dt">method =</span> <span class="st">&quot;gillespie&quot;</span>, <span class="dt">full_paths =</span> T)</a>
+<a class="sourceLine" id="cb2-2" title="2">sim_lna &lt;-<span class="st"> </span><span class="kw">simulate_stem</span>(<span class="dt">stem_object =</span> stem_object, <span class="dt">method =</span> <span class="st">&quot;lna&quot;</span>, <span class="dt">lna_method =</span> <span class="st">&quot;approx&quot;</span>)</a>
+<a class="sourceLine" id="cb2-3" title="3">sim_ode &lt;-<span class="st"> </span><span class="kw">simulate_stem</span>(<span class="dt">stem_object =</span> stem_object, <span class="dt">method =</span> <span class="st">&quot;ode&quot;</span>)</a></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+</div>
+<div id="fitting-the-model-to-data" class="section level2">
+<h2>Fitting the model to data</h2>
+<p>We’ll keep the dataset simulated under the MJP (shown below) and fit an SIR model to the data.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1"><span class="kw">ggplot</span>(<span class="dt">data =</span> <span class="kw">as.data.frame</span>(sim_mjp<span class="op">$</span>datasets[[<span class="dv">1</span>]]),</a>
+<a class="sourceLine" id="cb3-2" title="2">       <span class="kw">aes</span>(<span class="dt">x=</span>time, <span class="dt">y =</span> S2I)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb3-3" title="3"><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb3-4" title="4"><span class="st">  </span><span class="kw">theme_minimal</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb3-5" title="5"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;Week&quot;</span>, <span class="dt">y =</span> <span class="st">&quot;Count&quot;</span>, <span class="dt">title =</span> <span class="st">&quot;Observed Incidence&quot;</span>)</a></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>We’ll need to recompile the measurement process with the simulated data fed to the data argument of the <code>stem_measure</code> function since the data was not present when the measurement process was originally compiled. There is no need to recompile the model dynamics object, although we’ll have to regenerate the object with the new measurement process.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1">measurement_process &lt;-</a>
+<a class="sourceLine" id="cb4-2" title="2"><span class="st">  </span><span class="kw">stem_measure</span>(<span class="dt">emissions =</span> emissions,</a>
+<a class="sourceLine" id="cb4-3" title="3">               <span class="dt">dynamics =</span> dynamics,</a>
+<a class="sourceLine" id="cb4-4" title="4">               <span class="dt">data =</span> sim_mjp<span class="op">$</span>datasets[[<span class="dv">1</span>]])</a>
+<a class="sourceLine" id="cb4-5" title="5"><span class="co">#&gt; [1] &quot;Compiling measurement process functions.&quot;</span></a>
+<a class="sourceLine" id="cb4-6" title="6"><span class="co">#&gt; [1] &quot;Compiling measurement process functions.&quot;</span></a>
+<a class="sourceLine" id="cb4-7" title="7">stem_object &lt;-<span class="st"> </span><span class="kw">stem</span>(<span class="dt">dynamics =</span> dynamics, <span class="dt">measurement_process =</span> measurement_process)</a></code></pre></div>
+<p>In order to perform inference, we’ll need to specify a function for transforming the model parameters from their natural scale to the estimation scale on which the MCMC explores the posterior, a function for transforming parameters on their estimation scale to the natural scale on which they enter the model dynamics and measurement process, and a function that returns the log prior. We’ll parameterize the MCMC estimation scale in terms of the log basic reproduction number, log recovery rate, logit mean case detection rate, and log of the negative binomial overdispersion parameter. The functions are specified as follows and placed into a list of functions (note that it is critical that the function signatures follow the specification given below):</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1"></a>
+<a class="sourceLine" id="cb5-2" title="2"><span class="co">### Parameterization in terms of log(R0) and log(mu)</span></a>
+<a class="sourceLine" id="cb5-3" title="3"><span class="co">## Priors for log(R0), log(mu), logit(rho), phi</span></a>
+<a class="sourceLine" id="cb5-4" title="4"><span class="co"># Parameters (natural scale): beta, mu, rho, phi</span></a>
+<a class="sourceLine" id="cb5-5" title="5"><span class="co"># Parameters (estimation scale): log(beta * N / mu), log(mu), logit(rho), log(phi)</span></a>
+<a class="sourceLine" id="cb5-6" title="6"></a>
+<a class="sourceLine" id="cb5-7" title="7"><span class="co"># function to take params_nat and return params_est</span></a>
+<a class="sourceLine" id="cb5-8" title="8">to_estimation_scale =<span class="st"> </span><span class="cf">function</span>(params_nat) {</a>
+<a class="sourceLine" id="cb5-9" title="9">      <span class="kw">c</span>(<span class="kw">log</span>(params_nat[<span class="dv">1</span>] <span class="op">*</span><span class="st"> </span>popsize <span class="op">/</span><span class="st"> </span>params_nat[<span class="dv">2</span>] <span class="op">-</span><span class="st"> </span><span class="dv">1</span>), <span class="co"># (beta,mu,N) -&gt; log(R0-1)</span></a>
+<a class="sourceLine" id="cb5-10" title="10">        <span class="kw">log</span>(params_nat[<span class="dv">2</span>]),                     <span class="co"># mu -&gt; log(mu)</span></a>
+<a class="sourceLine" id="cb5-11" title="11">        <span class="kw">logit</span>(params_nat[<span class="dv">3</span>]),                   <span class="co"># rho -&gt; logit(rho)</span></a>
+<a class="sourceLine" id="cb5-12" title="12">        <span class="kw">log</span>(params_nat[<span class="dv">4</span>]))                     <span class="co"># phi -&gt; log(phi)</span></a>
+<a class="sourceLine" id="cb5-13" title="13">}</a>
+<a class="sourceLine" id="cb5-14" title="14"></a>
+<a class="sourceLine" id="cb5-15" title="15"><span class="co"># function to take params_est and return params_nat</span></a>
+<a class="sourceLine" id="cb5-16" title="16">from_estimation_scale =<span class="st"> </span><span class="cf">function</span>(params_est) {</a>
+<a class="sourceLine" id="cb5-17" title="17">      <span class="kw">c</span>(<span class="kw">exp</span>(<span class="kw">log</span>(<span class="kw">exp</span>(params_est[<span class="dv">1</span>])<span class="op">+</span><span class="dv">1</span>) <span class="op">+</span><span class="st"> </span>params_est[<span class="dv">2</span>] <span class="op">-</span><span class="st"> </span><span class="kw">log</span>(popsize)), <span class="co"># (log(R0), log(mu), N) -&gt; beta = exp(log(R0) + log(mu) - log(N))</span></a>
+<a class="sourceLine" id="cb5-18" title="18">        <span class="kw">exp</span>(params_est[<span class="dv">2</span>]), <span class="co"># log(mu) -&gt; mu</span></a>
+<a class="sourceLine" id="cb5-19" title="19">        <span class="kw">expit</span>(params_est[<span class="dv">3</span>]), <span class="co"># logit(rho) -&gt; rho</span></a>
+<a class="sourceLine" id="cb5-20" title="20">        <span class="kw">exp</span>(params_est[<span class="dv">4</span>])) <span class="co"># log(phi) -&gt; phi</span></a>
+<a class="sourceLine" id="cb5-21" title="21">}</a>
+<a class="sourceLine" id="cb5-22" title="22"></a>
+<a class="sourceLine" id="cb5-23" title="23"><span class="co"># calculate the log prior density. note the jacobian for phi</span></a>
+<a class="sourceLine" id="cb5-24" title="24">prior_density =</a>
+<a class="sourceLine" id="cb5-25" title="25"><span class="st">      </span><span class="cf">function</span>(params_nat, params_est) {</a>
+<a class="sourceLine" id="cb5-26" title="26">            <span class="kw">sum</span>(<span class="kw">dnorm</span>(params_est[<span class="dv">1</span>], <span class="dv">0</span>, <span class="fl">0.5</span>, <span class="dt">log =</span> <span class="ot">TRUE</span>),</a>
+<a class="sourceLine" id="cb5-27" title="27">                <span class="kw">dnorm</span>(params_est[<span class="dv">2</span>], <span class="fl">-0.7</span>, <span class="fl">0.35</span>, <span class="dt">log =</span> <span class="ot">TRUE</span>),</a>
+<a class="sourceLine" id="cb5-28" title="28">                <span class="kw">dnorm</span>(params_est[<span class="dv">3</span>], <span class="dv">0</span>, <span class="dv">1</span>, <span class="dt">log =</span> <span class="ot">TRUE</span>),</a>
+<a class="sourceLine" id="cb5-29" title="29">                <span class="kw">dexp</span>(<span class="kw">exp</span>(params_est[<span class="dv">4</span>]), <span class="fl">0.1</span>, <span class="dt">log =</span> <span class="ot">TRUE</span>) <span class="op">+</span><span class="st"> </span>params_est[<span class="dv">4</span>])</a>
+<a class="sourceLine" id="cb5-30" title="30">      }</a>
+<a class="sourceLine" id="cb5-31" title="31"></a>
+<a class="sourceLine" id="cb5-32" title="32"><span class="co"># return all three functions in a list</span></a>
+<a class="sourceLine" id="cb5-33" title="33">priors &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">prior_density =</span> prior_density,</a>
+<a class="sourceLine" id="cb5-34" title="34">               <span class="dt">to_estimation_scale =</span> to_estimation_scale,</a>
+<a class="sourceLine" id="cb5-35" title="35">               <span class="dt">from_estimation_scale =</span> from_estimation_scale)</a></code></pre></div>
+<p>We now specify the MCMC transition kernel. In this simple example, we’ll update the model hyperparameters using a multivariate Metropolis algorithm. We’ll tune the algorithm using a global adaptive scheme (algorithm 4 in Andrieu and Thoms). We’ll also initialize the parameters at random values, which is done by replacing the vector of parameters in the stem object with a function that returns a named vector of parameters.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" title="1"><span class="co"># specify the initial proposal covariance matrix with row and column names</span></a>
+<a class="sourceLine" id="cb6-2" title="2"><span class="co"># corresponding to parameters on their estimation scales</span></a>
+<a class="sourceLine" id="cb6-3" title="3">covmat &lt;-<span class="st"> </span><span class="kw">diag</span>(<span class="fl">0.01</span>, <span class="dv">4</span>)</a>
+<a class="sourceLine" id="cb6-4" title="4"><span class="kw">rownames</span>(covmat) &lt;-<span class="st"> </span><span class="kw">colnames</span>(covmat) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;log_R0&quot;</span>, <span class="st">&quot;log_mu&quot;</span>, <span class="st">&quot;logit_rho&quot;</span>, <span class="st">&quot;log_phi&quot;</span>)</a>
+<a class="sourceLine" id="cb6-5" title="5"></a>
+<a class="sourceLine" id="cb6-6" title="6"><span class="co"># specify the kernel</span></a>
+<a class="sourceLine" id="cb6-7" title="7">mcmc_kernel &lt;-</a>
+<a class="sourceLine" id="cb6-8" title="8"><span class="st">        </span><span class="kw">kernel</span>(</a>
+<a class="sourceLine" id="cb6-9" title="9">                <span class="dt">method =</span> <span class="st">&quot;mvn_g_adaptive&quot;</span>,</a>
+<a class="sourceLine" id="cb6-10" title="10">                <span class="dt">stop_adaptation =</span> <span class="fl">1e2</span>, <span class="co"># number of iterations for adaptation,  1e4 in coverage simulation</span></a>
+<a class="sourceLine" id="cb6-11" title="11">                <span class="dt">sigma =</span> covmat,</a>
+<a class="sourceLine" id="cb6-12" title="12">                <span class="dt">scale_constant =</span> <span class="fl">0.25</span>,</a>
+<a class="sourceLine" id="cb6-13" title="13">                <span class="dt">scale_cooling =</span> <span class="fl">0.5+1e-5</span>,</a>
+<a class="sourceLine" id="cb6-14" title="14">                <span class="dt">step_size =</span> <span class="fl">0.05</span>,</a>
+<a class="sourceLine" id="cb6-15" title="15">                <span class="dt">nugget =</span> <span class="fl">1e-5</span>,</a>
+<a class="sourceLine" id="cb6-16" title="16">                <span class="dt">messages =</span> <span class="ot">FALSE</span></a>
+<a class="sourceLine" id="cb6-17" title="17">        )</a>
+<a class="sourceLine" id="cb6-18" title="18"></a>
+<a class="sourceLine" id="cb6-19" title="19"><span class="co"># for initializing the parameters at random functions</span></a>
+<a class="sourceLine" id="cb6-20" title="20">stem_object<span class="op">$</span>dynamics<span class="op">$</span>parameters &lt;-<span class="st"> </span><span class="cf">function</span>() {</a>
+<a class="sourceLine" id="cb6-21" title="21">      priors<span class="op">$</span><span class="kw">from_estimation_scale</span>(priors<span class="op">$</span><span class="kw">to_estimation_scale</span>(parameters) <span class="op">+</span><span class="st"> </span><span class="kw">rnorm</span>(<span class="dv">4</span>, <span class="dv">0</span>, <span class="fl">0.1</span>))</a>
+<a class="sourceLine" id="cb6-22" title="22">}</a></code></pre></div>
+<p>We now run the MCMC algorithm to fit the model via ODEs. To perform inference with the LNA, simply change the <code>method</code> argument to <code>method=&quot;lna&quot;</code>.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" title="1">res &lt;-</a>
+<a class="sourceLine" id="cb7-2" title="2"><span class="st">  </span><span class="kw">stem_inference</span>(<span class="dt">stem_object =</span> stem_object,</a>
+<a class="sourceLine" id="cb7-3" title="3">                 <span class="dt">method =</span> <span class="st">&quot;ode&quot;</span>, <span class="co"># or set to &quot;lna&quot;</span></a>
+<a class="sourceLine" id="cb7-4" title="4">                 <span class="dt">iterations =</span> <span class="fl">3.5e2</span>, <span class="co"># total number of iterations, set to 3.5e4 for the paper</span></a>
+<a class="sourceLine" id="cb7-5" title="5">                 <span class="dt">thin_params =</span> <span class="dv">10</span>,</a>
+<a class="sourceLine" id="cb7-6" title="6">                 <span class="dt">thin_latent_proc =</span> <span class="dv">10</span>,</a>
+<a class="sourceLine" id="cb7-7" title="7">                 <span class="dt">initialization_attempts =</span> <span class="dv">500</span>,</a>
+<a class="sourceLine" id="cb7-8" title="8">                 <span class="dt">priors =</span> priors,</a>
+<a class="sourceLine" id="cb7-9" title="9">                 <span class="dt">mcmc_kernel =</span> mcmc_kernel,</a>
+<a class="sourceLine" id="cb7-10" title="10">                 <span class="dt">print_progress =</span> <span class="dv">0</span>,</a>
+<a class="sourceLine" id="cb7-11" title="11">                 <span class="dt">messages =</span> <span class="ot">FALSE</span>)</a></code></pre></div>
+<p>The <code>stem_inference</code> function returns a list of MCMC samples, latent epidemic paths, and MCMC tuning parameters (e.g., global scaling parameter adapted in the MCMC). These can be accessed as follows:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" title="1">runtime =<span class="st"> </span>res<span class="op">$</span>results<span class="op">$</span>time</a>
+<a class="sourceLine" id="cb8-2" title="2">mcmc_samples =<span class="st"> </span>res<span class="op">$</span>results<span class="op">$</span>MCMC_results</a>
+<a class="sourceLine" id="cb8-3" title="3">ode_paths =<span class="st"> </span>res<span class="op">$</span>results<span class="op">$</span>ode_paths <span class="co"># or res$results$lna_paths if using the LNA for inference</span></a>
+<a class="sourceLine" id="cb8-4" title="4">adapt_par =<span class="st"> </span>res<span class="op">$</span>results<span class="op">$</span>adaptation_record<span class="op">$</span>adaptation_scale_record</a></code></pre></div>
+</div>
+</div>
+<div id="fitting-the-sir-model-with-pomp" class="section level1">
+<h1>Fitting the SIR model with pomp</h1>
+<p>We can fit the model using the <code>pomp</code> package as follows. Note that pomp version 1.17 was used as a benchmark method in the paper.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" title="1"><span class="kw">require</span>(pomp)</a>
+<a class="sourceLine" id="cb9-2" title="2">S0 &lt;-<span class="st"> </span><span class="fl">1e4</span> <span class="op">-</span><span class="st"> </span><span class="dv">10</span></a>
+<a class="sourceLine" id="cb9-3" title="3">I0 &lt;-<span class="st"> </span><span class="dv">10</span></a>
+<a class="sourceLine" id="cb9-4" title="4">R0 &lt;-<span class="st"> </span><span class="dv">0</span></a>
+<a class="sourceLine" id="cb9-5" title="5">cases &lt;-<span class="st"> </span>sim_mjp<span class="op">$</span>datasets[[<span class="dv">1</span>]][,<span class="dv">2</span>]</a>
+<a class="sourceLine" id="cb9-6" title="6"></a>
+<a class="sourceLine" id="cb9-7" title="7"><span class="co"># Set up pomp objects -----------------------------------------------------</span></a>
+<a class="sourceLine" id="cb9-8" title="8"></a>
+<a class="sourceLine" id="cb9-9" title="9"><span class="co"># Measurement process objects</span></a>
+<a class="sourceLine" id="cb9-10" title="10">rmeas &lt;-<span class="st"> &quot;</span></a>
+<a class="sourceLine" id="cb9-11" title="11"><span class="st">  cases=rnbinom_mu(exp(log_phi),exp(logit_rho)*S2I/(1+exp(logit_rho)));    // simulates the data</span></a>
+<a class="sourceLine" id="cb9-12" title="12"><span class="st">&quot;</span></a>
+<a class="sourceLine" id="cb9-13" title="13"></a>
+<a class="sourceLine" id="cb9-14" title="14">dmeas&lt;-<span class="st">&quot;</span></a>
+<a class="sourceLine" id="cb9-15" title="15"><span class="st">  lik=dnbinom_mu(cases,exp(log_phi),exp(logit_rho)*S2I/(1+exp(logit_rho)),give_log); // emission density</span></a>
+<a class="sourceLine" id="cb9-16" title="16"><span class="st">&quot;</span></a>
+<a class="sourceLine" id="cb9-17" title="17"></a>
+<a class="sourceLine" id="cb9-18" title="18"><span class="co"># define the stepper</span></a>
+<a class="sourceLine" id="cb9-19" title="19">sir.step&lt;-<span class="kw">paste0</span>(<span class="st">&quot;</span></a>
+<a class="sourceLine" id="cb9-20" title="20"><span class="st">  double rate[2];</span></a>
+<a class="sourceLine" id="cb9-21" title="21"><span class="st">  double dN[2];</span></a>
+<a class="sourceLine" id="cb9-22" title="22"><span class="st">  rate[0]=exp(log(exp(log_R0)+1) + log_mu - log(&quot;</span>,popsize,<span class="st">&quot;))*I; // Infection rate</span></a>
+<a class="sourceLine" id="cb9-23" title="23"><span class="st">  rate[1]=exp(log_mu);                         // recovery rate</span></a>
+<a class="sourceLine" id="cb9-24" title="24"><span class="st">  reulermultinom(1,S,&amp;rate[0],dt,&amp;dN[0]);      // generate the number of newly infected people</span></a>
+<a class="sourceLine" id="cb9-25" title="25"><span class="st">  reulermultinom(1,I,&amp;rate[1],dt,&amp;dN[1]);      // generate the number of newly recovered people</span></a>
+<a class="sourceLine" id="cb9-26" title="26"><span class="st">  S+=-dN[0];                                   // update the number of Susceptibles</span></a>
+<a class="sourceLine" id="cb9-27" title="27"><span class="st">  I+=dN[0]-dN[1];                              // update the number of Infections</span></a>
+<a class="sourceLine" id="cb9-28" title="28"><span class="st">  R+=dN[1];                                    // update the number of Recoveries</span></a>
+<a class="sourceLine" id="cb9-29" title="29"><span class="st">  S2I += dN[0];</span></a>
+<a class="sourceLine" id="cb9-30" title="30"><span class="st">  I2R += dN[1];</span></a>
+<a class="sourceLine" id="cb9-31" title="31"><span class="st">&quot;</span>)</a>
+<a class="sourceLine" id="cb9-32" title="32"></a>
+<a class="sourceLine" id="cb9-33" title="33"><span class="co"># instatiate the euler stepper function</span></a>
+<a class="sourceLine" id="cb9-34" title="34">SIR_sim &lt;-<span class="st"> </span><span class="kw">euler.sim</span>(<span class="dt">step.fun =</span> <span class="kw">Csnippet</span>(sir.step), <span class="dt">delta.t =</span> <span class="dv">1</span><span class="op">/</span><span class="dv">7</span>)</a>
+<a class="sourceLine" id="cb9-35" title="35"></a>
+<a class="sourceLine" id="cb9-36" title="36"><span class="co"># Define the priors</span></a>
+<a class="sourceLine" id="cb9-37" title="37">sir.dprior &lt;-<span class="st"> </span><span class="cf">function</span>(params, ..., log) {</a>
+<a class="sourceLine" id="cb9-38" title="38">  l &lt;-<span class="st"> </span><span class="kw">dnorm</span>(params[<span class="st">&quot;log_R0&quot;</span>], <span class="dv">0</span>, <span class="fl">0.5</span>, <span class="dt">log =</span> <span class="ot">TRUE</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-39" title="39"><span class="st">    </span><span class="kw">dnorm</span>(params[<span class="st">&quot;log_mu&quot;</span>], <span class="fl">-0.7</span>, <span class="fl">0.35</span>, <span class="dt">log =</span> <span class="ot">TRUE</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-40" title="40"><span class="st">    </span><span class="kw">dnorm</span>(params[<span class="st">&quot;logit_rho&quot;</span>], <span class="dt">log =</span> T) <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-41" title="41"><span class="st">    </span><span class="kw">dexp</span>(<span class="kw">exp</span>(params[<span class="st">&quot;log_phi&quot;</span>]), <span class="fl">0.1</span>, <span class="dt">log =</span> T) <span class="op">+</span><span class="st"> </span>params[<span class="st">&quot;log_phi&quot;</span>]</a>
+<a class="sourceLine" id="cb9-42" title="42">  <span class="cf">if</span>(<span class="op">!</span>log) l &lt;-<span class="st"> </span><span class="kw">exp</span>(l)</a>
+<a class="sourceLine" id="cb9-43" title="43">  <span class="kw">return</span>(l)</a>
+<a class="sourceLine" id="cb9-44" title="44">}</a>
+<a class="sourceLine" id="cb9-45" title="45"></a>
+<a class="sourceLine" id="cb9-46" title="46"><span class="co"># instatiate the pomp object</span></a>
+<a class="sourceLine" id="cb9-47" title="47">sir_mod &lt;-<span class="st"> </span><span class="kw">pomp</span>(</a>
+<a class="sourceLine" id="cb9-48" title="48">  <span class="dt">data =</span> <span class="kw">data.frame</span>(<span class="dt">time =</span> <span class="kw">seq</span>(<span class="dv">1</span>, tmax, <span class="dt">by =</span> <span class="dv">1</span>), <span class="dt">cases =</span> cases),  <span class="co">#&quot;cases&quot; is the dataset, &quot;time&quot; is the observation time</span></a>
+<a class="sourceLine" id="cb9-49" title="49">  <span class="dt">times =</span> <span class="st">&quot;time&quot;</span>,</a>
+<a class="sourceLine" id="cb9-50" title="50">  <span class="dt">t0 =</span> <span class="dv">0</span>,                      <span class="co"># initial time point</span></a>
+<a class="sourceLine" id="cb9-51" title="51">  <span class="dt">dmeasure =</span> <span class="kw">Csnippet</span>(dmeas),  <span class="co"># evaluates the density of the measurement process</span></a>
+<a class="sourceLine" id="cb9-52" title="52">  <span class="dt">rmeasure =</span> <span class="kw">Csnippet</span>(rmeas),  <span class="co"># simulates from the measurement process</span></a>
+<a class="sourceLine" id="cb9-53" title="53">  <span class="dt">rprocess =</span> SIR_sim,          <span class="co"># simulates from the latent process</span></a>
+<a class="sourceLine" id="cb9-54" title="54">  <span class="dt">statenames =</span> <span class="kw">c</span>(<span class="st">&quot;S&quot;</span>, <span class="st">&quot;I&quot;</span>, <span class="st">&quot;R&quot;</span>, <span class="st">&quot;S2I&quot;</span>, <span class="st">&quot;I2R&quot;</span>),  <span class="co">#state space variable name</span></a>
+<a class="sourceLine" id="cb9-55" title="55">  <span class="dt">paramnames =</span> <span class="kw">c</span>(<span class="st">&quot;log_R0&quot;</span>, <span class="st">&quot;log_mu&quot;</span>, <span class="st">&quot;logit_rho&quot;</span>, <span class="st">&quot;log_phi&quot;</span>), <span class="co">#parameters name</span></a>
+<a class="sourceLine" id="cb9-56" title="56">  <span class="dt">zeronames =</span> <span class="kw">c</span>(<span class="st">&quot;S2I&quot;</span>, <span class="st">&quot;I2R&quot;</span>),</a>
+<a class="sourceLine" id="cb9-57" title="57">  <span class="dt">initializer =</span> <span class="cf">function</span>(params, t0, ...) {</a>
+<a class="sourceLine" id="cb9-58" title="58">                        <span class="kw">return</span>(<span class="kw">c</span>(<span class="dt">S =</span> S0, <span class="dt">I =</span> I0, <span class="dt">R =</span> R0, <span class="dt">S2I =</span> <span class="dv">0</span>, <span class="dt">I2R =</span> <span class="dv">0</span>))</a>
+<a class="sourceLine" id="cb9-59" title="59">                },</a>
+<a class="sourceLine" id="cb9-60" title="60">  <span class="dt">params =</span> <span class="kw">c</span>(<span class="dt">log_R0    =</span> <span class="kw">log</span>(<span class="fl">1.5</span>),</a>
+<a class="sourceLine" id="cb9-61" title="61">             <span class="dt">log_mu    =</span> <span class="kw">log</span>(<span class="dv">1</span>),</a>
+<a class="sourceLine" id="cb9-62" title="62">             <span class="dt">logit_rho =</span> <span class="kw">logit</span>(<span class="fl">0.5</span>),</a>
+<a class="sourceLine" id="cb9-63" title="63">             <span class="dt">log_phi   =</span> <span class="kw">log</span>(<span class="dv">5</span>)),</a>
+<a class="sourceLine" id="cb9-64" title="64">  <span class="dt">dprior =</span> sir.dprior</a>
+<a class="sourceLine" id="cb9-65" title="65">)</a>
+<a class="sourceLine" id="cb9-66" title="66"></a>
+<a class="sourceLine" id="cb9-67" title="67"><span class="co"># Metropolis kernel proposal covariance matrix</span></a>
+<a class="sourceLine" id="cb9-68" title="68">init =<span class="st"> </span><span class="kw">c</span>(<span class="dt">log_R0 =</span> <span class="kw">log</span>(true_pars[<span class="dv">1</span>]), <span class="dt">log_mu =</span> <span class="kw">log</span>(true_pars[<span class="dv">2</span>]), <span class="dt">logit_rho =</span> <span class="kw">logit</span>(true_pars[<span class="dv">3</span>]), <span class="dt">log_phi =</span> <span class="kw">log</span>(true_pars[<span class="dv">4</span>])) <span class="op">+</span><span class="st"> </span><span class="kw">rnorm</span>(<span class="dv">4</span>, <span class="dv">0</span>, <span class="kw">c</span>(<span class="fl">0.1</span>, <span class="fl">0.1</span>, <span class="fl">0.1</span>, <span class="fl">0.1</span>))</a>
+<a class="sourceLine" id="cb9-69" title="69"><span class="kw">names</span>(init) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;log_R0&quot;</span>, <span class="st">&quot;log_mu&quot;</span>, <span class="st">&quot;logit_rho&quot;</span>, <span class="st">&quot;log_phi&quot;</span>)</a>
+<a class="sourceLine" id="cb9-70" title="70">cov_init &lt;-<span class="st"> </span><span class="kw">diag</span>(<span class="fl">1e-3</span>, <span class="dv">4</span>); <span class="kw">colnames</span>(cov_init) &lt;-<span class="st"> </span><span class="kw">rownames</span>(cov_init) &lt;-<span class="st"> </span><span class="kw">names</span>(init)</a>
+<a class="sourceLine" id="cb9-71" title="71"></a>
+<a class="sourceLine" id="cb9-72" title="72"><span class="co"># adaptive phase of MCMC</span></a>
+<a class="sourceLine" id="cb9-73" title="73">res_adapt &lt;-<span class="st"> </span><span class="kw">pmcmc</span>(sir_mod,</a>
+<a class="sourceLine" id="cb9-74" title="74">                   <span class="dt">Nmcmc =</span> <span class="fl">1e2</span>, <span class="co"># number of adaptive iterations</span></a>
+<a class="sourceLine" id="cb9-75" title="75">                   <span class="dt">Np =</span> <span class="dv">50</span>, <span class="co"># number of particles in pmmh (set to 500 in paper)</span></a>
+<a class="sourceLine" id="cb9-76" title="76">                   <span class="dt">start =</span> init,</a>
+<a class="sourceLine" id="cb9-77" title="77">                  <span class="dt">proposal =</span> <span class="kw">mvn.rw.adaptive</span>(<span class="dt">rw.var =</span> cov_init))</a>
+<a class="sourceLine" id="cb9-78" title="78"></a>
+<a class="sourceLine" id="cb9-79" title="79"><span class="co"># final sample</span></a>
+<a class="sourceLine" id="cb9-80" title="80">sigma &lt;-<span class="st"> </span><span class="kw">covmat</span>(res_adapt)</a>
+<a class="sourceLine" id="cb9-81" title="81">res_pomp &lt;-<span class="st"> </span><span class="kw">pmcmc</span>(res_adapt,</a>
+<a class="sourceLine" id="cb9-82" title="82">                  <span class="dt">Nmcmc =</span> <span class="fl">2.5e2</span>, <span class="co">#number of mcmc iterations</span></a>
+<a class="sourceLine" id="cb9-83" title="83">                  <span class="dt">Np =</span> <span class="dv">50</span>,  <span class="co"># number of particles in PMMH (set to 500 in paper)</span></a>
+<a class="sourceLine" id="cb9-84" title="84">                  <span class="dt">start =</span> init,</a>
+<a class="sourceLine" id="cb9-85" title="85">                  <span class="dt">proposal =</span> <span class="kw">mvn.rw</span>(<span class="dt">rw.var =</span> sigma))</a></code></pre></div>
+</div>
+<div id="references" class="section level1">
+<h1>References</h1>
+<p>Andrieu, C., and Thoms, J.. “A tutorial on adaptive MCMC.” <strong>Statistics and Computing</strong> 18.4 (2008): 343-373.</p>
+<p>Fintzi, J., Wakefield, J., &amp; Minin, V. N. (2020). <strong>A linear noise approximation for stochastic epidemic models fit to partially observed incidence counts.</strong> arXiv preprint arXiv:2001.05099.</p>
+<p>Gillespie, D. T. (1976). <strong>A general method for numerically simulating the stochastic time</strong> <strong>evolution of coupled chemical reactions.</strong> Journal of Computational Physics 22, 403–434.</p>
+<p>Murray, I., Adams, R. P., and MacKay, D. J. C. (2010). <strong>Elliptical slice sampling.</strong> JMLR: W&amp;CP 9, 541–548.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
