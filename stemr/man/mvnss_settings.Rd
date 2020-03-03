@@ -4,9 +4,14 @@
 \alias{mvnss_settings}
 \title{Generate a list of settings for automated factor slice sampling}
 \usage{
-mvnss_settings(n_mvnss_updates = 1, initial_bracket_width = 1,
-  cov_update_interval = 1, bracket_limits = c(0, Inf),
-  nugget_cooling = 0.9, nugget_step_size = NULL)
+mvnss_settings(
+  n_mvnss_updates = 1,
+  initial_bracket_width = 1,
+  cov_update_interval = 1,
+  bracket_limits = c(0, Inf),
+  nugget_cooling = 0.9,
+  nugget_step_size = NULL
+)
 }
 \arguments{
 \item{n_mvnss_updates}{number of non-isotropoc hit-and-run updates.}

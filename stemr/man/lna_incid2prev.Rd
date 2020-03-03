@@ -5,8 +5,16 @@
 \title{Convert an LNA path from the counting process on transition events to the
 compartment densities on their natural scale.}
 \usage{
-lna_incid2prev(path, flow_matrix, init_state, forcing_matrix, forcing_inds,
-  forcing_tcov_inds, forcings_out, forcing_transfers)
+lna_incid2prev(
+  path,
+  flow_matrix,
+  init_state,
+  forcing_matrix,
+  forcing_inds,
+  forcing_tcov_inds,
+  forcings_out,
+  forcing_transfers
+)
 }
 \arguments{
 \item{path}{matrix containing the LNA path in terms of the counting

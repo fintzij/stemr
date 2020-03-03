@@ -4,8 +4,11 @@
 \alias{harss_settings}
 \title{Generate a list of settings for automated factor slice sampling}
 \usage{
-harss_settings(n_harss_updates = 1, bracket_update_interval = 100,
-  bracket_limits = c(0, Inf))
+harss_settings(
+  n_harss_updates = 1,
+  bracket_update_interval = 100,
+  bracket_limits = c(0, Inf)
+)
 }
 \arguments{
 \item{n_harss_updates}{number of hit-and-run updates.}

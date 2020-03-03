@@ -4,8 +4,13 @@
 \alias{parse_lna_rates}
 \title{Parse the LNA rates so they can be compiled.}
 \usage{
-parse_lna_rates(lna_rates, param_codes, const_codes, tcovar_codes,
-  lna_comp_codes)
+parse_lna_rates(
+  lna_rates,
+  param_codes,
+  const_codes,
+  tcovar_codes,
+  lna_comp_codes
+)
 }
 \arguments{
 \item{lna_rates}{character vector of LNA rates}

@@ -6,8 +6,14 @@
 number of iterations, given as \code{max(1, scale_constant/(1 + iteration *
 step_size)^scale_cooling)}}
 \usage{
-plot_adaptations(iterations, scale_cooling, scale_constant = 1,
-  step_size = 1, adaptation_offset = 0, plot_limits = c(0, 1))
+plot_adaptations(
+  iterations,
+  scale_cooling,
+  scale_constant = 1,
+  step_size = 1,
+  adaptation_offset = 0,
+  plot_limits = c(0, 1)
+)
 }
 \arguments{
 \item{iterations}{number of MCMC iterations}

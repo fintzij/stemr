@@ -4,14 +4,38 @@
 \alias{initialize_ode}
 \title{Initialize the LNA path}
 \usage{
-initialize_ode(data, ode_parameters, tparam, censusmat, emitmat,
-  stoich_matrix, ode_pointer, ode_set_pars_pointer, ode_times,
-  ode_param_vec, ode_param_inds, ode_const_inds, ode_tcovar_inds,
-  ode_initdist_inds, param_update_inds, census_indices, ode_event_inds,
-  measproc_indmat, d_meas_pointer, do_prevalence, forcing_inds,
-  forcing_tcov_inds, forcings_out, forcing_transfers,
-  initialization_attempts, step_size, fixed_inits, init_volumes_cur,
-  initdist_objects, par_init_fcn = NULL)
+initialize_ode(
+  data,
+  ode_parameters,
+  tparam,
+  censusmat,
+  emitmat,
+  stoich_matrix,
+  ode_pointer,
+  ode_set_pars_pointer,
+  ode_times,
+  ode_param_vec,
+  ode_param_inds,
+  ode_const_inds,
+  ode_tcovar_inds,
+  ode_initdist_inds,
+  param_update_inds,
+  census_indices,
+  ode_event_inds,
+  measproc_indmat,
+  d_meas_pointer,
+  do_prevalence,
+  forcing_inds,
+  forcing_tcov_inds,
+  forcings_out,
+  forcing_transfers,
+  initialization_attempts,
+  step_size,
+  fixed_inits,
+  init_volumes_cur,
+  initdist_objects,
+  par_init_fcn = NULL
+)
 }
 \arguments{
 \item{data}{matrix containing the dataset}

@@ -4,8 +4,13 @@
 \alias{reset_slice_ratios}
 \title{Reset counters for interval expansions/contractions and slice ratios}
 \usage{
-reset_slice_ratios(n_expansions, n_contractions, n_expansions_c,
-  n_contractions_c, slice_ratios)
+reset_slice_ratios(
+  n_expansions,
+  n_contractions,
+  n_expansions_c,
+  n_contractions_c,
+  slice_ratios
+)
 }
 \arguments{
 \item{n_expansions}{vector with number of expansion}

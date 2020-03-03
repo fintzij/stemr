@@ -5,10 +5,24 @@
 \title{Simulate an LNA path using a non-centered parameterization for the
 log-transformed counting process LNA.}
 \usage{
-propose_lna(lna_times, lna_draws, lna_pars, lna_param_inds,
-  lna_tcovar_inds, init_start, param_update_inds, stoich_matrix,
-  forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers,
-  max_attempts, step_size, lna_pointer, set_pars_pointer)
+propose_lna(
+  lna_times,
+  lna_draws,
+  lna_pars,
+  lna_param_inds,
+  lna_tcovar_inds,
+  init_start,
+  param_update_inds,
+  stoich_matrix,
+  forcing_inds,
+  forcing_tcov_inds,
+  forcings_out,
+  forcing_transfers,
+  max_attempts,
+  step_size,
+  lna_pointer,
+  set_pars_pointer
+)
 }
 \arguments{
 \item{lna_times}{vector of interval endpoint times}

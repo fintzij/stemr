@@ -4,9 +4,20 @@
 \alias{census_lna}
 \title{Construct a matrix containing the compartment counts and the incidence at a sequence of census times.}
 \usage{
-census_lna(path, census_path, census_inds, lna_event_inds, flow_matrix_lna,
-  do_prevalence, init_state, lna_pars, forcing_inds, forcing_tcov_inds,
-  forcings_out, forcing_transfers)
+census_lna(
+  path,
+  census_path,
+  census_inds,
+  lna_event_inds,
+  flow_matrix_lna,
+  do_prevalence,
+  init_state,
+  lna_pars,
+  forcing_inds,
+  forcing_tcov_inds,
+  forcings_out,
+  forcing_transfers
+)
 }
 \arguments{
 \item{path}{matrix containing the path to be censused (cumulative incidence).}

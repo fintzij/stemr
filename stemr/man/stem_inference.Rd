@@ -6,11 +6,21 @@
 differential equations, the linear noise approximation, or agent-based
 Bayesian data augmentation.}
 \usage{
-stem_inference(stem_object, method, iterations, priors, mcmc_kernel,
-  t0_kernel = NULL, thin_params = ceiling(iterations/1000),
+stem_inference(
+  stem_object,
+  method,
+  iterations,
+  priors,
+  mcmc_kernel,
+  t0_kernel = NULL,
+  thin_params = ceiling(iterations/1000),
   thin_latent_proc = ceiling(iterations/1000),
-  initialization_attempts = 500, ess_args = NULL, print_progress = 0,
-  status_filename = NULL, messages = FALSE)
+  initialization_attempts = 500,
+  ess_args = NULL,
+  print_progress = 0,
+  status_filename = NULL,
+  messages = FALSE
+)
 }
 \arguments{
 \item{stem_object}{a stochastic epidemic model object containing the dataset,

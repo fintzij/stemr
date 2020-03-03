@@ -4,15 +4,46 @@
 \alias{update_initdist_lna}
 \title{Update initial compartment volumes via elliptical slice sampling.}
 \usage{
-update_initdist_lna(initdist_objects, init_volumes_cur, init_volumes_prop,
-  path_cur, data, lna_parameters, lna_param_vec, tparam, pathmat_prop,
-  censusmat, emitmat, flow_matrix, stoich_matrix, lna_times, forcing_inds,
-  forcing_tcov_inds, forcings_out, forcing_transfers, lna_param_inds,
-  lna_const_inds, lna_tcovar_inds, lna_initdist_inds, param_update_inds,
-  census_indices, lna_event_inds, measproc_indmat, svd_d, svd_U, svd_V,
-  lna_pointer, lna_set_pars_pointer, d_meas_pointer, do_prevalence,
-  step_size, initdist_steps, initdist_angle, initdist_bracket_width,
-  n_initdist_updates)
+update_initdist_lna(
+  initdist_objects,
+  init_volumes_cur,
+  init_volumes_prop,
+  path_cur,
+  data,
+  lna_parameters,
+  lna_param_vec,
+  tparam,
+  pathmat_prop,
+  censusmat,
+  emitmat,
+  flow_matrix,
+  stoich_matrix,
+  lna_times,
+  forcing_inds,
+  forcing_tcov_inds,
+  forcings_out,
+  forcing_transfers,
+  lna_param_inds,
+  lna_const_inds,
+  lna_tcovar_inds,
+  lna_initdist_inds,
+  param_update_inds,
+  census_indices,
+  lna_event_inds,
+  measproc_indmat,
+  svd_d,
+  svd_U,
+  svd_V,
+  lna_pointer,
+  lna_set_pars_pointer,
+  d_meas_pointer,
+  do_prevalence,
+  step_size,
+  initdist_steps,
+  initdist_angle,
+  initdist_bracket_width,
+  n_initdist_updates
+)
 }
 \arguments{
 \item{path_cur}{list with the current path}

@@ -5,8 +5,14 @@
 \title{Simulate a data matrix from the measurement process of a stochastic epidemic
 model.}
 \usage{
-simulate_r_measure(censusmat, measproc_indmat, parameters, constants,
-  tcovar, r_measure_ptr)
+simulate_r_measure(
+  censusmat,
+  measproc_indmat,
+  parameters,
+  constants,
+  tcovar,
+  r_measure_ptr
+)
 }
 \arguments{
 \item{censusmat}{matrix of compartment counts at observation times}

@@ -6,9 +6,17 @@
 seasonality, based on a user-supplied time-varying covariate matrix. Used 
 internally.}
 \usage{
-build_tcovar_matrix(tcovar = NULL, tparam = NULL, forcings = NULL,
-  timestep = NULL, census_times = NULL, parameters = NULL, t0, tmax,
-  messages)
+build_tcovar_matrix(
+  tcovar = NULL,
+  tparam = NULL,
+  forcings = NULL,
+  timestep = NULL,
+  census_times = NULL,
+  parameters = NULL,
+  t0,
+  tmax,
+  messages
+)
 }
 \arguments{
 \item{tcovar}{user-supplied time-varying covariance matrix}

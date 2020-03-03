@@ -8,8 +8,13 @@ depending on whether inference (or simulation) is accomplished using the LNA
 or using Bayesian data augmentation (Gillespie's direct algorithm for
 simulation).}
 \usage{
-stem_initializer(init_states, fixed, strata = NULL, prior = NULL,
-  dist = "multinom")
+stem_initializer(
+  init_states,
+  fixed,
+  strata = NULL,
+  prior = NULL,
+  dist = "multinom"
+)
 }
 \arguments{
 \item{init_states}{named vector of initial compartment counts (MJP) or

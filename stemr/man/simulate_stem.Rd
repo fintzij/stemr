@@ -4,12 +4,25 @@
 \alias{simulate_stem}
 \title{Simulations from a stochastic epidemic model.}
 \usage{
-simulate_stem(stem_object, nsim = 1, simulation_parameters = NULL,
-  lna_draws = NULL, tparam_draws = NULL, tparam_values = NULL,
-  paths = FALSE, full_paths = FALSE, observations = FALSE,
-  method = "gillespie", tmax = NULL, census_times = NULL,
-  max_attempts = 500, lna_method = "exact", lna_bracket_width = 2 *
-  pi, ess_warmup = 100, messages = TRUE)
+simulate_stem(
+  stem_object,
+  nsim = 1,
+  simulation_parameters = NULL,
+  lna_draws = NULL,
+  tparam_draws = NULL,
+  tparam_values = NULL,
+  paths = FALSE,
+  full_paths = FALSE,
+  observations = FALSE,
+  method = "gillespie",
+  tmax = NULL,
+  census_times = NULL,
+  max_attempts = 500,
+  lna_method = "exact",
+  lna_bracket_width = 2 * pi,
+  ess_warmup = 100,
+  messages = TRUE
+)
 }
 \arguments{
 \item{stem_object}{stem object list}

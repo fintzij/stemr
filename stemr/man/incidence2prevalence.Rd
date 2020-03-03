@@ -4,8 +4,13 @@
 \alias{incidence2prevalence}
 \title{Convert an LNA/ODE incidence path to a prevalence path.}
 \usage{
-incidence2prevalence(path, flow_matrix, init_state, forcings = NULL,
-  forcing_matrix = NULL)
+incidence2prevalence(
+  path,
+  flow_matrix,
+  init_state,
+  forcings = NULL,
+  forcing_matrix = NULL
+)
 }
 \arguments{
 \item{path}{matrix containing the incidence path the first column of which

@@ -4,8 +4,13 @@
 \alias{parse_ode_rates}
 \title{Parse the ODE rates so they can be compiled.}
 \usage{
-parse_ode_rates(ode_rates, param_codes, const_codes, tcovar_codes,
-  ode_comp_codes)
+parse_ode_rates(
+  ode_rates,
+  param_codes,
+  const_codes,
+  tcovar_codes,
+  ode_comp_codes
+)
 }
 \arguments{
 \item{ode_rates}{character vector of ODE rates}

@@ -5,15 +5,24 @@
 \title{Generates a list of settings for sampling the latent LNA paths and
 time-varying parameters via elliptical slice sampling.}
 \usage{
-ess_settings(n_ess_updates = 1, n_initdist_updates = 1,
-  n_tparam_updates = 1, lna_bracket_width = 2 * pi,
-  initdist_bracket_width = 2 * pi, tparam_bracket_width = 2 * pi,
-  lna_bracket_update = 0, initdist_bracket_update = 0,
-  tparam_bracket_update = 0, lna_bracket_scaling = 2 * sqrt(2 *
-  log(10)), initdist_bracket_scaling = 2 * sqrt(2 * log(10)),
+ess_settings(
+  n_ess_updates = 1,
+  n_initdist_updates = 1,
+  n_tparam_updates = 1,
+  lna_bracket_width = 2 * pi,
+  initdist_bracket_width = 2 * pi,
+  tparam_bracket_width = 2 * pi,
+  lna_bracket_update = 0,
+  initdist_bracket_update = 0,
+  tparam_bracket_update = 0,
+  lna_bracket_scaling = 2 * sqrt(2 * log(10)),
+  initdist_bracket_scaling = 2 * sqrt(2 * log(10)),
   tparam_bracket_scaling = 2 * sqrt(2 * log(10)),
-  joint_tparam_update = FALSE, joint_initdist_update = TRUE,
-  joint_strata_update = FALSE, ess_warmup = 50)
+  joint_tparam_update = FALSE,
+  joint_initdist_update = TRUE,
+  joint_strata_update = FALSE,
+  ess_warmup = 50
+)
 }
 \arguments{
 \item{n_ess_updates, n_initdist_updates, n_tparam_updates}{number of elliptical

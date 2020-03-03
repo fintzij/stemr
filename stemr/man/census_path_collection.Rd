@@ -5,8 +5,12 @@
 \title{Census each path in a collection of paths to obtain the compartment counts at
 census times.}
 \usage{
-census_path_collection(paths, census_times, census_columns = NULL,
-  as_array = FALSE)
+census_path_collection(
+  paths,
+  census_times,
+  census_columns = NULL,
+  as_array = FALSE
+)
 }
 \arguments{
 \item{paths}{either a list or array of paths}

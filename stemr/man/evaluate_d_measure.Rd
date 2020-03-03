@@ -5,8 +5,16 @@
 \title{Evaluate the log-density of the measurement process by calling measurement
 process density functions via external Xptr.}
 \usage{
-evaluate_d_measure(emitmat, obsmat, statemat, measproc_indmat, parameters,
-  constants, tcovar_censusmat, d_meas_ptr)
+evaluate_d_measure(
+  emitmat,
+  obsmat,
+  statemat,
+  measproc_indmat,
+  parameters,
+  constants,
+  tcovar_censusmat,
+  d_meas_ptr
+)
 }
 \arguments{
 \item{emitmat}{matrix of emission probabilities}

@@ -5,9 +5,20 @@
 \title{Evaluate the log-density of a possibly time-verying measurement process
 by calling measurement process density functions via external Xptr.}
 \usage{
-evaluate_d_measure_LNA(emitmat, obsmat, censusmat, measproc_indmat,
-  lna_parameters, lna_param_inds, lna_const_inds, lna_tcovar_inds,
-  param_update_inds, census_indices, lna_param_vec, d_meas_ptr)
+evaluate_d_measure_LNA(
+  emitmat,
+  obsmat,
+  censusmat,
+  measproc_indmat,
+  lna_parameters,
+  lna_param_inds,
+  lna_const_inds,
+  lna_tcovar_inds,
+  param_update_inds,
+  census_indices,
+  lna_param_vec,
+  d_meas_ptr
+)
 }
 \arguments{
 \item{emitmat}{matrix of emission probabilities}
@@ -34,12 +45,9 @@ should be updated.}
 
 \item{census_indices}{vector of indices when the LNA path has been censused.}
 
-\item{lna_param_vec}{container for storing the LNA parameters at each
-observation time.}
+\item{lna_param_vec}{vector for keeping the current lna parameters}
 
 \item{d_meas_ptr}{external pointer to measurement process density function}
-
-\item{lna_param_vec}{vector for keeping the current lna parameters}
 }
 \description{
 Evaluate the log-density of a possibly time-verying measurement process

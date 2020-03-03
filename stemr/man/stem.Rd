@@ -4,8 +4,13 @@
 \alias{stem}
 \title{Construct a stem object.}
 \usage{
-stem(stem_object = NULL, data = NULL, dynamics = NULL,
-  measurement_process = NULL, stem_settings = NULL)
+stem(
+  stem_object = NULL,
+  data = NULL,
+  dynamics = NULL,
+  measurement_process = NULL,
+  stem_settings = NULL
+)
 }
 \arguments{
 \item{stem_object}{an existing stochastic epidemic model object to which

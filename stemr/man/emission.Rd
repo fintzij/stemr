@@ -5,8 +5,14 @@
 \title{Generates an emission list to be supplied to the \code{\link{stem_measure}}
 function.}
 \usage{
-emission(meas_var, distribution, emission_params, incidence = TRUE,
-  obstimes = NULL, strata = NULL)
+emission(
+  meas_var,
+  distribution,
+  emission_params,
+  incidence = TRUE,
+  obstimes = NULL,
+  strata = NULL
+)
 }
 \arguments{
 \item{meas_var}{character vector supplying the name of the measurement
