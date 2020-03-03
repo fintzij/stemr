@@ -1427,16 +1427,25 @@ simulate_stem <-
                   
                   if(method == "gillespie") {
                         
+                        measproc_indmat = as.matrix(stem_object$measurement_process$measproc_indmat)
+                        constants = as.numeric(stem_object$dynamics$constants)
+                        r_measure_ptr = 
+                              if(!is.null(stem_object$measurement_process$meas_pointers_lna)) {
+                                    stem_object$measurement_process$meas_pointers_lna$r_measure_ptr
+                              } else {
+                                    stem_object$measurement_process$meas_pointers$r_measure_ptr
+                              }
+                        
                         # should incidence be computed?
                         if(do_incidence) incidence_codes <- stem_object$dynamics$incidence_codes + 1
                         
                         # column codes in the path matrix for compartments to be censused
                         census_codes    <- c(stem_object$dynamics$comp_codes,
                                              stem_object$dynamics$incidence_codes) + 2
-                        censusmat       <- stem_object$measurement_process$censusmat
+                        pathmat         <- stem_object$measurement_process$censusmat
                         
                         # initialize simulation parameters
-                        sim_pars <- stem_object$dynamics$parameters
+                        sim_pars <- as.numeric(stem_object$dynamics$parameters)
                         
                         for(k in seq_len(nsim)) {
                               
@@ -1444,9 +1453,9 @@ simulate_stem <-
                               if(!is.null(census_paths[[k]])) {
                                     
                                     if(do_census) {
-                                          censusmat[,-1] <- census_paths[[k]][cens_inds, -1]
+                                          pathmat[,-1] <- census_paths[[k]][cens_inds, -1]
                                     } else {
-                                          censusmat <- census_paths[[k]]
+                                          pathmat <- census_paths[[k]]
                                     }
                                     
                                     # get the new simulation parameters if a list was supplied
@@ -1472,12 +1481,13 @@ simulate_stem <-
                                     }
                                     
                                     # simulate the data
-                                    datasets[[k]] <- simulate_r_measure(censusmat = censusmat,
-                                                                        measproc_indmat = stem_object$measurement_process$measproc_indmat,
-                                                                        parameters = sim_pars,
-                                                                        constants = stem_object$dynamics$constants,
-                                                                        tcovar = tcovar_obstimes,
-                                                                        r_measure_ptr = stem_object$measurement_process$meas_pointers$r_measure_ptr)
+                                    datasets[[k]] <- 
+                                          simulate_r_measure(censusmat = pathmat,
+                                                             measproc_indmat = measproc_indmat,
+                                                             parameters = sim_pars,
+                                                             constants = constants,
+                                                             tcovar = tcovar_obstimes,
+                                                             r_measure_ptr = r_measure_ptr)
                                     colnames(datasets[[k]]) <- measvar_names
                               }
                         }

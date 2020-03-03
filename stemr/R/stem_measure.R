@@ -347,14 +347,14 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
         compile_moments <- !is.null(dynamics$ode_pointers)
         meas_pointers <- 
               if(do_exact) {
-                    parse_meas_procs(meas_procs, compile_moments = compile_moments, messages = messages)
+                    parse_meas_procs(meas_procs, compile_moments = FALSE, messages = messages)
               } else {
                     NULL
               }
         
         meas_pointers_lna <- 
               if(do_approx) {
-                    parse_meas_procs(meas_procs_lna, compile_moments = compile_moments, messages = messages)
+                    parse_meas_procs(meas_procs_lna, compile_moments = FALSE, messages = messages)
               } else {
                     NULL
               }

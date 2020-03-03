@@ -159,7 +159,7 @@ will produce incidence data. The prevalence and incidence curves are plotted
 below. 
 
 ```{r sim_paths, echo = TRUE}
-sim_mjp <- simulate_stem(stem_object = stem_object, method = "gillespie", full_paths = TRUE)
+sim_mjp <- simulate_stem(stem_object = stem_object, method = "gillespie")
 sim_lna <- simulate_stem(stem_object = stem_object, method = "lna", lna_method = "approx")
 sim_ode <- simulate_stem(stem_object = stem_object, method = "ode")
 ```
@@ -369,6 +369,7 @@ res <-
                  initialization_attempts = 500,
                  priors = priors,
                  mcmc_kernel = mcmc_kernel,
+                 print_progress = 0,
                  messages = FALSE)
 ```
 
