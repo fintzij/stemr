@@ -42,7 +42,11 @@ package are implemented in C++. Hence, it is important to also make sure
 that your C++ toolchain is set up properly, e.g., by following
 instructions given in the
 [Stan](https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started)
-documentation, and that Rtools has been added to your system path.
+documentation, and that Rtools has been added to your system path. If
+you are working on a Windows machine, you may need to take additional
+steps to ensure your toolset is in order. See the
+(cran)\[<a href="https://cran.r-project.org/doc/manuals/R-admin.html#The-Windows-toolset" class="uri">https://cran.r-project.org/doc/manuals/R-admin.html#The-Windows-toolset</a>\]
+webpage for more details.
 
 Vignettes
 ---------
