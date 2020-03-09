@@ -395,6 +395,7 @@ require(pomp)
 S0 <- 1e4 - 10
 I0 <- 10
 R0 <- 0
+popsize = 1e4
 cases <- sim_mjp$datasets[[1]][,2]
 
 # Set up pomp objects -----------------------------------------------------
@@ -412,7 +413,7 @@ dmeas<-"
 sir.step<-paste0("
   double rate[2];
   double dN[2];
-  rate[0]=exp(log(exp(log_R0)+1) + log_mu - log(",popsize,"))*I; // Infection rate
+  rate[0]=exp(log(exp(log_R0)+1) + log_mu - log(10000))*I; // Infection rate
   rate[1]=exp(log_mu);                         // recovery rate
   reulermultinom(1,S,&rate[0],dt,&dN[0]);      // generate the number of newly infected people
   reulermultinom(1,I,&rate[1],dt,&dN[1]);      // generate the number of newly recovered people
