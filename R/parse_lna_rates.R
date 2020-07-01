@@ -77,24 +77,24 @@ parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, l
       
       # generate symbolic expressions for the rates and other objects
       rate_syms   <- lapply(hazards, function(x) (parse(text = x)))
-      comp_syms   <- lapply(lookup_table[comp_inds,"code"], Ryacas::Sym)
+      comp_syms   <- lapply(lookup_table[comp_inds,"code"], Ryacas::ysym)
       time_derivs <- vector(mode = "list", length = length(hazards))
       
       # if there are time-varying rates, generate the time-derivative symbols
-      if(!is.na(time_ind)) time_sym  <- Ryacas::Sym(lookup_table[time_ind,"code"])
+      if(!is.na(time_ind)) time_sym  <- Ryacas::ysym(lookup_table[time_ind,"code"])
       
       # compute the derivatives
       for(t in seq_along(hazards)) {
             derivatives[[t]] <- vector(mode = "list", length = length(lna_comp_codes))
             
             for(s in seq_along(derivatives[[t]])) {
-                  derivatives[[t]][[s]] <- D(rate_syms[[t]], comp_syms[[s]])
-                  derivatives[[t]][[s]] <- paste(deparse(derivatives[[t]][[s]]), collapse = "")
+               derivatives[[t]][[s]] <- D(rate_syms[[t]], as.character(comp_syms[[s]]))
+               derivatives[[t]][[s]] <- paste(deparse(derivatives[[t]][[s]]), collapse = "")
             }
             
             if(!is.na(time_ind)) {
-                  time_derivs[[t]] <- D(rate_syms[[t]], time_sym)
-                  time_derivs[[t]] <- paste(deparse(time_derivs[[t]]), collapse = "")
+               time_derivs[[t]] <- D(rate_syms[[t]], as.character(time_sym))
+               time_derivs[[t]] <- paste(deparse(time_derivs[[t]]), collapse = "")
             } else {
                   time_derivs[[t]] <- "0.0"
             }

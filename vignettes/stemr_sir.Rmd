@@ -366,7 +366,7 @@ We now run the MCMC algorithm to fit the model via ODEs. To perform inference wi
 ```{r fit_mod, echo = TRUE}
 res <-
   stem_inference(stem_object = stem_object,
-                 method = "ode", # or set to "lna"
+                 method = "lna", # or set to "lna"
                  iterations = 3.5e2, # total number of iterations, set to 3.5e4 for the paper
                  thin_params = 10,
                  thin_latent_proc = 10,
@@ -398,7 +398,7 @@ adapt_par = res$results$adaptation_record$adaptation_scale_record
 
 We can fit the model using the `pomp` package as follows. Note that pomp version 1.17 was used as a benchmark method in the paper.
 
-```{r pomp_fit, echo = TRUE, warning=FALSE}
+```{r pomp_fit, echo = TRUE, warning=FALSE, eval = FALSE}
 require(pomp)
 S0 <- 1e4 - 10
 I0 <- 10

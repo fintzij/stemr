@@ -850,12 +850,16 @@ stem_dynamics <-
 
         # identify whether rates are 0th or 1st order rates or higher order rates
         for(s in seq_along(rate_fcns)) {
-                rate_fcns[[s]]$higher_order <- sum((gregexpr("state\\[", rate_fcns[[s]]$lumped)[[1]] > 0)) > 1
+                rate_fcns[[s]]$higher_order <-
+                        sum((gregexpr("state\\[", rate_fcns[[s]]$lumped)[[1]] > 0)) > 1
         }
 
         # compile the rate functions and get the pointers
         if(is.character(compile_rates) | compile_rates) {
-                rate_ptrs <- parse_rates_exact(rates = rate_fcns, compile_rates = compile_rates, messages = messages)
+                rate_ptrs <-
+                        parse_rates_exact(rates = rate_fcns,
+                                          compile_rates = compile_rates,
+                                          messages = messages)
         } else {
                 rate_ptrs <- NULL
         }

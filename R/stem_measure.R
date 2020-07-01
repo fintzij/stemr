@@ -150,7 +150,7 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
         # if a dataset or list of datasets is supplied, extract the observation times, combine them and generate the indicator matrix
         if(!is.null(data)) {
               
-                if(class(data) == "data.frame") data <- as.matrix(data)
+                if(class(data)[1] == "data.frame") data <- as.matrix(data)
 
                 if(!is.list(data)) {
                         obstimes <- data[,1]
