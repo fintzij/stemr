@@ -749,7 +749,7 @@ res <-
                                          lna_bracket_update = 5e3,
                                          joint_strata_update = FALSE,
                                          joint_initdist_update = FALSE),
-                 print_progress = 1e3,
+                 print_progress = 0,
                  messages = F)
 ```
 
@@ -766,7 +766,7 @@ adapt_par = res$results$adaptation_record$adaptation_scale_record
 
 We can fit the model using the `pomp` package as follows. Note that pomp version 1.17 was used as a benchmark method in the paper. 
 
-```{r pomp_fit, echo = TRUE, warning=FALSE}
+```{r pomp_fit, echo = TRUE, warning=FALSE, eval = FALSE}
 
 # Load libraries ----------------------------------------------------------
 

@@ -113,7 +113,10 @@ parse_rates_exact <- function(rates, compile_rates, messages = TRUE) {
                     print("Compiling rate functions.")
               }
               
-              Rcpp::sourceCpp(code = exact_code, env = globalenv(), verbose = FALSE, rebuild = TRUE)
+              Rcpp::sourceCpp(code = exact_code,
+                              # env = globalenv(), 
+                              verbose = FALSE,
+                              rebuild = TRUE)
               
               rate_pointers <- c(lumped_ptr = LUMPED_XPtr())
               

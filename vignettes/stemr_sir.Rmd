@@ -366,7 +366,7 @@ We now run the MCMC algorithm to fit the model via ODEs. To perform inference wi
 ```{r fit_mod, echo = TRUE}
 res <-
   stem_inference(stem_object = stem_object,
-                 method = "lna", # or set to "lna"
+                 method = "lna", # or set to "ode"
                  iterations = 3.5e2, # total number of iterations, set to 3.5e4 for the paper
                  thin_params = 10,
                  thin_latent_proc = 10,

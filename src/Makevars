@@ -1,4 +1,2 @@
 PKG_LIBS=$(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
-CXXFLAGS=-O3 -Wno-unused-variable -Wno-unused-function -Wno-macro-redefined
-CXXFLAGS+=-Wno-unused-local-typedefs -DBOOST_NO_AUTO_PTR
-CXXFLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations 
+PKG_CXXFLAGS=-DBOOST_NO_AUTO_PTR

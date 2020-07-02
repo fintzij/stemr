@@ -49,7 +49,7 @@ stem_inference_ode <- function(stem_object,
       mcmc_restart <- !is.null(stem_object$results)
       
       # extract the model objects from the stem_object
-      if (is.function(stem_object$dynamics$parameters)) {
+      if(is.function(stem_object$dynamics$parameters)) {
             par_init_fcn   <- stem_object$dynamics$parameters
             parameters     <- par_init_fcn()
             
