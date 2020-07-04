@@ -115,7 +115,7 @@ stem_dynamics <-
                  tcovar = NULL,
                  forcings = NULL,
                  strata = NULL,
-                 constants = c(t0 = 0),
+                 constants = NULL,
                  timestep = NULL,
                  adjacency = NULL,
                  messages = TRUE,
@@ -199,12 +199,19 @@ stem_dynamics <-
                                rtol              = rtol,
                                atol              = atol)
 
-        if(!"t0" %in% names(constants)) {
-                stop("t0 must be specified either as a constant in the stochastic epidemic model.")
+        if(!"t0" %in% c(names(parameters), names(constants))) {
+                stop("t0 must be specified either as a parameter or a constant in the stochastic epidemic model.")
         }
 
-        # grab t0
-        t0 <- constants["t0"]
+        # identify whether t0 is fixed or random, and isolate it
+        if("t0" %in% names(parameters)) {
+                t0_fixed   <- FALSE
+                t0         <- parameters["t0"]
+
+        } else {
+                t0_fixed  <- TRUE
+                t0        <- constants["t0"]
+        }
 
         # build the vector of full compartment names
         if(!is.list(compartments)) {
@@ -875,11 +882,19 @@ stem_dynamics <-
                 }
 
                 # remove t0 from the constants or parameters
-                constants   <- constants[-which(names(constants) == "t0")]
-                const_codes <- const_codes[-which(names(const_codes) == "t0")]
-                const_names <- names(const_codes)
-                const_codes <- seq_along(const_codes) - 1
-                names(const_codes) <- const_names
+                if(t0_fixed) {
+                        constants   <- constants[-which(names(constants) == "t0")]
+                        const_codes <- const_codes[-which(names(const_codes) == "t0")]
+                        const_names <- names(const_codes)
+                        const_codes <- seq_along(const_codes) - 1
+                        names(const_codes) <- const_names
+                } else {
+                        parameters  <- parameters[-which(names(parameters) == "t0")]
+                        param_codes <- param_codes[-which(names(param_codes) == "t0")]
+                        param_names <- names(param_codes)
+                        param_codes <- seq_along(param_codes) - 1
+                        names(param_codes) <- param_names
+                }
 
                 stoich_matrix_lna   <- t(flow_matrix_lna)
 
@@ -1007,6 +1022,7 @@ stem_dynamics <-
                          tcovar_adjmat       = tcovar_adjmat,
                          tcovar_changemat    = tcovar_changemat,
                          t0                  = t0,
+                         t0_fixed            = t0_fixed,
                          timestep            = timestep,
                          tmax                = tmax,
                          n_strata            = n_strata,
