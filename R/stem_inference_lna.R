@@ -762,7 +762,7 @@ stem_inference_lna <- function(stem_object,
             
             for(b in seq_along(mvnss_objects)) {
                   
-                  # initiale the list of objects for mvnss in the block
+                  # initialize the list of objects for mvnss in the block
                   mvnss_objects[[b]] <- 
                         list(har_direction   = rep(0.0, parameter_blocks[[b]]$block_size),
                              mvn_direction   = rep(0.0, parameter_blocks[[b]]$block_size),

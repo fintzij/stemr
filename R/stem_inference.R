@@ -68,7 +68,6 @@ stem_inference <-
                           iterations = iterations,
                           priors = priors,
                           mcmc_kernel = mcmc_kernel,
-                          t0_kernel = t0_kernel,
                           thin_params = thin_params,
                           thin_latent_proc = thin_latent_proc,
                           initialization_attempts = initialization_attempts,
