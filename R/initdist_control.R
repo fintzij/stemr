@@ -6,25 +6,22 @@
 #' @param bracket_widths width of the elliptical slice sampling brackets, must
 #'   be in (0,2*pi], and default to 2*pi.
 #' @param bracket_update_iter iteration at which the widths of the elliptical
-#'   slice sampling brackets should be shrunk, defaults to 0 and the bracket
+#'   slice sampling brackets should be shrunk, defaults to Inf and the bracket
 #'   widths are kept constant.
 #' @param bracket_scaling Scaling factors for elliptical slice sampling bracket
 #'   widths. If brackets are to be shrunk, the new width is set to the minimum
 #'   of 2*pi or the scaling multiplied by the standard deviation of the previous
 #'   ESS angles. The scalings default to the full width at one tenth maximum for
 #'   a gaussian.
-#' @param joint_tparam_update should all initial distributions be updated
-#'   jointly? Defaults to FALSE.
 #' @param ess_warmup ess_warmup ESS updates prior to starting MCMC
 #'
 #' @return list with settings for elliptical slice sampling
 #' @export
-initdist_ess_settings <-
+initdist_control <-
       function(n_updates = 1,
                bracket_widths = 2 * pi,
-               bracket_update_iter = 0,
+               bracket_update_iter = Inf,
                bracket_scaling = 2 * sqrt(2 * log(10)),
-               joint_initdist_update = FALSE,
                ess_warmup = 50) {
           
             if (any(bracket_widths <= 0 | bracket_widths > 2 * pi)) {
@@ -36,7 +33,6 @@ initdist_ess_settings <-
                        bracket_widths        = bracket_widths,
                        bracket_update_iter   = bracket_update_iter,
                        bracket_scaling       = bracket_scaling,
-                       joint_initdist_update = joint_initdist_update,
                        ess_warmup            = ess_warmup
                   )
             )

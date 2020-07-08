@@ -37,7 +37,7 @@
 #'   indices for LNA count processes on transition events for which incidence is
 #'   to be computed}}
 #' @export
-stem_measure <- function(emissions, dynamics, data = NULL, messages = TRUE) {
+stem_measure <- function(emissions, dynamics, data = NULL, messages = FALSE) {
 
         if(is.null(data)) {
                 if(any(unlist(lapply(lapply(emissions, "[[", "obstimes"), is.null)))) {

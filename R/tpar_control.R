@@ -6,7 +6,7 @@
 #' @param bracket_widths width of the elliptical slice sampling brackets, must
 #'   be in (0,2*pi], and default to 2*pi.
 #' @param bracket_update_iter iteration at which the widths of the elliptical
-#'   slice sampling brackets should be shrunk, defaults to 0 and the bracket
+#'   slice sampling brackets should be shrunk, defaults to Inf and the bracket
 #'   widths are kept constant.
 #' @param bracket_scaling Scaling factors for elliptical slice sampling bracket
 #'   widths. If brackets are to be shrunk, the new width is set to the minimum
@@ -22,7 +22,7 @@
 tpar_control <-
       function(n_updates = 1,
                bracket_widths = 2 * pi,
-               bracket_update_iter = 0,
+               bracket_update_iter = Inf,
                bracket_scaling = 2 * sqrt(2 * log(10)),
                joint_tparam_update = FALSE,
                ess_warmup = 50) {

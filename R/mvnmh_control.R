@@ -12,6 +12,8 @@
 #'  scale_constant/(iteration/step_size+1)^scale_cooling. The
 #'  \code{plot_adaptations} function may be used to plot the adaptation factors.
 #' @param step_size adaptation increment for each iteration, defaults to 1.
+#' @param stop_adaptation iteration at which adaptation should be terminated, 
+#'   defaults to 0 for no adaptation. 
 #' @param adaptation_offset iteration offset
 #' @param nugget nugget for proposal covariance
 #' @param nugget_step_size increment for each iteration, defaults to 100/number
@@ -24,7 +26,7 @@
 #'
 #' @return list with control settings for Metropolis-Hastings updates
 #' @export
-mvnss_settings <-
+mvnmh_control <-
       function(n_updates = 1,
                target_acceptance = 0.234,
                cov_update_interval = 1,
@@ -50,10 +52,10 @@ mvnss_settings <-
            target_acceptance     = target_acceptance,
            cov_update_interval   = cov_update_interval,
            max_scaling           = max_scaling,
-           bracket_limits        = bracket_limits,
            scale_constant        = scale_constant,
            scale_cooling         = scale_cooling,
            step_size             = step_size,
+           stop_adaptation       = stop_adaptation,
            adaptation_offset     = adaptation_offset,
            nugget                = nugget,
            nugget_cooling        = nugget_cooling,

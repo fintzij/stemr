@@ -10,7 +10,6 @@ stem_inference_lna(
   iterations,
   priors,
   mcmc_kernel,
-  t0_kernel,
   thin_params,
   thin_latent_proc,
   initialization_attempts = 500,
@@ -31,7 +30,7 @@ well as transforming parameters to and from their estimation scales. The
 functions should have the following names: "prior_density",
 "to_estimation_scale", "from_estimation_scale". The prior_density function
 must take two vectors as arguments, the model parameters (excluding initial
-compartment volumes and t0) on their natural scales, and the model
+compartment volumes) on their natural scales, and the model
 parameters on their estimation scales. The functions for converting between
 parameter scales should take vector of parameters as an argument, returning
 a transformed vector (the function call has the form:
@@ -40,9 +39,6 @@ a transformed vector (the function call has the form:
 \item{mcmc_kernel}{list containing the mcmc_kernel method, proposal
 covariance matrix, and an external pointer for the compiled mcmc_kernel
 function}
-
-\item{t0_kernel}{output of \code{t0_kernel}, specifying the RWMH transition
-mcmc_kernel for t0 and the truncated normal distribution prior.}
 
 \item{thin_params}{thinning interval for posterior parameter samples,
 defaults to 1}

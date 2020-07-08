@@ -14,7 +14,7 @@ stem_dynamics(
   tcovar = NULL,
   forcings = NULL,
   strata = NULL,
-  constants = NULL,
+  constants = c(t0 = 0),
   timestep = NULL,
   adjacency = NULL,
   messages = TRUE,

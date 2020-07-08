@@ -177,8 +177,7 @@ stem_inference_lna <- function(stem_object,
       } else {
             ess_schedule <- 
                   lapply(paste0("_",names(stem_object$dynamics$strata_codes)),
-                         function(x) grep(x, rownames(flow_matrix)))      
-      
+                         function(x) grep(x, rownames(flow_matrix)))     
       }
       
       # get the complement indices for the elliptical slice sampling schedule
