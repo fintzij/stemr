@@ -71,53 +71,59 @@ fit_stem <-
         # match parameters in parblocks with dynamics and check that fcns for 
         # going to and from the estimation scale are 1:1
         # grab the names of parameters on their natural and estimation scales
+        parameters      <- stem_object$dynamics$parameters
         param_names_nat <- names(stem_object$dynamics$param_codes)
         param_names_est <- c(sapply(mcmc_kern$parameter_blocks, function(x) x$pars_est))
         n_model_params  <- length(param_names_est)
-        parameters = stem_object$dynamics$parameters
+        
+        # functions for going to and from the estimation scale
+        log_prior = lapply(param_blocks, function(x) x$priors$logprior)
+        param_inds_nat = lapply(param_blocks, function(x) match(x$pars_nat, param_names_nat))
+        param_inds_est = param_inds_nat
+        to_est_scale = lapply(param_blocks, function(x) x$priors$to_estimation_scale)
+        from_est_scale = lapply(param_blocks, function(x) x$priors$from_estimation_scale)
+        param_initializer = lapply(param_blocks, function(x) x$initializer)
+        
+        ind_est_0 = 0
         for(s in seq_along(param_blocks)) {
                 
-                # get indices 
-                param_blocks[[s]]$inds_nat = 
-                        match(param_blocks[[s]]$pars_nat, names(parameters))
-                
                 # double check whether the functions for going to and from the estimation scale biject
-                if(any(parameters[param_blocks[[s]]$inds_nat] != 
-                       param_blocks[[s]]$priors$from_estimation_scale(
-                               param_blocks[[s]]$priors$to_estimation_scale(
-                                       parameters[param_blocks[[s]]$inds_nat])))) {
+                if(!all.equal(parameters[param_inds_nat[[s]]],
+                              from_est_scale[[s]](to_est_scale[[s]](parameters[param_inds_nat[[s]]])))) {
                         stop(paste0("Functions for going to and from the estimation scale in parameter block ", s, " do not biject."))
                 }
                 
+                # get the estimation scale indices
+                param_inds_est = ind_est_0 + seq_along(param_inds_nat[[s]])
+                ind_est_0 = ind_est_0 + length(param_inds_nat[[s]])
+                
                 # initialize parameters on their estimation scale
-                param_blocks[[s]]$params_est = 
+                param_blocks[[s]]$params_est = to_est_scale[[s]](parameters[param_inds_nat[[s]]])
+                
+                # check that the log-prior was not -Inf if no initializer is supplied, else initialize params
+                if(is.null(param_initializer[[s]])) {
+                        pd = log_prior[[s]](param_blocks[[s]]$params_est)
+                        if(is.infinite(pd)) {
+                                stop("Parameters have log prior density of negative infinity. Try another initialization.")
+                        }
+                } else {
+                        # initialize parameters
+                        parameters[param_inds_nat[[s]]] = param_initializer[[s]]()
                         
-        }
-        
-        
-        if(is.function(stem_object$dynamics$parameters)) {
-                
-                par_init_fcn <- stem_object$dynamics$parameters
-                parameters   <- par_init_fcn()
-                
-                pd <- logprior(to_estimation_scale(parameters))
-                par_init_attempt <- 1
-                while(is.infinite(pd) && par_init_attempt <= initialization_attempts) {
-                        parameters <- par_init_fcn()
-                        pd <- logprior(to_estimation_scale(parameters))
-                        par_init_attempt <- par_init_attempt + 1
-                }
-                
-                if(is.infinite(pd)) {
-                        stop("Parameters have log prior density of negative infinity. Try another initialization.")
-                }
-                
-        } else {
-                par_init_fcn   <- NULL
-                parameters     <- stem_object$dynamics$parameters
-                pd <- logprior(to_estimation_scale(parameters))
-                if(is.infinite(pd)) {
-                        stop("Parameters have log prior density of negative infinity. Try another initialization.")
+                        # check log prior
+                        pd = log_prior[[s]](to_est_scale[[s]](parameters[param_inds_nat[[s]]]))
+                        
+                        # keep initializing if pd is infinite
+                        par_init_attempt <- 1
+                        while(is.infinite(pd) && par_init_attempt <= initialization_attempts) {
+                                parameters[param_inds_nat[[s]]] = param_initializer[[s]]()
+                                pd = log_prior[[s]](to_est_scale[[s]](parameters[param_inds_nat[[s]]]))
+                                par_init_attempt <- par_init_attempt + 1
+                        }
+                        
+                        if(is.infinite(pd)) {
+                                stop("Parameters have log prior density of negative infinity. Try another initialization.")
+                        }
                 }
         }
         
@@ -131,11 +137,10 @@ fit_stem <-
         }
         
         ### Unpack stem_object-------------------------
+        
         # dynamics that are not method specific
         censusmat           <- stem_object$measurement_process$censusmat
         constants           <- stem_object$dynamics$constants
-        n_compartments      <- ncol(flow_matrix)
-        n_rates             <- nrow(flow_matrix)
         initializer         <- stem_object$dynamics$initializer
         fixed_inits         <- stem_object$dynamics$fixed_inits
         n_strata            <- stem_object$dynamics$n_strata
@@ -153,6 +158,8 @@ fit_stem <-
                 
                 # extract objects from dynamics
                 flow_matrix      <- stem_object$dynamics$flow_matrix_lna
+                n_compartments   <- ncol(flow_matrix)
+                n_rates          <- nrow(flow_matrix)
                 stoich_matrix    <- stem_object$dynamics$stoich_matrix_lna
                 proc_pointer     <- stem_object$dynamics$lna_pointers$lna_ptr
                 set_pars_pointer <- stem_object$dynamics$lna_pointers$set_lna_params_ptr
@@ -177,10 +184,17 @@ fit_stem <-
                 # should initial concentrations be updated jointly with the LNA path
                 joint_initdist_update = !fixed_inits & lna_ess_control$joint_initdist_update
                 
+                # objects for computing the SVD of the LNA diffusion matrix
+                svd_U    <- diag(0.0, n_rates)
+                svd_V    <- diag(0.0, n_rates)
+                svd_d    <- rep(0.0, n_rates)
+                
         } else if(method == "ode") {
                 
                 # extract objects from dynamics
                 flow_matrix         <- stem_object$dynamics$flow_matrix_ode
+                n_compartments      <- ncol(flow_matrix)
+                n_rates             <- nrow(flow_matrix)
                 stoich_matrix       <- stem_object$dynamics$stoich_matrix_ode
                 proc_pointer        <- stem_object$dynamics$ode_pointers$ode_ptr
                 set_pars_pointer    <- stem_object$dynamics$ode_pointers$set_ode_params_ptr
@@ -368,7 +382,87 @@ fit_stem <-
                 }
         }
         
+        # vectors for storing the model parameters on their natural and estimation scales
+        # model_params_nat -- model parameters on their natural scales
+        # model_params_est -- model parameters on their estimation scales
+        model_params_nat <- double(n_model_params) 
+        copy_vec(model_params_nat, parameters[param_names_nat])
         
+        model_params_est <- double(n_model_params)
+        for(s in seq_along(to_est_scale)) {
+                model_params_est[param_inds_est[[s]]] = 
+                        to_est_scale[[s]](model_params_nat[param_inds_nat[[s]]])
+        }
+        
+        # analogous vectors for parameter proposals
+        params_prop_nat = double(n_model_params)
+        params_prop_est = double(n_model_params)
+        copy_vec(params_prop_nat, model_params_nat)
+        copy_vec(params_prop_est, model_params_est)
+        
+        # name vectors
+        names(model_params_nat) = param_names_nat
+        names(params_prop_nat)  = param_names_nat
+        names(model_params_est) = param_names_est
+        names(params_prop_est)  = param_names_est
+        
+        # full vector of times
+        times <- sort(unique(c(obstimes,
+                              stem_object$dynamics$tcovar[, 1],
+                              seq(stem_object$dynamics$t0,
+                                  stem_object$dynamics$tmax,
+                                  by = stem_object$dynamics$timestep),
+                              stem_object$dynamics$tmax)))
+        n_times <- length(times)
+        
+        # make sure no times are less than t0
+        if(any(obstimes < stem_object$dynamics$t0)) {
+                stop("Cannot have observations before time t0.")
+        }
+        
+        if(any(stem_object$dynamics$tcovar[,1] < stem_object$dynamics$t0)) {
+                stop("Cannot have time-varying covariates specified before time t0.")
+        }
+        
+        # vector of times, constrained between t0 and tmax
+        census_times <- 
+                times[times >= min(stem_object$dynamics$t0, min(obstimes)) &
+                              times <= max(stem_object$dynamics$tmax, max(obstimes))]
+        census_indices   <- unique(c(0, findInterval(obstimes, census_times) - 1))
+        
+        # warmup iterations
+        initdist_ess_warmup = ifelse(fixed_inits, 0, initdist_ess_control$ess_warmup)
+        lna_ess_warmup      = ifelse(method == "ode", 0, lna_ess_control$ess_warmup)
+        tparam_ess_warmup   = ifelse(is.null(stem_object$dynamics$tparam), 0, tparam_ess_control$ess_warmup)
+        warmup_iterations   = max(c(lna_ess_warmup, initdist_ess_warmup, tparam_ess_warmup))
+        
+        ### Set up MCMC kernel ---------------------------------
+        max_adaptation = max(sapply(param_blocks, function(x) x$control$stop_adaptation))
+        
+        for(s in seq_along(param_blocks)) {
+                # generate sequence of gain factors
+                param_blocks[[s]]$adaptations <- 
+                        pmin(1, param_blocks[[s]]$control$scale_constant *
+                                     (seq(0, iterations) * 
+                                              param_blocks[[s]]$control$step_size + 
+                                              param_blocks[[s]]$control$adaptation_offset + 1) ^ 
+                                     -param_blocks[[s]]$control$scale_cooling)
+                
+                # set nugget step size if it wasn't specified
+                if(is.null(param_blocks[[s]]$control$nugget_step_size)) {
+                        param_blocks[[s]]$control$nugget_step_size = 
+                                100 / iterations
+                }
+                
+                # set the nugget sequence
+                param_blocks[[s]]$nugget_sequence = 
+                        param_blocks[[s]]$control$nugget * 
+                        (seq(0, iterations) * 
+                                 param_blocks[[s]]$control$nugget_step_size + 1) ^ 
+                        -param_blocks[[s]]$control$nugget_cooling
+                
+                
+        }
         
         # grab time-varying parameters
         if(mcmc_restart) {

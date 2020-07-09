@@ -2,9 +2,6 @@
 exportPattern("^[[:alpha:]]+")
 importFrom(Rcpp, evalCpp)
 importFrom(odeintr, compile_sys)
-importFrom("graphics", "abline", "plot")
-importFrom("stats", "D", "dnorm", "rexp", "rmultinom", "rnorm",
-             "runif", "sd", "setNames")
 useDynLib(stemr, .registration=TRUE)
 
 export(CALL_D_MEASURE)
