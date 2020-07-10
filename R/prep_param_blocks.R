@@ -164,12 +164,12 @@ prep_param_blocks = function(param_blocks, parameters, iterations) {
                        kernel_cov       = diag(1.0, param_blocks[[s]]$block_size))
                
                # fill out the mean, covariance, and cholesky
-               copy_vec(dest = param_blocks[[s]]$mvnss_objects$kernel_mean, 
+               copy_vec(dest = param_blocks[[s]]$mvnmh_objects$kernel_mean, 
                         orig = param_blocks[[s]]$pars_est)
-               copy_mat(dest = param_blocks[[s]]$mvnss_objects$kernel_cov, 
+               copy_mat(dest = param_blocks[[s]]$mvnmh_objects$kernel_cov, 
                         orig = param_blocks[[s]]$sigma)
-               param_blocks[[s]]$mvnss_objects$kernel_cov_chol <- 
-                  chol(param_blocks[[s]]$mvnss_objects$kernel_cov)
+               param_blocks[[s]]$mvnmh_objects$kernel_cov_chol <- 
+                  chol(param_blocks[[s]]$mvnmh_objects$kernel_cov)
             }
       }
       

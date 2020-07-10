@@ -18,8 +18,6 @@ Imports:
     MASS,
     extraDistr,
     stats,
-    ggplot2,
-    cowplot,
     Rcpp
 LinkingTo: Rcpp,
     RcppArmadillo,

@@ -166,7 +166,8 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol, stepper) {
                Rcpp::sourceCpp(
                   code = LNA_code, 
                   rebuild = TRUE,
-                  verbose = FALSE)
+                  verbose = FALSE,
+                  cleanupCacheDir = TRUE)
             
             # get the LNA function pointers
             lna_pointer <- c(lna_ptr = LNA_XPtr(),

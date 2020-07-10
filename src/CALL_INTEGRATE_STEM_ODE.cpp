@@ -19,5 +19,5 @@ void CALL_INTEGRATE_STEM_ODE(Rcpp::NumericVector& init, double start, double end
         Rcpp::XPtr<ode_ptr> xpfun(stem_ode_ptr); // Receive the SEXP and put in Xptr
         ode_ptr fun = *xpfun;                   // get function via pointer
 
-        return fun(init, start, end, step_size);
+        fun(init, start, end, step_size);
 }

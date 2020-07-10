@@ -7,13 +7,11 @@
 #'
 #' @return Two vector of strings that serve as function pointers.
 #' @export
-parse_meas_procs <- function(meas_procs, compile_moments = FALSE, messages = TRUE) {
+parse_meas_procs <- function(meas_procs, messages = TRUE) {
       
         # set to null to avoid warnings
       R_MEASURE_XPtr <- NULL
       D_MEASURE_XPtr <- NULL
-      MEAS_MEAN_XPtr <- NULL
-      MEAS_VAR_XPtr  <- NULL
 
         # emitmat is the matrix of emission probabilities
         d_measure_args <- "Rcpp::NumericMatrix& emitmat, const Rcpp::LogicalVector& emit_inds, const int record_ind, const Rcpp::NumericVector& record, const Rcpp::NumericVector& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const Rcpp::NumericVector& tcovar"
@@ -33,12 +31,6 @@ parse_meas_procs <- function(meas_procs, compile_moments = FALSE, messages = TRU
                 r_meas <- paste(r_meas,paste0("if(emit_inds[",i-1,"] && (",
                                               meas_procs[[i]]$emission_params[1]," != 0)) obsmat(record_ind,",i,") = ",
                                               meas_procs[[i]]$rmeasure,"[0];"), sep = "\n ")
-
-                m_meas <- paste(m_meas,paste0("if(emit_inds[",i-1,"]) obsmat(record_ind,",i,") = ",
-                                              meas_procs[[i]]$mmeasure,";"), sep = "\n ")
-
-                v_meas <- paste(v_meas,paste0("if(emit_inds[",i-1,"]) obsmat(record_ind,",i,") = ",
-                                              meas_procs[[i]]$vmeasure,";"), sep = "\n ")
         }
 
         # compile function for updating elements a rate vector
@@ -66,57 +58,21 @@ parse_meas_procs <- function(meas_procs, compile_moments = FALSE, messages = TRU
                                "return(Rcpp::XPtr<d_measure_ptr>(new d_measure_ptr(&D_MEASURE)));",
                                "}", sep = "\n")
 
-        code_m_measure <- paste("// [[Rcpp::depends(Rcpp)]]",
-                                "#include <Rcpp.h>",
-                                "using namespace Rcpp;",
-                                paste0("void MEAS_MEAN(",r_measure_args,") {"),
-                                m_meas,
-                                "}",
-                                paste0("typedef void(*r_measure_ptr)(", r_measure_args,");"),
-                                "// [[Rcpp::export]]",
-                                "Rcpp::XPtr<r_measure_ptr> MEAS_MEAN_XPtr() {",
-                                "return(Rcpp::XPtr<r_measure_ptr>(new r_measure_ptr(&MEAS_MEAN)));",
-                                "}", sep = "\n")
-
-        code_v_measure <- paste("// [[Rcpp::depends(Rcpp)]]",
-                                "#include <Rcpp.h>",
-                                "using namespace Rcpp;",
-                                paste0("void MEAS_VAR(",r_measure_args,") {"),
-                                v_meas,
-                                "}",
-                                paste0("typedef void(*r_measure_ptr)(", r_measure_args,");"),
-                                "// [[Rcpp::export]]",
-                                "Rcpp::XPtr<r_measure_ptr> MEAS_VAR_XPtr() {",
-                                "return(Rcpp::XPtr<r_measure_ptr>(new r_measure_ptr(&MEAS_VAR)));",
-                                "}", sep = "\n")
-
         if(messages) {
                 print("Compiling measurement process functions.")
         }
 
-        Rcpp::sourceCpp(code = code_r_measure, env = globalenv(), rebuild = TRUE)
-        Rcpp::sourceCpp(code = code_d_measure, env = globalenv(), rebuild = TRUE)
+        Rcpp::sourceCpp(code = code_r_measure, 
+                        rebuild = TRUE,
+                        cleanupCacheDir = TRUE)
+        Rcpp::sourceCpp(code = code_d_measure, 
+                        rebuild = TRUE,
+                        cleanupCacheDir = TRUE)
 
         measproc_pointers <- c(r_measure_ptr = R_MEASURE_XPtr(),
                                d_measure_ptr = D_MEASURE_XPtr(),
-                               meas_proc_code = paste(code_r_measure, code_d_measure, sep = "\n\n"))
-
-        if(compile_moments) {
-                Rcpp::sourceCpp(code = code_m_measure, 
-                                # env = globalenv(),
-                                rebuild = TRUE)
-                Rcpp::sourceCpp(code = code_v_measure, 
-                                # env = globalenv(), 
-                                rebuild = TRUE)
-
-                measproc_pointers <- c(measproc_pointers,
-                                       m_measure_ptr = MEAS_MEAN_XPtr(),
-                                       v_measure_ptr = MEAS_VAR_XPtr())
-
-                measproc_pointers$meas_proc_code = paste(measproc_pointers$meas_proc_code,
-                                                         code_m_measure, code_d_measure,
-                                                         collapse = "\n\n")
-        }
+                               meas_proc_code = paste(code_r_measure, 
+                                                      code_d_measure, sep = "\n\n"))
 
         return(measproc_pointers)
 }

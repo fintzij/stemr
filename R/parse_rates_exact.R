@@ -114,9 +114,9 @@ parse_rates_exact <- function(rates, compile_rates, messages = TRUE) {
               }
               
               Rcpp::sourceCpp(code = exact_code,
-                              # env = globalenv(), 
                               verbose = FALSE,
-                              rebuild = TRUE)
+                              rebuild = TRUE,
+                              cleanupCacheDir = TRUE)
               
               rate_pointers <- c(lumped_ptr = LUMPED_XPtr())
               

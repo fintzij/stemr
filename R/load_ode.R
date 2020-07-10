@@ -113,7 +113,8 @@ load_ode <- function(ode_rates, compile_ode, messages, atol, rtol, stepper) {
                 Rcpp::sourceCpp(code = ODE_code, 
                                 # env = globalenv(),
                                 rebuild = TRUE, 
-                                verbose = FALSE)
+                                verbose = FALSE,
+                                cleanupCacheDir = TRUE)
 
                 # get the ODE function pointers
                 ode_pointer <- c(ode_ptr = ODE_XPtr(),

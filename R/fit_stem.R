@@ -62,20 +62,19 @@ fit_stem <-
         # if the MCMC is being restarted, save the existing results
         mcmc_restart <- !is.null(stem_object$stem_settings$restart_objects)
         
+        # grab parameter names
+        parameters      <- stem_object$dynamics$parameters
+        param_names_nat <- names(stem_object$dynamics$param_codes)
+        param_names_est <- c(sapply(mcmc_kern$parameter_blocks, function(x) x$pars_est))
+        n_model_params  <- length(param_names_est)
+        
         # unpack mcmc kernel
         param_blocks         = mcmc_kern$parameter_blocks
         lna_ess_control      = mcmc_kern$lna_ess_control
         initdist_ess_control = mcmc_kern$initdist_ess_control
         tparam_ess_control   = mcmc_kern$tparam_ess_control
         
-        # match parameters in parblocks with dynamics and check that fcns for 
-        # going to and from the estimation scale are 1:1
-        # grab the names of parameters on their natural and estimation scales
-        parameters      <- stem_object$dynamics$parameters
-        param_names_nat <- names(stem_object$dynamics$param_codes)
-        param_names_est <- c(sapply(mcmc_kern$parameter_blocks, function(x) x$pars_est))
-        n_model_params  <- length(param_names_est)
-        
+        # prepare param_blocks
         param_blocks <- 
                 prep_param_blocks(param_blocks = param_blocks, 
                                   parameters = parameters,
