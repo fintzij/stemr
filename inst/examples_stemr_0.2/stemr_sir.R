@@ -353,10 +353,12 @@ mcmc_kern <-
                   pars_nat = c("beta", "mu", "rho", "phi"),
                   pars_est = c("log_R0", "log_mu", "logit_rho", "log_phi"),
                   priors = priors,
-                  alg = "mvnmh",
+                  alg = "mvnss",
                   sigma = diag(0.01, 4),
                   initializer = par_initializer,
-                  control = mvnmh_control(stop_adaptation = 1e2))),
+                  control = 
+                    # mvnss_control(stop_adaptation = 1e2))), 
+                    mvnmh_control(stop_adaptation = 1e2))),
           lna_ess_control = lna_control(bracket_update_iter = 50,
                                         joint_initdist_update = TRUE))
 
@@ -372,7 +374,7 @@ res <-
              iterations = 3.5e2)
 
 #' 
-#' The `stem_inference` function returns a list of MCMC samples, latent epidemic paths, and MCMC tuning parameters (e.g., global scaling parameter adapted in the MCMC). These can be accessed as follows:
+#' The `fit_stem` function returns a list with posterior samples, latent epidemic paths, and MCMC tuning parameters (e.g., global scaling parameter adapted in the MCMC). These can be accessed as follows:
 #' 
 ## ----access_res, echo = TRUE---------------------------------------------
 runtime = res$results$time

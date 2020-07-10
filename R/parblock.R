@@ -26,10 +26,21 @@
 #'
 #' @return parameter block for use in MCMC kernel
 #' @export
-parblock <- function(pars_nat, pars_est, priors, alg, sigma, initializer = NULL, control = NULL) {
-    
+parblock <-
+    function(pars_nat,
+             pars_est,
+             priors,
+             alg,
+             sigma,
+             initializer = NULL,
+             control = NULL) {
+        
     if(!alg %in% c("mvnmh", "mvnss")) {
         stop("MCMC algorithm for updating parameters must be one of 'mvnmh' or 'mvnss'.")
+    }
+    
+    if(length(pars_nat) != length(pars_est)) {
+        stop("pars_nat and pars_est must have the same length.")
     }
     
     # make sure sigma has row and column names

@@ -29,7 +29,7 @@
 #' @export
 mvnss_control <-
       function(n_updates = 1,
-               initial_bracket_width = 1,
+               bracket_width = 1,
                cov_update_interval = 1,
                bracket_limits = c(0,Inf),
                scale_constant = 0.5,
@@ -46,7 +46,7 @@ mvnss_control <-
       }
       
       list(n_updates             = n_updates,
-           initial_bracket_width = initial_bracket_width,
+           bracket_width         = bracket_width,
            cov_update_interval   = cov_update_interval,
            bracket_limits        = bracket_limits,
            scale_constant        = scale_constant,

@@ -76,56 +76,10 @@ fit_stem <-
         param_names_est <- c(sapply(mcmc_kern$parameter_blocks, function(x) x$pars_est))
         n_model_params  <- length(param_names_est)
         
-        # functions for going to and from the estimation scale
-        log_prior = lapply(param_blocks, function(x) x$priors$logprior)
-        param_inds_nat = lapply(param_blocks, function(x) match(x$pars_nat, param_names_nat))
-        param_inds_est = param_inds_nat
-        to_est_scale = lapply(param_blocks, function(x) x$priors$to_estimation_scale)
-        from_est_scale = lapply(param_blocks, function(x) x$priors$from_estimation_scale)
-        param_initializer = lapply(param_blocks, function(x) x$initializer)
-        
-        ind_est_0 = 0
-        for(s in seq_along(param_blocks)) {
-                
-                # double check whether the functions for going to and from the estimation scale biject
-                if(!all.equal(parameters[param_inds_nat[[s]]],
-                              from_est_scale[[s]](to_est_scale[[s]](parameters[param_inds_nat[[s]]])))) {
-                        stop(paste0("Functions for going to and from the estimation scale in parameter block ", s, " do not biject."))
-                }
-                
-                # get the estimation scale indices
-                param_inds_est = ind_est_0 + seq_along(param_inds_nat[[s]])
-                ind_est_0 = ind_est_0 + length(param_inds_nat[[s]])
-                
-                # initialize parameters on their estimation scale
-                param_blocks[[s]]$params_est = to_est_scale[[s]](parameters[param_inds_nat[[s]]])
-                
-                # check that the log-prior was not -Inf if no initializer is supplied, else initialize params
-                if(is.null(param_initializer[[s]])) {
-                        pd = log_prior[[s]](param_blocks[[s]]$params_est)
-                        if(is.infinite(pd)) {
-                                stop("Parameters have log prior density of negative infinity. Try another initialization.")
-                        }
-                } else {
-                        # initialize parameters
-                        parameters[param_inds_nat[[s]]] = param_initializer[[s]]()
-                        
-                        # check log prior
-                        pd = log_prior[[s]](to_est_scale[[s]](parameters[param_inds_nat[[s]]]))
-                        
-                        # keep initializing if pd is infinite
-                        par_init_attempt <- 1
-                        while(is.infinite(pd) && par_init_attempt <= initialization_attempts) {
-                                parameters[param_inds_nat[[s]]] = param_initializer[[s]]()
-                                pd = log_prior[[s]](to_est_scale[[s]](parameters[param_inds_nat[[s]]]))
-                                par_init_attempt <- par_init_attempt + 1
-                        }
-                        
-                        if(is.infinite(pd)) {
-                                stop("Parameters have log prior density of negative infinity. Try another initialization.")
-                        }
-                }
-        }
+        param_blocks <- 
+                prep_param_blocks(param_blocks = param_blocks, 
+                                  parameters = parameters,
+                                  iterations = iterations)
         
         # progress printing interval
         if(print_progress != 0) {

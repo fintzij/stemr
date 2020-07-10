@@ -1,4 +1,2 @@
-PKG_LIBS=$(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
-PKG_CXXFLAGS= -DBOOST_NO_AUTO_PTR 
-PKG_CXX14FLAGS=-O3 -march=native -mtune=native
-PKG_CXX14FLAGS += -arch x86_64 -ftemplate-depth-256
+PKG_CXXFLAGS= -DBOOST_NO_AUTO_PTR
+PKG_LIBS = $(shell $(R_HOME)/bin/Rscript -e "Rcpp:::LdFlags()" ) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) 
