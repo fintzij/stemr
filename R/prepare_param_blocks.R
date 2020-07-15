@@ -2,11 +2,12 @@
 #'
 #' @param param_blocks list of parameter blocks
 #' @param parameters vector of parameters
+#' @param param_codes vector of parameter codes
 #' @param iterations number of MCMC iterations
 #'
 #' @return validated param_block list with mcmc bookkeeping objects
 #' @export
-prep_param_blocks = function(param_blocks, parameters, iterations) {
+prepare_param_blocks = function(param_blocks, parameters, param_codes, iterations) {
       
       ### first validate the parameter blocks
       # check that all parameters are in a block
@@ -14,10 +15,13 @@ prep_param_blocks = function(param_blocks, parameters, iterations) {
                     sort(names(parameters)))) {
             stop("Not all parameters are part of a parameter block.")
       }
-      
+
+      # names of the param codes 
+      code_names = names(param_codes)
+         
       # functions for going to and from the estimation scale
       log_prior         = lapply(param_blocks, function(x) x$priors$logprior)
-      param_inds_nat    = lapply(param_blocks, function(x) match(x$pars_nat, param_names_nat))
+      param_inds_nat    = lapply(param_blocks, function(x) match(x$pars_nat, code_names))
       param_inds_est    = param_inds_nat
       to_est_scale      = lapply(param_blocks, function(x) x$priors$to_estimation_scale)
       from_est_scale    = lapply(param_blocks, function(x) x$priors$from_estimation_scale)
@@ -29,12 +33,6 @@ prep_param_blocks = function(param_blocks, parameters, iterations) {
       
       ind_est_0 = 0
       for(s in seq_along(param_blocks)) {
-            
-            # double check whether the functions for going to and from the estimation scale biject
-            if(!all.equal(parameters[param_inds_nat[[s]]],
-                          from_est_scale[[s]](to_est_scale[[s]](parameters[param_inds_nat[[s]]])))) {
-                  stop(paste0("Functions for going to and from the estimation scale in parameter block ", s, " do not biject."))
-            }
             
             # get the estimation scale indices
             param_inds_est = ind_est_0 + seq_along(param_inds_nat[[s]])
@@ -80,16 +78,24 @@ prep_param_blocks = function(param_blocks, parameters, iterations) {
                   }
             }
             
+            # double check whether the functions for going to and from the estimation scale biject
+            if(!all.equal(param_blocks[[s]]$pars_nat,
+                          from_est_scale[[s]](
+                             to_est_scale[[s]](
+                                param_blocks[[s]]$pars_nat)))) {
+               stop(paste0("Functions for going to and from the estimation scale in parameter block ", s, " do not biject."))
+            }
+            
             ### now set up other MCMC objects-------------
             # names and indices
             param_blocks[[s]]$param_names_nat = param_names_nat[[s]]
             param_blocks[[s]]$param_names_est = param_names_est[[s]]
             
-            param_blocks[[s]]$param_inds_nat_R   = param_inds_nat[[s]]
-            param_blocks[[s]]$param_inds_nat_Cpp = param_inds_nat[[s]] - 1
-            
-            param_blocks[[s]]$param_inds_est_R   = param_inds_est[[s]]
-            param_blocks[[s]]$param_inds_est_Cpp = param_inds_est[[s]] - 1
+            # parameter indices in the params_cur and params_prop matrices
+            param_blocks[[s]]$param_inds_nat_Cpp = 
+               param_codes[match(param_names_nat[[s]], names(param_codes))]
+            param_blocks[[s]]$param_inds_nat_R = 
+               param_blocks[[s]]$param_inds_nat_Cpp + 1
             
             # vectors for proposals
             param_blocks[[s]]$block_size = length(param_blocks[[s]]$pars_nat)

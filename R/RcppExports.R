@@ -151,6 +151,14 @@ convert_lna2 <- function(path, flow_matrix, init_state, statemat) {
     invisible(.Call(`_stemr_convert_lna2`, path, flow_matrix, init_state, statemat))
 }
 
+#' Insert parameters into the first row of a parameter matrix
+#' 
+#' @param parmat parameter matrics
+#' @param pars vector of parameters to insert
+#' @param colinds vector of column indices
+#' @param rowinds vector of row indices, just the first row by default.
+NULL
+
 #' Insert parameters into each row of a parameter matrix
 #'
 #' @param lnapars matrix of lna parameters, constants, and time-varying covars

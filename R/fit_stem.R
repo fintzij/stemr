@@ -74,11 +74,22 @@ fit_stem <-
         initdist_ess_control = mcmc_kern$initdist_ess_control
         tparam_ess_control   = mcmc_kern$tparam_ess_control
         
+        # parameter codes
+        if(method == "lna") {
+                n_pars_tot  = length(stem_object$dynamics$lna_rates$lna_param_codes) 
+                param_codes = stem_object$dynamics$lna_rates$lna_param_codes        
+        } else {
+                n_pars_tot  = length(stem_object$dynamics$ode_rates$ode_param_codes) 
+                param_codes = stem_object$dynamics$lna_rates$ode_param_codes
+        }
+        
         # prepare param_blocks
         param_blocks <- 
-                prep_param_blocks(param_blocks = param_blocks, 
-                                  parameters = parameters,
-                                  iterations = iterations)
+                prepare_param_blocks(
+                        param_blocks = param_blocks, 
+                        parameters   = parameters,
+                        param_codes  = param_codes,
+                        iterations   = iterations)
         
         # progress printing interval
         if(print_progress != 0) {
@@ -335,30 +346,6 @@ fit_stem <-
                 }
         }
         
-        # vectors for storing the model parameters on their natural and estimation scales
-        # model_params_nat -- model parameters on their natural scales
-        # model_params_est -- model parameters on their estimation scales
-        model_params_nat <- double(n_model_params) 
-        copy_vec(model_params_nat, parameters[param_names_nat])
-        
-        model_params_est <- double(n_model_params)
-        for(s in seq_along(to_est_scale)) {
-                model_params_est[param_inds_est[[s]]] = 
-                        to_est_scale[[s]](model_params_nat[param_inds_nat[[s]]])
-        }
-        
-        # analogous vectors for parameter proposals
-        params_prop_nat = double(n_model_params)
-        params_prop_est = double(n_model_params)
-        copy_vec(params_prop_nat, model_params_nat)
-        copy_vec(params_prop_est, model_params_est)
-        
-        # name vectors
-        names(model_params_nat) = param_names_nat
-        names(params_prop_nat)  = param_names_nat
-        names(model_params_est) = param_names_est
-        names(params_prop_est)  = param_names_est
-        
         # full vector of times
         times <- sort(unique(c(obstimes,
                               stem_object$dynamics$tcovar[, 1],
@@ -388,34 +375,29 @@ fit_stem <-
         lna_ess_warmup      = ifelse(method == "ode", 0, lna_ess_control$ess_warmup)
         tparam_ess_warmup   = ifelse(is.null(stem_object$dynamics$tparam), 0, tparam_ess_control$ess_warmup)
         warmup_iterations   = max(c(lna_ess_warmup, initdist_ess_warmup, tparam_ess_warmup))
+        max_adaptation      = max(sapply(param_blocks, function(x) x$control$stop_adaptation))
         
-        ### Set up MCMC kernel ---------------------------------
-        max_adaptation = max(sapply(param_blocks, function(x) x$control$stop_adaptation))
+        ### Set up parameter objects ---------------------------------
+        params_cur <- 
+                matrix(0.0,
+                       nrow = n_times,
+                       ncol = n_pars_tot,
+                       dimnames = list(NULL, names(param_codes)))
         
-        for(s in seq_along(param_blocks)) {
-                # generate sequence of gain factors
-                param_blocks[[s]]$adaptations <- 
-                        pmin(1, param_blocks[[s]]$control$scale_constant *
-                                     (seq(0, iterations) * 
-                                              param_blocks[[s]]$control$step_size + 
-                                              param_blocks[[s]]$control$adaptation_offset + 1) ^ 
-                                     -param_blocks[[s]]$control$scale_cooling)
-                
-                # set nugget step size if it wasn't specified
-                if(is.null(param_blocks[[s]]$control$nugget_step_size)) {
-                        param_blocks[[s]]$control$nugget_step_size = 
-                                100 / iterations
-                }
-                
-                # set the nugget sequence
-                param_blocks[[s]]$nugget_sequence = 
-                        param_blocks[[s]]$control$nugget * 
-                        (seq(0, iterations) * 
-                                 param_blocks[[s]]$control$nugget_step_size + 1) ^ 
-                        -param_blocks[[s]]$control$nugget_cooling
-                
-                
-        }
+        params_prop <- 
+                matrix(0.0,
+                       nrow = n_times,
+                       ncol = n_pars_tot,
+                       dimnames = list(NULL, names(param_codes)))
+        
+        # insert the lna parameters into the parameter matrix
+        pars2lnapars2(lnapars    = lna_params_cur,
+                      parameters = c(model_params_nat, init_volumes_cur), 
+                      c_start    = 0)
+        pars2lnapars2(lnapars    = lna_params_prop, 
+                      parameters = c(params_prop_nat, init_volumes_prop), 
+                      c_start    = 0)
+        
         
         # grab time-varying parameters
         if(mcmc_restart) {

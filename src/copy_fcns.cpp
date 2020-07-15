@@ -31,6 +31,19 @@ void pars2lnapars2(arma::mat& lnapars, const arma::rowvec& parameters, int c_sta
       lnapars(0, arma::span(c_start, c_start + c_end)) = parameters;
 }
 
+//' Insert parameters into the first row of a parameter matrix
+//' 
+//' @param parmat parameter matrics
+//' @param pars vector of parameters to insert
+//' @param colinds vector of column indices
+//' @param rowinds vector of row indices, just the first row by default.
+void pars2parmat(arma::mat& parmat, 
+                 const arma::rowvec pars,
+                 const arma::uvec colinds,
+                 const arma::uvec rowinds = 0) {
+  parmat.submat(rowinds, colinds) = pars; 
+}
+
 //' Copy an element from one vector into another
 //'
 //' @param dest destination row vector
