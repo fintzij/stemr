@@ -92,10 +92,10 @@ prepare_param_blocks = function(param_blocks, parameters, param_codes, iteration
             param_blocks[[s]]$param_names_est = param_names_est[[s]]
             
             # parameter indices in the params_cur and params_prop matrices
-            param_blocks[[s]]$param_inds_nat_Cpp = 
+            param_blocks[[s]]$param_inds_Cpp = 
                param_codes[match(param_names_nat[[s]], names(param_codes))]
-            param_blocks[[s]]$param_inds_nat_R = 
-               param_blocks[[s]]$param_inds_nat_Cpp + 1
+            param_blocks[[s]]$param_inds_R = 
+               param_blocks[[s]]$param_inds_Cpp + 1
             
             # vectors for proposals
             param_blocks[[s]]$block_size = length(param_blocks[[s]]$pars_nat)

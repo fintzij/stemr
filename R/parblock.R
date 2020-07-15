@@ -5,8 +5,8 @@
 #' @param pars_est character vector of parameter names on their estimation scale
 #'   (i.e., corresponding to row/column names in the kernel covariance matrix).
 #'   IMPORTANT: the estimation scale for a parameter should be unconstrained,
-#'   e.g., if $\mu$ is the recovery rate in an SIR model, it is natural to use
-#'   the log infectious period duration, $-\log(\mu)$ as the estimation scale.
+#'   e.g., if mu is the recovery rate in an SIR model, it is natural to use
+#'   the log infectious period duration, -log(mu) as the estimation scale.
 #' @param priors A list of three functions supplied by the user with names
 #'   "logprior", "to_estimation_scale", and "from_estimation_scale" (N.B. All
 #'   three must be supplied). The first of these functions should take as an

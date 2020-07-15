@@ -6,7 +6,7 @@
 \usage{
 mvnss_control(
   n_updates = 1,
-  initial_bracket_width = 1,
+  bracket_width = 1,
   cov_update_interval = 1,
   bracket_limits = c(0, Inf),
   scale_constant = 0.5,
@@ -21,8 +21,6 @@ mvnss_control(
 }
 \arguments{
 \item{n_updates}{number of updates per iteration.}
-
-\item{initial_bracket_width}{initial width of the slice bracket}
 
 \item{cov_update_interval}{how often the empirical covariance matrix should
 be updated}
@@ -55,6 +53,8 @@ factors.}
 
 \item{nugget_step_size}{increment for each iteration, defaults to 100/number
 of iterations.}
+
+\item{initial_bracket_width}{initial width of the slice bracket}
 }
 \value{
 list with control settings for multivariate normal slice sampling

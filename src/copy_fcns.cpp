@@ -37,6 +37,10 @@ void pars2lnapars2(arma::mat& lnapars, const arma::rowvec& parameters, int c_sta
 //' @param pars vector of parameters to insert
 //' @param colinds vector of column indices
 //' @param rowinds vector of row indices, just the first row by default.
+//' 
+//' @return modifies the parameter matrix in place
+//' @export
+// [[Rcpp::export]]
 void pars2parmat(arma::mat& parmat, 
                  const arma::rowvec pars,
                  const arma::uvec colinds,

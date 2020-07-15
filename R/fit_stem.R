@@ -108,7 +108,6 @@ fit_stem <-
         initializer         <- stem_object$dynamics$initializer
         fixed_inits         <- stem_object$dynamics$fixed_inits
         n_strata            <- stem_object$dynamics$n_strata
-        initdist_params_cur <- as.numeric(stem_object$dynamics$initdist_params)
         t0                  <- stem_object$dynamics$t0
         step_size           <- stem_object$dynamics$dynamics_args$step_size
         
@@ -116,6 +115,13 @@ fit_stem <-
         measproc_indmat <- stem_object$measurement_process$measproc_indmat
         dat             <- stem_object$measurement_process$obsmat
         obstimes        <- stem_object$measurement_process$obstimes
+        
+        # grab time-varying parameters
+        if(mcmc_restart) {
+                tparam <- stem_object$stem_settings$tparam_for_restart
+        } else {
+                tparam <- stem_object$dynamics$tparam
+        }
         
         # dynamics and measurement process objects that are method specific
         if(method == "lna") {
@@ -153,6 +159,13 @@ fit_stem <-
                 svd_V    <- diag(0.0, n_rates)
                 svd_d    <- rep(0.0, n_rates)
                 
+                # grab the tparam indices and update scheme
+                if(!is.null(tparam)) {
+                        tparam_inds <-
+                                stem_object$dynamics$lna_rates$lna_param_codes[
+                                        sapply(tparam, function(x) x$tparam_name)]
+                }
+                
         } else if(method == "ode") {
                 
                 # extract objects from dynamics
@@ -182,6 +195,13 @@ fit_stem <-
                 
                 # obviously, initial distribution is its own ESS update
                 joint_initdist_update = FALSE
+                
+                # grab the tparam indices
+                if(!is.na(tparam)) {
+                        tparam_inds <-
+                                stem_object$dynamics$ode_rates$ode_param_codes[
+                                        sapply(tparam, function(x) x$tparam_name)]
+                }
         }
         
         # LNA ESS schedule --------------------------------------------------------
@@ -243,73 +263,10 @@ fit_stem <-
         }
         
         # list for initial compartment volume objects
-        initdist_objects <- vector("list", length = n_strata)
-        for(t in seq_len(n_strata)) {
-                
-                # hyperparameters
-                comp_prior <- 
-                        if(!initializer[[t]]$fixed) {
-                                if(!is.null(initializer[[t]]$prior)) {
-                                        if(comp_size_vec[t] != 0) {
-                                                initializer[[t]]$prior
-                                        } else {
-                                                rep(0.0, length(initializer[[t]]$init_states))
-                                        }
-                                } else {
-                                        if(comp_size_vec[t] != 0) {
-                                                initializer[[t]]$init_states
-                                        } else {
-                                                rep(0.0, length(initializer[[t]]$init_states))     
-                                        }
-                                }
-                        } else {
-                                if(comp_size_vec[t] != 0) {
-                                        initializer[[t]]$init_states
-                                } else {
-                                        rep(0.0, length(initializer[[t]]$init_states))     
-                                }
-                        }
-                
-                # compartment probabilities
-                comp_probs <- if(sum(comp_prior) != 0) {
-                        comp_prior / sum(comp_prior)
-                } else {
-                        rep(0.0, length(comp_prior))
-                }
-                
-                # unconstrained moments
-                comp_mean  <- comp_size_vec[t] * comp_probs
-                comp_cov   <- comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs)) 
-                
-                if(initializer[[t]]$dist == "dirmultinom") 
-                        comp_cov <- comp_cov * ((comp_size_vec[t] + sum(comp_prior))/(1 + sum(comp_prior))) 
-                
-                comp_cov_svd <- svd(comp_cov)
-                comp_cov_svd$d[length(comp_cov_svd$d)] <- 0
-                comp_sqrt_cov <- comp_cov_svd$u %*% diag(sqrt(comp_cov_svd$d))
-                
-                initdist_objects[[t]] <- 
-                        list(
-                                stratum            = initializer[[t]]$strata,
-                                fixed              = initializer[[t]]$fixed,
-                                comp_size          = comp_size_vec[t],
-                                comp_mean          = comp_mean,
-                                comp_sqrt_cov      = comp_sqrt_cov[,-length(comp_mean)],
-                                draws_cur          = rnorm(length(comp_mean)-1),
-                                draws_prop         = rnorm(length(comp_mean)-1),
-                                draws_ess          = rnorm(length(comp_mean)-1),
-                                comp_inds_R        = initializer[[t]]$codes,
-                                comp_inds_Cpp      = initializer[[t]]$codes - 1
-                        )
-        }
-        
-        # names of initial compartment volumes
-        convrec_initvol_names <- names(stem_object$dynamics$initdist_params)
-        
-        # vector for the initial compartment volumes
-        init_volumes_cur  <- rep(0.0, n_compartments); copy_vec(init_volumes_cur, initdist_params_cur)
-        init_volumes_prop <- rep(0.0, n_compartments); copy_vec(init_volumes_prop, initdist_params_cur)
-        names(init_volumes_prop) <- names(init_volumes_cur) <- names(initdist_params_cur)
+        initdist_objects <- 
+                prepare_initdist_objects(initializer = initializer,
+                                         param_codes = param_codes,
+                                         comp_size_vec = comp_size_vec)
         
         # initialize initdist draws
         if(!fixed_inits) {
@@ -322,7 +279,7 @@ fit_stem <-
                         initdist_angle_record <- rep(1, floor(iterations / thin_params))
                 }
                 
-                bad_draws             <- rep(TRUE, length(initdist_objects))
+                bad_draws        <- rep(TRUE, length(initdist_objects))
                 initdist_log_lik <- rep(0.0, floor(iterations / thin_params) + 1)
                 
                 # map draws to initial volumes
@@ -330,18 +287,22 @@ fit_stem <-
                         for(s in seq_along(initdist_objects)) {
                                 
                                 # map draws
-                                copy_vec2(dest = init_volumes_cur,
-                                          orig = c(initdist_objects[[s]]$comp_mean + 
-                                                           c(initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur)),
-                                          inds = initdist_objects[[s]]$comp_inds_Cpp)
+                                copy_vec(dest = initdist_objects[[s]]$init_volumes,
+                                         orig = c(initdist_objects[[s]]$comp_mean +
+                                                          c(initdist_objects[[s]]$comp_sqrt_cov %*% 
+                                                              initdist_objects[[s]]$draws_cur)))
                                 
                                 # check boundary conditions
                                 bad_draws[s] <- 
-                                        any(init_volumes_cur[initdist_objects[[s]]$comp_inds_R] < 0) | 
-                                        any(init_volumes_cur[initdist_objects[[s]]$comp_inds_R] > initdist_objects[[s]]$comp_size)
+                                        any(initdist_objects[[s]]$init_volumes < 0) | 
+                                        any(initdist_objects[[s]]$init_volumes > 
+                                                    initdist_objects[[s]]$comp_size)
                                 
                                 # if outside boundaries, resample
-                                if(bad_draws[s]) initdist_objects[[s]]$draws_cur <- rnorm(initdist_objects[[s]]$draws_cur)
+                                if(bad_draws[s]) {
+                                        initdist_objects[[s]]$draws_cur <- 
+                                                rnorm(initdist_objects[[s]]$draws_cur)        
+                                } 
                         }      
                 }
         }
@@ -390,21 +351,354 @@ fit_stem <-
                        ncol = n_pars_tot,
                        dimnames = list(NULL, names(param_codes)))
         
-        # insert the lna parameters into the parameter matrix
-        pars2lnapars2(lnapars    = lna_params_cur,
-                      parameters = c(model_params_nat, init_volumes_cur), 
-                      c_start    = 0)
-        pars2lnapars2(lnapars    = lna_params_prop, 
-                      parameters = c(params_prop_nat, init_volumes_prop), 
-                      c_start    = 0)
+        # insert parameters into the parameter matrix
+        insert_params(parmat = params_cur, param_blocks = param_blocks, prop = FALSE)
+        insert_params(parmat = params_prop, param_blocks = param_blocks, prop = FALSE)
         
+        # insert initial conditions
+        insert_initdist(parmat = params_cur, initdist_objects = initdist_objects, prop = FALSE)
+        insert_initdist(parmat = params_prop, initdist_objects = initdist_objects, prop = FALSE)
         
-        # grab time-varying parameters
-        if(mcmc_restart) {
-                tparam <- stem_object$stem_settings$tparam_for_restart
-        } else {
-                tparam <- stem_object$dynamics$tparam
+        # get column indices for constants and time-varying covariates
+        const_inds  <- 
+                seq_along(stem_object$dynamics$const_codes) + 
+                length(stem_object$dynamics$param_codes)
+        tcovar_inds <- (max(const_inds) + 1):ncol(lna_params_cur)
+        
+        # insert the constants
+        params_cur[, const_inds]  <- 
+                matrix(stem_object$dynamics$constants,
+                       nrow = nrow(params_cur),
+                       ncol = length(const_inds), byrow = T)
+        
+        params_prop[, const_inds] <- 
+                matrix(stem_object$dynamics$constants,
+                       nrow = nrow(params_cur),
+                       ncol = length(const_inds), byrow = T)
+        
+        # generate forcing indices and other objects
+        forcing_inds   <- rep(FALSE, length(lna_census_times))
+        
+        # insert time varying covariates
+        if (!is.null(stem_object$dynamics$tcovar)) {
+                
+                tcovar_rowinds <- 
+                        findInterval(times, stem_object$dynamics$tcovar[, 1], left.open = F)
+                params_cur[tcovar_rowinds, tcovar_inds] <- 
+                        stem_object$dynamics$tcovar[tcovar_rowinds, -1]
+                params_prop[tcovar_rowinds, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds, -1]
+                
+                # zero out forcings if necessary
+                if(!is.null(stem_object$dynamics$forcings)) {
+                        
+                        # get the forcing indices (supplied in the original tcovar matrix)
+                        for(f in seq_along(stem_object$dynamics$forcings)) {
+                                forcing_inds <- 
+                                        forcing_inds | 
+                                        stem_object$dynamics$tcovar[stem_object$dynamics$tcovar[,1] %in% census_times, 
+                                                                    stem_object$dynamics$forcings[[f]]$tcovar_name] != 0
+                        }
+                        
+                        zero_inds    <- !forcing_inds
+                        
+                        # zero out the tcovar elements corresponding to times with no forcings
+                        for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
+                                params_cur[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]  = 0
+                                params_prop[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] = 0
+                        }
+                }
         }
+        
+        
+        # get indices for time-varying parameters
+        if (!is.null(tparam)) {
+                
+                if (!joint_tparam_update) {
+                        tparam_ess  <- 1
+                } else {
+                        tparam_ess <- NULL
+                }
+                
+                # verify whether the mcmc is being restarted
+                if (!mcmc_restart) {
+                        
+                        # generate the indices for updating the time-varying parameter and initialize the values
+                        for (s in seq_along(tparam)) {
+                                
+                                # can get rid of the values slot
+                                tparam[[s]]$values <- NULL
+                                
+                                # indices
+                                tparam[[s]]$col_ind   <- param_codes[tparam[[s]]$tparam_name]
+                                tparam[[s]]$tpar_inds <- findInterval(times, tparam[[s]]$times, left.open = F) - 1
+                                tparam[[s]]$tpar_inds[tparam[[s]]$tpar_inds == -1] <- 0
+                                
+                                # values
+                                tparam[[s]]$draws_cur  <- rnorm(tparam[[s]]$n_draws)
+                                tparam[[s]]$draws_prop <- rnorm(tparam[[s]]$n_draws)
+                                tparam[[s]]$draws_ess  <- rnorm(tparam[[s]]$n_draws)
+                                tparam[[s]]$log_lik    <- sum(dnorm(tparam[[s]]$draws_cur, log = TRUE))
+                                
+                                # get values
+                                insert_tparam(tcovar = params_cur,
+                                              values = tparam[[s]]$draws2par(
+                                                      parameters = params_cur[1,],
+                                                      draws = tparam[[s]]$draws_cur),
+                                              col_ind   = tparam[[s]]$col_ind,
+                                              tpar_inds = tparam[[s]]$tpar_inds)
+                                
+                                # copy into lna_params_prop
+                                copy_col(
+                                        dest = params_prop,
+                                        orig = params_cur,
+                                        ind  = tparam[[s]]$col_ind
+                                )
+                        }
+                } else {
+                        
+                        # if restarting, just copy the values into the parameter matrices
+                        for (s in seq_along(tparam)) {
+                                
+                                # get values
+                                insert_tparam(tcovar = params_cur,
+                                              values = tparam[[s]]$draws2par(
+                                                        parameters = params_cur[1,],
+                                                        draws = tparam[[s]]$draws_cur),
+                                              col_ind   = tparam[[s]]$col_ind,
+                                              tpar_inds = tparam[[s]]$tpar_inds)
+                                
+                                # copy into lna_params_prop
+                                copy_col(dest = params_prop,
+                                         orig = params_cur,
+                                         ind  = tparam[[s]]$col_ind)
+                        }
+                }
+                
+                if(tparam_ess_control$joint_tparam_update | 
+                   length(tparam) == 1) {
+                        tparam_steps        <- 1.0
+                        tparam_angle        <- 0.0
+                        tparam_step_record  <- rep(1, floor(iterations / thin_params))
+                        tparam_angle_record <- rep(1, floor(iterations / thin_params))
+                } else {
+                        tparam_steps        <- rep(1.0, length(tparam))
+                        tparam_angle        <- rep(0.0, length(tparam))
+                        tparam_step_record  <- matrix(1, nrow = length(tparam), 
+                                                      ncol = floor(iterations / thin_params))
+                }
+                
+                tparam_log_lik <-
+                        matrix(0.0,
+                               nrow = 1 + floor(iterations / thin_params),
+                               ncol = length(tparam),
+                               dimnames = list(NULL, paste0(sapply(tparam, function(x) x$tparam_name),"_loglik")))
+                tparam_samples <-
+                        array(0.0, 
+                              dim = c(n_times, length(tparam), 1 + floor(iterations / thin_params)))
+                        
+        } else {
+                tparam              <- NULL
+                tparam_steps        <- NULL
+                tparam_angle        <- NULL
+                tparam_step_record  <- NULL
+                tparam_angle_record <- NULL
+                tparam_log_lik      <- NULL
+                tparam_samples      <- NULL
+                tparam_log_lik      <- NULL
+        }
+        
+        # indices for when to update the parameters
+        param_update_inds <- rep(FALSE, length(census_times))
+        param_update_inds[1] <- TRUE
+        
+        if(!is.null(stem_object$dynamics$tcovar)) {
+                param_update_inds[census_times %in% stem_object$dynamics$tcovar[,1]] <- TRUE
+        }
+        
+        if(!is.null(tparam)) {
+                for(s in seq_along(tparam)) {
+                        param_update_inds[census_times %in% tparam[[s]]$times] <- TRUE
+                }      
+        }
+        
+        if(length(param_update_inds) == nrow(stem_object$dynamics$tcovar_changemat)) {
+                param_update_inds <- 
+                        param_update_inds | apply(stem_object$dynamics$tcovar_changemat, 1, any)
+        }
+        
+        # generate forcing objects
+        if(!is.null(stem_object$dynamics$forcings)) {
+                
+                # names and indices
+                forcing_tcovars   <- sapply(forcings, function(x) x$tcovar_name)
+                forcing_tcov_inds <- match(forcing_tcovars, colnames(params_cur)) - 1
+                forcing_events    <- c(sapply(forcings, function(x) paste0(x$from, "2", x$to)))
+                
+                # matrix indicating which compartments are involved in which forcings in and out
+                forcings_out <-
+                        matrix(0.0, 
+                               nrow = ncol(flow_matrix), 
+                               ncol = length(forcings),
+                               dimnames = list(colnames(flow_matrix), 
+                                               forcing_tcovars))
+                
+                forcing_transfers <- 
+                        array(0.0, 
+                              dim = c(ncol(flow_matrix),
+                                      ncol(flow_matrix),
+                                      length(forcings)),
+                              dimnames = list(colnames(flow_matrix),
+                                              colnames(flow_matrix),
+                                              forcing_tcovars))
+                
+                for(s in seq_along(forcings)) {
+                        
+                        forcings_out[forcings[[s]]$from, s] <- 1
+                        
+                        for(t in seq_along(forcings[[s]]$from)) {
+                                forcing_transfers[forcings[[s]]$from[t], forcings[[s]]$from[t], s] <- -1
+                                forcing_transfers[forcings[[s]]$to[t], forcings[[s]]$from[t], s]    <- 1
+                        }
+                }
+                
+        } else {
+                forcing_tcovars   <- character(0L)
+                forcing_tcov_inds <- integer(0L)
+                forcing_events    <- character(0L)
+                forcings_out      <- matrix(0.0, nrow = 0, ncol = 0)
+                forcing_transfers <- array(0.0, dim = c(0,0,0))
+        }
+        
+        # matrix in which to store the emission probabilities
+        emitmat <- cbind(dat[, 1, drop = F],
+                         matrix(0.0,
+                                nrow = nrow(measproc_indmat),
+                                ncol = ncol(measproc_indmat),
+                                dimnames = list(NULL, colnames(measproc_indmat))))
+        
+        pathmat_prop <- cbind(census_times,
+                              matrix(0.0,
+                                     nrow = length(census_times),
+                                     ncol = nrow(flow_matrix),
+                                     dimnames = list(NULL, c(rownames(flow_matrix)))))
+        
+        # set up MCMC objects
+        parameter_samples_nat <-
+                matrix(0.0,
+                       nrow = 1 + floor(iterations / thin_params),
+                       ncol = n_model_params + n_compartments,
+                       dimnames = 
+                               list(NULL, 
+                                    c(param_names_nat, 
+                                      names(stem_object$dynamics$initdist_params)))
+                )
+        
+        parameter_samples_est <-
+                matrix(0.0,
+                       nrow = 1 + floor(iterations / thin_params),
+                       ncol = n_model_params,
+                       dimnames = list(NULL, param_names_est))
+        
+        # initialize the lna_param_vec for the measurement process
+        param_vec <- params_cur[1,]
+        
+        # initialize the latent path
+        path <- NULL
+        if (mcmc_restart) {
+                
+                # extract the path
+                assign("path", stem_object$stem_settings$path_for_restart)
+                data_log_lik_prop <- NULL
+                
+                # recompute the data log likelihood
+                try({
+                        census_lna(
+                                path                = path$latent_path,
+                                census_path         = censusmat,
+                                census_inds         = census_indices,
+                                lna_event_inds      = lna_event_inds,
+                                flow_matrix_lna     = t(stoich_matrix),
+                                do_prevalence       = do_prevalence,
+                                init_state          = init_volumes_cur,
+                                lna_pars            = lna_params_cur,
+                                forcing_inds        = forcing_inds,
+                                forcing_tcov_inds   = forcing_tcov_inds,
+                                forcings_out        = forcings_out,
+                                forcing_transfers   = forcing_transfers
+                        )
+                        
+                        # evaluate the density of the incidence counts
+                        evaluate_d_measure_LNA(
+                                emitmat           = emitmat,
+                                obsmat            = data,
+                                censusmat         = censusmat,
+                                measproc_indmat   = measproc_indmat,
+                                lna_parameters    = lna_params_cur,
+                                lna_param_inds    = lna_param_inds,
+                                lna_const_inds    = lna_const_inds,
+                                lna_tcovar_inds   = lna_tcovar_inds,
+                                param_update_inds = param_update_inds,
+                                census_indices    = census_indices,
+                                lna_param_vec     = lna_param_vec,
+                                d_meas_ptr        = d_meas_pointer
+                        )
+                        
+                        # compute the data log likelihood
+                        data_log_lik_prop <- sum(emitmat[, -1][measproc_indmat])
+                        if (is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
+                }, silent = TRUE)
+                
+                if (is.null(data_log_lik_prop)) {
+                        stop("Restart attempted with data log likelihood of negative infinity.")
+                } else {
+                        path$data_log_lik <- data_log_lik_prop
+                }
+                
+        } else {
+                
+                path <- initialize_lna(
+                        data                    = data,
+                        lna_parameters          = lna_params_cur,
+                        tparam                  = tparam,
+                        censusmat               = censusmat,
+                        emitmat                 = emitmat,
+                        stoich_matrix           = stoich_matrix,
+                        lna_pointer             = lna_pointer,
+                        lna_set_pars_pointer    = lna_set_pars_pointer,
+                        lna_times               = lna_census_times,
+                        lna_param_vec           = lna_param_vec,
+                        lna_param_inds          = lna_param_inds,
+                        lna_const_inds          = lna_const_inds,
+                        lna_tcovar_inds         = lna_tcovar_inds,
+                        lna_initdist_inds       = lna_initdist_inds,
+                        param_update_inds       = param_update_inds,
+                        census_indices          = census_indices,
+                        lna_event_inds          = lna_event_inds,
+                        measproc_indmat         = measproc_indmat,
+                        d_meas_pointer          = d_meas_pointer,
+                        do_prevalence           = do_prevalence,
+                        forcing_inds            = forcing_inds,
+                        forcing_tcov_inds       = forcing_tcov_inds,
+                        forcings_out            = forcings_out,
+                        forcing_transfers       = forcing_transfers,
+                        initialization_attempts = initialization_attempts,
+                        step_size               = step_size,
+                        par_init_fcn            = par_init_fcn,
+                        fixed_inits             = fixed_inits,
+                        initdist_objects        = initdist_objects,
+                        init_volumes_cur        = init_volumes_cur,
+                        ess_warmup              = 100
+                )
+                
+                # make sure that the model parameters are updated if new ones were proposed
+                if (!is.null(par_init_fcn)) {
+                        model_params_est <- to_estimation_scale(lna_params_cur[1, lna_param_inds + 1])
+                        model_params_nat <- from_estimation_scale(model_params_est)
+                }
+        }
+        
+        
+        
         
         class(results) <- "stemr_inference_list"
         return(results)

@@ -151,14 +151,6 @@ convert_lna2 <- function(path, flow_matrix, init_state, statemat) {
     invisible(.Call(`_stemr_convert_lna2`, path, flow_matrix, init_state, statemat))
 }
 
-#' Insert parameters into the first row of a parameter matrix
-#' 
-#' @param parmat parameter matrics
-#' @param pars vector of parameters to insert
-#' @param colinds vector of column indices
-#' @param rowinds vector of row indices, just the first row by default.
-NULL
-
 #' Insert parameters into each row of a parameter matrix
 #'
 #' @param lnapars matrix of lna parameters, constants, and time-varying covars
@@ -180,6 +172,19 @@ pars2lnapars <- function(lnapars, parameters) {
 #' @export
 pars2lnapars2 <- function(lnapars, parameters, c_start) {
     invisible(.Call(`_stemr_pars2lnapars2`, lnapars, parameters, c_start))
+}
+
+#' Insert parameters into the first row of a parameter matrix
+#' 
+#' @param parmat parameter matrics
+#' @param pars vector of parameters to insert
+#' @param colinds vector of column indices
+#' @param rowinds vector of row indices, just the first row by default.
+#' 
+#' @return modifies the parameter matrix in place
+#' @export
+pars2parmat <- function(parmat, pars, colinds, rowinds = 0L) {
+    invisible(.Call(`_stemr_pars2parmat`, parmat, pars, colinds, rowinds))
 }
 
 #' Copy an element from one vector into another

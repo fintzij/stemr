@@ -8,9 +8,8 @@ time-varying parameters via elliptical slice sampling.}
 initdist_control(
   n_updates = 1,
   bracket_widths = 2 * pi,
-  bracket_update_iter = 0,
+  bracket_update_iter = Inf,
   bracket_scaling = 2 * sqrt(2 * log(10)),
-  joint_initdist_update = FALSE,
   ess_warmup = 50
 )
 }
@@ -22,7 +21,7 @@ iteration, defaults to 1.}
 be in (0,2*pi], and default to 2*pi.}
 
 \item{bracket_update_iter}{iteration at which the widths of the elliptical
-slice sampling brackets should be shrunk, defaults to 0 and the bracket
+slice sampling brackets should be shrunk, defaults to Inf and the bracket
 widths are kept constant.}
 
 \item{bracket_scaling}{Scaling factors for elliptical slice sampling bracket
@@ -30,10 +29,6 @@ widths. If brackets are to be shrunk, the new width is set to the minimum
 of 2*pi or the scaling multiplied by the standard deviation of the previous
 ESS angles. The scalings default to the full width at one tenth maximum for
 a gaussian.}
-
-\item{joint_initdist_update}{should all initial distributions be updated
-jointly? Inherits from \code{lna_control} if inference uses the LNA, or 
-defaults to FALSE for ODEs.}
 
 \item{ess_warmup}{ess_warmup ESS updates prior to starting MCMC}
 }

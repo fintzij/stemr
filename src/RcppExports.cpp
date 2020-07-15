@@ -178,6 +178,19 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// pars2parmat
+void pars2parmat(arma::mat& parmat, const arma::rowvec pars, const arma::uvec colinds, const arma::uvec rowinds);
+RcppExport SEXP _stemr_pars2parmat(SEXP parmatSEXP, SEXP parsSEXP, SEXP colindsSEXP, SEXP rowindsSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat& >::type parmat(parmatSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec >::type pars(parsSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec >::type colinds(colindsSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec >::type rowinds(rowindsSEXP);
+    pars2parmat(parmat, pars, colinds, rowinds);
+    return R_NilValue;
+END_RCPP
+}
 // copy_elem
 void copy_elem(arma::rowvec& dest, const arma::rowvec& orig, int ind);
 RcppExport SEXP _stemr_copy_elem(SEXP destSEXP, SEXP origSEXP, SEXP indSEXP) {
@@ -808,6 +821,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_convert_lna2", (DL_FUNC) &_stemr_convert_lna2, 4},
     {"_stemr_pars2lnapars", (DL_FUNC) &_stemr_pars2lnapars, 2},
     {"_stemr_pars2lnapars2", (DL_FUNC) &_stemr_pars2lnapars2, 3},
+    {"_stemr_pars2parmat", (DL_FUNC) &_stemr_pars2parmat, 4},
     {"_stemr_copy_elem", (DL_FUNC) &_stemr_copy_elem, 3},
     {"_stemr_copy_elem2", (DL_FUNC) &_stemr_copy_elem2, 3},
     {"_stemr_increment_elem", (DL_FUNC) &_stemr_increment_elem, 2},
