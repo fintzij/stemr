@@ -109,6 +109,28 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// census_latent_path
+void census_latent_path(const arma::mat& path, arma::mat& census_path, const arma::uvec& census_inds, const arma::uvec& event_inds, const arma::mat& flow_matrix, bool do_prevalence, const arma::mat& parmat, const arma::uvec& initdist_inds, const Rcpp::LogicalVector& forcing_inds, const arma::uvec& forcing_tcov_inds, const arma::mat& forcings_out, const arma::cube& forcing_transfers, arma::uvec row0);
+RcppExport SEXP _stemr_census_latent_path(SEXP pathSEXP, SEXP census_pathSEXP, SEXP census_indsSEXP, SEXP event_indsSEXP, SEXP flow_matrixSEXP, SEXP do_prevalenceSEXP, SEXP parmatSEXP, SEXP initdist_indsSEXP, SEXP forcing_indsSEXP, SEXP forcing_tcov_indsSEXP, SEXP forcings_outSEXP, SEXP forcing_transfersSEXP, SEXP row0SEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type path(pathSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type census_path(census_pathSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type census_inds(census_indsSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type event_inds(event_indsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type flow_matrix(flow_matrixSEXP);
+    Rcpp::traits::input_parameter< bool >::type do_prevalence(do_prevalenceSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type parmat(parmatSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type initdist_inds(initdist_indsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type forcing_inds(forcing_indsSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type forcing_tcov_inds(forcing_tcov_indsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type forcings_out(forcings_outSEXP);
+    Rcpp::traits::input_parameter< const arma::cube& >::type forcing_transfers(forcing_transfersSEXP);
+    Rcpp::traits::input_parameter< arma::uvec >::type row0(row0SEXP);
+    census_latent_path(path, census_path, census_inds, event_inds, flow_matrix, do_prevalence, parmat, initdist_inds, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, row0);
+    return R_NilValue;
+END_RCPP
+}
 // census_lna
 void census_lna(const arma::mat& path, arma::mat& census_path, const arma::uvec& census_inds, const arma::uvec& lna_event_inds, const arma::mat& flow_matrix_lna, bool do_prevalence, const arma::rowvec& init_state, const arma::mat& lna_pars, const Rcpp::LogicalVector& forcing_inds, const arma::uvec& forcing_tcov_inds, const arma::mat& forcings_out, const arma::cube& forcing_transfers);
 RcppExport SEXP _stemr_census_lna(SEXP pathSEXP, SEXP census_pathSEXP, SEXP census_indsSEXP, SEXP lna_event_indsSEXP, SEXP flow_matrix_lnaSEXP, SEXP do_prevalenceSEXP, SEXP init_stateSEXP, SEXP lna_parsSEXP, SEXP forcing_indsSEXP, SEXP forcing_tcov_indsSEXP, SEXP forcings_outSEXP, SEXP forcing_transfersSEXP) {
@@ -391,23 +413,23 @@ BEGIN_RCPP
 END_RCPP
 }
 // evaluate_d_measure_LNA
-void evaluate_d_measure_LNA(Rcpp::NumericMatrix& emitmat, const Rcpp::NumericMatrix& obsmat, const Rcpp::NumericMatrix& censusmat, const Rcpp::LogicalMatrix& measproc_indmat, const Rcpp::NumericMatrix& lna_parameters, const Rcpp::IntegerVector& lna_param_inds, const Rcpp::IntegerVector& lna_const_inds, const Rcpp::IntegerVector& lna_tcovar_inds, const Rcpp::LogicalVector& param_update_inds, const Rcpp::IntegerVector& census_indices, Rcpp::NumericVector& lna_param_vec, SEXP d_meas_ptr);
-RcppExport SEXP _stemr_evaluate_d_measure_LNA(SEXP emitmatSEXP, SEXP obsmatSEXP, SEXP censusmatSEXP, SEXP measproc_indmatSEXP, SEXP lna_parametersSEXP, SEXP lna_param_indsSEXP, SEXP lna_const_indsSEXP, SEXP lna_tcovar_indsSEXP, SEXP param_update_indsSEXP, SEXP census_indicesSEXP, SEXP lna_param_vecSEXP, SEXP d_meas_ptrSEXP) {
+void evaluate_d_measure_LNA(Rcpp::NumericMatrix& emitmat, const Rcpp::NumericMatrix& obsmat, const Rcpp::NumericMatrix& censusmat, const Rcpp::LogicalMatrix& measproc_indmat, const Rcpp::NumericMatrix& parameters, const Rcpp::IntegerVector& param_inds, const Rcpp::IntegerVector& const_inds, const Rcpp::IntegerVector& tcovar_inds, const Rcpp::LogicalVector& param_update_inds, const Rcpp::IntegerVector& census_indices, Rcpp::NumericVector& param_vec, SEXP d_meas_ptr);
+RcppExport SEXP _stemr_evaluate_d_measure_LNA(SEXP emitmatSEXP, SEXP obsmatSEXP, SEXP censusmatSEXP, SEXP measproc_indmatSEXP, SEXP parametersSEXP, SEXP param_indsSEXP, SEXP const_indsSEXP, SEXP tcovar_indsSEXP, SEXP param_update_indsSEXP, SEXP census_indicesSEXP, SEXP param_vecSEXP, SEXP d_meas_ptrSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix& >::type emitmat(emitmatSEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type obsmat(obsmatSEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type censusmat(censusmatSEXP);
     Rcpp::traits::input_parameter< const Rcpp::LogicalMatrix& >::type measproc_indmat(measproc_indmatSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type lna_parameters(lna_parametersSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type lna_param_inds(lna_param_indsSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type lna_const_inds(lna_const_indsSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type lna_tcovar_inds(lna_tcovar_indsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type parameters(parametersSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type param_inds(param_indsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type const_inds(const_indsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type tcovar_inds(tcovar_indsSEXP);
     Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type param_update_inds(param_update_indsSEXP);
     Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type census_indices(census_indicesSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type lna_param_vec(lna_param_vecSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type param_vec(param_vecSEXP);
     Rcpp::traits::input_parameter< SEXP >::type d_meas_ptr(d_meas_ptrSEXP);
-    evaluate_d_measure_LNA(emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, lna_param_vec, d_meas_ptr);
+    evaluate_d_measure_LNA(emitmat, obsmat, censusmat, measproc_indmat, parameters, param_inds, const_inds, tcovar_inds, param_update_inds, census_indices, param_vec, d_meas_ptr);
     return R_NilValue;
 END_RCPP
 }
@@ -816,6 +838,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_CALL_SET_ODE_PARAMS", (DL_FUNC) &_stemr_CALL_SET_ODE_PARAMS, 2},
     {"_stemr_build_census_path", (DL_FUNC) &_stemr_build_census_path, 3},
     {"_stemr_census_incidence", (DL_FUNC) &_stemr_census_incidence, 3},
+    {"_stemr_census_latent_path", (DL_FUNC) &_stemr_census_latent_path, 13},
     {"_stemr_census_lna", (DL_FUNC) &_stemr_census_lna, 12},
     {"_stemr_compute_incidence", (DL_FUNC) &_stemr_compute_incidence, 3},
     {"_stemr_convert_lna2", (DL_FUNC) &_stemr_convert_lna2, 4},

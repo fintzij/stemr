@@ -30,11 +30,12 @@ void census_latent_path(
                 const arma::mat& flow_matrix,
                 bool do_prevalence,
                 const arma::mat& parmat,
-                const arma::rowvec& init_state,
+                const arma::uvec& initdist_inds,
                 const Rcpp::LogicalVector& forcing_inds,
                 const arma::uvec& forcing_tcov_inds,
                 const arma::mat& forcings_out,
-                const arma::cube& forcing_transfers) {
+                const arma::cube& forcing_transfers,
+                arma::uvec row0 = 0) {
 
         // get dimensions
         int n_census_times  = census_inds.n_elem;
@@ -64,8 +65,10 @@ void census_latent_path(
         if(do_prevalence) {
               
               // initialize the state and increment vectors
-              arma::rowvec state(init_state);
+              arma::rowvec state(n_comps);
               arma::rowvec increment(n_rates, arma::fill::zeros);
+              
+              state = path.submat(row0, initdist_inds);
               
               for(int k=1; k < n_census_times-1; ++k) {
                     

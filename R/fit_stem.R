@@ -142,7 +142,7 @@ fit_stem <-
                 
                 # indices of parameters, constants, and time-varying covariates
                 param_inds <- 
-                        setdiff(stem_object$dynamics$lna_param_codes,
+                        setdiff(stem_object$dynamics$param_codes,
                                 stem_object$dynamics$lna_initdist_inds)
                 const_inds <- 
                         length(stem_object$dynamics$param_codes) + 
@@ -290,7 +290,7 @@ fit_stem <-
                                 copy_vec(dest = initdist_objects[[s]]$init_volumes,
                                          orig = c(initdist_objects[[s]]$comp_mean +
                                                           c(initdist_objects[[s]]$comp_sqrt_cov %*% 
-                                                              initdist_objects[[s]]$draws_cur)))
+                                                                    initdist_objects[[s]]$draws_cur)))
                                 
                                 # check boundary conditions
                                 bad_draws[s] <- 
@@ -359,34 +359,30 @@ fit_stem <-
         insert_initdist(parmat = params_cur, initdist_objects = initdist_objects, prop = FALSE)
         insert_initdist(parmat = params_prop, initdist_objects = initdist_objects, prop = FALSE)
         
-        # get column indices for constants and time-varying covariates
-        const_inds  <- 
-                seq_along(stem_object$dynamics$const_codes) + 
-                length(stem_object$dynamics$param_codes)
-        tcovar_inds <- (max(const_inds) + 1):ncol(lna_params_cur)
-        
         # insert the constants
-        params_cur[, const_inds]  <- 
+        params_cur[, const_inds + 1]  <- 
                 matrix(stem_object$dynamics$constants,
                        nrow = nrow(params_cur),
                        ncol = length(const_inds), byrow = T)
         
-        params_prop[, const_inds] <- 
+        params_prop[, const_inds + 1] <- 
                 matrix(stem_object$dynamics$constants,
                        nrow = nrow(params_cur),
                        ncol = length(const_inds), byrow = T)
         
         # generate forcing indices and other objects
-        forcing_inds   <- rep(FALSE, length(lna_census_times))
+        forcing_inds   <- rep(FALSE, length(census_times))
         
         # insert time varying covariates
-        if (!is.null(stem_object$dynamics$tcovar)) {
+        if(!is.null(stem_object$dynamics$tcovar)) {
                 
                 tcovar_rowinds <- 
-                        findInterval(times, stem_object$dynamics$tcovar[, 1], left.open = F)
-                params_cur[tcovar_rowinds, tcovar_inds] <- 
+                        findInterval(times, stem_object$dynamics$tcovar[, 1],
+                                     left.open = FALSE, all.inside = TRUE)
+                params_cur[, tcovar_inds + 1] <- 
                         stem_object$dynamics$tcovar[tcovar_rowinds, -1]
-                params_prop[tcovar_rowinds, tcovar_inds] <- stem_object$dynamics$tcovar[tcovar_rowinds, -1]
+                params_prop[, tcovar_inds + 1] <- 
+                        stem_object$dynamics$tcovar[tcovar_rowinds, -1]
                 
                 # zero out forcings if necessary
                 if(!is.null(stem_object$dynamics$forcings)) {
@@ -612,15 +608,15 @@ fit_stem <-
                 
                 # recompute the data log likelihood
                 try({
-                        census_lna(
+                        census_latent_path(
                                 path                = path$latent_path,
                                 census_path         = censusmat,
                                 census_inds         = census_indices,
-                                lna_event_inds      = lna_event_inds,
-                                flow_matrix_lna     = t(stoich_matrix),
+                                event_inds          = event_inds,
+                                flow_matrix         = flow_matrix,
                                 do_prevalence       = do_prevalence,
-                                init_state          = init_volumes_cur,
-                                lna_pars            = lna_params_cur,
+                                parmat              = params_cur,
+                                initdist_inds       = initdist_inds,
                                 forcing_inds        = forcing_inds,
                                 forcing_tcov_inds   = forcing_tcov_inds,
                                 forcings_out        = forcings_out,
@@ -633,13 +629,13 @@ fit_stem <-
                                 obsmat            = data,
                                 censusmat         = censusmat,
                                 measproc_indmat   = measproc_indmat,
-                                lna_parameters    = lna_params_cur,
-                                lna_param_inds    = lna_param_inds,
-                                lna_const_inds    = lna_const_inds,
-                                lna_tcovar_inds   = lna_tcovar_inds,
+                                parameters        = params_cur,
+                                param_inds        = param_inds,
+                                const_inds        = const_inds,
+                                tcovar_inds       = tcovar_inds,
                                 param_update_inds = param_update_inds,
                                 census_indices    = census_indices,
-                                lna_param_vec     = lna_param_vec,
+                                param_vec         = param_vec,
                                 d_meas_ptr        = d_meas_pointer
                         )
                         
@@ -656,24 +652,26 @@ fit_stem <-
                 
         } else {
                 
-                path <- initialize_lna(
-                        data                    = data,
-                        lna_parameters          = lna_params_cur,
+                inits <- 
+                    initialize_lna(
+                        dat                     = dat,
+                        parmat                  = params_cur,
+                        param_blocks            = param_blocks,
                         tparam                  = tparam,
                         censusmat               = censusmat,
                         emitmat                 = emitmat,
                         stoich_matrix           = stoich_matrix,
-                        lna_pointer             = lna_pointer,
-                        lna_set_pars_pointer    = lna_set_pars_pointer,
-                        lna_times               = lna_census_times,
-                        lna_param_vec           = lna_param_vec,
-                        lna_param_inds          = lna_param_inds,
-                        lna_const_inds          = lna_const_inds,
-                        lna_tcovar_inds         = lna_tcovar_inds,
-                        lna_initdist_inds       = lna_initdist_inds,
+                        proc_pointer            = proc_pointer,
+                        set_pars_pointer        = set_pars_pointer,
+                        times                   = census_times,
+                        param_vec               = param_vec,
+                        param_inds              = param_inds,
+                        const_inds              = const_inds,
+                        tcovar_inds             = tcovar_inds,
+                        initdist_inds           = initdist_inds,
                         param_update_inds       = param_update_inds,
                         census_indices          = census_indices,
-                        lna_event_inds          = lna_event_inds,
+                        event_inds              = event_inds,
                         measproc_indmat         = measproc_indmat,
                         d_meas_pointer          = d_meas_pointer,
                         do_prevalence           = do_prevalence,
@@ -683,18 +681,14 @@ fit_stem <-
                         forcing_transfers       = forcing_transfers,
                         initialization_attempts = initialization_attempts,
                         step_size               = step_size,
-                        par_init_fcn            = par_init_fcn,
-                        fixed_inits             = fixed_inits,
                         initdist_objects        = initdist_objects,
-                        init_volumes_cur        = init_volumes_cur,
-                        ess_warmup              = 100
-                )
+                        ess_warmup              = 100)
                 
-                # make sure that the model parameters are updated if new ones were proposed
-                if (!is.null(par_init_fcn)) {
-                        model_params_est <- to_estimation_scale(lna_params_cur[1, lna_param_inds + 1])
-                        model_params_nat <- from_estimation_scale(model_params_est)
-                }
+                # grab the initial path, param_blocks, initdist_objects, and tparam
+                path             = inits$path
+                param_blocks     = inits$param_blocks
+                initdist_objects = inits$initdist_objects
+                tparam           = inits$tparam
         }
         
         

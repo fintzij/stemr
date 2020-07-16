@@ -104,6 +104,27 @@ census_incidence <- function(incid_mat, census_times, interval_inds) {
 #' @param path matrix containing the path to be censused (cumulative incidence).
 #' @param census_path matrix to be filled out with the path.
 #' @param census_inds vector of indices for census interval endpoints.
+#' @param event_inds vector of column indices in the path matrix for events that
+#'   should be censused.
+#' @param flow_matrix matrix containing the flow matrix for the LNA (no incidence)
+#' @param do_prevalence should the prevalence be computed
+#' @param init_state the initial compartment counts
+#' @param forcing_inds logical vector of indicating at which times in the
+#'   time-varying covariance matrix a forcing is applied.
+#' @param parmat matrix with parameters, constants, and time varying 
+#'   covariates and parameters.
+#'
+#' @return matrix containing the compartment counts at census times.
+#' @export
+census_latent_path <- function(path, census_path, census_inds, event_inds, flow_matrix, do_prevalence, parmat, initdist_inds, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, row0 = 0L) {
+    invisible(.Call(`_stemr_census_latent_path`, path, census_path, census_inds, event_inds, flow_matrix, do_prevalence, parmat, initdist_inds, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, row0))
+}
+
+#' Construct a matrix containing the compartment counts and the incidence at a sequence of census times.
+#'
+#' @param path matrix containing the path to be censused (cumulative incidence).
+#' @param census_path matrix to be filled out with the path.
+#' @param census_inds vector of indices for census interval endpoints.
 #' @param lna_event_inds vector of column indices in the path matrix for events that
 #'   should be censused.
 #' @param flow_matrix_lna matrix containing the flow matrix for the LNA (no incidence)
@@ -398,22 +419,22 @@ evaluate_d_measure <- function(emitmat, obsmat, statemat, measproc_indmat, param
 #'   observation times
 #' @param measproc_indmat logical matrix indicating which compartments are
 #'   observed at every observation time
-#' @param lna_parameters matrix containing the LNA parameters, constants and
+#' @param parameters matrix containing the LNA parameters, constants and
 #'   time-varying coariates.
-#' @param lna_param_vec container for storing the LNA parameters at each
+#' @param param_vec container for storing the LNA parameters at each
 #'   observation time.
-#' @param lna_param_inds indices for the model parameters.
-#' @param lna_const_inds indices for the constants.
-#' @param lna_tcovar_inds indices for the time-varying covariates.
+#' @param param_inds indices for the model parameters.
+#' @param const_inds indices for the constants.
+#' @param tcovar_inds indices for the time-varying covariates.
 #' @param param_update_inds logical vector indicating when model parameters
 #'   should be updated.
 #' @param census_indices vector of indices when the LNA path has been censused.
-#' @param lna_param_vec vector for keeping the current lna parameters
+#' @param param_vec vector for keeping the current lna parameters
 #' @param d_meas_ptr external pointer to measurement process density function
 #'
 #' @export
-evaluate_d_measure_LNA <- function(emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, lna_param_vec, d_meas_ptr) {
-    invisible(.Call(`_stemr_evaluate_d_measure_LNA`, emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, lna_param_vec, d_meas_ptr))
+evaluate_d_measure_LNA <- function(emitmat, obsmat, censusmat, measproc_indmat, parameters, param_inds, const_inds, tcovar_inds, param_update_inds, census_indices, param_vec, d_meas_ptr) {
+    invisible(.Call(`_stemr_evaluate_d_measure_LNA`, emitmat, obsmat, censusmat, measproc_indmat, parameters, param_inds, const_inds, tcovar_inds, param_update_inds, census_indices, param_vec, d_meas_ptr))
 }
 
 #' Given a vector of interval endpoints \code{breaks}, determine in which
