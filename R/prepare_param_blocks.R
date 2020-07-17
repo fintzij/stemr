@@ -70,7 +70,8 @@ prepare_param_blocks = function(param_blocks, parameters, param_codes, iteration
                      
                      # check log prior
                      param_blocks[[s]]$log_pd = log_prior[[s]](param_blocks[[s]]$pars_est)
-                        par_init_attempt <- par_init_attempt + 1
+                        
+                     par_init_attempt <- par_init_attempt + 1
                   }
                   
                   if(is.infinite(param_blocks[[s]]$log_pd)) {
@@ -101,6 +102,7 @@ prepare_param_blocks = function(param_blocks, parameters, param_codes, iteration
             param_blocks[[s]]$block_size = length(param_blocks[[s]]$pars_nat)
             param_blocks[[s]]$pars_prop_nat = double(param_blocks[[s]]$block_size)
             param_blocks[[s]]$pars_prop_est = double(param_blocks[[s]]$block_size)
+            param_blocks[[s]]$log_pd_prop = log_prior[[s]](param_blocks[[s]]$pars_est)
             
             # should the proposals be adapted
             param_blocks[[s]]$adapt = 

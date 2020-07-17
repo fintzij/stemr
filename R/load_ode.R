@@ -111,7 +111,6 @@ load_ode <- function(ode_rates, compile_ode, messages, atol, rtol, stepper) {
                 # compile the ODE code
                 if(messages) print("Compiling ODE functions.")
                 Rcpp::sourceCpp(code = ODE_code, 
-                                # env = globalenv(),
                                 rebuild = TRUE, 
                                 verbose = FALSE,
                                 cleanupCacheDir = TRUE)

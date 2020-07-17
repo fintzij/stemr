@@ -10,7 +10,7 @@
 #' @param stoich_matrix LNA stoichiometry matrix
 #' @param proc_pointer external LNA pointer
 #' @param set_pars_pointer pointer for setting the LNA parameters
-#' @param times times at whicht eh LNA should be evaluated
+#' @param times times at which the LNA should be evaluated
 #' @param param_inds C++ column indices for parameters
 #' @param const_inds C++ column indices for constants
 #' @param tcovar_inds C++ column indices for time varying covariates
@@ -75,6 +75,7 @@ initialize_lna <-
                 data_log_lik <- NaN
                 attempt      <- 0
                 keep_going   <- TRUE
+                flow_matrix  <- t(stoich_matrix)
                 
                 draws <- rnorm(ncol(stoich_matrix) * (length(times) - 1))
                 

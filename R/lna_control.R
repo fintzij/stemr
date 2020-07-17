@@ -18,7 +18,8 @@
 #' @param joint_initdist_update should the initial states be updated jointly
 #'   with the lna path? Defaults to TRUE, in which case initial conditions for
 #'   each stratum are still paired with the LNA path for that stratum.
-#' @param ess_warmup ess_warmup ESS updates prior to starting MCMC
+#' @param ess_warmup number of ESS warmup iterations if approximate LNA
+#'   initialization
 #'
 #' @return list with settings for elliptical slice sampling
 #' @export
@@ -29,7 +30,7 @@ lna_control <-
                bracket_scaling = 2 * sqrt(2 * log(10)),
                joint_strata_update = FALSE,
                joint_initdist_update = TRUE,
-               ess_warmup = 50) {
+               ess_warmup = 100) {
           
             if (any(bracket_width <= 0 | bracket_width > 2 * pi)) {
                   stop("The elliptical slice sampling bracket width must be in (0,2*pi].")
@@ -37,7 +38,7 @@ lna_control <-
             
             return(
                   list(n_updates             = n_updates,
-                       bracket_width        = bracket_width,
+                       bracket_width         = bracket_width,
                        bracket_update_iter   = bracket_update_iter,
                        bracket_scaling       = bracket_scaling,
                        joint_strata_update   = joint_strata_update,

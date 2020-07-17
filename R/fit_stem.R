@@ -80,7 +80,7 @@ fit_stem <-
                 param_codes = stem_object$dynamics$lna_rates$lna_param_codes        
         } else {
                 n_pars_tot  = length(stem_object$dynamics$ode_rates$ode_param_codes) 
-                param_codes = stem_object$dynamics$lna_rates$ode_param_codes
+                param_codes = stem_object$dynamics$ode_rates$ode_param_codes
         }
         
         # prepare param_blocks
@@ -136,6 +136,7 @@ fit_stem <-
                 do_prevalence    <- stem_object$measurement_process$lna_prevalence
                 event_inds       <- stem_object$measurement_process$incidence_codes_lna
                 initdist_inds    <- stem_object$dynamics$lna_initdist_inds
+                ess_warmup       <- lna_ess_control$ess_warmup
                 
                 # measurement process
                 d_meas_pointer   <- stem_object$measurement_process$meas_pointers_lna$d_measure_ptr
@@ -180,7 +181,7 @@ fit_stem <-
                 initdist_inds       <- stem_object$dynamics$ode_initdist_inds
                 
                 # measurement process
-                d_meas_pointer   <- stem_object$measurement_process$meas_pointers_ode$d_measure_ptr
+                d_meas_pointer <- stem_object$measurement_process$meas_pointers_lna$d_measure_ptr
                 
                 # indices of parameters, constants, and time-varying covariates
                 param_inds <- 
@@ -197,7 +198,7 @@ fit_stem <-
                 joint_initdist_update = FALSE
                 
                 # grab the tparam indices
-                if(!is.na(tparam)) {
+                if(!is.null(tparam)) {
                         tparam_inds <-
                                 stem_object$dynamics$ode_rates$ode_param_codes[
                                         sapply(tparam, function(x) x$tparam_name)]
@@ -331,12 +332,8 @@ fit_stem <-
                               times <= max(stem_object$dynamics$tmax, max(obstimes))]
         census_indices   <- unique(c(0, findInterval(obstimes, census_times) - 1))
         
-        # warmup iterations
-        initdist_ess_warmup = ifelse(fixed_inits, 0, initdist_ess_control$ess_warmup)
-        lna_ess_warmup      = ifelse(method == "ode", 0, lna_ess_control$ess_warmup)
-        tparam_ess_warmup   = ifelse(is.null(stem_object$dynamics$tparam), 0, tparam_ess_control$ess_warmup)
-        warmup_iterations   = max(c(lna_ess_warmup, initdist_ess_warmup, tparam_ess_warmup))
-        max_adaptation      = max(sapply(param_blocks, function(x) x$control$stop_adaptation))
+        # maximum number of adaptive iterations
+        max_adaptation <- max(sapply(param_blocks, function(x) x$control$stop_adaptation))
         
         ### Set up parameter objects ---------------------------------
         params_cur <- 
@@ -652,37 +649,68 @@ fit_stem <-
                 
         } else {
                 
-                inits <- 
-                    initialize_lna(
-                        dat                     = dat,
-                        parmat                  = params_cur,
-                        param_blocks            = param_blocks,
-                        tparam                  = tparam,
-                        censusmat               = censusmat,
-                        emitmat                 = emitmat,
-                        stoich_matrix           = stoich_matrix,
-                        proc_pointer            = proc_pointer,
-                        set_pars_pointer        = set_pars_pointer,
-                        times                   = census_times,
-                        param_vec               = param_vec,
-                        param_inds              = param_inds,
-                        const_inds              = const_inds,
-                        tcovar_inds             = tcovar_inds,
-                        initdist_inds           = initdist_inds,
-                        param_update_inds       = param_update_inds,
-                        census_indices          = census_indices,
-                        event_inds              = event_inds,
-                        measproc_indmat         = measproc_indmat,
-                        d_meas_pointer          = d_meas_pointer,
-                        do_prevalence           = do_prevalence,
-                        forcing_inds            = forcing_inds,
-                        forcing_tcov_inds       = forcing_tcov_inds,
-                        forcings_out            = forcings_out,
-                        forcing_transfers       = forcing_transfers,
-                        initialization_attempts = initialization_attempts,
-                        step_size               = step_size,
-                        initdist_objects        = initdist_objects,
-                        ess_warmup              = 100)
+                if(method == "lna") {
+                        inits <- initialize_lna(
+                                        dat                     = dat,
+                                        parmat                  = params_cur,
+                                        param_blocks            = param_blocks,
+                                        tparam                  = tparam,
+                                        censusmat               = censusmat,
+                                        emitmat                 = emitmat,
+                                        stoich_matrix           = stoich_matrix,
+                                        proc_pointer            = proc_pointer,
+                                        set_pars_pointer        = set_pars_pointer,
+                                        times                   = census_times,
+                                        param_vec               = param_vec,
+                                        param_inds              = param_inds,
+                                        const_inds              = const_inds,
+                                        tcovar_inds             = tcovar_inds,
+                                        initdist_inds           = initdist_inds,
+                                        param_update_inds       = param_update_inds,
+                                        census_indices          = census_indices,
+                                        event_inds              = event_inds,
+                                        measproc_indmat         = measproc_indmat,
+                                        d_meas_pointer          = d_meas_pointer,
+                                        do_prevalence           = do_prevalence,
+                                        forcing_inds            = forcing_inds,
+                                        forcing_tcov_inds       = forcing_tcov_inds,
+                                        forcings_out            = forcings_out,
+                                        forcing_transfers       = forcing_transfers,
+                                        initialization_attempts = initialization_attempts,
+                                        step_size               = step_size,
+                                        initdist_objects        = initdist_objects,
+                                        ess_warmup              = ess_warmup)        
+                } else {
+                        inits <- initialize_ode(
+                                dat                     = dat,
+                                parmat                  = params_cur,
+                                param_blocks            = param_blocks,
+                                tparam                  = tparam,
+                                censusmat               = censusmat,
+                                emitmat                 = emitmat,
+                                stoich_matrix           = stoich_matrix,
+                                proc_pointer            = proc_pointer,
+                                set_pars_pointer        = set_pars_pointer,
+                                times                   = census_times,
+                                param_vec               = param_vec,
+                                param_inds              = param_inds,
+                                const_inds              = const_inds,
+                                tcovar_inds             = tcovar_inds,
+                                initdist_inds           = initdist_inds,
+                                param_update_inds       = param_update_inds,
+                                census_indices          = census_indices,
+                                event_inds              = event_inds,
+                                measproc_indmat         = measproc_indmat,
+                                d_meas_pointer          = d_meas_pointer,
+                                do_prevalence           = do_prevalence,
+                                forcing_inds            = forcing_inds,
+                                forcing_tcov_inds       = forcing_tcov_inds,
+                                forcings_out            = forcings_out,
+                                forcing_transfers       = forcing_transfers,
+                                initialization_attempts = initialization_attempts,
+                                step_size               = step_size,
+                                initdist_objects        = initdist_objects)    
+                }
                 
                 # grab the initial path, param_blocks, initdist_objects, and tparam
                 path             = inits$path
@@ -691,8 +719,82 @@ fit_stem <-
                 tparam           = inits$tparam
         }
         
+        if(method == "lna") {
+                
+                # object for proposing new stochastic perturbations
+                draws_prop <-
+                        matrix(0.0,
+                               nrow = nrow(flow_matrix),
+                               ncol = length(census_times) - 1)
+                copy_mat(draws_prop, path$draws)
+                
+                # add a vector for the ESS record to the path
+                path$step_record  <- 
+                        matrix(1.0, 
+                               nrow = lna_ess_control$n_updates, 
+                               ncol = length(ess_schedule[[1]]))
+                
+                path$angle_record <- 
+                        matrix(1.0, 
+                               nrow = lna_ess_control$n_updates,
+                               ncol = length(ess_schedule[[1]]))
+                
+                # instatiate matrix for elliptical slice sampling draws
+                ess_draws_prop <- matrix(0.0, nrow = nrow(path$draws), ncol = ncol(path$draws))
+                copy_mat(ess_draws_prop, path$draws)
+                
+                # vector for saving the log-likelihood of the LNA draws
+                lna_log_lik <- double(1 + floor(iterations / thin_params))
+                
+                # matrix for saving LNA draws
+                lna_draws <-
+                        array(0.0,
+                              dim = c(n_rates,
+                                      length(census_times) - 1,
+                                      1 + floor(iterations / thin_latent_proc)))
+                rownames(lna_draws) <- rownames(flow_matrix)
+                
+                # elliptical slice sampling MCMC record
+                ess_step_record   <- array(1.0, 
+                                           dim = c(n_ess_updates,
+                                                   length(ess_schedule[[1]]),
+                                                   floor(iterations / thin_params)))
+                ess_angle_record  <- array(1.0, 
+                                           dim = c(n_ess_updates,
+                                                   length(ess_schedule[[1]]),
+                                                   floor(iterations / thin_params)))
+        }
+        
+        # objects to store the paths and likelihood terms
+        data_log_lik      <- double(1 + floor(iterations / thin_params))
+        params_log_prior  <- double(1 + floor(iterations / thin_params))
+        
+        latent_paths <-
+                array(0.0,
+                      dim = c(length(census_times),
+                              1 + n_rates,
+                              1 + floor(iterations / thin_latent_proc)))
+        colnames(lna_paths) <- c("time", rownames(flow_matrix))
         
         
+        
+        
+        parameter_samples_nat[1, ] <- c(model_params_nat, init_volumes_cur)
+        parameter_samples_est[1, ] <- c(model_params_est)
+        lna_paths[,,1]        <- path$latent_path
+        lna_draws[,,1]        <- path$draws
+        data_log_lik[1]       <- path$data_log_lik
+        lna_log_lik[1]        <- sum(dnorm(path$draws, log = T))
+        params_log_prior[1]   <- params_logprior_cur
+        
+        if (!fixed_inits) {
+                initdist_log_lik[1] <- 
+                        sum(dnorm(unlist(lapply(initdist_objects, "[[", "draws_cur")), log = T))
+        }
+        
+        # indices for recording paths and parameters
+        path_rec_ind          <- 2 # index for recording the latent paths
+        param_rec_ind         <- 2 # index for recording the parameters
         
         class(results) <- "stemr_inference_list"
         return(results)
