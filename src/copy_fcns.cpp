@@ -44,8 +44,8 @@ void pars2lnapars2(arma::mat& lnapars, const arma::rowvec& parameters, int c_sta
 void pars2parmat(arma::mat& parmat, 
                  const arma::rowvec pars,
                  const arma::uvec colinds,
-                 const arma::uvec rowinds = 0) {
-  parmat.submat(rowinds, colinds) = pars; 
+                 const arma::uvec rowind = 0) {
+  parmat.submat(rowind, colinds) = pars; 
 }
 
 //' Copy an element from one vector into another

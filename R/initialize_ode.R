@@ -194,8 +194,7 @@ initialize_ode <-
                         
                         # insert parameters into the parameter matrix
                         insert_params(parmat = parmat,
-                                      param_blocks = param_blocks,
-                                      prop = FALSE)
+                                      param_blocks = param_blocks)
                                 
                         if(!is.null(tparam)) {
                             for(s in seq_along(tparam)) {

@@ -201,15 +201,15 @@ BEGIN_RCPP
 END_RCPP
 }
 // pars2parmat
-void pars2parmat(arma::mat& parmat, const arma::rowvec pars, const arma::uvec colinds, const arma::uvec rowinds);
-RcppExport SEXP _stemr_pars2parmat(SEXP parmatSEXP, SEXP parsSEXP, SEXP colindsSEXP, SEXP rowindsSEXP) {
+void pars2parmat(arma::mat& parmat, const arma::rowvec pars, const arma::uvec colinds, const arma::uvec rowind);
+RcppExport SEXP _stemr_pars2parmat(SEXP parmatSEXP, SEXP parsSEXP, SEXP colindsSEXP, SEXP rowindSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::mat& >::type parmat(parmatSEXP);
     Rcpp::traits::input_parameter< const arma::rowvec >::type pars(parsSEXP);
     Rcpp::traits::input_parameter< const arma::uvec >::type colinds(colindsSEXP);
-    Rcpp::traits::input_parameter< const arma::uvec >::type rowinds(rowindsSEXP);
-    pars2parmat(parmat, pars, colinds, rowinds);
+    Rcpp::traits::input_parameter< const arma::uvec >::type rowind(rowindSEXP);
+    pars2parmat(parmat, pars, colinds, rowind);
     return R_NilValue;
 END_RCPP
 }

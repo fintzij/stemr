@@ -8,10 +8,8 @@
 #'   \code{mcmc_kernel} function.
 #' @param iterations number of iterations
 #' @param initialization_attempts number of initialization attempts
-#' @param thin_params thinning interval for posterior parameter samples,
-#'   defaults to 1
-#' @param thin_latent_proc thinning interval for latent paths, defaults to
-#'   ceiling(iterations/100) so that every 100th path will be saved
+#' @param thinning_interval thinning interval for posterior samples, defaults to
+#'   ceiling(iterations/100) so that every 100th sample will be saved
 #' @param return_adapt_rec should the MCMC adaptation record be returned?
 #'   defaults to FALSE.
 #' @param print_progress interval at which to print progress to a text file. If
@@ -29,8 +27,7 @@ fit_stem <-
                  mcmc_kern,
                  iterations,
                  initialization_attempts = 500,
-                 thin_params = ceiling(iterations / 100),
-                 thin_latent_proc = ceiling(iterations / 100),
+                 thinning_interval = ceiling(iterations / 100),
                  return_adapt_rec = FALSE,
                  print_progress = 0,
                  status_filename = NULL,
@@ -276,12 +273,12 @@ fit_stem <-
                 if(!joint_initdist_update) {
                         initdist_steps        <- 1.0
                         initdist_angle        <- 0.0
-                        initdist_step_record  <- rep(1, floor(iterations / thin_params))
-                        initdist_angle_record <- rep(1, floor(iterations / thin_params))
+                        initdist_step_record  <- rep(1, floor(iterations / thinning_interval))
+                        initdist_angle_record <- rep(1, floor(iterations / thinning_interval))
                 }
                 
                 bad_draws        <- rep(TRUE, length(initdist_objects))
-                initdist_log_lik <- rep(0.0, floor(iterations / thin_params) + 1)
+                initdist_log_lik <- rep(0.0, floor(iterations / thinning_interval) + 1)
                 
                 # map draws to initial volumes
                 while(any(bad_draws)) {
@@ -306,6 +303,9 @@ fit_stem <-
                                 } 
                         }      
                 }
+                
+                # object for storing initial distribution objects
+                
         }
         
         # full vector of times
@@ -349,12 +349,12 @@ fit_stem <-
                        dimnames = list(NULL, names(param_codes)))
         
         # insert parameters into the parameter matrix
-        insert_params(parmat = params_cur, param_blocks = param_blocks, prop = FALSE)
-        insert_params(parmat = params_prop, param_blocks = param_blocks, prop = FALSE)
+        insert_params(parmat = params_cur, param_blocks = param_blocks)
+        insert_params(parmat = params_prop, param_blocks = param_blocks)
         
         # insert initial conditions
-        insert_initdist(parmat = params_cur, initdist_objects = initdist_objects, prop = FALSE)
-        insert_initdist(parmat = params_prop, initdist_objects = initdist_objects, prop = FALSE)
+        insert_initdist(parmat = params_cur, initdist_objects = initdist_objects)
+        insert_initdist(parmat = params_prop, initdist_objects = initdist_objects)
         
         # insert the constants
         params_cur[, const_inds + 1]  <- 
@@ -471,23 +471,23 @@ fit_stem <-
                    length(tparam) == 1) {
                         tparam_steps        <- 1.0
                         tparam_angle        <- 0.0
-                        tparam_step_record  <- rep(1, floor(iterations / thin_params))
-                        tparam_angle_record <- rep(1, floor(iterations / thin_params))
+                        tparam_step_record  <- rep(1, floor(iterations / thinning_interval))
+                        tparam_angle_record <- rep(1, floor(iterations / thinning_interval))
                 } else {
                         tparam_steps        <- rep(1.0, length(tparam))
                         tparam_angle        <- rep(0.0, length(tparam))
                         tparam_step_record  <- matrix(1, nrow = length(tparam), 
-                                                      ncol = floor(iterations / thin_params))
+                                                      ncol = floor(iterations / thinning_interval))
                 }
                 
                 tparam_log_lik <-
                         matrix(0.0,
-                               nrow = 1 + floor(iterations / thin_params),
+                               nrow = 1 + floor(iterations / thinning_interval),
                                ncol = length(tparam),
                                dimnames = list(NULL, paste0(sapply(tparam, function(x) x$tparam_name),"_loglik")))
                 tparam_samples <-
                         array(0.0, 
-                              dim = c(n_times, length(tparam), 1 + floor(iterations / thin_params)))
+                              dim = c(n_times, length(tparam), 1 + floor(iterations / thinning_interval)))
                         
         } else {
                 tparam              <- NULL
@@ -574,23 +574,6 @@ fit_stem <-
                                      nrow = length(census_times),
                                      ncol = nrow(flow_matrix),
                                      dimnames = list(NULL, c(rownames(flow_matrix)))))
-        
-        # set up MCMC objects
-        parameter_samples_nat <-
-                matrix(0.0,
-                       nrow = 1 + floor(iterations / thin_params),
-                       ncol = n_model_params + n_compartments,
-                       dimnames = 
-                               list(NULL, 
-                                    c(param_names_nat, 
-                                      names(stem_object$dynamics$initdist_params)))
-                )
-        
-        parameter_samples_est <-
-                matrix(0.0,
-                       nrow = 1 + floor(iterations / thin_params),
-                       ncol = n_model_params,
-                       dimnames = list(NULL, param_names_est))
         
         # initialize the lna_param_vec for the measurement process
         param_vec <- params_cur[1,]
@@ -744,57 +727,803 @@ fit_stem <-
                 copy_mat(ess_draws_prop, path$draws)
                 
                 # vector for saving the log-likelihood of the LNA draws
-                lna_log_lik <- double(1 + floor(iterations / thin_params))
+                lna_log_lik <- double(1 + floor(iterations / thinning_interval))
                 
                 # matrix for saving LNA draws
                 lna_draws <-
                         array(0.0,
                               dim = c(n_rates,
                                       length(census_times) - 1,
-                                      1 + floor(iterations / thin_latent_proc)))
+                                      1 + floor(iterations / thinning_interval)))
                 rownames(lna_draws) <- rownames(flow_matrix)
                 
                 # elliptical slice sampling MCMC record
                 ess_step_record   <- array(1.0, 
-                                           dim = c(n_ess_updates,
+                                           dim = c(lna_ess_control$n_updates,
                                                    length(ess_schedule[[1]]),
-                                                   floor(iterations / thin_params)))
+                                                   floor(iterations / thinning_interval)))
                 ess_angle_record  <- array(1.0, 
-                                           dim = c(n_ess_updates,
+                                           dim = c(lna_ess_control$n_updates,
                                                    length(ess_schedule[[1]]),
-                                                   floor(iterations / thin_params)))
+                                                   floor(iterations / thinning_interval)))
         }
         
         # objects to store the paths and likelihood terms
-        data_log_lik      <- double(1 + floor(iterations / thin_params))
-        params_log_prior  <- double(1 + floor(iterations / thin_params))
+        data_log_lik      <- double(1 + floor(iterations / thinning_interval))
+        params_log_prior  <- double(1 + floor(iterations / thinning_interval))
         
         latent_paths <-
                 array(0.0,
                       dim = c(length(census_times),
                               1 + n_rates,
-                              1 + floor(iterations / thin_latent_proc)))
-        colnames(lna_paths) <- c("time", rownames(flow_matrix))
+                              1 + floor(iterations / thinning_interval)))
+        colnames(latent_paths) <- c("time", rownames(flow_matrix))
         
+        # set up MCMC record objects
+        parameter_samples_nat <-
+                matrix(0.0,
+                       nrow = 1 + floor(iterations / thinning_interval),
+                       ncol = n_model_params,
+                       dimnames = list(NULL, param_names_nat))
         
+        parameter_samples_est <-
+                matrix(0.0,
+                       nrow = 1 + floor(iterations / thinning_interval),
+                       ncol = n_model_params,
+                       dimnames = list(NULL, param_names_est))
         
+        if(!fixed_inits) {
+                initdist_samples <- 
+                        matrix(0.0,
+                               nrow = 1 + floor(iterations / thinning_interval),
+                               ncol = n_compartments,
+                               dimnames = list(NULL, 
+                                               names(stem_object$dynamics$initdist_params)))
+        }
         
-        parameter_samples_nat[1, ] <- c(model_params_nat, init_volumes_cur)
-        parameter_samples_est[1, ] <- c(model_params_est)
-        lna_paths[,,1]        <- path$latent_path
-        lna_draws[,,1]        <- path$draws
-        data_log_lik[1]       <- path$data_log_lik
-        lna_log_lik[1]        <- sum(dnorm(path$draws, log = T))
-        params_log_prior[1]   <- params_logprior_cur
+        # record the initial parameter values
+        insert_params(parmat       = parameter_samples_nat,
+                      param_blocks = param_blocks,
+                      nat          = TRUE,
+                      rowind       = 0)
+        
+        insert_params(parmat       = parameter_samples_est,
+                      param_blocks = param_blocks,
+                      nat          = FALSE,
+                      rowind       = 0)
+        
+        # log prior for initial parameters
+        params_log_prior <- calc_params_logprior(param_blocks)
+        
+        # record the initial path
+        latent_paths[,,1] <- path$latent_path
+        data_log_lik[1]   <- path$data_log_lik
+        
+        if(method == "lna") {
+                lna_draws[,,1] <- path$draws
+                lna_log_lik[1] <- sum(dnorm(path$draws, log = TRUE))
+        }
         
         if (!fixed_inits) {
                 initdist_log_lik[1] <- 
-                        sum(dnorm(unlist(lapply(initdist_objects, "[[", "draws_cur")), log = T))
+                        calc_initdist_loglik(initdist_objects)
+        }
+        
+        if (!is.null(tparam)) {
+                for (p in seq_along(tparam)) tparam[[p]]$log_lik <- sum(dnorm(tparam[[p]]$draws_cur, log = T))
+                tparam_log_lik[1, ] <- sapply(tparam, "[[", "log_lik")
+                tparam_samples[,,1] <- lna_params_cur[, tparam_inds + 1, drop = FALSE]
         }
         
         # indices for recording paths and parameters
-        path_rec_ind          <- 2 # index for recording the latent paths
-        param_rec_ind         <- 2 # index for recording the parameters
+        rec_ind <- 2 # R index for recording the parameters
+        
+        # initialize the status file if status updates are required
+        if (messages | print_progress) {
+                status_file <-
+                        paste0(status_filename,
+                               "_inference_status_",
+                               as.numeric(Sys.time()),
+                               ".txt")
+                cat(
+                        "Beginning MCMC",
+                        file = status_file,
+                        sep = "\n",
+                        append = FALSE
+                )
+        }
+        
+        # begin the MCMC
+        start.time <- Sys.time()
+        for (iter in (seq_len(iterations) + 1)) {
+                
+                # Sample new parameter values
+                for(s in seq_along(param_blocks)) {
+                        
+                        if(param_blocks[[s]]$alg == "mvnmh") {
+                                
+                        }
+                }
+                
+                if (mcmc_kernel$method == "mvn_g_adaptive") {
+                        
+                        if (iter == stop_adaptation | iter == (iterations+1)) {
+                                
+                                mcmc_kernel$sigma = proposal_scaling * kernel_cov
+                                colnames(mcmc_kernel$sigma) <- 
+                                        rownames(mcmc_kernel$sigma) <- param_names_est
+                                
+                                comp_chol(kernel_cov_chol, mcmc_kernel$sigma)
+                        }
+                        
+                        # propose new parameters
+                        if (iter < stop_adaptation) {
+                                
+                                mvn_g_adaptive(
+                                        params_prop = params_prop_est,
+                                        params_cur = model_params_est,
+                                        kernel_cov_chol =  kernel_cov_chol,
+                                        nugget = nugget * adaptations[iter]
+                                )
+                                
+                        } else {
+                                mvn_rw(
+                                        params_prop = params_prop_est,
+                                        params_cur = model_params_est,
+                                        sigma_chol = kernel_cov_chol
+                                )
+                        }
+                        
+                        # Convert the proposed parameters to their natural scale
+                        params_prop_nat <- from_estimation_scale(params_prop_est)
+                        
+                        # Compute the log prior for the proposed parameters
+                        params_logprior_prop <- prior_density(params_prop_nat, params_prop_est)
+                        
+                        # Insert the proposed parameters into the parameter proposal matrix
+                        pars2lnapars2(lnapars    = lna_params_prop, 
+                                      parameters = c(params_prop_nat, init_volumes_cur),
+                                      c_start    = 0)
+                        
+                        # update time-varying parameters if necessary
+                        if (!is.null(tparam)) {
+                                for (p in seq_along(tparam)) {
+                                        insert_tparam(
+                                                tcovar    = lna_params_prop,
+                                                values    = tparam[[p]]$draws2par(
+                                                        parameters = lna_params_prop[1,],
+                                                        draws = tparam[[p]]$draws_cur),
+                                                col_ind   = tparam[[p]]$col_ind,
+                                                tpar_inds = tparam[[p]]$tpar_inds)
+                                }
+                        }
+                        
+                        # set the data log likelihood for the proposal to NULL
+                        data_log_lik_prop <- NULL
+                        
+                        try({
+                                map_draws_2_lna(
+                                        pathmat           = pathmat_prop,
+                                        draws             = path$draws,
+                                        lna_times         = lna_census_times,
+                                        lna_pars          = lna_params_prop,
+                                        lna_param_vec     = lna_param_vec,
+                                        lna_param_inds    = lna_param_inds,
+                                        lna_tcovar_inds   = lna_tcovar_inds,
+                                        init_start        = lna_initdist_inds[1],
+                                        param_update_inds = param_update_inds,
+                                        stoich_matrix     = stoich_matrix,
+                                        forcing_inds      = forcing_inds,
+                                        forcing_tcov_inds = forcing_tcov_inds,
+                                        forcings_out      = forcings_out,
+                                        forcing_transfers = forcing_transfers,
+                                        svd_d             = svd_d,
+                                        svd_U             = svd_U,
+                                        svd_V             = svd_V,
+                                        lna_pointer       = lna_pointer,
+                                        set_pars_pointer  = lna_set_pars_pointer,
+                                        step_size         = step_size
+                                )
+                                
+                                census_lna(
+                                        path                = pathmat_prop,
+                                        census_path         = censusmat,
+                                        census_inds         = census_indices,
+                                        lna_event_inds      = lna_event_inds,
+                                        flow_matrix_lna     = flow_matrix,
+                                        do_prevalence       = do_prevalence,
+                                        init_state          = init_volumes_cur,
+                                        lna_pars            = lna_params_prop,
+                                        forcing_inds        = forcing_inds,
+                                        forcing_tcov_inds   = forcing_tcov_inds,
+                                        forcings_out        = forcings_out,
+                                        forcing_transfers   = forcing_transfers
+                                )
+                                
+                                # evaluate the density of the incidence counts
+                                evaluate_d_measure_LNA(
+                                        emitmat           = emitmat,
+                                        obsmat            = data,
+                                        censusmat         = censusmat,
+                                        measproc_indmat   = measproc_indmat,
+                                        lna_parameters    = lna_params_prop,
+                                        lna_param_inds    = lna_param_inds,
+                                        lna_const_inds    = lna_const_inds,
+                                        lna_tcovar_inds   = lna_tcovar_inds,
+                                        param_update_inds = param_update_inds,
+                                        census_indices    = census_indices,
+                                        lna_param_vec     = lna_param_vec,
+                                        d_meas_ptr        = d_meas_pointer
+                                )
+                                
+                                # compute the data log likelihood
+                                data_log_lik_prop <- sum(emitmat[, -1][measproc_indmat])
+                                if (is.nan(data_log_lik_prop)) data_log_lik_prop <- -Inf
+                        }, silent = TRUE)
+                        
+                        if (is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
+                        
+                        ## Compute the acceptance probability
+                        acceptance_prob <- 
+                                (data_log_lik_prop + params_logprior_prop) - 
+                                (path$data_log_lik + params_logprior_cur)
+                        
+                        # Accept/Reject via metropolis-hastings
+                        if (acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
+                                
+                                ### ACCEPTANCE
+                                acceptances_g <- acceptances_g + 1    # increment acceptances
+                                
+                                copy_vec(path$data_log_lik, data_log_lik_prop)      # update the data log likelihood
+                                copy_vec(params_logprior_cur, params_logprior_prop) # update the prior density
+                                
+                                copy_mat(lna_params_cur, lna_params_prop)   # update the model parameter
+                                copy_vec(model_params_nat, params_prop_nat) # update LNA parameters on their natural scales
+                                copy_vec(model_params_est, params_prop_est) # update LNA parameters on their estimation scales
+                                
+                                if(!is.null(tparam)) {
+                                        for (s in seq_along(tparam)) {
+                                                copy_col(dest = lna_params_cur,
+                                                         orig = lna_params_prop,
+                                                         ind  = tparam[[s]]$col_ind)
+                                        }
+                                }
+                        }
+                        
+                        if (iter < stop_adaptation) {
+                                
+                                # Adapt the proposal kernel
+                                proposal_scaling <-
+                                        min(exp(log(proposal_scaling) +
+                                                        adaptations[iter] * (min(exp(acceptance_prob), 1) - target_g)),
+                                            max_scaling)
+                                
+                                # update the covariance matrix
+                                kernel_resid <- model_params_est - kernel_mean
+                                kernel_cov   <- kernel_cov + adaptations[iter] * (kernel_resid %*% t(kernel_resid) - kernel_cov)
+                                kernel_mean  <- kernel_mean + adaptations[iter] * kernel_resid
+                                
+                                # compute the cholesky
+                                comp_chol(kernel_cov_chol, proposal_scaling * kernel_cov)
+                        }
+                        
+                } else if (mcmc_kernel$method == "mvnss") {
+                        
+                        if (iter == stop_adaptation | iter == (iterations+1)) {
+                                
+                                # reconstitute covariance matrix
+                                mcmc_kernel$sigma <- 
+                                        blocks2cov(kernel_objects   = mvnss_objects, 
+                                                   parameter_blocks = parameter_blocks)
+                                
+                                # reconstruct mvnss settings
+                                mcmc_kernel$kernel_settings$mvnss_setting_list <- 
+                                        mvnss_settings(n_mvnss_updates       = n_mvnss_updates,
+                                                       cov_update_interval   = cov_update_interval,
+                                                       initial_bracket_width = if(joint_block_update) {
+                                                               mvnss_objects_joint$bracket_width
+                                                       } else {
+                                                               mean(sapply(mvnss_objects, function(x) x$bracket_width))      
+                                                       },
+                                                       nugget_cooling        = nugget_cooling,
+                                                       nugget_step_size      = nugget_step_size,
+                                                       bracket_limits        = c(mvnss_bracket_min, mvnss_bracket_max))
+                        }
+                        
+                        # update_sequence
+                        if(length(parameter_blocks) != 1 & !mcmc_kernel$kernel_settings$joint_block_update) {
+                                mvnss_update_seq <- c(replicate(n_mvnss_updates, sample.int(length(parameter_blocks))))
+                        }
+                        
+                        for(b in mvnss_update_seq) {
+                                
+                                # sample new parameter values
+                                mvn_slice_sampler(
+                                        model_params_est     = model_params_est,
+                                        model_params_nat     = model_params_nat,
+                                        params_prop_est      = params_prop_est,
+                                        params_prop_nat      = params_prop_nat,
+                                        mvn_direction        = if(joint_block_update) {
+                                                mvnss_objects_joint$mvn_direction
+                                        } else {
+                                                mvnss_objects[[b]]$mvn_direction
+                                        },
+                                        har_direction        = if(joint_block_update) {
+                                                mvnss_objects_joint$har_direction
+                                        } else {
+                                                mvnss_objects[[b]]$har_direction
+                                        },
+                                        mvnss_propvec        = if(joint_block_update) {
+                                                mvnss_objects_joint$mvnss_propvec
+                                        } else {
+                                                mvnss_objects[[b]]$mvnss_propvec
+                                        },
+                                        param_inds_Cpp       = if(joint_block_update) {
+                                                mvnss_objects_joint$param_inds_Cpp
+                                        } else {
+                                                parameter_blocks[[b]]$param_inds_Cpp
+                                        },
+                                        kernel_cov_chol      = if(joint_block_update) {
+                                                mvnss_objects_joint$kernel_cov_chol
+                                        } else {
+                                                mvnss_objects[[b]]$kernel_cov_chol
+                                        },
+                                        nugget               = ifelse(iter < stop_adaptation, nugget_sequence[iter], 0),
+                                        mvnss_bracket_width  = if(joint_block_update) {
+                                                mvnss_objects_joint$bracket_width
+                                        } else {
+                                                mvnss_objects[[b]]$bracket_width
+                                        },
+                                        n_expansions_mvnss   = if(joint_block_update) {
+                                                mvnss_objects_joint$n_expansions
+                                        } else {
+                                                mvnss_objects[[b]]$n_expansions
+                                        },
+                                        n_contractions_mvnss = if(joint_block_update) {
+                                                mvnss_objects_joint$n_contractions
+                                        } else {
+                                                mvnss_objects[[b]]$n_contractions
+                                        }, 
+                                        path                 = path,
+                                        pathmat_prop         = pathmat_prop,
+                                        data                 = data,
+                                        priors               = priors,
+                                        params_logprior_cur  = params_logprior_cur,
+                                        lna_params_cur       = lna_params_cur,
+                                        lna_param_vec        = lna_param_vec,
+                                        tparam               = tparam,
+                                        censusmat            = censusmat,
+                                        emitmat              = emitmat,
+                                        flow_matrix          = flow_matrix,
+                                        stoich_matrix        = stoich_matrix,
+                                        lna_times            = lna_census_times,
+                                        forcing_inds         = forcing_inds,
+                                        forcing_tcov_inds    = forcing_tcov_inds,
+                                        forcings_out         = forcings_out,
+                                        forcing_transfers    = forcing_transfers,
+                                        lna_param_inds       = lna_param_inds,
+                                        lna_const_inds       = lna_const_inds,
+                                        lna_tcovar_inds      = lna_tcovar_inds,
+                                        lna_initdist_inds    = lna_initdist_inds,
+                                        param_update_inds    = param_update_inds,
+                                        lna_event_inds       = lna_event_inds,
+                                        census_indices       = census_indices,
+                                        measproc_indmat      = measproc_indmat,
+                                        svd_d                = svd_d,
+                                        svd_U                = svd_U,
+                                        svd_V                = svd_V,
+                                        lna_pointer          = lna_pointer,
+                                        lna_set_pars_pointer = lna_set_pars_pointer,
+                                        d_meas_pointer       = d_meas_pointer,
+                                        do_prevalence        = do_prevalence,
+                                        step_size            = step_size
+                                )
+                        }
+                        
+                        # adapt the covariance blocks
+                        if(iter < stop_adaptation) {
+                                for(b in seq_along(parameter_blocks)) {
+                                        
+                                        # update the kernel covariance
+                                        mvnss_objects[[b]]$kernel_resid <- 
+                                                model_params_est[parameter_blocks[[b]]$param_inds_R] - mvnss_objects[[b]]$kernel_mean
+                                        
+                                        mvnss_objects[[b]]$kernel_cov <- 
+                                                mvnss_objects[[b]]$kernel_cov + 
+                                                adaptations[iter] * (mvnss_objects[[b]]$kernel_resid %*% t(mvnss_objects[[b]]$kernel_resid) - mvnss_objects[[b]]$kernel_cov)
+                                        
+                                        mvnss_objects[[b]]$kernel_mean <- 
+                                                mvnss_objects[[b]]$kernel_mean + adaptations[iter] * mvnss_objects[[b]]$kernel_resid
+                                        
+                                        # compute the cholesky
+                                        if((iter-1) %% cov_update_interval == 0) {
+                                                
+                                                # compute the cholesky
+                                                comp_chol(mvnss_objects[[b]]$kernel_cov_chol, mvnss_objects[[b]]$kernel_cov)
+                                                
+                                                # insert into the joint covariance matrix and cholesky if appropriate
+                                                if(joint_block_update) {
+                                                        
+                                                        # covariance block
+                                                        insert_block(dest = mvnss_objects_joint$kernel_cov,
+                                                                     orig = mvnss_objects[[b]]$kernel_cov,
+                                                                     rowinds = parameter_blocks[[b]]$param_inds_Cpp,
+                                                                     colinds = parameter_blocks[[b]]$param_inds_Cpp)
+                                                        
+                                                        # cholesky block
+                                                        insert_block(dest = mvnss_objects_joint$kernel_cov_chol,
+                                                                     orig = mvnss_objects[[b]]$kernel_cov_chol,
+                                                                     rowinds = parameter_blocks[[b]]$param_inds_Cpp,
+                                                                     colinds = parameter_blocks[[b]]$param_inds_Cpp)
+                                                }
+                                        }
+                                }
+                        }
+                        
+                        # adapt the mvnss bracket width
+                        if(joint_block_update) {
+                                
+                                mvnss_objects_joint$bracket_width <- 
+                                        max(mvnss_bracket_min,
+                                            min(mvnss_bracket_max,
+                                                exp(log(mvnss_objects_joint$bracket_width) +
+                                                            sqrt(adaptations[iter]) * 
+                                                            (mvnss_objects_joint$n_expansions / 
+                                                                     (mvnss_objects_joint$n_expansions + mvnss_objects_joint$n_contractions) - 0.5))
+                                            ))
+                                
+                        } else {
+                                for(b in seq_along(parameter_blocks)) {
+                                        mvnss_objects[[b]]$bracket_width <- 
+                                                max(mvnss_bracket_min,
+                                                    min(mvnss_bracket_max,
+                                                        exp(log(mvnss_objects[[b]]$bracket_width) +
+                                                                    sqrt(adaptations[iter]) * 
+                                                                    (mvnss_objects[[b]]$n_expansions / 
+                                                                             (mvnss_objects[[b]]$n_expansions + mvnss_objects[[b]]$n_contractions) - 0.5))
+                                                    ))
+                                }      
+                        }
+                }
+                
+                # update the initial compartment volumes
+                if(!fixed_inits && !joint_initdist_update) {
+                        
+                        update_initdist_lna(
+                                initdist_objects       = initdist_objects,
+                                init_volumes_cur       = init_volumes_cur,
+                                init_volumes_prop      = init_volumes_prop,
+                                path_cur               = path,
+                                data                   = data,
+                                lna_parameters         = lna_params_cur,
+                                lna_param_vec          = lna_param_vec,
+                                tparam                 = tparam,
+                                pathmat_prop           = pathmat_prop,
+                                censusmat              = censusmat,
+                                emitmat                = emitmat,
+                                flow_matrix            = flow_matrix,
+                                stoich_matrix          = stoich_matrix,
+                                lna_times              = lna_census_times,
+                                forcing_inds           = forcing_inds,
+                                forcing_tcov_inds      = forcing_tcov_inds,
+                                forcings_out           = forcings_out,
+                                forcing_transfers      = forcing_transfers,
+                                lna_param_inds         = lna_param_inds,
+                                lna_const_inds         = lna_const_inds,
+                                lna_tcovar_inds        = lna_tcovar_inds,
+                                lna_initdist_inds      = lna_initdist_inds,
+                                param_update_inds      = param_update_inds,
+                                census_indices         = census_indices,
+                                lna_event_inds         = lna_event_inds,
+                                measproc_indmat        = measproc_indmat,
+                                svd_d                  = svd_d,
+                                svd_U                  = svd_U,
+                                svd_V                  = svd_V,
+                                lna_pointer            = lna_pointer,
+                                lna_set_pars_pointer   = lna_set_pars_pointer,
+                                d_meas_pointer         = d_meas_pointer,
+                                do_prevalence          = do_prevalence,
+                                step_size              = step_size,
+                                initdist_steps         = initdist_steps,
+                                initdist_angle         = initdist_angle,
+                                initdist_bracket_width = initdist_bracket_width,
+                                n_initdist_updates     = n_initdist_updates
+                        )
+                        
+                        if((iter-1) <= initdist_bracket_update) {
+                                
+                                # angle residual
+                                initdist_angle_resid <- 
+                                        initdist_angle - initdist_angle_mean
+                                
+                                # angle variance
+                                initdist_angle_var   <- 
+                                        (iter-2) / (iter-1) * initdist_angle_var + initdist_angle_resid^2 / (iter - 1)
+                                
+                                # angle mean
+                                initdist_angle_mean  <- 
+                                        (iter-2) / (iter-1) * initdist_angle_mean + initdist_angle / (iter - 1)
+                                
+                                # set the new angle bracket
+                                if(((iter-1) == initdist_bracket_update)) {
+                                        initdist_bracket_width <- 
+                                                min(initdist_bracket_scaling * sqrt(initdist_angle_var), 2*pi)
+                                }
+                        }
+                }
+                
+                # update the tparam draws
+                if (!is.null(tparam) && !joint_tparam_update) {
+                        
+                        update_tparam_lna(
+                                tparam               = tparam,
+                                path_cur             = path,
+                                data                 = data,
+                                lna_parameters       = lna_params_cur,
+                                lna_param_vec        = lna_param_vec,
+                                pathmat_prop         = pathmat_prop,
+                                censusmat            = censusmat,
+                                emitmat              = emitmat,
+                                flow_matrix          = flow_matrix,
+                                stoich_matrix        = stoich_matrix,
+                                lna_times            = lna_census_times,
+                                forcing_inds         = forcing_inds,
+                                forcing_tcov_inds    = forcing_tcov_inds,
+                                forcings_out         = forcings_out,
+                                forcing_transfers    = forcing_transfers,
+                                lna_param_inds       = lna_param_inds,
+                                lna_const_inds       = lna_const_inds,
+                                lna_tcovar_inds      = lna_tcovar_inds,
+                                lna_initdist_inds    = lna_initdist_inds,
+                                param_update_inds    = param_update_inds,
+                                census_indices       = census_indices,
+                                lna_event_inds       = lna_event_inds,
+                                measproc_indmat      = measproc_indmat,
+                                svd_d                = svd_d,
+                                svd_U                = svd_U,
+                                svd_V                = svd_V,
+                                lna_pointer          = lna_pointer,
+                                lna_set_pars_pointer = lna_set_pars_pointer,
+                                d_meas_pointer       = d_meas_pointer,
+                                do_prevalence        = do_prevalence,
+                                step_size            = step_size,
+                                tparam_angle         = tparam_angle,
+                                tparam_steps         = tparam_steps,
+                                tparam_bracket_width = tparam_bracket_width,
+                                n_tparam_updates     = n_tparam_updates
+                        )
+                        
+                        if((iter-1) <= tparam_bracket_update) {
+                                
+                                # angle residual
+                                tparam_angle_resid <- 
+                                        tparam_angle - tparam_angle_mean
+                                
+                                # angle variance
+                                tparam_angle_var   <- 
+                                        (iter-2) / (iter-1) * tparam_angle_var + tparam_angle_resid^2 / (iter - 1)
+                                
+                                # angle mean
+                                tparam_angle_mean  <- 
+                                        (iter-2) / (iter-1) * tparam_angle_mean + tparam_angle / (iter - 1)
+                                
+                                # set the new angle bracket
+                                if(((iter-1) == tparam_bracket_update)) {
+                                        tparam_bracket_width <- 
+                                                min(tparam_bracket_scaling * sqrt(tparam_angle_var), 2*pi)
+                                }
+                        }
+                }
+                
+                # Update the path via elliptical slice sampling
+                update_lna_path(
+                        path_cur                = path,
+                        data                    = data,
+                        lna_parameters          = lna_params_cur,
+                        lna_param_vec           = lna_param_vec,
+                        init_volumes_cur        = init_volumes_cur,
+                        init_volumes_prop       = init_volumes_prop,
+                        initdist_objects        = initdist_objects,
+                        tparam                  = tparam,
+                        pathmat_prop            = pathmat_prop,
+                        censusmat               = censusmat,
+                        draws_prop              = draws_prop,
+                        ess_draws_prop          = ess_draws_prop,
+                        emitmat                 = emitmat,
+                        flow_matrix             = flow_matrix,
+                        stoich_matrix           = stoich_matrix,
+                        lna_times               = lna_census_times,
+                        forcing_inds            = forcing_inds,
+                        forcing_tcov_inds       = forcing_tcov_inds,
+                        forcings_out            = forcings_out,
+                        forcing_transfers       = forcing_transfers,
+                        lna_param_inds          = lna_param_inds,
+                        lna_const_inds          = lna_const_inds,
+                        lna_tcovar_inds         = lna_tcovar_inds,
+                        lna_initdist_inds       = lna_initdist_inds,
+                        param_update_inds       = param_update_inds,
+                        lna_event_inds          = lna_event_inds,
+                        census_indices          = census_indices,
+                        measproc_indmat         = measproc_indmat,
+                        svd_d                   = svd_d,
+                        svd_U                   = svd_U,
+                        svd_V                   = svd_V,
+                        lna_pointer             = lna_pointer,
+                        lna_set_pars_pointer    = lna_set_pars_pointer,
+                        d_meas_pointer          = d_meas_pointer,
+                        do_prevalence           = do_prevalence,
+                        n_ess_updates           = n_ess_updates,
+                        ess_schedule            = ess_schedule,
+                        lna_bracket_width       = lna_bracket_width,
+                        joint_tparam_update     = joint_tparam_update,
+                        joint_initdist_update   = joint_initdist_update,
+                        step_size               = step_size
+                )
+                
+                # update the lna bracket if required
+                if((iter-1) <= lna_bracket_update) {
+                        
+                        # angle residual
+                        lna_angle_resid <- 
+                                colMeans(path$angle_record) - lna_angle_mean
+                        
+                        # angle variance
+                        lna_angle_var <- 
+                                (iter - 2) / (iter - 1) * lna_angle_var + 
+                                lna_angle_resid^2 / (iter - 1)
+                        
+                        # angle mean
+                        lna_angle_mean  <- 
+                                (iter - 2) / (iter - 1) * lna_angle_mean + 
+                                colMeans(path$angle_record) / (iter - 1)
+                        
+                        # set the new angle bracket
+                        if(((iter-1) == lna_bracket_update)) {
+                                lna_bracket_width <- 
+                                        pmin(lna_bracket_scaling * sqrt(lna_angle_var), 2*pi)
+                        }
+                }
+                
+                # Save the latent process if called for in this iteration
+                if ((iter-1) %% thin_latent_proc == 0) {
+                        ess_step_record[, , param_rec_ind - 1]  <- path$step_record  # save the number of steps
+                        ess_angle_record[, , param_rec_ind - 1] <- path$angle_record # save the angle
+                        lna_paths[,,path_rec_ind] <- path$lna_path                 # save the path
+                        lna_draws[,,path_rec_ind] <- path$draws                    # save the N(0,1) draws
+                        path_rec_ind <- path_rec_ind + 1                           # increment the path record index
+                }
+                
+                # Save the parameters if called for in this iteration
+                if ((iter-1) %% thin_params == 0) {
+                        
+                        # Save the lna log likelihood, data log likelihood, and log priors
+                        data_log_lik[param_rec_ind]     <- path$data_log_lik
+                        lna_log_lik[param_rec_ind]      <- sum(dnorm(path$draws, log = T))
+                        params_log_prior[param_rec_ind] <- params_logprior_cur
+                        
+                        # save initdist ess record and log prior
+                        if(!fixed_inits){
+                                
+                                initdist_log_lik[param_rec_ind] <- 
+                                        sum(dnorm(unlist(lapply(initdist_objects, "[[", "draws_cur")), log = T))
+                                
+                                if(!joint_initdist_update) {
+                                        initdist_step_record[param_rec_ind]  <- initdist_steps
+                                        initdist_angle_record[param_rec_ind] <- initdist_angle
+                                }
+                        } 
+                        
+                        if (!is.null(tparam)) {
+                                
+                                if (!joint_tparam_update) {
+                                        tparam_step_record[param_rec_ind]  <- tparam_steps
+                                        tparam_angle_record[param_rec_ind] <- tparam_angle
+                                } 
+                                
+                                for (p in seq_along(tparam)) tparam[[p]]$log_lik <- sum(dnorm(tparam[[p]]$draws_cur, log = T))
+                                
+                                tparam_log_lik[param_rec_ind, ] <- sapply(tparam, "[[", "log_lik")
+                                tparam_samples[,,param_rec_ind] <- lna_params_cur[, tparam_inds + 1, drop = FALSE]
+                        }
+                        
+                        # Store the parameter sample
+                        parameter_samples_nat[param_rec_ind,] <- c(model_params_nat, init_volumes_cur)
+                        parameter_samples_est[param_rec_ind,] <- c(model_params_est)
+                        
+                        # Store the proposal covariance matrix if monitoring is requested
+                        if (mcmc_kernel$method == "mvn_g_adaptive") {
+                                
+                                adaptation_scale_record[param_rec_ind] <- proposal_scaling
+                                kernel_cov_record[, , param_rec_ind]   <- kernel_cov
+                                
+                        } else if(mcmc_kernel$method == "afss") {
+                                
+                                kernel_cov_record[, , param_rec_ind] <- kernel_cov
+                                
+                        } else if(mcmc_kernel$method == "mvnss") {
+                                
+                                for(b in seq_along(parameter_blocks)) {
+                                        kernel_cov_record[[b]][,,param_rec_ind] <- mvnss_objects[[b]]$kernel_cov
+                                }
+                        }
+                        
+                        # Increment the parameter record index
+                        param_rec_ind <- param_rec_ind + 1
+                }
+                
+                # print status messages if called for
+                if(print_progress && (iter-1) %% progress_interval == 0) {
+                        
+                        if(mcmc_kernel$method == "mvn_g_adaptive") {
+                                
+                                if (iter < stop_adaptation) {
+                                        cat(
+                                                paste0("Iteration: ", iter-1),
+                                                paste0("Global acceptances: ", acceptances_g),
+                                                paste0(
+                                                        "Global acceptance rate: ",
+                                                        acceptances_g / (iter - 1)
+                                                ),
+                                                file = status_file,
+                                                sep = "\n",
+                                                append = TRUE
+                                        )
+                                        
+                                } else {
+                                        cat(
+                                                paste0("Iteration: ", iter-1),
+                                                file = status_file,
+                                                sep = "\n",
+                                                append = TRUE
+                                        )
+                                }
+                        } else if(mcmc_kernel$method %in% c("afss", "mvn_rw")) {
+                                
+                                cat(
+                                        paste0("Iteration: ", iter-1),
+                                        file = status_file,
+                                        sep = "\n",
+                                        append = TRUE
+                                )
+                                
+                        } else if(mcmc_kernel$method == "harss") {
+                                
+                                cat(paste0("Iteration: ", iter-1),
+                                    paste0("n_contractions = ", n_contractions_harss - 0.5,
+                                           "; n_expansions = ",n_expansions_harss - 0.5),
+                                    file = status_file,
+                                    sep = "\n",
+                                    append = T)
+                                
+                        } else if(mcmc_kernel$method == "mvnss") {
+                                
+                                if(joint_block_update) {
+                                        
+                                        cat(paste0("Iteration: ", iter-1, "\n"),
+                                            paste0("n_contractions = ", mvnss_objects_joint$n_contractions,
+                                                   "; n_expansions = ", mvnss_objects_joint$n_expansions, sep = "\n"),
+                                            file = status_file,
+                                            sep = "\n",
+                                            append = T)
+                                        
+                                } else {
+                                        expansions_by_block   <- sapply(mvnss_objects, function(x) x$n_expansions - 0.5)
+                                        contractions_by_block <- sapply(mvnss_objects, function(x) x$n_contractions - 0.5)
+                                        
+                                        cat(paste0("Iteration: ", iter-1, "\n"),
+                                            paste0("Block ", seq_along(parameter_blocks), ": ",
+                                                   "n_contractions = ", contractions_by_block,
+                                                   "; n_expansions = ", expansions_by_block, sep = "\n"),
+                                            file = status_file,
+                                            sep = "\n",
+                                            append = T)
+                                }
+                        }
+                }
+        }
+        
+        # record the end time
+        end.time = Sys.time()
         
         class(results) <- "stemr_inference_list"
         return(results)

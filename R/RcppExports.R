@@ -204,8 +204,8 @@ pars2lnapars2 <- function(lnapars, parameters, c_start) {
 #' 
 #' @return modifies the parameter matrix in place
 #' @export
-pars2parmat <- function(parmat, pars, colinds, rowinds = 0L) {
-    invisible(.Call(`_stemr_pars2parmat`, parmat, pars, colinds, rowinds))
+pars2parmat <- function(parmat, pars, colinds, rowind = 0L) {
+    invisible(.Call(`_stemr_pars2parmat`, parmat, pars, colinds, rowind))
 }
 
 #' Copy an element from one vector into another
