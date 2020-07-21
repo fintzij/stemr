@@ -64,8 +64,6 @@ initialize_ode <-
                  forcing_transfers,
                  initialization_attempts,
                  step_size,
-                 fixed_inits,
-                 init_volumes_cur,
                  initdist_objects) {
               
               # get the initial state parameters
@@ -154,7 +152,8 @@ initialize_ode <-
                                                             initdist_objects[[s]]$draws_cur)))
                                 
                                 while(any(initdist_objects[[s]]$init_volumes < 0) | 
-                                      any(init_volumes_cur[initdist_objects[[s]]$comp_inds_R] > initdist_objects[[s]]$comp_size)) {
+                                      any(initdist_objects[[s]]$init_volumes > 
+                                          initdist_objects[[s]]$comp_size)) {
                                     
                                     # N(0,1) draws
                                     draw_normals(initdist_objects[[s]]$draws_cur)

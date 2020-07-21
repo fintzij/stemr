@@ -302,6 +302,18 @@ copy_col <- function(dest, orig, ind) {
     invisible(.Call(`_stemr_copy_col`, dest, orig, ind))
 }
 
+#' Copy the contents of one matrix into another
+#'
+#' @param dest destination matrix
+#' @param orig origin matrix
+#' @param ind row index
+#'
+#' @return copy the elements of one matrix into another.
+#' @export
+copy_row <- function(dest, orig, ind) {
+    invisible(.Call(`_stemr_copy_row`, dest, orig, ind))
+}
+
 #' Copy the columns of one matrix into another
 #'
 #' @param dest destination matrix
@@ -586,8 +598,8 @@ map_draws_2_lna <- function(pathmat, draws, lna_times, lna_pars, lna_param_vec, 
 #' @return List containing the ODE incidence and prevalence paths.
 #'
 #' @export
-map_pars_2_ode <- function(pathmat, ode_times, ode_pars, ode_param_inds, ode_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, step_size, ode_pointer, set_pars_pointer) {
-    invisible(.Call(`_stemr_map_pars_2_ode`, pathmat, ode_times, ode_pars, ode_param_inds, ode_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, step_size, ode_pointer, set_pars_pointer))
+map_pars_2_ode <- function(pathmat, ode_times, ode_pars, ode_param_vec, ode_param_inds, ode_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, step_size, ode_pointer, set_pars_pointer) {
+    invisible(.Call(`_stemr_map_pars_2_ode`, pathmat, ode_times, ode_pars, ode_param_vec, ode_param_inds, ode_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, step_size, ode_pointer, set_pars_pointer))
 }
 
 #' Cholesky decomposition
@@ -739,6 +751,19 @@ propose_lna <- function(lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcov
 #' @export
 propose_lna_approx <- function(lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, max_attempts, ess_updates, ess_warmup, lna_bracket_width, step_size, lna_pointer, set_pars_pointer) {
     .Call(`_stemr_propose_lna_approx`, lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, max_attempts, ess_updates, ess_warmup, lna_bracket_width, step_size, lna_pointer, set_pars_pointer)
+}
+
+#' Multivariate normal Metropolis-Hastings proposal
+#'
+#' @param params_prop vector in which the proposed parameters should be stored
+#' @param params_cur vector containing the current parameter vector
+#' @param kernel_cov_chol cholesky of the kernel covariance
+#' @param nugget zero if adaptation is not ongoing
+#'
+#' @return propose new parameter values in place
+#' @export
+propose_mvnmh <- function(params_prop, params_cur, kernel_cov_chol, nugget) {
+    invisible(.Call(`_stemr_propose_mvnmh`, params_prop, params_cur, kernel_cov_chol, nugget))
 }
 
 #' Identify which rates to update when a state transition event occurs.

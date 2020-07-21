@@ -158,6 +158,20 @@ void copy_col(arma::mat& dest, const arma::mat& orig, int ind) {
       dest.col(ind) = orig.col(ind);
 }
 
+//' Copy the contents of one matrix into another
+//'
+//' @param dest destination matrix
+//' @param orig origin matrix
+//' @param ind row index
+//'
+//' @return copy the elements of one matrix into another.
+//' @export
+// [[Rcpp::export]]
+void copy_row(arma::mat& dest, const arma::mat& orig, int ind) {
+  
+  dest.row(ind) = orig.row(ind);
+}
+
 //' Copy the columns of one matrix into another
 //'
 //' @param dest destination matrix

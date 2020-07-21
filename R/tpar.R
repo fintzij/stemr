@@ -4,10 +4,9 @@
 #' @param tparam_name name of the time--varying parameter
 #' @param draws2par function for mapping a vector of N(0,1) draws of length
 #'   equal to the length of the \code{times} argument. The function should have
-#'   the following signature: \code{draws2par(draws, pars)}. Here, draws is
-#'   a vector of N(0,1) draws, pars is the matrix of parameters, which includes
-#'   possibly other time varying parameters. The function should return a vector
-#'   of time-varying parameter values.
+#'   the following signature: \code{draws2par(draws, pars)}. Here, draws is a
+#'   vector of N(0,1) draws and pars is a vector of parameters. The
+#'   function should return a vector of time-varying parameter values.
 #' @param times vector of times when the time-varying parameter changes.
 #' @param n_draws number of N(0,1) random variates
 #' @param values vector of values of N(0,1) draws for the time-varying

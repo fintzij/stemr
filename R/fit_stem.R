@@ -200,6 +200,11 @@ fit_stem <-
                                 stem_object$dynamics$ode_rates$ode_param_codes[
                                         sapply(tparam, function(x) x$tparam_name)]
                 }
+                
+                # set the LNA SVD objects to NULL
+                svd_U <- NULL
+                svd_V <- NULL
+                svd_d <- NULL
         }
         
         # LNA ESS schedule --------------------------------------------------------
@@ -303,9 +308,6 @@ fit_stem <-
                                 } 
                         }      
                 }
-                
-                # object for storing initial distribution objects
-                
         }
         
         # full vector of times
@@ -406,7 +408,7 @@ fit_stem <-
         # get indices for time-varying parameters
         if (!is.null(tparam)) {
                 
-                if (!joint_tparam_update) {
+                if (!tparam_ess_control$joint_tparam_update) {
                         tparam_ess  <- 1
                 } else {
                         tparam_ess <- NULL
@@ -812,7 +814,7 @@ fit_stem <-
         if (!is.null(tparam)) {
                 for (p in seq_along(tparam)) tparam[[p]]$log_lik <- sum(dnorm(tparam[[p]]$draws_cur, log = T))
                 tparam_log_lik[1, ] <- sapply(tparam, "[[", "log_lik")
-                tparam_samples[,,1] <- lna_params_cur[, tparam_inds + 1, drop = FALSE]
+                tparam_samples[,,1] <- params_cur[, tparam_inds + 1, drop = FALSE]
         }
         
         # indices for recording paths and parameters
@@ -841,6 +843,7 @@ fit_stem <-
                 for(s in seq_along(param_blocks)) {
                         
                         if(param_blocks[[s]]$alg == "mvnmh") {
+                                
                                 
                         }
                 }

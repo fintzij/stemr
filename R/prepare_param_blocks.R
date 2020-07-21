@@ -15,7 +15,15 @@ prepare_param_blocks = function(param_blocks, parameters, param_codes, iteration
                     sort(names(parameters)))) {
             stop("Not all parameters are part of a parameter block.")
       }
-
+   
+      ### get index for when MCMC adaptation is to be stopped
+      adapt_iters = sapply(param_blocks, function(x) x$control$stop_adaptation)
+      if(!all.equal(adapt_iters, adapt_iters[1])) {
+            message("MCMC proposals for some parameter blocks are adapted longer than 
+                    others. All blocks will be adapted until the maximum adaptation.")
+      }
+      max_adaptation = max(adapt_iters)
+      
       # names of the param codes 
       code_names = names(param_codes)
          
@@ -102,21 +110,22 @@ prepare_param_blocks = function(param_blocks, parameters, param_codes, iteration
             param_blocks[[s]]$block_size = length(param_blocks[[s]]$pars_nat)
             param_blocks[[s]]$pars_prop_nat = double(param_blocks[[s]]$block_size)
             param_blocks[[s]]$pars_prop_est = double(param_blocks[[s]]$block_size)
+            copy_vec(param_blocks[[s]]$pars_prop_nat, param_blocks[[s]]$pars_nat)
+            copy_vec(param_blocks[[s]]$pars_prop_est, param_blocks[[s]]$pars_est)
             param_blocks[[s]]$log_pd_prop = log_prior[[s]](param_blocks[[s]]$pars_est)
             
             # should the proposals be adapted
-            param_blocks[[s]]$adapt = 
+            param_blocks[[s]]$control$adapt = 
                param_blocks[[s]]$control$stop_adaptation != 0
             
-            if(param_blocks[[s]]$adapt) {
-               param_blocks[[s]]$stop_adaptation = 
-                  param_blocks[[s]]$control$stop_adaptation + 1
+            if(param_blocks[[s]]$control$adapt) {
+               param_blocks[[s]]$control$stop_adaptation = max_adaptation + 1
             } else {
-               param_blocks[[s]]$stop_adaptation = 0
+               param_blocks[[s]]$control$stop_adaptation = 0
             }
             
             # generate sequence of gain factors
-            param_blocks[[s]]$adaptations = 
+            param_blocks[[s]]$gain_factors = 
                pmin(1, param_blocks[[s]]$control$scale_constant *
                        (seq(0, iterations) * 
                            param_blocks[[s]]$control$step_size + 
@@ -136,9 +145,27 @@ prepare_param_blocks = function(param_blocks, parameters, param_codes, iteration
                    param_blocks[[s]]$control$nugget_step_size + 1) ^ 
                -param_blocks[[s]]$control$nugget_cooling
             
-            # zero out the nugget sequence after adaptation ends
+            # zero out the adaptation and nugget sequence after adaptation ends
+            param_blocks[[s]]$gain_factors[
+               seq(param_blocks[[s]]$control$stop_adaptation, (iterations + 1))] = 0.0
             param_blocks[[s]]$nugget_sequence[
-               seq(param_blocks[[s]]$stop_adaptation, (iterations + 1))] = 0.0
+               seq(param_blocks[[s]]$control$stop_adaptation, (iterations + 1))] = 0.0
+            
+            # kernel_resid, _mean, and _cov for adaptation
+            param_blocks[[s]]$kernel_resid = 
+               double(param_blocks[[s]]$block_size)
+            param_blocks[[s]]$kernel_mean  = 
+               double(param_blocks[[s]]$block_size)
+            param_blocks[[s]]$kernel_cov   = 
+               diag(1.0, param_blocks[[s]]$block_size)
+            
+            # fill out the mean, covariance, and cholesky
+            copy_vec(dest = param_blocks[[s]]$kernel_mean, 
+                     orig = param_blocks[[s]]$pars_est)
+            copy_mat(dest = param_blocks[[s]]$kernel_cov, 
+                     orig = param_blocks[[s]]$sigma)
+            param_blocks[[s]]$kernel_cov_chol <- 
+               chol(param_blocks[[s]]$kernel_cov)
             
             # initialize the list of objects for mvnss in the block
             if(param_blocks[[s]]$alg == "mvnss") {
@@ -149,35 +176,13 @@ prepare_param_blocks = function(param_blocks, parameters, param_codes, iteration
                        mvnss_propvec   = rep(0.0, param_blocks[[s]]$block_size),
                        n_expansions    = c(0.5),
                        n_contractions  = c(0.5),
-                       bracket_width   = param_blocks[[s]]$control$initial_bracket_width,
-                       kernel_resid    = double(param_blocks[[s]]$block_size),
-                       kernel_mean     = double(param_blocks[[s]]$block_size),
-                       kernel_cov      = diag(1.0, param_blocks[[s]]$block_size))
-               
-               # fill out the mean, covariance, and cholesky
-               copy_vec(dest = param_blocks[[s]]$mvnss_objects$kernel_mean, 
-                        orig = param_blocks[[s]]$pars_est)
-               copy_mat(dest = param_blocks[[s]]$mvnss_objects$kernel_cov, 
-                        orig = param_blocks[[s]]$sigma)
-               param_blocks[[s]]$mvnss_objects$kernel_cov_chol <- 
-                  chol(param_blocks[[s]]$mvnss_objects$kernel_cov)
+                       bracket_width   = param_blocks[[s]]$control$initial_bracket_width)
                
             } else if(param_blocks[[s]]$alg == "mvnmh") {
                
                param_blocks[[s]]$mvnmh_objects = 
                   list(proposal_scaling = 1,
-                       acceptances      = 0,
-                       kernel_resid     = double(param_blocks[[s]]$block_size),
-                       kernel_mean      = double(param_blocks[[s]]$block_size),
-                       kernel_cov       = diag(1.0, param_blocks[[s]]$block_size))
-               
-               # fill out the mean, covariance, and cholesky
-               copy_vec(dest = param_blocks[[s]]$mvnmh_objects$kernel_mean, 
-                        orig = param_blocks[[s]]$pars_est)
-               copy_mat(dest = param_blocks[[s]]$mvnmh_objects$kernel_cov, 
-                        orig = param_blocks[[s]]$sigma)
-               param_blocks[[s]]$mvnmh_objects$kernel_cov_chol <- 
-                  chol(param_blocks[[s]]$mvnmh_objects$kernel_cov)
+                       acceptances      = 0)
             }
       }
       
