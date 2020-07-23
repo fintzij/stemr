@@ -7,10 +7,9 @@
 mvnss_control(
   n_updates = 1,
   bracket_width = 1,
-  cov_update_interval = 1,
   bracket_limits = c(0, Inf),
-  scale_constant = 0.5,
-  scale_cooling = 0.5 + 1e-05,
+  scale_constant = 1,
+  scale_cooling = 2/3,
   step_size = 1,
   stop_adaptation = 0,
   adaptation_offset = 0,
@@ -21,9 +20,6 @@ mvnss_control(
 }
 \arguments{
 \item{n_updates}{number of updates per iteration.}
-
-\item{cov_update_interval}{how often the empirical covariance matrix should
-be updated}
 
 \item{bracket_limits}{limits for the slice bracket width, defaults to
 (0,Inf).}

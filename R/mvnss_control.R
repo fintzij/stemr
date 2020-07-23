@@ -2,8 +2,6 @@
 #'
 #' @param n_updates number of updates per iteration.
 #' @param initial_bracket_width initial width of the slice bracket
-#' @param cov_update_interval how often the empirical covariance matrix should
-#'   be updated
 #' @param bracket_limits limits for the slice bracket width, defaults to
 #'   (0,Inf).
 #' @param scale_constant constant multiple of the adaptations determined by
@@ -30,10 +28,9 @@
 mvnss_control <-
       function(n_updates = 1,
                bracket_width = 1,
-               cov_update_interval = 1,
                bracket_limits = c(0,Inf),
-               scale_constant = 0.5,
-               scale_cooling = 0.5+1e-5,
+               scale_constant = 1,
+               scale_cooling = 2/3,
                step_size = 1,
                stop_adaptation = 0,
                adaptation_offset = 0,
@@ -47,7 +44,6 @@ mvnss_control <-
       
       list(n_updates             = n_updates,
            bracket_width         = bracket_width,
-           cov_update_interval   = cov_update_interval,
            bracket_limits        = bracket_limits,
            scale_constant        = scale_constant,
            scale_cooling         = scale_cooling,

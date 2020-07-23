@@ -12,7 +12,7 @@ lna_control(
   bracket_scaling = 2 * sqrt(2 * log(10)),
   joint_strata_update = FALSE,
   joint_initdist_update = TRUE,
-  ess_warmup = 50
+  ess_warmup = 100
 )
 }
 \arguments{
@@ -39,7 +39,8 @@ FALSE.}
 with the lna path? Defaults to TRUE, in which case initial conditions for
 each stratum are still paired with the LNA path for that stratum.}
 
-\item{ess_warmup}{ess_warmup ESS updates prior to starting MCMC}
+\item{ess_warmup}{number of ESS warmup iterations if approximate LNA
+initialization}
 }
 \value{
 list with settings for elliptical slice sampling

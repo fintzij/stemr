@@ -1,9 +1,8 @@
-#' Generate a list of settings for metropolis-hastings 
+#' Generate a list of settings for Metropolis-Hastings updates and adaptation
+#' via the robust adaptive Metropolis algorithm (Vilhola, 2012).  
 #'
 #' @param n_updates number of updates per iteration.
 #' @param target_acceptance target acceptance rate, defaults to 0.234
-#' @param cov_update_interval how often the empirical covariance matrix should
-#'   be updated
 #' @param max_scaling maximum global scaling factor, defaults to Inf. 
 #' @param scale_constant constant multiple of the adaptations determined by
 #'  \code{scale_cooling}.
@@ -29,10 +28,9 @@
 mvnmh_control <-
       function(n_updates = 1,
                target_acceptance = 0.234,
-               cov_update_interval = 1,
                max_scaling = Inf,
-               scale_constant = 0.5,
-               scale_cooling = 0.5+1e-5,
+               scale_constant = 1,
+               scale_cooling = 2/3,
                step_size = 1,
                stop_adaptation = 0, 
                adaptation_offset = 0,
@@ -50,7 +48,6 @@ mvnmh_control <-
       
       list(n_updates             = n_updates,
            target_acceptance     = target_acceptance,
-           cov_update_interval   = cov_update_interval,
            max_scaling           = max_scaling,
            scale_constant        = scale_constant,
            scale_cooling         = scale_cooling,

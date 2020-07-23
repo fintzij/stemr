@@ -9,6 +9,7 @@ map_pars_2_ode(
   pathmat,
   ode_times,
   ode_pars,
+  ode_param_vec,
   ode_param_inds,
   ode_tcovar_inds,
   init_start,

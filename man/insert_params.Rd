@@ -4,14 +4,18 @@
 \alias{insert_params}
 \title{Insert natural scale parameters into a parameter matrix}
 \usage{
-insert_params(parmat, param_blocks, prop)
+insert_params(parmat, param_blocks, nat = TRUE, prop = FALSE, rowind = 0)
 }
 \arguments{
 \item{parmat}{matrix into which parameters should be inserted}
 
 \item{param_blocks}{list of parameter blocks}
 
+\item{nat}{should parameters be inserted on their estimation scale}
+
 \item{prop}{should proposed parameters be inserted?}
+
+\item{rowind}{C++ row index}
 }
 \value{
 insert natural scale parameters into a parameter matrix

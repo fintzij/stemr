@@ -11,8 +11,7 @@ fit_stem(
   mcmc_kern,
   iterations,
   initialization_attempts = 500,
-  thin_params = ceiling(iterations/100),
-  thin_latent_proc = ceiling(iterations/100),
+  thinning_interval = ceiling(iterations/100),
   return_adapt_rec = FALSE,
   print_progress = 0,
   status_filename = NULL,
@@ -32,11 +31,8 @@ model dynamics, and measurement process.}
 
 \item{initialization_attempts}{number of initialization attempts}
 
-\item{thin_params}{thinning interval for posterior parameter samples,
-defaults to 1}
-
-\item{thin_latent_proc}{thinning interval for latent paths, defaults to
-ceiling(iterations/100) so that every 100th path will be saved}
+\item{thinning_interval}{thinning interval for posterior samples, defaults to
+ceiling(iterations/100) so that every 100th sample will be saved}
 
 \item{return_adapt_rec}{should the MCMC adaptation record be returned?
 defaults to FALSE.}

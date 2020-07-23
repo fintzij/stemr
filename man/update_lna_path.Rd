@@ -53,12 +53,6 @@ update_lna_path(
 
 \item{data}{matrix containing the dataset}
 
-\item{lna_parameters}{parameters, contants, time-varying covariates at LNA
-times}
-
-\item{lna_param_vec}{vector for storing lna parameters when evaluating the
-measurement process}
-
 \item{tparam}{list of time-varying parameters}
 
 \item{censusmat}{template matrix for the LNA path and incidence at the
@@ -68,19 +62,8 @@ observation times}
 
 \item{stoich_matrix}{LNA stoichiometry matrix}
 
-\item{lna_times}{times at whicht eh LNA should be evaluated}
-
 \item{forcing_inds}{logical vector of indicating at which times in the
 time-varying covariance matrix a forcing is applied.}
-
-\item{lna_param_inds}{C++ column indices for parameters}
-
-\item{lna_const_inds}{C++ column indices for constants}
-
-\item{lna_tcovar_inds}{C++ column indices for time varying covariates}
-
-\item{lna_initdist_inds}{C++ column indices in the LNA parameter matrix for
-the initial state}
 
 \item{param_update_inds}{logical vector indicating when to update the
 parameters}
@@ -88,17 +71,10 @@ parameters}
 \item{census_indices}{C++ row indices of LNA times when the path is to be
 censused}
 
-\item{lna_event_inds}{vector of column indices in the LNA path for which
-incidence will be computed.}
-
 \item{measproc_indmat}{logical matrix for evaluating the measuement process}
 
 \item{svd_d, svd_U, svd_V}{objects for computing the SVD of LNA
 diffusion matrics}
-
-\item{lna_pointer}{external LNA pointer}
-
-\item{lna_set_pars_pointer}{pointer for setting the LNA parameters}
 
 \item{d_meas_pointer}{external pointer for the measurement process function}
 

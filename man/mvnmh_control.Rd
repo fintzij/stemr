@@ -2,15 +2,15 @@
 % Please edit documentation in R/mvnmh_control.R
 \name{mvnmh_control}
 \alias{mvnmh_control}
-\title{Generate a list of settings for metropolis-hastings}
+\title{Generate a list of settings for Metropolis-Hastings updates and adaptation
+via the robust adaptive Metropolis algorithm (Vilhola, 2012).}
 \usage{
 mvnmh_control(
   n_updates = 1,
   target_acceptance = 0.234,
-  cov_update_interval = 1,
   max_scaling = Inf,
-  scale_constant = 0.5,
-  scale_cooling = 0.5 + 1e-05,
+  scale_constant = 1,
+  scale_cooling = 2/3,
   step_size = 1,
   stop_adaptation = 0,
   adaptation_offset = 0,
@@ -23,9 +23,6 @@ mvnmh_control(
 \item{n_updates}{number of updates per iteration.}
 
 \item{target_acceptance}{target acceptance rate, defaults to 0.234}
-
-\item{cov_update_interval}{how often the empirical covariance matrix should
-be updated}
 
 \item{max_scaling}{maximum global scaling factor, defaults to Inf.}
 
@@ -59,5 +56,6 @@ of iterations.}
 list with control settings for Metropolis-Hastings updates
 }
 \description{
-Generate a list of settings for metropolis-hastings
+Generate a list of settings for Metropolis-Hastings updates and adaptation
+via the robust adaptive Metropolis algorithm (Vilhola, 2012).
 }

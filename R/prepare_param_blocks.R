@@ -12,7 +12,7 @@ prepare_param_blocks = function(param_blocks, parameters, param_codes, iteration
       ### first validate the parameter blocks
       # check that all parameters are in a block
       if(!identical(sort(c(sapply(param_blocks, function(x) x$pars_nat))),
-                    sort(names(parameters)))) {
+                    sort(names(parameters)[!grepl("_0", names(parameters))]))) {
             stop("Not all parameters are part of a parameter block.")
       }
    
@@ -176,7 +176,13 @@ prepare_param_blocks = function(param_blocks, parameters, param_codes, iteration
                        mvnss_propvec   = rep(0.0, param_blocks[[s]]$block_size),
                        n_expansions    = c(0.5),
                        n_contractions  = c(0.5),
-                       bracket_width   = param_blocks[[s]]$control$initial_bracket_width)
+                       bracket_width   = param_blocks[[s]]$control$bracket_width,
+                       bracket_adaptations = 
+                          sqrt(pmin(1, param_blocks[[s]]$control$scale_constant *
+                                       (seq(0, iterations) * 
+                                           param_blocks[[s]]$control$step_size + 
+                                           param_blocks[[s]]$control$adaptation_offset + 1) ^ 
+                                       -param_blocks[[s]]$control$scale_cooling)))
                
             } else if(param_blocks[[s]]$alg == "mvnmh") {
                

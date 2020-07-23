@@ -4,7 +4,7 @@
 \alias{pars2parmat}
 \title{Insert parameters into the first row of a parameter matrix}
 \usage{
-pars2parmat(parmat, pars, colinds, rowinds = 0L)
+pars2parmat(parmat, pars, colinds, rowind = 0L)
 }
 \arguments{
 \item{parmat}{parameter matrics}

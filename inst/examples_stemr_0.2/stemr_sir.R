@@ -281,10 +281,32 @@ ggplot(data = as.data.frame(sim_mjp$datasets[[1]]),
 #' We'll need to recompile the measurement process with the simulated data fed to
 #' the data argument of the `stem_measure` function since the data was not present
 #' when the measurement process was originally compiled. There is no need to recompile
-#' the model dynamics object, although we'll have to regenerate the object with the
-#' new measurement process.
+#' the model dynamics object if nothing about the model dynamics changes. In this
+#' case however, we'll also do inference on the initial compartment volumes, so
+#' we'll recompile the dynamics with a new state initializer.
 #' 
 ## ----recompile_meas, echo = TRUE-----------------------------------------
+state_initializer <-
+  list(
+    stem_initializer(
+      init_states = c(S = popsize-10, I = 10, R = 0), # must match compartment names
+      fixed = FALSE,
+      prior = c(popsize, 10, 0)/10)) # we now do inference on the initial compartment counts
+
+dynamics <-
+  stem_dynamics(
+    rates = rates,
+    tmax = tmax,
+    parameters = parameters,
+    state_initializer = state_initializer,
+    compartments = compartments,
+    constants = constants,
+    compile_ode = T,   # compile ODE functions
+    compile_rates = F, # compile MJP functions for Gillespie simulation
+    compile_lna = T,   # compile LNA functions
+    messages = F       # don't print messages
+  )
+
 measurement_process <-
   stem_measure(emissions = emissions,
                dynamics = dynamics,
@@ -353,12 +375,12 @@ mcmc_kern <-
                   pars_nat = c("beta", "mu", "rho", "phi"),
                   pars_est = c("log_R0", "log_mu", "logit_rho", "log_phi"),
                   priors = priors,
-                  alg = "mvnmh",
+                  alg = "mvnss",
                   sigma = diag(0.01, 4),
                   initializer = par_initializer,
                   control = 
-                    # mvnss_control(stop_adaptation = 1e2))),
-                    mvnmh_control(stop_adaptation = 1e2))),
+                    mvnss_control(stop_adaptation = 1e2))),
+                    # mvnmh_control(stop_adaptation = 1e2))),
           lna_ess_control = lna_control(bracket_update_iter = 50,
                                         joint_initdist_update = TRUE))
 

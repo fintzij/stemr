@@ -377,6 +377,17 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// increment_vec
+void increment_vec(arma::rowvec& target, const arma::rowvec& increments);
+RcppExport SEXP _stemr_increment_vec(SEXP targetSEXP, SEXP incrementsSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::rowvec& >::type target(targetSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type increments(incrementsSEXP);
+    increment_vec(target, increments);
+    return R_NilValue;
+END_RCPP
+}
 // draw_normals
 void draw_normals(arma::vec& v);
 RcppExport SEXP _stemr_draw_normals(SEXP vSEXP) {
@@ -885,6 +896,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_mat_2_arr", (DL_FUNC) &_stemr_mat_2_arr, 3},
     {"_stemr_reset_vec", (DL_FUNC) &_stemr_reset_vec, 2},
     {"_stemr_add2vec", (DL_FUNC) &_stemr_add2vec, 3},
+    {"_stemr_increment_vec", (DL_FUNC) &_stemr_increment_vec, 2},
     {"_stemr_draw_normals", (DL_FUNC) &_stemr_draw_normals, 1},
     {"_stemr_draw_normals2", (DL_FUNC) &_stemr_draw_normals2, 1},
     {"_stemr_sample_unit_sphere", (DL_FUNC) &_stemr_sample_unit_sphere, 1},

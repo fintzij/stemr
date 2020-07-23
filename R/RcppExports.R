@@ -373,6 +373,17 @@ add2vec <- function(target, increments, inds) {
     invisible(.Call(`_stemr_add2vec`, target, increments, inds))
 }
 
+#' Add one vector to another
+#'
+#' @param dest target vector
+#' @param orig vector to be added
+#'
+#' @return add the elements of one row vector to another.
+#' @export
+increment_vec <- function(target, increments) {
+    invisible(.Call(`_stemr_increment_vec`, target, increments))
+}
+
 #' Draw new N(0,1) values and fill a vector.
 #'
 #' @param v vector to fill with new N(0,1) draws

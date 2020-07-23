@@ -238,3 +238,15 @@ void reset_vec(arma::vec& v, double value = 0) {
 void add2vec(arma::rowvec& target, const arma::rowvec& increments, const arma::uvec& inds) {
       target.elem(inds) += increments;
 }
+
+//' Add one vector to another
+//'
+//' @param dest target vector
+//' @param orig vector to be added
+//'
+//' @return add the elements of one row vector to another.
+//' @export
+// [[Rcpp::export]]
+void increment_vec(arma::rowvec& target, const arma::rowvec& increments) {
+  target += increments;
+}

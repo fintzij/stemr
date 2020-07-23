@@ -2,26 +2,27 @@
 % Please edit documentation in R/initialize_ode.R
 \name{initialize_ode}
 \alias{initialize_ode}
-\title{Initialize the LNA path}
+\title{Initialize the ODE path}
 \usage{
 initialize_ode(
-  data,
-  ode_parameters,
+  dat,
+  parmat,
+  param_blocks,
   tparam,
   censusmat,
   emitmat,
   stoich_matrix,
-  ode_pointer,
-  ode_set_pars_pointer,
-  ode_times,
-  ode_param_vec,
-  ode_param_inds,
-  ode_const_inds,
-  ode_tcovar_inds,
-  ode_initdist_inds,
+  proc_pointer,
+  set_pars_pointer,
+  times,
+  param_vec,
+  param_inds,
+  const_inds,
+  tcovar_inds,
+  initdist_inds,
   param_update_inds,
   census_indices,
-  ode_event_inds,
+  event_inds,
   measproc_indmat,
   d_meas_pointer,
   do_prevalence,
@@ -31,47 +32,48 @@ initialize_ode(
   forcing_transfers,
   initialization_attempts,
   step_size,
-  fixed_inits,
-  init_volumes_cur,
-  initdist_objects,
-  par_init_fcn = NULL
+  initdist_objects
 )
 }
 \arguments{
-\item{data}{matrix containing the dataset}
+\item{parmat}{matrix with parameters, contants, time-varying pars and covars}
 
-\item{ode_parameters}{parameters, contants, time-varying covariates at ode
-times}
+\item{param_blocks}{list of parameter blocks}
 
-\item{censusmat}{template matrix for the ode path and incidence at the
+\item{tparam}{list of time-varying parameters}
+
+\item{censusmat}{template matrix for the LNA path and incidence at the
 observation times}
 
 \item{emitmat}{matrix in which to store the log-emission probabilities}
 
-\item{stoich_matrix}{ode stoichiometry matrix}
+\item{stoich_matrix}{ODE stoichiometry matrix}
 
-\item{ode_pointer}{external ode pointer}
+\item{proc_pointer}{external LNA pointer}
 
-\item{ode_set_pars_pointer}{pointer for setting the ode parameters}
+\item{set_pars_pointer}{pointer for setting the LNA parameters}
 
-\item{ode_times}{times at whicht eh ode should be evaluated}
+\item{times}{times at which the LNA should be evaluated}
 
-\item{ode_param_inds}{C++ column indices for parameters}
+\item{param_vec}{vector for storing lna parameters when evaluating the
+measurement process}
 
-\item{ode_const_inds}{C++ column indices for constants}
+\item{param_inds}{C++ column indices for parameters}
 
-\item{ode_tcovar_inds}{C++ column indices for time varying covariates}
+\item{const_inds}{C++ column indices for constants}
 
-\item{ode_initdist_inds}{C++ column indices in the ode parameter matrix for
+\item{tcovar_inds}{C++ column indices for time varying covariates}
+
+\item{initdist_inds}{C++ column indices in the LNA parameter matrix for
 the initial state}
 
 \item{param_update_inds}{logical vector indicating when to update the
 parameters}
 
-\item{census_indices}{C++ row indices of ode times when the path is to be
+\item{census_indices}{C++ row indices of LNA times when the path is to be
 censused}
 
-\item{ode_event_inds}{vector of column indices in the ode path for which
+\item{event_inds}{vector of column indices in the LNA path for which
 incidence will be computed.}
 
 \item{measproc_indmat}{logical matrix for evaluating the measuement process}
@@ -87,10 +89,14 @@ time-varying covariance matrix a forcing is applied.}
 
 \item{step_size}{initial step size for the ODE solver (adapted internally,
 but too large of an initial step can lead to failure in stiff systems).}
+
+\item{data}{matrix containing the dataset}
+
+\item{par_init_fcn}{function for initializing the parameter values}
 }
 \value{
 ODE path
 }
 \description{
-Initialize the LNA path
+Initialize the ODE path
 }

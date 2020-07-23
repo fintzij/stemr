@@ -4,7 +4,7 @@
 \alias{insert_initdist}
 \title{Insert natural scale parameters into a parameter matrix}
 \usage{
-insert_initdist(parmat, initdist_objects, prop)
+insert_initdist(parmat, initdist_objects, prop = FALSE, rowind = 0)
 }
 \arguments{
 \item{parmat}{matrix into which parameters should be inserted}
@@ -12,6 +12,8 @@ insert_initdist(parmat, initdist_objects, prop)
 \item{initdist_objects}{list of parameter blocks}
 
 \item{prop}{should proposed parameters be inserted?}
+
+\item{rowind}{row index}
 }
 \value{
 insert natural scale parameters into a parameter matrix
