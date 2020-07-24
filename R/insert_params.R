@@ -8,11 +8,7 @@
 #'
 #' @return insert natural scale parameters into a parameter matrix
 #' @export
-insert_params = function(parmat,
-                         param_blocks,
-                         nat = TRUE,
-                         prop = FALSE,
-                         rowind = 0) {
+insert_params = function(parmat, param_blocks, nat, prop, rowind) {
     
     if(prop) {
         if(nat) {

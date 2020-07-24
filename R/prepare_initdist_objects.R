@@ -12,6 +12,9 @@ prepare_initdist_objects =
         # list for initial compartment volume objects
         initdist_objects <- vector("list", length = length(initializer))
         
+        # where in param codes do the initial distributions start
+        initdist_start = param_codes[min(grep("_0", names(param_codes)))]
+        
         for(s in seq_along(initdist_objects)) {
             
             # hyperparameters
@@ -81,6 +84,12 @@ prepare_initdist_objects =
                 param_codes[match(initvol_names, names(param_codes))]
             initdist_objects[[s]]$param_inds_R = 
                 initdist_objects[[s]]$param_inds_Cpp + 1
+            
+            # indices in the MCMC samples matrix
+            initdist_objects[[s]]$rec_inds_Cpp = 
+                initdist_objects[[s]]$param_inds_Cpp - initdist_start
+            initdist_objects[[s]]$rec_inds_R = 
+                initdist_objects[[s]]$rec_inds_Cpp + 1
             
             # name the initial volume vectors
             names(initdist_objects[[s]]$init_volumes) = initvol_names

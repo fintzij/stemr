@@ -12,6 +12,8 @@
 #'   ceiling(iterations/100) so that every 100th sample will be saved
 #' @param return_adapt_rec should the MCMC adaptation record be returned?
 #'   defaults to FALSE.
+#' @param return_ess_rec should elliptical slice sampling steps and angles be 
+#'   returned? defaults to FALSE
 #' @param print_progress interval at which to print progress to a text file. If
 #'   0 (default) progress is not printed.
 #' @param status_filename string to pre-append to status files, defaults to LNA
@@ -29,6 +31,7 @@ fit_stem <-
              initialization_attempts = 500,
              thinning_interval = ceiling(iterations / 100),
              return_adapt_rec = FALSE,
+             return_ess_rec = FALSE,
              print_progress = 0,
              status_filename = NULL,
              messages = FALSE) {
@@ -61,7 +64,8 @@ fit_stem <-
         
         # grab parameter names
         parameters      <- stem_object$dynamics$parameters
-        param_names_nat <- names(stem_object$dynamics$param_codes)[!grepl("_0", stem_object$dynamics$param_codes)]
+        param_names_nat <- names(stem_object$dynamics$param_codes)[!grepl("_0", names(stem_object$dynamics$param_codes))]
+        initdist_names  <- names(stem_object$dynamics$param_codes)[grepl("_0", names(stem_object$dynamics$param_codes))]
         param_names_est <- c(sapply(mcmc_kern$parameter_blocks, function(x) x$pars_est))
         n_model_params  <- length(param_names_est)
         
@@ -87,6 +91,17 @@ fit_stem <-
                 parameters   = parameters,
                 param_codes  = param_codes,
                 iterations   = iterations)
+        
+        # maximum number of adaptive iterations
+        max_adaptation <- max(sapply(param_blocks, function(x) x$control$stop_adaptation))
+        record_sample  <- max_adaptation == 0 # start collecting posterior right away if no adaptation
+        
+        # number of posterior samples
+        if(return_adapt_rec) {
+            n_samples <- 1 + floor(iterations / thinning_interval)
+        } else {
+            n_samples <- floor((iterations - max_adaptation) / thinning_interval)
+        }
         
         # progress printing interval
         if(print_progress != 0) {
@@ -164,6 +179,12 @@ fit_stem <-
                         sapply(tparam, function(x) x$tparam_name)]
             }
             
+            lna_ess_schedule = 
+                prepare_lna_ess_schedule(
+                    stem_object = stem_object,
+                    initializer = initializer,
+                    lna_ess_control = lna_ess_control)
+            
         } else if(method == "ode") {
             
             # extract objects from dynamics
@@ -209,53 +230,12 @@ fit_stem <-
         
         # LNA ESS schedule --------------------------------------------------------
         if(method == "lna") {
-            
-            # initialize list with ESS schedule
-            joint_strata_update = lna_ess_control$joint_strata_update
-            ess_schedule = vector(mode = "list")
-            if(joint_strata_update | n_strata == 1) {
-                ess_schedule$ess_inds = seq_len(nrow(flow_matrix))
-                
-            } else {
-                ess_schedule$ess_inds =
-                    lapply(paste0("_", names(stem_object$dynamics$strata_codes)),
-                           function(x) grep(x, rownames(flow_matrix)))
-            }
-            
-            # get the complement indices for the elliptical slice sampling schedule
-            ess_schedule$complementary_inds <- 
-                lapply(ess_schedule$ess_inds, 
-                       function(x) setdiff(seq_len(nrow(flow_matrix)), x))
-            
-            # whether all strata are updated jointly
-            ess_schedule$joint_strata_update = joint_strata_update
-            ess_schedule$strata_codes        = stem_object$dynamics$strata_codes + 1
-            
-            # get the corresponding initdist codes
-            if(joint_strata_update | n_strata == 1) {
-                ess_schedule$initdist_codes = c("ALL" = 1)
-            } else {
-                ess_schedule$initdist_codes = 
-                    match(names(ess_schedule$strata_codes), sapply(initializer, function(x) x$strata))
-            }
-            
-            # LNA bracket width
-            if(n_strata > 1 & !joint_strata_update & length(lna_ess_control$bracket_width) == 1) {
-                lna_bracket_width <- rep(lna_ess_control$bracket_width, n_strata)
-                names(lna_bracket_width) <- names(stem_object$dynamics$strata_codes)
-                
-            } else {
-                lna_bracket_width = lna_ess_control$bracket_width
-            }
-            
-            # for updating the LNA bracket width if requested
-            lna_bracket_update_iter = lna_ess_control$bracket_update_iter
-            
-            if(lna_bracket_update_iter != Inf) {
-                lna_angle_mean  <- rep(0, length(ess_schedule[[1]]))
-                lna_angle_var   <- rep(pi^2 / 3, length(ess_schedule[[1]]))
-                lna_angle_resid <- rep(0, length(ess_schedule[[1]]))
-            }
+            ess_schedule =
+                prepare_lna_ess_schedule(
+                    stem_object = stem_object,
+                    initializer = initializer,
+                    lna_ess_control = lna_ess_control
+                )
         }
         
         ### Initial distribution objects --------------------------------------------
@@ -278,12 +258,15 @@ fit_stem <-
             if(!joint_initdist_update) {
                 initdist_steps        <- 1.0
                 initdist_angle        <- 0.0
-                initdist_step_record  <- rep(1, floor(iterations / thinning_interval))
-                initdist_angle_record <- rep(1, floor(iterations / thinning_interval))
+                
+                if(return_ess_rec) {
+                    initdist_step_record  <- rep(1, floor(iterations / thinning_interval))
+                    initdist_angle_record <- rep(1, floor(iterations / thinning_interval))    
+                }
             }
             
             bad_draws        <- rep(TRUE, length(initdist_objects))
-            initdist_log_lik <- rep(0.0, floor(iterations / thinning_interval) + 1)
+            initdist_log_lik <- rep(0.0, n_samples)
             
             # map draws to initial volumes
             while(any(bad_draws)) {
@@ -333,9 +316,6 @@ fit_stem <-
             times[times >= min(stem_object$dynamics$t0, min(obstimes)) &
                       times <= max(stem_object$dynamics$tmax, max(obstimes))]
         census_indices   <- unique(c(0, findInterval(obstimes, census_times) - 1))
-        
-        # maximum number of adaptive iterations
-        max_adaptation <- max(sapply(param_blocks, function(x) x$control$stop_adaptation))
         
         ### Set up parameter objects ---------------------------------
         params_cur <- 
@@ -473,23 +453,33 @@ fit_stem <-
                length(tparam) == 1) {
                 tparam_steps        <- 1.0
                 tparam_angle        <- 0.0
-                tparam_step_record  <- rep(1, floor(iterations / thinning_interval))
-                tparam_angle_record <- rep(1, floor(iterations / thinning_interval))
+                
+                if(return_ess_rec) {
+                    tparam_step_record  <- 
+                        matrix(1, nrow = floor(iterations / thinning_interval), ncol = 1)
+                    tparam_angle_record <- 
+                        matrix(1, nrow = floor(iterations / thinning_interval), ncol = 1)
+                }
+                
             } else {
                 tparam_steps        <- rep(1.0, length(tparam))
                 tparam_angle        <- rep(0.0, length(tparam))
-                tparam_step_record  <- matrix(1, nrow = length(tparam), 
-                                              ncol = floor(iterations / thinning_interval))
+                
+                if(return_ess_rec) {
+                    tparam_step_record <-
+                        matrix(1, nrow = floor(iterations / thinning_interval), ncol = length(tparam))
+                    
+                    tparam_angle_record <-
+                        matrix(1, nrow = floor(iterations / thinning_interval), ncol = length(tparam))
+                }
             }
             
             tparam_log_lik <-
                 matrix(0.0,
-                       nrow = 1 + floor(iterations / thinning_interval),
-                       ncol = length(tparam),
+                       nrow = n_samples, ncol = length(tparam),
                        dimnames = list(NULL, paste0(sapply(tparam, function(x) x$tparam_name),"_loglik")))
             tparam_samples <-
-                array(0.0, 
-                      dim = c(n_times, length(tparam), 1 + floor(iterations / thinning_interval)))
+                array(0.0, dim = c(n_times, length(tparam), n_samples))
             
         } else {
             tparam              <- NULL
@@ -712,76 +702,57 @@ fit_stem <-
                        nrow = nrow(flow_matrix),
                        ncol = length(census_times) - 1)
             copy_mat(draws_prop, path$draws)
-            
-            # add a vector for the ESS record to the path
-            path$step_record  <- 
-                matrix(1.0, 
-                       nrow = lna_ess_control$n_updates, 
-                       ncol = length(ess_schedule[[1]]))
-            
-            path$angle_record <- 
-                matrix(1.0, 
-                       nrow = lna_ess_control$n_updates,
-                       ncol = length(ess_schedule[[1]]))
-            
+     
             # instatiate matrix for elliptical slice sampling draws
             ess_draws_prop <- matrix(0.0, nrow = nrow(path$draws), ncol = ncol(path$draws))
             copy_mat(ess_draws_prop, path$draws)
             
             # vector for saving the log-likelihood of the LNA draws
-            lna_log_lik <- double(1 + floor(iterations / thinning_interval))
+            lna_log_lik <- double(n_samples)
             
             # matrix for saving LNA draws
             lna_draws <-
-                array(0.0,
-                      dim = c(n_rates,
-                              length(census_times) - 1,
-                              1 + floor(iterations / thinning_interval)))
+                array(0.0, dim = c(n_rates, length(census_times) - 1, n_samples))
             rownames(lna_draws) <- rownames(flow_matrix)
             
             # elliptical slice sampling MCMC record
-            ess_step_record   <- array(1.0, 
-                                       dim = c(lna_ess_control$n_updates,
-                                               length(ess_schedule[[1]]),
-                                               floor(iterations / thinning_interval)))
-            ess_angle_record  <- array(1.0, 
-                                       dim = c(lna_ess_control$n_updates,
-                                               length(ess_schedule[[1]]),
-                                               floor(iterations / thinning_interval)))
+            if(return_ess_rec) {
+                
+                for(s in seq_along(ess_schedule)) {
+                    ess_schedule$steps  = rep(1.0, lna_ess_control$n_updates)
+                    ess_schedule$angles = rep(1.0, lna_ess_control$n_updates)
+                }
+                
+                ess_step_record <- 
+                    array(1.0, 
+                          dim = c(lna_ess_control$n_updates,
+                                  length(ess_schedule),
+                                  floor(iterations / thinning_interval)))
+                
+                ess_angle_record <-
+                    array(1.0, 
+                          dim = c(lna_ess_control$n_updates,
+                                  length(ess_schedule),
+                                  floor(iterations / thinning_interval)))
+            }
         }
         
         # objects to store the paths and likelihood terms
-        data_log_lik      <- double(1 + floor(iterations / thinning_interval))
-        params_log_prior  <- double(1 + floor(iterations / thinning_interval))
+        data_log_lik      <- double(n_samples)
+        params_log_prior  <- double(n_samples)
         
         latent_paths <-
-            array(0.0,
-                  dim = c(length(census_times),
-                          1 + n_rates,
-                          1 + floor(iterations / thinning_interval)))
+            array(0.0, dim = c(length(census_times), 1 + n_rates, n_samples))
         colnames(latent_paths) <- c("time", rownames(flow_matrix))
         
         # set up MCMC record objects
         parameter_samples_nat <-
-            matrix(0.0,
-                   nrow = 1 + floor(iterations / thinning_interval),
-                   ncol = n_model_params,
+            matrix(0.0, nrow = n_samples, ncol = n_model_params, 
                    dimnames = list(NULL, param_names_nat))
         
         parameter_samples_est <-
-            matrix(0.0,
-                   nrow = 1 + floor(iterations / thinning_interval),
-                   ncol = n_model_params,
+            matrix(0.0, nrow = n_samples, ncol = n_model_params, 
                    dimnames = list(NULL, param_names_est))
-        
-        if(!fixed_inits) {
-            initdist_samples <- 
-                matrix(0.0,
-                       nrow = 1 + floor(iterations / thinning_interval),
-                       ncol = n_compartments,
-                       dimnames = list(NULL, 
-                                       names(stem_object$dynamics$initdist_params)))
-        }
         
         # record the initial parameter values
         insert_params(parmat       = parameter_samples_nat,
@@ -793,6 +764,18 @@ fit_stem <-
                       param_blocks = param_blocks,
                       nat          = FALSE,
                       rowind       = 0)
+        
+        # matrix for saving initial compartment volumes
+        if(!fixed_inits) {
+            initdist_samples <- 
+                matrix(0.0, nrow = n_samples, ncol = n_compartments,
+                       dimnames = list(NULL, initdist_names))
+            
+            insert_initdist(parmat           = initdist_samples,
+                            initdist_objects = initdist_objects,
+                            prop             = FALSE,
+                            rowind           = 0)
+        }
         
         # log prior for initial parameters
         params_log_prior <- calc_params_logprior(param_blocks)

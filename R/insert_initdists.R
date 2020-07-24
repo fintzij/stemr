@@ -2,12 +2,14 @@
 #'
 #' @param parmat matrix into which parameters should be inserted
 #' @param initdist_objects list of parameter blocks
+#' @param rowind row index (C++)
+#' @param mcmc_rec are the parameters being inserted into the MCMC record?
 #' @param prop should proposed parameters be inserted?
-#' @param rowind row index
 #'
 #' @return insert natural scale parameters into a parameter matrix
 #' @export
-insert_initdist = function(parmat, initdist_objects, prop = FALSE, rowind = 0) {
+insert_initdist = function(parmat, initdist_objects, rowind, mcmc_rec, prop) {
+    
     if(prop) {
         for(s in seq_along(initdist_objects)) {
             pars2parmat(parmat = parmat,
