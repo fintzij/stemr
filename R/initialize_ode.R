@@ -170,7 +170,9 @@ initialize_ode <-
                         # copy to the ode parameter matrix
                         insert_initdist(parmat = parmat,
                                         initdist_objects = initdist_objects, 
-                                        prop = FALSE)
+                                        prop = FALSE, 
+                                        rowind = 0,
+                                        mcmc_rec = FALSE)
                                       
                         # draw new parameter values if called for
                         for(s in seq_along(param_blocks)) {
@@ -193,7 +195,10 @@ initialize_ode <-
                         
                         # insert parameters into the parameter matrix
                         insert_params(parmat = parmat,
-                                      param_blocks = param_blocks)
+                                      param_blocks = param_blocks, 
+                                      nat = TRUE,
+                                      prop = FALSE,
+                                      rowind = 0)
                                 
                         if(!is.null(tparam)) {
                             for(s in seq_along(tparam)) {

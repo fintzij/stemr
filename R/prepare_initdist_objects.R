@@ -66,9 +66,24 @@ prepare_initdist_objects =
             initdist_objects[[s]] <- 
                 list(init_volumes      = rep(0.0, n_comps_strat),
                      init_volumes_prop = rep(0.0, n_comps_strat),
-                     draws_cur         = rnorm(length(comp_mean)-1),
-                     draws_prop        = rnorm(length(comp_mean)-1),
-                     draws_ess         = rnorm(length(comp_mean)-1),
+                     draws_cur         = 
+                         if(initializer[[s]]$fixed) {
+                             rep(0, length(comp_mean) - 1)
+                         } else {
+                             rnorm(length(comp_mean) - 1)
+                         },
+                     draws_prop        = 
+                         if(initializer[[s]]$fixed) {
+                             rep(0, length(comp_mean) - 1)
+                         } else {
+                             rnorm(length(comp_mean) - 1)
+                         },
+                     draws_ess         = 
+                         if(initializer[[s]]$fixed) {
+                             rep(0, length(comp_mean) - 1)
+                         } else {
+                             rnorm(length(comp_mean) - 1)
+                         },
                      stratum           = initializer[[s]]$strata,
                      fixed             = initializer[[s]]$fixed,
                      comp_size         = comp_size_vec[s],
