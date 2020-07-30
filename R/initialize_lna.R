@@ -145,8 +145,8 @@ initialize_lna <-
                       # try new parameters
                       if(keep_going) {
                             
-                            # new LNA draws
-                            draws <- rnorm(ncol(stoich_matrix) * (length(times) - 1))
+                          # new LNA draws
+                          draws <- rnorm(ncol(stoich_matrix) * (length(times) - 1))
                             
                           for(s in seq_along(initdist_objects)) {
                                 

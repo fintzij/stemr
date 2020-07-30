@@ -3,8 +3,8 @@
 #'
 #' @param n_updates number of elliptical slice sampling updates per MCMC
 #'   iteration, defaults to 1.
-#' @param bracket_width width of the elliptical slice sampling bracket, must
-#'   be in (0,2*pi], and default to 2*pi. 
+#' @param bracket_width width of the elliptical slice sampling bracket, must be
+#'   in (0,2*pi], and default to 2*pi.
 #' @param bracket_update_iter iteration at which the widths of the elliptical
 #'   slice sampling brackets should be shrunk, defaults to Inf and the bracket
 #'   widths are kept constant.
@@ -18,8 +18,8 @@
 #' @param joint_initdist_update should the initial states be updated jointly
 #'   with the lna path? Defaults to TRUE, in which case initial conditions for
 #'   each stratum are still paired with the LNA path for that stratum.
-#' @param ess_warmup number of ESS warmup iterations if approximate LNA
-#'   initialization
+#' @param approx_warmup number of warmup iterations if using approximate
+#'   initialization for the LNA
 #'
 #' @return list with settings for elliptical slice sampling
 #' @export
@@ -30,7 +30,7 @@ lna_control <-
                bracket_scaling = 2 * sqrt(2 * log(10)),
                joint_strata_update = FALSE,
                joint_initdist_update = TRUE,
-               ess_warmup = 100) {
+               approx_warmup = 100) {
           
             if (any(bracket_width <= 0 | bracket_width > 2 * pi)) {
                   stop("The elliptical slice sampling bracket width must be in (0,2*pi].")
@@ -43,7 +43,7 @@ lna_control <-
                        bracket_scaling       = bracket_scaling,
                        joint_strata_update   = joint_strata_update,
                        joint_initdist_update = joint_initdist_update,
-                       ess_warmup            = ess_warmup
+                       approx_warmup         = approx_warmup
                   )
             )
       }

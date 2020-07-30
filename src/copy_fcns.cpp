@@ -48,6 +48,20 @@ void pars2parmat(arma::mat& parmat,
   parmat.submat(rowind, colinds) = pars; 
 }
 
+//' insert an element into a vector
+//'
+//' @param dest destination row vector
+//' @param orig elem
+//' @param ind C++ style index for the element to be copied
+//'
+//' @return copy an element of one row vector into another.
+//' @export
+// [[Rcpp::export]]
+void insert_elem(arma::rowvec& dest, double elem, int ind) {
+  
+  dest[ind] = elem;
+}
+
 //' Copy an element from one vector into another
 //'
 //' @param dest destination row vector
@@ -212,6 +226,35 @@ void copy_2_rows(arma::mat& dest, const arma::mat& orig, const arma::uvec& inds)
 void mat_2_arr(arma::cube& dest, const arma::mat& orig, int ind) {
       
       dest.slice(ind) = orig;
+}
+
+//' Copy a matrix into a column of a slice of an array
+//'
+//' @param dest array into which to copy
+//' @param orig matrix to copy
+//' @param col_ind column index (C++)
+//' @param slice_ind slice index (C++)
+//'
+//' @return copy a matrix into an array.
+//' @export
+// [[Rcpp::export]]
+void vec_2_arr(arma::cube& dest, const arma::vec& orig, int col_ind, int slice_ind) {
+  
+  dest.slice(slice_ind).col(col_ind) = orig;
+}
+
+//' Copy a vector into a matrix
+//'
+//' @param dest array into which to copy
+//' @param orig matrix to copy
+//' @param ind column index (C++)
+//'
+//' @return copy a matrix into an array.
+//' @export
+// [[Rcpp::export]]
+void vec_2_mat(arma::mat& dest, const arma::vec& orig, int ind) {
+  
+  dest.col(ind) = orig;
 }
 
 //' Reset a vector by filling it with an element

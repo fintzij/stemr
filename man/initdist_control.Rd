@@ -9,8 +9,7 @@ initdist_control(
   n_updates = 1,
   bracket_widths = 2 * pi,
   bracket_update_iter = Inf,
-  bracket_scaling = 2 * sqrt(2 * log(10)),
-  ess_warmup = 50
+  bracket_scaling = 2 * sqrt(2 * log(10))
 )
 }
 \arguments{
@@ -29,8 +28,6 @@ widths. If brackets are to be shrunk, the new width is set to the minimum
 of 2*pi or the scaling multiplied by the standard deviation of the previous
 ESS angles. The scalings default to the full width at one tenth maximum for
 a gaussian.}
-
-\item{ess_warmup}{ess_warmup ESS updates prior to starting MCMC}
 }
 \value{
 list with settings for elliptical slice sampling

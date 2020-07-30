@@ -11,8 +11,10 @@ fit_stem(
   mcmc_kern,
   iterations,
   initialization_attempts = 500,
+  ess_warmup = 50,
   thinning_interval = ceiling(iterations/100),
   return_adapt_rec = FALSE,
+  return_ess_rec = FALSE,
   print_progress = 0,
   status_filename = NULL,
   messages = FALSE
@@ -31,11 +33,17 @@ model dynamics, and measurement process.}
 
 \item{initialization_attempts}{number of initialization attempts}
 
+\item{ess_warmup}{number of preliminary ESS iterations for the LNA, initial
+conditions, and time varying parameters prior to starting MCMC}
+
 \item{thinning_interval}{thinning interval for posterior samples, defaults to
 ceiling(iterations/100) so that every 100th sample will be saved}
 
 \item{return_adapt_rec}{should the MCMC adaptation record be returned?
 defaults to FALSE.}
+
+\item{return_ess_rec}{should elliptical slice sampling steps and angles be
+returned? defaults to FALSE}
 
 \item{print_progress}{interval at which to print progress to a text file. If
 0 (default) progress is not printed.}

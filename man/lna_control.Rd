@@ -12,15 +12,15 @@ lna_control(
   bracket_scaling = 2 * sqrt(2 * log(10)),
   joint_strata_update = FALSE,
   joint_initdist_update = TRUE,
-  ess_warmup = 100
+  approx_warmup = 100
 )
 }
 \arguments{
 \item{n_updates}{number of elliptical slice sampling updates per MCMC
 iteration, defaults to 1.}
 
-\item{bracket_width}{width of the elliptical slice sampling bracket, must
-be in (0,2*pi], and default to 2*pi.}
+\item{bracket_width}{width of the elliptical slice sampling bracket, must be
+in (0,2*pi], and default to 2*pi.}
 
 \item{bracket_update_iter}{iteration at which the widths of the elliptical
 slice sampling brackets should be shrunk, defaults to Inf and the bracket
@@ -39,8 +39,8 @@ FALSE.}
 with the lna path? Defaults to TRUE, in which case initial conditions for
 each stratum are still paired with the LNA path for that stratum.}
 
-\item{ess_warmup}{number of ESS warmup iterations if approximate LNA
-initialization}
+\item{approx_warmup}{number of warmup iterations if using approximate
+initialization for the LNA}
 }
 \value{
 list with settings for elliptical slice sampling

@@ -4,7 +4,7 @@
 \alias{insert_initdist}
 \title{Insert natural scale parameters into a parameter matrix}
 \usage{
-insert_initdist(parmat, initdist_objects, prop = FALSE, rowind = 0)
+insert_initdist(parmat, initdist_objects, prop, rowind, mcmc_rec)
 }
 \arguments{
 \item{parmat}{matrix into which parameters should be inserted}
@@ -13,7 +13,9 @@ insert_initdist(parmat, initdist_objects, prop = FALSE, rowind = 0)
 
 \item{prop}{should proposed parameters be inserted?}
 
-\item{rowind}{row index}
+\item{rowind}{row index (C++)}
+
+\item{mcmc_rec}{are the parameters being inserted into the MCMC record?}
 }
 \value{
 insert natural scale parameters into a parameter matrix

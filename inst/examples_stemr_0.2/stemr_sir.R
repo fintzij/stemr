@@ -391,7 +391,6 @@ mcmc_kern <-
 res <-
     fit_stem(stem_object = stem_object,
              method = "lna",
-             priors = priors,
              mcmc_kern = mcmc_kern,
              iterations = 3.5e2)
 

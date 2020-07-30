@@ -213,6 +213,18 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// insert_elem
+void insert_elem(arma::rowvec& dest, double elem, int ind);
+RcppExport SEXP _stemr_insert_elem(SEXP destSEXP, SEXP elemSEXP, SEXP indSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::rowvec& >::type dest(destSEXP);
+    Rcpp::traits::input_parameter< double >::type elem(elemSEXP);
+    Rcpp::traits::input_parameter< int >::type ind(indSEXP);
+    insert_elem(dest, elem, ind);
+    return R_NilValue;
+END_RCPP
+}
 // copy_elem
 void copy_elem(arma::rowvec& dest, const arma::rowvec& orig, int ind);
 RcppExport SEXP _stemr_copy_elem(SEXP destSEXP, SEXP origSEXP, SEXP indSEXP) {
@@ -351,6 +363,31 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type orig(origSEXP);
     Rcpp::traits::input_parameter< int >::type ind(indSEXP);
     mat_2_arr(dest, orig, ind);
+    return R_NilValue;
+END_RCPP
+}
+// vec_2_arr
+void vec_2_arr(arma::cube& dest, const arma::vec& orig, int col_ind, int slice_ind);
+RcppExport SEXP _stemr_vec_2_arr(SEXP destSEXP, SEXP origSEXP, SEXP col_indSEXP, SEXP slice_indSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::cube& >::type dest(destSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type orig(origSEXP);
+    Rcpp::traits::input_parameter< int >::type col_ind(col_indSEXP);
+    Rcpp::traits::input_parameter< int >::type slice_ind(slice_indSEXP);
+    vec_2_arr(dest, orig, col_ind, slice_ind);
+    return R_NilValue;
+END_RCPP
+}
+// vec_2_mat
+void vec_2_mat(arma::mat& dest, const arma::vec& orig, int ind);
+RcppExport SEXP _stemr_vec_2_mat(SEXP destSEXP, SEXP origSEXP, SEXP indSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat& >::type dest(destSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type orig(origSEXP);
+    Rcpp::traits::input_parameter< int >::type ind(indSEXP);
+    vec_2_mat(dest, orig, ind);
     return R_NilValue;
 END_RCPP
 }
@@ -882,6 +919,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_pars2lnapars", (DL_FUNC) &_stemr_pars2lnapars, 2},
     {"_stemr_pars2lnapars2", (DL_FUNC) &_stemr_pars2lnapars2, 3},
     {"_stemr_pars2parmat", (DL_FUNC) &_stemr_pars2parmat, 4},
+    {"_stemr_insert_elem", (DL_FUNC) &_stemr_insert_elem, 3},
     {"_stemr_copy_elem", (DL_FUNC) &_stemr_copy_elem, 3},
     {"_stemr_copy_elem2", (DL_FUNC) &_stemr_copy_elem2, 3},
     {"_stemr_increment_elem", (DL_FUNC) &_stemr_increment_elem, 2},
@@ -894,6 +932,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_copy_pathmat", (DL_FUNC) &_stemr_copy_pathmat, 2},
     {"_stemr_copy_2_rows", (DL_FUNC) &_stemr_copy_2_rows, 3},
     {"_stemr_mat_2_arr", (DL_FUNC) &_stemr_mat_2_arr, 3},
+    {"_stemr_vec_2_arr", (DL_FUNC) &_stemr_vec_2_arr, 4},
+    {"_stemr_vec_2_mat", (DL_FUNC) &_stemr_vec_2_mat, 3},
     {"_stemr_reset_vec", (DL_FUNC) &_stemr_reset_vec, 2},
     {"_stemr_add2vec", (DL_FUNC) &_stemr_add2vec, 3},
     {"_stemr_increment_vec", (DL_FUNC) &_stemr_increment_vec, 2},

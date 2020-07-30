@@ -20,7 +20,7 @@ prepare_lna_ess_schedule = function(stem_object, initializer, lna_ess_control) {
         
         # all inds and initdist codes
         ess_schedule[[1]]$ess_inds = seq_len(nrow(stem_object$dynamics$flow_matrix))
-        ess_schedule[[1]]$initdist_codes = c("ALL" = 1) 
+        ess_schedule[[1]]$initdist_codes = seq_along(initializer)
         
         # complementary inds
         ess_schedule[[1]]$complementary_inds <- 
@@ -36,6 +36,7 @@ prepare_lna_ess_schedule = function(stem_object, initializer, lna_ess_control) {
         ess_schedule[[1]]$angle_mean  = 0
         ess_schedule[[1]]$angle_var   = pi^2/3
         ess_schedule[[1]]$angle_resid = 0
+        ess_schedule[[1]]$n_updates   = lna_ess_control$n_updates 
         
     } else {
         ess_inds =
@@ -61,6 +62,7 @@ prepare_lna_ess_schedule = function(stem_object, initializer, lna_ess_control) {
             ess_schedule[[s]]$angle_mean  = 0
             ess_schedule[[s]]$angle_var   = pi^2/3
             ess_schedule[[s]]$angle_resid = 0
+            ess_schedule[[s]]$n_updates   = lna_ess_control$n_updates 
         }
     }
     

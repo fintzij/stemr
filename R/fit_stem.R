@@ -8,11 +8,13 @@
 #'   \code{mcmc_kernel} function.
 #' @param iterations number of iterations
 #' @param initialization_attempts number of initialization attempts
+#' @param ess_warmup number of preliminary ESS iterations for the LNA, initial
+#'   conditions, and time varying parameters prior to starting MCMC
 #' @param thinning_interval thinning interval for posterior samples, defaults to
 #'   ceiling(iterations/100) so that every 100th sample will be saved
 #' @param return_adapt_rec should the MCMC adaptation record be returned?
 #'   defaults to FALSE.
-#' @param return_ess_rec should elliptical slice sampling steps and angles be 
+#' @param return_ess_rec should elliptical slice sampling steps and angles be
 #'   returned? defaults to FALSE
 #' @param print_progress interval at which to print progress to a text file. If
 #'   0 (default) progress is not printed.
@@ -29,6 +31,7 @@ fit_stem <-
              mcmc_kern,
              iterations,
              initialization_attempts = 500,
+             ess_warmup = 50,
              thinning_interval = ceiling(iterations / 100),
              return_adapt_rec = FALSE,
              return_ess_rec = FALSE,
@@ -98,9 +101,11 @@ fit_stem <-
         
         # number of posterior samples
         if(return_adapt_rec) {
-            n_samples <- 1 + floor(iterations / thinning_interval)
+            n_samples  <- 1 + floor(iterations / thinning_interval)
+            n_ess_recs <- n_samples - 1
         } else {
-            n_samples <- floor((iterations - max_adaptation) / thinning_interval)
+            n_samples  <- floor((iterations - max_adaptation) / thinning_interval)
+            n_ess_recs <- n_samples
         }
         
         # progress printing interval
@@ -120,7 +125,6 @@ fit_stem <-
         initializer         <- stem_object$dynamics$initializer
         fixed_inits         <- stem_object$dynamics$fixed_inits
         n_strata            <- stem_object$dynamics$n_strata
-        t0                  <- stem_object$dynamics$t0
         step_size           <- stem_object$dynamics$dynamics_args$step_size
         
         # measurement process objects that are not method specific
@@ -151,7 +155,7 @@ fit_stem <-
             do_prevalence    <- stem_object$measurement_process$lna_prevalence
             event_inds       <- stem_object$measurement_process$incidence_codes_lna
             initdist_inds    <- stem_object$dynamics$lna_initdist_inds
-            ess_warmup       <- lna_ess_control$ess_warmup
+            approx_warmup    <- lna_ess_control$approx_warmup
             
             # measurement process
             d_meas_pointer   <- stem_object$measurement_process$meas_pointers_lna$d_measure_ptr
@@ -193,9 +197,15 @@ fit_stem <-
             if(return_ess_rec) {
                 ess_record$lna_ess_record = 
                     list(ess_steps  = 
-                             matrix(1.0, nrow = n_samples, ncol = length(lna_ess_schedule)),
+                             array(1.0, 
+                                   dim = c(lna_ess_control$n_updates,
+                                           length(lna_ess_schedule),
+                                           n_ess_recs)),
                          ess_angles = 
-                             matrix(0.0, nrow = n_samples, ncol = length(lna_ess_schedule)))
+                             array(1.0, 
+                                   dim = c(lna_ess_control$n_updates,
+                                           length(lna_ess_schedule),
+                                           n_ess_recs)))
             }
             
         } else if(method == "ode") {
@@ -261,8 +271,8 @@ fit_stem <-
             
             # for recording the ess initdist updates
             if(!joint_initdist_update) {
-                initdist_ess_schedule$initdist_steps <- 1.0
-                initdist_ess_schedule$initdist_angle <- 0.0
+                initdist_objects$initdist_steps <- rep(1.0, initdist_ess_control$n_updates)
+                initdist_objects$initdist_angle <- rep(0.0, initdist_ess_control$n_updates)
             }
             
             bad_draws          <- rep(TRUE, length(initdist_objects))
@@ -294,8 +304,14 @@ fit_stem <-
             if(return_ess_rec) {
                 if(method != "lna" | !joint_initdist_update) {
                     ess_record$initdist_ess_record = 
-                        list(ess_steps  = rep(1, nrow = n_samples),
-                             ess_angles = rep(0, nrow = n_samples))
+                        list(ess_steps = 
+                                 matrix(1.0, 
+                                        nrow = initdist_ess_control$n_updates, 
+                                        ncol = n_ess_recs),
+                             ess_angles = 
+                                 matrix(0.0, 
+                                        nrow = initdist_ess_control$n_updates, 
+                                        ncol = n_ess_recs))
                 }
             }
         }
@@ -412,12 +428,6 @@ fit_stem <-
         # get indices for time-varying parameters
         if (!is.null(tparam)) {
             
-            if (!tparam_ess_control$joint_tparam_update) {
-                tparam_ess  <- 1
-            } else {
-                tparam_ess <- NULL
-            }
-            
             # verify whether the mcmc is being restarted
             if (!mcmc_restart) {
                 
@@ -477,43 +487,22 @@ fit_stem <-
                 }
             }
             
-            if(tparam_ess_control$joint_tparam_update | length(tparam) == 1) {
-                
-                if(return_ess_rec) {
-                    ess_record$tparam_ess_record = 
-                        list(ess_steps  = 
-                                 array(1.0, 
-                                       dim = c(tparam_ess_control$n_updates,
-                                               1,
-                                               n_samples)),
-                             ess_angles = 
-                                 array(1.0, 
-                                       dim = c(tparam_ess_control$n_updates,
-                                               1,
-                                               n_samples)))
-                }
-                
-            } else {
-                
-                if(return_ess_rec) {
-                    ess_record$tparam_ess_record = 
-                        list(ess_steps  = 
-                                 array(1.0, 
-                                       dim = c(tparam_ess_control$n_updates,
-                                               length(tparam),
-                                               n_samples)),
-                             ess_angles = 
-                                 array(1.0, 
-                                       dim = c(tparam_ess_control$n_updates,
-                                               length(tparam),
-                                               n_samples)))
-                }
+            if(return_ess_rec) {
+                ess_record$tparam_ess_record = 
+                    list(ess_steps  = 
+                             array(1.0, 
+                                   dim = c(tparam_ess_control$n_updates,
+                                           length(tparam),
+                                           n_ess_recs)),
+                         ess_angles = 
+                             array(1.0, 
+                                   dim = c(tparam_ess_control$n_updates,
+                                           length(tparam),
+                                           n_ess_recs)))
             }
             
         } else {
             tparam              <- NULL
-            tparam_steps        <- NULL
-            tparam_angle        <- NULL
         }
         
         # indices for when to update the parameters
@@ -678,7 +667,7 @@ fit_stem <-
                     initialization_attempts = initialization_attempts,
                     step_size               = step_size,
                     initdist_objects        = initdist_objects,
-                    ess_warmup              = ess_warmup)      
+                    ess_warmup              = approx_warmup)      
                 
             } else {
                 inits <- initialize_ode(
@@ -719,6 +708,75 @@ fit_stem <-
             tparam           = inits$tparam
         }
         
+        if(method == "lna") {
+            
+            # object for proposing new stochastic perturbations
+            draws_prop <- matrix(0.0, nrow = nrow(path$draws), ncol = ncol(path$draws))
+            copy_mat(draws_prop, path$draws)
+            
+            # instatiate matrix for elliptical slice sampling draws
+            ess_draws_prop <- matrix(0.0, nrow = nrow(path$draws), ncol = ncol(path$draws))
+            copy_mat(ess_draws_prop, path$draws)
+            
+            # elliptical slice sampling MCMC record
+            if(return_ess_rec) {
+                for(s in seq_along(lna_ess_schedule)) {
+                    lna_ess_schedule[[s]]$steps  = rep(1.0, lna_ess_control$n_updates)
+                    lna_ess_schedule[[s]]$angles = rep(0.0, lna_ess_control$n_updates)
+                }
+            } 
+        }
+        
+        # warmup the LNA, initial conditions, or time-varying parameters
+        if(ess_warmup != 0 && 
+           (method == "lna" | !is.null(tparam) | !joint_initdist_update)) {
+            
+            for(warmup in seq_len(ess_warmup)) {
+                
+                if(method == "lna") {
+                    
+                    lna_update(
+                        path = path,
+                        dat = dat,
+                        params_cur = params_cur,
+                        lna_ess_schedule = lna_ess_schedule,
+                        initdist_objects = initdist_objects,
+                        tparam = tparam,
+                        pathmat_prop = pathmat_prop,
+                        censusmat = censusmat,
+                        draws_prop = draws_prop,
+                        ess_draws_prop = ess_draws_prop,
+                        emitmat = emitmat,
+                        flow_matrix = flow_matrix,
+                        stoich_matrix = stoich_matrix,
+                        times = census_times,
+                        forcing_inds = forcing_inds,
+                        forcing_tcov_inds = forcing_tcov_inds,
+                        forcings_out = forcings_out,
+                        forcing_transfers = forcing_transfers,
+                        param_inds = param_inds,
+                        const_inds = const_inds,
+                        tcovar_inds = tcovar_inds,
+                        initdist_inds = initdist_inds,
+                        param_update_inds = param_update_inds,
+                        census_indices = census_indices,
+                        event_inds = event_inds,
+                        measproc_indmat = measproc_indmat,
+                        svd_d = svd_d,
+                        svd_U = svd_U,
+                        svd_V = svd_V,
+                        proc_pointer = proc_pointer,
+                        set_pars_pointer = set_pars_pointer,
+                        d_meas_pointer = d_meas_pointer,
+                        do_prevalence = do_prevalence,
+                        joint_initdist_update = joint_initdist_update,
+                        return_ess_rec = return_ess_rec,
+                        step_size = step_size
+                    )
+                }
+            }
+        }
+        
         # objects to store the paths and likelihood terms
         mcmc_samples = 
             list(data_log_lik          = double(n_samples),
@@ -730,6 +788,16 @@ fit_stem <-
                  latent_paths = 
                      array(0.0, dim = c(length(census_times), 1 + n_rates, n_samples), 
                            dimnames = list(NULL, c("time", rownames(flow_matrix)), NULL)))
+        
+        if(method == "lna") {
+            # vector for saving the log-likelihood of the LNA draws
+            mcmc_samples$lna_log_lik <- double(n_samples)
+            
+            # matrix for saving LNA draws
+            mcmc_samples$lna_draws <-
+                array(0.0, dim = c(n_rates, length(census_times) - 1, n_samples),
+                      dimnames = list(rownames(flow_matrix), NULL, NULL))
+        }
         
         if(!fixed_inits) {
             
@@ -748,40 +816,10 @@ fit_stem <-
                 array(0.0, dim = c(n_times, length(tparam), n_samples))
         }
         
-        
-        if(method == "lna") {
-            
-            # object for proposing new stochastic perturbations
-            draws_prop <-
-                matrix(0.0,
-                       nrow = nrow(flow_matrix),
-                       ncol = length(census_times) - 1)
-            copy_mat(draws_prop, path$draws)
-            
-            # instatiate matrix for elliptical slice sampling draws
-            ess_draws_prop <- matrix(0.0, nrow = nrow(path$draws), ncol = ncol(path$draws))
-            copy_mat(ess_draws_prop, path$draws)
-            
-            # vector for saving the log-likelihood of the LNA draws
-            mcmc_samples$lna_log_lik <- double(n_samples)
-            
-            # matrix for saving LNA draws
-            mcmc_samples$lna_draws <-
-                array(0.0, dim = c(n_rates, length(census_times) - 1, n_samples),
-                      dimnames = list(rownames(flow_matrix), NULL, NULL))
-            
-            # elliptical slice sampling MCMC record
-            if(return_ess_rec) {
-                
-                for(s in seq_along(lna_ess_schedule)) {
-                    lna_ess_schedule[[s]]$steps  = rep(1.0, lna_ess_control$n_updates)
-                    lna_ess_schedule[[s]]$angles = rep(1.0, lna_ess_control$n_updates)
-                }
-            } 
-        }
-        
         # record the initial parameter values
         rec_ind = 0
+        if(return_ess_rec) ess_rec_ind = 0
+        
         if(record_sample) {
             save_mcmc_sample(
                 mcmc_samples     = mcmc_samples,
@@ -794,10 +832,6 @@ fit_stem <-
                 tparam_inds      = tparam_inds,
                 method           = method
             )
-            
-            if(return_ess_rec) {
-                save_ess_record()
-            }
         }
         
         # initialize the status file if status updates are required

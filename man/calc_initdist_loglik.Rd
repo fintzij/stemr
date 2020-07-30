@@ -2,7 +2,7 @@
 % Please edit documentation in R/calc_initdist_loglik.R
 \name{calc_initdist_loglik}
 \alias{calc_initdist_loglik}
-\title{Return the log-likelihood of initial distribution draws}
+\title{Return the log-lik of initial distribution draws}
 \usage{
 calc_initdist_loglik(initdist_objects)
 }
@@ -13,5 +13,5 @@ calc_initdist_loglik(initdist_objects)
 log likelihood
 }
 \description{
-Return the log-likelihood of initial distribution draws
+Return the log-lik of initial distribution draws
 }

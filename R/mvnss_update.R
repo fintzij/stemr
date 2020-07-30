@@ -107,7 +107,7 @@ mvnss_update <-
                 # initialize data log likelihood
                 loglik_lower <- NULL
                 
-                # map the perturbations to an LNA path
+                # map the perturbations to a latent path
                 try({
                     if(is.null(svd_d)) {
                         

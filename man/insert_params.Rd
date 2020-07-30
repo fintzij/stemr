@@ -4,7 +4,7 @@
 \alias{insert_params}
 \title{Insert natural scale parameters into a parameter matrix}
 \usage{
-insert_params(parmat, param_blocks, nat = TRUE, prop = FALSE, rowind = 0)
+insert_params(parmat, param_blocks, nat, prop, rowind)
 }
 \arguments{
 \item{parmat}{matrix into which parameters should be inserted}

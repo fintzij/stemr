@@ -208,6 +208,18 @@ pars2parmat <- function(parmat, pars, colinds, rowind = 0L) {
     invisible(.Call(`_stemr_pars2parmat`, parmat, pars, colinds, rowind))
 }
 
+#' insert an element into a vector
+#'
+#' @param dest destination row vector
+#' @param orig elem
+#' @param ind C++ style index for the element to be copied
+#'
+#' @return copy an element of one row vector into another.
+#' @export
+insert_elem <- function(dest, elem, ind) {
+    invisible(.Call(`_stemr_insert_elem`, dest, elem, ind))
+}
+
 #' Copy an element from one vector into another
 #'
 #' @param dest destination row vector
@@ -348,6 +360,31 @@ copy_2_rows <- function(dest, orig, inds) {
 #' @export
 mat_2_arr <- function(dest, orig, ind) {
     invisible(.Call(`_stemr_mat_2_arr`, dest, orig, ind))
+}
+
+#' Copy a matrix into a column of a slice of an array
+#'
+#' @param dest array into which to copy
+#' @param orig matrix to copy
+#' @param col_ind column index (C++)
+#' @param slice_ind slice index (C++)
+#'
+#' @return copy a matrix into an array.
+#' @export
+vec_2_arr <- function(dest, orig, col_ind, slice_ind) {
+    invisible(.Call(`_stemr_vec_2_arr`, dest, orig, col_ind, slice_ind))
+}
+
+#' Copy a vector into a matrix
+#'
+#' @param dest array into which to copy
+#' @param orig matrix to copy
+#' @param ind column index (C++)
+#'
+#' @return copy a matrix into an array.
+#' @export
+vec_2_mat <- function(dest, orig, ind) {
+    invisible(.Call(`_stemr_vec_2_mat`, dest, orig, ind))
 }
 
 #' Reset a vector by filling it with an element
