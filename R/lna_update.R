@@ -11,8 +11,10 @@
 lna_update <-
     function(path,
              dat,
+             iter,
              params_cur,
              lna_ess_schedule,
+             lna_ess_control,
              initdist_objects,
              tparam,
              pathmat_prop,
@@ -43,18 +45,15 @@ lna_update <-
              d_meas_pointer,
              do_prevalence,
              joint_initdist_update,
-             return_ess_rec,
              step_size) {
         
         # order of strata updates
         ess_order <- sample.int(length(lna_ess_schedule))
         
-        # return ess record?
-        if(return_ess_rec) {
-            for(s in seq_along(lna_ess_schedule)) {
-                reset_vec(lna_ess_schedule[[s]]$steps, 1.0)
-                reset_vec(lna_ess_schedule[[s]]$angles, 0.0)
-            }
+        # reset ESS steps and angles
+        for(s in seq_along(lna_ess_schedule)) {
+            reset_vec(lna_ess_schedule[[s]]$steps, 1.0)
+            reset_vec(lna_ess_schedule[[s]]$angles, 0.0)
         }
         
         # perform the elliptical slice sampling updates
@@ -83,7 +82,7 @@ lna_update <-
                 if(joint_initdist_update) {
                     
                     # indices of strata to sample
-                    initdist_codes <- lna_ess_schedule[[j]]$initdist_codes
+                    initdist_codes <- lna_ess_schedule[[j]]$initdist_codes # block in initdist_objects
                     bad_draws      <- vector("logical", length(initdist_codes))
                     
                     # choose an ellipse
@@ -132,7 +131,8 @@ lna_update <-
                     
                     # construct the first proposal
                     copy_2_rows(dest = draws_prop,
-                                orig = cos(theta) * path$draws[lna_ess_schedule[[j]]$ess_inds, ] + 
+                                orig = 
+                                    cos(theta) * path$draws[lna_ess_schedule[[j]]$ess_inds, ] + 
                                     sin(theta) * ess_draws_prop[lna_ess_schedule[[j]]$ess_inds, ],
                                 inds = lna_ess_schedule[[j]]$ess_inds - 1)
                     
@@ -142,7 +142,6 @@ lna_update <-
                                 inds = lna_ess_schedule[[j]]$complementary_inds - 1)
                     
                     try({
-                    
                         # map draws onto a latent path
                         map_draws_2_lna(
                             pathmat           = pathmat_prop,
@@ -210,8 +209,7 @@ lna_update <-
                 while((upper - lower) > sqrt(.Machine$double.eps) && (data_log_lik_prop < threshold)) {
                     
                     # increment the number of ESS steps
-                    if(return_ess_rec) 
-                        increment_elem(lna_ess_schedule[[j]]$steps, k)
+                    increment_elem(lna_ess_schedule[[j]]$steps, k-1)
                     
                     # shrink the bracket
                     if(theta < 0) {
@@ -267,7 +265,8 @@ lna_update <-
                         
                         # construct the first proposal
                         copy_2_rows(dest = draws_prop,
-                                    orig = cos(theta) * path$draws[lna_ess_schedule[[j]]$ess_inds, ] + 
+                                    orig = 
+                                        cos(theta) * path$draws[lna_ess_schedule[[j]]$ess_inds, ] + 
                                         sin(theta) * ess_draws_prop[lna_ess_schedule[[j]]$ess_inds, ],
                                     inds = lna_ess_schedule[[j]]$ess_inds - 1)
                         
@@ -370,11 +369,9 @@ lna_update <-
                     copy_vec(dest = path$data_log_lik, orig = data_log_lik_prop)
                     
                     # record the final angle
-                    if(return_ess_rec) {
-                        insert_elem(dest = lna_ess_schedule[[j]]$angles,
-                                    elem = theta,
-                                    ind  = k-1)
-                    }
+                    insert_elem(dest = lna_ess_schedule[[j]]$angles,
+                                elem = theta,
+                                ind  = k-1)
                     
                 } else {
                     
@@ -386,7 +383,37 @@ lna_update <-
                                         rowind = 0,
                                         mcmc_rec = FALSE)
                     }
-                }   
+                }
+                
+                # update the lna bracket
+                if(iter != 0 && iter <= lna_ess_control$bracket_update_iter) {
+                    
+                    # angle residual
+                    copy_vec(
+                        dest = lna_ess_schedule[[j]]$angle_resid,
+                        orig = mean(lna_ess_schedule[[j]]$angles) - 
+                                    lna_ess_schedule[[j]]$angle_mean)
+                    
+                    # angle variance
+                    copy_vec(
+                        dest = lna_ess_schedule[[j]]$angle_var,
+                        orig = lna_ess_schedule[[j]]$angle_resid^2 / (iter-1) + 
+                               lna_ess_schedule[[j]]$angle_var * (iter-2) / (iter-1))
+                        
+                    # angle mean
+                    copy_vec(
+                        dest = lna_ess_schedule[[j]]$angle_mean,
+                        orig = mean(lna_ess_schedule[[j]]$angles) / (iter-1) + 
+                               lna_ess_schedule[[j]]$angle_mean * (iter-2) / (iter-1))
+                    
+                    # set the new angle bracket
+                    copy_vec(
+                        dest = lna_ess_schedule[[j]]$bracket_width,
+                        orig = pmin(lna_ess_control$bracket_scaling * 
+                                        sqrt(lna_ess_schedule[[j]]$angle_var),
+                                    2*pi)
+                    )
+                }
             }
         }
     }

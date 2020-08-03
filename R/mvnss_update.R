@@ -416,6 +416,7 @@ mvnss_update <-
                         ) 
                         
                     } else {
+                        
                         map_draws_2_lna(
                             pathmat           = pathmat_prop,
                             draws             = path$draws,

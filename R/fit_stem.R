@@ -719,12 +719,10 @@ fit_stem <-
             copy_mat(ess_draws_prop, path$draws)
             
             # elliptical slice sampling MCMC record
-            if(return_ess_rec) {
-                for(s in seq_along(lna_ess_schedule)) {
-                    lna_ess_schedule[[s]]$steps  = rep(1.0, lna_ess_control$n_updates)
-                    lna_ess_schedule[[s]]$angles = rep(0.0, lna_ess_control$n_updates)
-                }
-            } 
+            for(s in seq_along(lna_ess_schedule)) {
+                lna_ess_schedule[[s]]$steps  = rep(1.0, lna_ess_control$n_updates)
+                lna_ess_schedule[[s]]$angles = rep(0.0, lna_ess_control$n_updates)
+            }
         }
         
         # warmup the LNA, initial conditions, or time-varying parameters
@@ -732,48 +730,46 @@ fit_stem <-
            (method == "lna" | !is.null(tparam) | !joint_initdist_update)) {
             
             for(warmup in seq_len(ess_warmup)) {
-                
-                if(method == "lna") {
                     
-                    lna_update(
-                        path = path,
-                        dat = dat,
-                        params_cur = params_cur,
-                        lna_ess_schedule = lna_ess_schedule,
-                        initdist_objects = initdist_objects,
-                        tparam = tparam,
-                        pathmat_prop = pathmat_prop,
-                        censusmat = censusmat,
-                        draws_prop = draws_prop,
-                        ess_draws_prop = ess_draws_prop,
-                        emitmat = emitmat,
-                        flow_matrix = flow_matrix,
-                        stoich_matrix = stoich_matrix,
-                        times = census_times,
-                        forcing_inds = forcing_inds,
-                        forcing_tcov_inds = forcing_tcov_inds,
-                        forcings_out = forcings_out,
-                        forcing_transfers = forcing_transfers,
-                        param_inds = param_inds,
-                        const_inds = const_inds,
-                        tcovar_inds = tcovar_inds,
-                        initdist_inds = initdist_inds,
-                        param_update_inds = param_update_inds,
-                        census_indices = census_indices,
-                        event_inds = event_inds,
-                        measproc_indmat = measproc_indmat,
-                        svd_d = svd_d,
-                        svd_U = svd_U,
-                        svd_V = svd_V,
-                        proc_pointer = proc_pointer,
-                        set_pars_pointer = set_pars_pointer,
-                        d_meas_pointer = d_meas_pointer,
-                        do_prevalence = do_prevalence,
-                        joint_initdist_update = joint_initdist_update,
-                        return_ess_rec = return_ess_rec,
-                        step_size = step_size
-                    )
-                }
+                lna_update(
+                    path = path,
+                    dat = dat,
+                    iter = 0,
+                    params_cur = params_cur,
+                    lna_ess_schedule = lna_ess_schedule,
+                    lna_ess_control = lna_ess_control,
+                    initdist_objects = initdist_objects,
+                    tparam = tparam,
+                    pathmat_prop = pathmat_prop,
+                    censusmat = censusmat,
+                    draws_prop = draws_prop,
+                    ess_draws_prop = ess_draws_prop,
+                    emitmat = emitmat,
+                    flow_matrix = flow_matrix,
+                    stoich_matrix = stoich_matrix,
+                    times = census_times,
+                    forcing_inds = forcing_inds,
+                    forcing_tcov_inds = forcing_tcov_inds,
+                    forcings_out = forcings_out,
+                    forcing_transfers = forcing_transfers,
+                    param_inds = param_inds,
+                    const_inds = const_inds,
+                    tcovar_inds = tcovar_inds,
+                    initdist_inds = initdist_inds,
+                    param_update_inds = param_update_inds,
+                    census_indices = census_indices,
+                    event_inds = event_inds,
+                    measproc_indmat = measproc_indmat,
+                    svd_d = svd_d,
+                    svd_U = svd_U,
+                    svd_V = svd_V,
+                    proc_pointer = proc_pointer,
+                    set_pars_pointer = set_pars_pointer,
+                    d_meas_pointer = d_meas_pointer,
+                    do_prevalence = do_prevalence,
+                    joint_initdist_update = joint_initdist_update,
+                    step_size = step_size
+                )
             }
         }
         
@@ -852,6 +848,22 @@ fit_stem <-
         # begin the MCMC
         start.time <- Sys.time()
         for (iter in (seq_len(iterations) + 1)) {
+            
+            # ESS updates to initial conditions are made directly to params_cur so
+            # make sure that the initial conditions and tparam are in params_prop
+            if(!fixed_inits) {
+                copy_row(dest = params_prop, orig = params_cur, ind = 0)    
+            }
+            
+            if(!is.null(tparam)) {
+                for(s in seq_along(tparam)) {
+                    copy_col(
+                        dest = params_prop,
+                        orig = params_cur,
+                        ind  = tparam[[s]]$col_ind
+                    )
+                }
+            }
             
             # Sample new parameter values
             for(ind in sample.int(length(param_blocks))) {
@@ -1091,73 +1103,45 @@ fit_stem <-
             }
             
             # Update the path via elliptical slice sampling
-            update_lna_path(
-                path_cur                = path,
-                data                    = data,
-                lna_parameters          = lna_params_cur,
-                lna_param_vec           = lna_param_vec,
-                init_volumes_cur        = init_volumes_cur,
-                init_volumes_prop       = init_volumes_prop,
-                initdist_objects        = initdist_objects,
-                tparam                  = tparam,
-                pathmat_prop            = pathmat_prop,
-                censusmat               = censusmat,
-                draws_prop              = draws_prop,
-                ess_draws_prop          = ess_draws_prop,
-                emitmat                 = emitmat,
-                flow_matrix             = flow_matrix,
-                stoich_matrix           = stoich_matrix,
-                lna_times               = lna_census_times,
-                forcing_inds            = forcing_inds,
-                forcing_tcov_inds       = forcing_tcov_inds,
-                forcings_out            = forcings_out,
-                forcing_transfers       = forcing_transfers,
-                lna_param_inds          = lna_param_inds,
-                lna_const_inds          = lna_const_inds,
-                lna_tcovar_inds         = lna_tcovar_inds,
-                lna_initdist_inds       = lna_initdist_inds,
-                param_update_inds       = param_update_inds,
-                lna_event_inds          = lna_event_inds,
-                census_indices          = census_indices,
-                measproc_indmat         = measproc_indmat,
-                svd_d                   = svd_d,
-                svd_U                   = svd_U,
-                svd_V                   = svd_V,
-                lna_pointer             = lna_pointer,
-                lna_set_pars_pointer    = lna_set_pars_pointer,
-                d_meas_pointer          = d_meas_pointer,
-                do_prevalence           = do_prevalence,
-                n_ess_updates           = n_ess_updates,
-                ess_schedule            = ess_schedule,
-                lna_bracket_width       = lna_bracket_width,
-                joint_tparam_update     = joint_tparam_update,
-                joint_initdist_update   = joint_initdist_update,
-                step_size               = step_size
+            lna_update(
+                path = path,
+                dat = dat,
+                iter = iter,
+                params_cur = params_cur,
+                lna_ess_schedule = lna_ess_schedule,
+                lna_ess_control = lna_ess_control,
+                initdist_objects = initdist_objects,
+                tparam = tparam,
+                pathmat_prop = pathmat_prop,
+                censusmat = censusmat,
+                draws_prop = draws_prop,
+                ess_draws_prop = ess_draws_prop,
+                emitmat = emitmat,
+                flow_matrix = flow_matrix,
+                stoich_matrix = stoich_matrix,
+                times = census_times,
+                forcing_inds = forcing_inds,
+                forcing_tcov_inds = forcing_tcov_inds,
+                forcings_out = forcings_out,
+                forcing_transfers = forcing_transfers,
+                param_inds = param_inds,
+                const_inds = const_inds,
+                tcovar_inds = tcovar_inds,
+                initdist_inds = initdist_inds,
+                param_update_inds = param_update_inds,
+                census_indices = census_indices,
+                event_inds = event_inds,
+                measproc_indmat = measproc_indmat,
+                svd_d = svd_d,
+                svd_U = svd_U,
+                svd_V = svd_V,
+                proc_pointer = proc_pointer,
+                set_pars_pointer = set_pars_pointer,
+                d_meas_pointer = d_meas_pointer,
+                do_prevalence = do_prevalence,
+                joint_initdist_update = joint_initdist_update,
+                step_size = step_size
             )
-            
-            # update the lna bracket if required
-            if((iter-1) <= lna_bracket_update) {
-                
-                # angle residual
-                lna_angle_resid <- 
-                    colMeans(path$angle_record) - lna_angle_mean
-                
-                # angle variance
-                lna_angle_var <- 
-                    (iter - 2) / (iter - 1) * lna_angle_var + 
-                    lna_angle_resid^2 / (iter - 1)
-                
-                # angle mean
-                lna_angle_mean  <- 
-                    (iter - 2) / (iter - 1) * lna_angle_mean + 
-                    colMeans(path$angle_record) / (iter - 1)
-                
-                # set the new angle bracket
-                if(((iter-1) == lna_bracket_update)) {
-                    lna_bracket_width <- 
-                        pmin(lna_bracket_scaling * sqrt(lna_angle_var), 2*pi)
-                }
-            }
             
             # Save the latent process if called for in this iteration
             if ((iter-1) %% thin_latent_proc == 0) {

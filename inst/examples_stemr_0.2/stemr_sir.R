@@ -376,6 +376,7 @@ mcmc_kern <-
                   pars_est = c("log_R0", "log_mu", "logit_rho", "log_phi"),
                   priors = priors,
                   alg = "mvnss",
+                  # alg = "mvnmh",
                   sigma = diag(0.01, 4),
                   initializer = par_initializer,
                   control = 
