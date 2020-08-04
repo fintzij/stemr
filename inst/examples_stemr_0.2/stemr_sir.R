@@ -375,13 +375,13 @@ mcmc_kern <-
                   pars_nat = c("beta", "mu", "rho", "phi"),
                   pars_est = c("log_R0", "log_mu", "logit_rho", "log_phi"),
                   priors = priors,
-                  alg = "mvnss",
-                  # alg = "mvnmh",
+                  # alg = "mvnss",
+                  alg = "mvnmh",
                   sigma = diag(0.01, 4),
                   initializer = par_initializer,
                   control = 
-                    mvnss_control(stop_adaptation = 1e2))),
-                    # mvnmh_control(stop_adaptation = 1e2))),
+                    # mvnss_control(stop_adaptation = 1e2))),
+                    mvnmh_control(stop_adaptation = 1e2))),
           lna_ess_control = lna_control(bracket_update_iter = 50,
                                         joint_initdist_update = TRUE))
 

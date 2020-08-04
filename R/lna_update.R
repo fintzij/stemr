@@ -12,7 +12,7 @@ lna_update <-
     function(path,
              dat,
              iter,
-             params_cur,
+             parmat,
              lna_ess_schedule,
              lna_ess_control,
              initdist_objects,
@@ -47,9 +47,6 @@ lna_update <-
              joint_initdist_update,
              step_size) {
         
-        # order of strata updates
-        ess_order <- sample.int(length(lna_ess_schedule))
-        
         # reset ESS steps and angles
         for(s in seq_along(lna_ess_schedule)) {
             reset_vec(lna_ess_schedule[[s]]$steps, 1.0)
@@ -57,8 +54,12 @@ lna_update <-
         }
         
         # perform the elliptical slice sampling updates
-        for(j in ess_order) {
-            for(k in seq_len(lna_ess_schedule[[j]]$n_updates)) {
+        for(k in seq_len(lna_ess_control$n_updates)) {
+            
+            # order of strata updates
+            ess_order <- sample.int(length(lna_ess_schedule))
+            
+            for(j in ess_order) {
             
                 # sample a new set of stochastic perturbations
                 ess_draws_prop[lna_ess_schedule[[j]]$ess_inds,] <- 
@@ -71,8 +72,8 @@ lna_update <-
                 # theta <- runif(1, 0, ess_bracket_width)
                 # lower <- theta - ess_bracket_width; upper <- theta
                 pos <- runif(1) 
-                lower <- -lna_ess_schedule[[j]]$bracket_width[j] * pos
-                upper <- lower + lna_ess_schedule[[j]]$bracket_width[j]
+                lower <- -lna_ess_schedule[[j]]$bracket_width * pos
+                upper <- lower + lna_ess_schedule[[j]]$bracket_width
                 theta <- runif(1, lower, upper)
                     
                 # initialize the data log likelihood for the proposed path
@@ -122,7 +123,7 @@ lna_update <-
                     
                     # copy the new initial compartment counts
                     if(joint_initdist_update) {
-                        insert_initdist(parmat = params_cur,
+                        insert_initdist(parmat = parmat,
                                         initdist_objects = initdist_objects[initdist_codes],
                                         prop = TRUE,
                                         rowind = 0,
@@ -147,7 +148,7 @@ lna_update <-
                             pathmat           = pathmat_prop,
                             draws             = draws_prop,
                             lna_times         = times,
-                            lna_pars          = params_cur,
+                            lna_pars          = parmat,
                             lna_param_vec     = param_vec,
                             lna_param_inds    = param_inds,
                             lna_tcovar_inds   = tcovar_inds,
@@ -173,7 +174,7 @@ lna_update <-
                             event_inds          = event_inds,
                             flow_matrix         = flow_matrix,
                             do_prevalence       = do_prevalence,
-                            parmat              = params_cur,
+                            parmat              = parmat,
                             initdist_inds       = initdist_inds,
                             forcing_inds        = forcing_inds,
                             forcing_tcov_inds   = forcing_tcov_inds,
@@ -187,7 +188,7 @@ lna_update <-
                             obsmat            = dat,
                             censusmat         = censusmat,
                             measproc_indmat   = measproc_indmat,
-                            parameters        = params_cur,
+                            parameters        = parmat,
                             param_inds        = param_inds,
                             const_inds        = const_inds,
                             tcovar_inds       = tcovar_inds,
@@ -256,7 +257,7 @@ lna_update <-
                         
                         # copy the new initial compartment counts
                         if(joint_initdist_update) {
-                            insert_initdist(parmat = params_cur,
+                            insert_initdist(parmat = parmat,
                                             initdist_objects = initdist_objects[initdist_codes],
                                             prop = TRUE,
                                             rowind = 0,
@@ -281,7 +282,7 @@ lna_update <-
                                 pathmat           = pathmat_prop,
                                 draws             = draws_prop,
                                 lna_times         = census_times,
-                                lna_pars          = params_cur,
+                                lna_pars          = parmat,
                                 lna_param_vec     = param_vec,
                                 lna_param_inds    = param_inds,
                                 lna_tcovar_inds   = tcovar_inds,
@@ -307,7 +308,7 @@ lna_update <-
                                 event_inds          = event_inds,
                                 flow_matrix         = flow_matrix,
                                 do_prevalence       = do_prevalence,
-                                parmat              = params_cur,
+                                parmat              = parmat,
                                 initdist_inds       = initdist_inds,
                                 forcing_inds        = forcing_inds,
                                 forcing_tcov_inds   = forcing_tcov_inds,
@@ -321,7 +322,7 @@ lna_update <-
                                 obsmat            = dat,
                                 censusmat         = censusmat,
                                 measproc_indmat   = measproc_indmat,
-                                parameters        = params_cur,
+                                parameters        = parmat,
                                 param_inds        = param_inds,
                                 const_inds        = const_inds,
                                 tcovar_inds       = tcovar_inds,
@@ -377,7 +378,7 @@ lna_update <-
                     
                     # insert the original compartment counts back into the parameter matrix
                     if(joint_initdist_update) {
-                        insert_initdist(parmat = params_cur,
+                        insert_initdist(parmat = parmat,
                                         initdist_objects = initdist_objects[initdist_codes],
                                         prop = FALSE,
                                         rowind = 0,

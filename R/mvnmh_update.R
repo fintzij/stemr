@@ -35,8 +35,7 @@ mvnmh_update =
     function(param_blocks, 
              ind,
              iter,
-             params_cur,
-             params_prop,
+             parmat,
              dat,
              path,
              pathmat_prop,
@@ -84,7 +83,7 @@ mvnmh_update =
         )
         
         # insert parameters into the parameter proposal matrix
-        pars2parmat(parmat = params_prop,
+        pars2parmat(parmat = parmat,
                     pars = param_blocks[[ind]]$pars_prop_nat,
                     colinds = param_blocks[[ind]]$param_inds_Cpp)
         
@@ -92,10 +91,10 @@ mvnmh_update =
         if(!is.null(tparam)) {
             for(p in seq_along(tparam)) {
                 insert_tparam(
-                    tcovar = params_prop,
+                    tcovar = parmat,
                     values = 
                         tparam[[p]]$draws2par(
-                            parameters = params_prop[1,],
+                            parameters = parmat[1,],
                             draws = tparam[[p]]$draws_cur),
                     col_ind = tparam[[p]]$col_ind,
                     tpar_inds = tparam[[p]]$tpar_inds)
@@ -111,7 +110,7 @@ mvnmh_update =
                 map_pars_2_ode(
                     pathmat           = pathmat_prop,
                     ode_times         = census_times,
-                    ode_pars          = params_prop,
+                    ode_pars          = parmat,
                     ode_param_vec     = param_vec,
                     ode_param_inds    = param_inds,
                     ode_tcovar_inds   = tcovar_inds,
@@ -132,7 +131,7 @@ mvnmh_update =
                     pathmat           = pathmat_prop,
                     draws             = path$draws,
                     lna_times         = census_times,
-                    lna_pars          = params_prop,
+                    lna_pars          = parmat,
                     lna_param_vec     = param_vec,
                     lna_param_inds    = param_inds,
                     lna_tcovar_inds   = tcovar_inds,
@@ -159,7 +158,7 @@ mvnmh_update =
                 event_inds          = event_inds,
                 flow_matrix         = flow_matrix,
                 do_prevalence       = do_prevalence,
-                parmat              = params_prop,
+                parmat              = parmat,
                 initdist_inds       = initdist_inds,
                 forcing_inds        = forcing_inds,
                 forcing_tcov_inds   = forcing_tcov_inds,
@@ -173,7 +172,7 @@ mvnmh_update =
                 obsmat            = dat,
                 censusmat         = censusmat,
                 measproc_indmat   = measproc_indmat,
-                parameters        = params_prop,
+                parameters        = parmat,
                 param_inds        = param_inds,
                 const_inds        = const_inds,
                 tcovar_inds       = tcovar_inds,
@@ -209,15 +208,11 @@ mvnmh_update =
             copy_vec(param_blocks[[ind]]$pars_nat, param_blocks[[ind]]$pars_prop_nat)
             copy_vec(param_blocks[[ind]]$pars_est, param_blocks[[ind]]$pars_prop_est)
             
-            pars2parmat(parmat  = params_cur,
-                        pars    = param_blocks[[ind]]$pars_nat,
-                        colinds = param_blocks[[ind]]$param_inds_Cpp)
-            
+            # copy time-varying parameters
             if(!is.null(tparam)) {
-                for (s in seq_along(tparam)) {
-                    copy_col(dest = params_cur,
-                             orig = params_prop,
-                             ind  = tparam[[s]]$col_ind)
+                for(p in seq_along(tparam)) {
+                    copy_vec(dest = tparam[[p]]$tpar_cur,
+                             orig = parmat[,tparam[[p]]$col_ind + 1])
                 }
             }
             
@@ -226,15 +221,16 @@ mvnmh_update =
             
         } else {
             # need to reset the params_prop matrix
-            pars2parmat(parmat  = params_prop,
+            pars2parmat(parmat  = parmat,
                         pars    = param_blocks[[ind]]$pars_nat,
                         colinds = param_blocks[[ind]]$param_inds_Cpp)
             
             if(!is.null(tparam)) {
-                for (s in seq_along(tparam)) {
-                    copy_col(dest = params_prop,
-                             orig = params_cur,
-                             ind  = tparam[[s]]$col_ind)
+                for (p in seq_along(tparam)) {
+                    insert_tparam(tcovar = parmat,
+                                  values = tparam[[p]]$tpar_cur,
+                                  col_ind = tparam[[p]]$col_ind,
+                                  tpar_inds = tparam[[p]]$tpar_inds)
                 }
             }
         }

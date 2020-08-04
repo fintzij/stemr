@@ -15,7 +15,7 @@ save_mcmc_sample =
     function(mcmc_samples,
              rec_ind,
              path,
-             params_cur,
+             parmat,
              param_blocks, 
              initdist_objects,
              tparam, 
@@ -74,7 +74,7 @@ save_mcmc_sample =
         # record time-varying parameters
         if(!is.null(tparam_inds)) {
             mat_2_arr(dest = mcmc_samples$tparam_samples,
-                      orig = params_cur[, tparam_inds, drop=FALSE],
+                      orig = parmat[, tparam_inds, drop=FALSE],
                       ind  = rec_ind)
             
             copy_elem(dest = mcmc_samples$tparam_log_lik,

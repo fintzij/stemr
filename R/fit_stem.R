@@ -341,53 +341,30 @@ fit_stem <-
         census_indices   <- unique(c(0, findInterval(obstimes, census_times) - 1))
         
         ### Set up parameter objects ---------------------------------
-        params_cur <- 
-            matrix(0.0,
-                   nrow = n_times,
-                   ncol = n_pars_tot,
-                   dimnames = list(NULL, names(param_codes)))
-        
-        params_prop <- 
+        parmat <- 
             matrix(0.0,
                    nrow = n_times,
                    ncol = n_pars_tot,
                    dimnames = list(NULL, names(param_codes)))
         
         # insert parameters into the parameter matrix
-        insert_params(parmat       = params_cur, 
-                      param_blocks = param_blocks, 
-                      nat          = TRUE,
-                      prop         = FALSE,
-                      rowind       = 0)
-        
-        insert_params(parmat       = params_prop, 
+        insert_params(parmat       = parmat, 
                       param_blocks = param_blocks, 
                       nat          = TRUE,
                       prop         = FALSE,
                       rowind       = 0)
         
         # insert initial conditions
-        insert_initdist(parmat           = params_cur, 
-                        initdist_objects = initdist_objects, 
-                        prop             = FALSE,
-                        rowind           = 0, 
-                        mcmc_rec         = FALSE)
-        
-        insert_initdist(parmat           = params_prop, 
+        insert_initdist(parmat           = parmat,
                         initdist_objects = initdist_objects, 
                         prop             = FALSE,
                         rowind           = 0, 
                         mcmc_rec         = FALSE)
         
         # insert the constants
-        params_cur[, const_inds + 1]  <- 
+        parmat[, const_inds + 1]  <- 
             matrix(stem_object$dynamics$constants,
-                   nrow = nrow(params_cur),
-                   ncol = length(const_inds), byrow = T)
-        
-        params_prop[, const_inds + 1] <- 
-            matrix(stem_object$dynamics$constants,
-                   nrow = nrow(params_cur),
+                   nrow = nrow(parmat),
                    ncol = length(const_inds), byrow = T)
         
         # generate forcing indices and other objects
@@ -399,9 +376,7 @@ fit_stem <-
             tcovar_rowinds <- 
                 findInterval(times, stem_object$dynamics$tcovar[, 1],
                              left.open = FALSE, all.inside = TRUE)
-            params_cur[, tcovar_inds + 1] <- 
-                stem_object$dynamics$tcovar[tcovar_rowinds, -1]
-            params_prop[, tcovar_inds + 1] <- 
+            parmat[, tcovar_inds + 1] <- 
                 stem_object$dynamics$tcovar[tcovar_rowinds, -1]
             
             # zero out forcings if necessary
@@ -419,8 +394,7 @@ fit_stem <-
                 
                 # zero out the tcovar elements corresponding to times with no forcings
                 for(l in seq_along(stem_object$dynamics$dynamics_args$forcings)) {
-                    params_cur[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]  = 0
-                    params_prop[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name] = 0
+                    parmat[zero_inds, stem_object$dynamics$dynamics_args$forcings[[l]]$tcovar_name]  = 0
                 }
             }
         }
@@ -453,19 +427,16 @@ fit_stem <-
                     tparam[[s]]$tparam_angles <- rep(0.0, tparam_ess_control$n_updates)
                     
                     # get values
-                    insert_tparam(tcovar = params_cur,
-                                  values = tparam[[s]]$draws2par(
-                                      parameters = params_cur[1,],
-                                      draws = tparam[[s]]$draws_cur),
+                    tparam[[s]]$tpar_cur <- 
+                        tparam[[s]]$draws2par(
+                            parameters = parmat[1,],
+                            draws = tparam[[s]]$draws_cur) 
+                    
+                    # insert into the parameter matrix
+                    insert_tparam(tcovar    = parmat,
+                                  values    = tparam[[s]]$tpar_cur,
                                   col_ind   = tparam[[s]]$col_ind,
                                   tpar_inds = tparam[[s]]$tpar_inds)
-                    
-                    # copy into lna_params_prop
-                    copy_col(
-                        dest = params_prop,
-                        orig = params_cur,
-                        ind  = tparam[[s]]$col_ind
-                    )
                 }
             } else {
                 
@@ -473,17 +444,10 @@ fit_stem <-
                 for (s in seq_along(tparam)) {
                     
                     # get values
-                    insert_tparam(tcovar = params_cur,
-                                  values = tparam[[s]]$draws2par(
-                                      parameters = params_cur[1,],
-                                      draws = tparam[[s]]$draws_cur),
+                    insert_tparam(tcovar    = parmat,
+                                  values    = tparam[[s]]$tpar_cur,
                                   col_ind   = tparam[[s]]$col_ind,
                                   tpar_inds = tparam[[s]]$tpar_inds)
-                    
-                    # copy into lna_params_prop
-                    copy_col(dest = params_prop,
-                             orig = params_cur,
-                             ind  = tparam[[s]]$col_ind)
                 }
             }
             
@@ -502,7 +466,7 @@ fit_stem <-
             }
             
         } else {
-            tparam              <- NULL
+            tparam <- NULL
         }
         
         # indices for when to update the parameters
@@ -529,7 +493,7 @@ fit_stem <-
             
             # names and indices
             forcing_tcovars   <- sapply(forcings, function(x) x$tcovar_name)
-            forcing_tcov_inds <- match(forcing_tcovars, colnames(params_cur)) - 1
+            forcing_tcov_inds <- match(forcing_tcovars, colnames(parmat)) - 1
             forcing_events    <- c(sapply(forcings, function(x) paste0(x$from, "2", x$to)))
             
             # matrix indicating which compartments are involved in which forcings in and out
@@ -581,7 +545,7 @@ fit_stem <-
                                      dimnames = list(NULL, c(rownames(flow_matrix)))))
         
         # initialize the lna_param_vec for the measurement process
-        param_vec <- params_cur[1,]
+        param_vec <- parmat[1,]
         
         # initialize the latent path
         path <- NULL
@@ -600,7 +564,7 @@ fit_stem <-
                     event_inds          = event_inds,
                     flow_matrix         = flow_matrix,
                     do_prevalence       = do_prevalence,
-                    parmat              = params_cur,
+                    parmat              = parmat,
                     initdist_inds       = initdist_inds,
                     forcing_inds        = forcing_inds,
                     forcing_tcov_inds   = forcing_tcov_inds,
@@ -614,7 +578,7 @@ fit_stem <-
                     obsmat            = data,
                     censusmat         = censusmat,
                     measproc_indmat   = measproc_indmat,
-                    parameters        = params_cur,
+                    parameters        = parmat,
                     param_inds        = param_inds,
                     const_inds        = const_inds,
                     tcovar_inds       = tcovar_inds,
@@ -640,7 +604,7 @@ fit_stem <-
             if(method == "lna") {
                 inits <- initialize_lna(
                     dat                     = dat,
-                    parmat                  = params_cur,
+                    parmat                  = parmat,
                     param_blocks            = param_blocks,
                     tparam                  = tparam,
                     censusmat               = censusmat,
@@ -672,7 +636,7 @@ fit_stem <-
             } else {
                 inits <- initialize_ode(
                     dat                     = dat,
-                    parmat                  = params_cur,
+                    parmat                  = parmat,
                     param_blocks            = param_blocks,
                     tparam                  = tparam,
                     censusmat               = censusmat,
@@ -735,7 +699,7 @@ fit_stem <-
                     path = path,
                     dat = dat,
                     iter = 0,
-                    params_cur = params_cur,
+                    parmat = parmat,
                     lna_ess_schedule = lna_ess_schedule,
                     lna_ess_control = lna_ess_control,
                     initdist_objects = initdist_objects,
@@ -821,7 +785,7 @@ fit_stem <-
                 mcmc_samples     = mcmc_samples,
                 rec_ind          = rec_ind,
                 path             = path,
-                params_cur       = params_cur,
+                parmat           = parmat,
                 param_blocks     = param_blocks,
                 initdist_objects = initdist_objects,
                 tparam           = tparam,
@@ -849,22 +813,6 @@ fit_stem <-
         start.time <- Sys.time()
         for (iter in (seq_len(iterations) + 1)) {
             
-            # ESS updates to initial conditions are made directly to params_cur so
-            # make sure that the initial conditions and tparam are in params_prop
-            if(!fixed_inits) {
-                copy_row(dest = params_prop, orig = params_cur, ind = 0)    
-            }
-            
-            if(!is.null(tparam)) {
-                for(s in seq_along(tparam)) {
-                    copy_col(
-                        dest = params_prop,
-                        orig = params_cur,
-                        ind  = tparam[[s]]$col_ind
-                    )
-                }
-            }
-            
             # Sample new parameter values
             for(ind in sample.int(length(param_blocks))) {
                 
@@ -890,12 +838,11 @@ fit_stem <-
                         param_blocks      = param_blocks, 
                         ind               = ind,
                         iter              = iter,
-                        params_cur        = params_cur,
-                        params_prop       = params_prop,
+                        parmat            = parmat,
                         dat               = dat,
                         path              = path,
                         pathmat_prop      = pathmat_prop,
-                        tparam            = tparam,
+                        tparam            = tparam, 
                         times             = census_times,
                         flow_matrix       = flow_matrix,
                         stoich_matrix     = stoich_matrix,
@@ -941,8 +888,7 @@ fit_stem <-
                         param_blocks      = param_blocks, 
                         ind               = ind,
                         iter              = iter,
-                        params_cur        = params_cur,
-                        params_prop       = params_prop,
+                        parmat            = parmat,
                         dat               = dat,
                         path              = path,
                         pathmat_prop      = pathmat_prop,
@@ -982,7 +928,7 @@ fit_stem <-
                     init_volumes_prop      = init_volumes_prop,
                     path_cur               = path,
                     data                   = data,
-                    lna_parameters         = lna_params_cur,
+                    lna_parameters         = lna_parmat,
                     lna_param_vec          = lna_param_vec,
                     tparam                 = tparam,
                     pathmat_prop           = pathmat_prop,
@@ -1046,7 +992,7 @@ fit_stem <-
                     tparam               = tparam,
                     path_cur             = path,
                     data                 = data,
-                    lna_parameters       = lna_params_cur,
+                    lna_parameters       = lna_parmat,
                     lna_param_vec        = lna_param_vec,
                     pathmat_prop         = pathmat_prop,
                     censusmat            = censusmat,
@@ -1107,7 +1053,7 @@ fit_stem <-
                 path = path,
                 dat = dat,
                 iter = iter,
-                params_cur = params_cur,
+                parmat = parmat,
                 lna_ess_schedule = lna_ess_schedule,
                 lna_ess_control = lna_ess_control,
                 initdist_objects = initdist_objects,
@@ -1182,7 +1128,7 @@ fit_stem <-
                     for (p in seq_along(tparam)) tparam[[p]]$log_lik <- sum(dnorm(tparam[[p]]$draws_cur, log = T))
                     
                     tparam_log_lik[param_rec_ind, ] <- sapply(tparam, "[[", "log_lik")
-                    tparam_samples[,,param_rec_ind] <- lna_params_cur[, tparam_inds + 1, drop = FALSE]
+                    tparam_samples[,,param_rec_ind] <- lna_parmat[, tparam_inds + 1, drop = FALSE]
                 }
                 
                 # Store the parameter sample
