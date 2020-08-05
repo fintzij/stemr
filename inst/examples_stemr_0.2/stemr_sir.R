@@ -366,7 +366,7 @@ priors <- list(logprior = logprior,
 par_initializer = function() {
   priors$from_estimation_scale(priors$to_estimation_scale(parameters) + rnorm(4, 0, 0.1))
 }
-
+  
 # specify the kernel
 mcmc_kern <-
         mcmc_kernel(
@@ -383,7 +383,7 @@ mcmc_kern <-
                     # mvnss_control(stop_adaptation = 1e2))),
                     mvnmh_control(stop_adaptation = 1e2))),
           lna_ess_control = lna_control(bracket_update_iter = 50,
-                                        joint_initdist_update = TRUE))
+                                        joint_initdist_update = FALSE))
 
 #' 
 #' We now run the MCMC algorithm to fit the model via ODEs. To perform inference with the LNA, simply change the `method` argument to `method="lna"`.

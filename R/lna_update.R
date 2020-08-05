@@ -360,7 +360,7 @@ lna_update <-
                         }
                     }
                     
-                    # transfer the new path and residual path into the path list
+                    # copy the LNA draws
                     copy_2_rows(dest = path$draws,
                                 orig = draws_prop[lna_ess_schedule[[j]]$ess_inds,],
                                 inds = lna_ess_schedule[[j]]$ess_inds-1)

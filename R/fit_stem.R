@@ -271,11 +271,15 @@ fit_stem <-
             
             # for recording the ess initdist updates
             if(!joint_initdist_update) {
-                initdist_objects$initdist_steps <- rep(1.0, initdist_ess_control$n_updates)
-                initdist_objects$initdist_angle <- rep(0.0, initdist_ess_control$n_updates)
+                initdist_ess_control$steps  <- rep(1.0, initdist_ess_control$n_updates)
+                initdist_ess_control$angles <- rep(0.0, initdist_ess_control$n_updates)
+                
+                initdist_ess_control$angle_mean  <- 0.0
+                initdist_ess_control$angle_resid <- 0.0
+                initdist_ess_control$angle_var   <- 0.0
             }
             
-            bad_draws          <- rep(TRUE, length(initdist_objects))
+            bad_draws <- rep(TRUE, length(initdist_objects))
             
             # map draws to initial volumes
             while(any(bad_draws)) {
@@ -919,70 +923,46 @@ fit_stem <-
             
             # update the initial compartment volumes
             if(!fixed_inits && 
-               (method == "ode" | 
-                (method == "lna" & !lna_ess_control$joint_initdist_update))) {
+               !(method == "lna" & lna_ess_control$joint_initdist_update)) {
                 
-                update_initdist_lna(
-                    initdist_objects       = initdist_objects,
-                    init_volumes_cur       = init_volumes_cur,
-                    init_volumes_prop      = init_volumes_prop,
-                    path_cur               = path,
-                    data                   = data,
-                    lna_parameters         = lna_parmat,
-                    lna_param_vec          = lna_param_vec,
-                    tparam                 = tparam,
-                    pathmat_prop           = pathmat_prop,
-                    censusmat              = censusmat,
-                    emitmat                = emitmat,
-                    flow_matrix            = flow_matrix,
-                    stoich_matrix          = stoich_matrix,
-                    lna_times              = lna_census_times,
-                    forcing_inds           = forcing_inds,
-                    forcing_tcov_inds      = forcing_tcov_inds,
-                    forcings_out           = forcings_out,
-                    forcing_transfers      = forcing_transfers,
-                    lna_param_inds         = lna_param_inds,
-                    lna_const_inds         = lna_const_inds,
-                    lna_tcovar_inds        = lna_tcovar_inds,
-                    lna_initdist_inds      = lna_initdist_inds,
-                    param_update_inds      = param_update_inds,
-                    census_indices         = census_indices,
-                    lna_event_inds         = lna_event_inds,
-                    measproc_indmat        = measproc_indmat,
-                    svd_d                  = svd_d,
-                    svd_U                  = svd_U,
-                    svd_V                  = svd_V,
-                    lna_pointer            = lna_pointer,
-                    lna_set_pars_pointer   = lna_set_pars_pointer,
-                    d_meas_pointer         = d_meas_pointer,
-                    do_prevalence          = do_prevalence,
-                    step_size              = step_size,
-                    initdist_steps         = initdist_steps,
-                    initdist_angle         = initdist_angle,
-                    initdist_bracket_width = initdist_bracket_width,
-                    n_initdist_updates     = n_initdist_updates
+                initdist_update(
+                    path = path,
+                    dat = dat,
+                    iter = iter,
+                    parmat = parmat,
+                    initdist_objects = initdist_objects,
+                    initdist_ess_control = initdist_ess_control,
+                    tparam = tparam,
+                    pathmat_prop = pathmat_prop,
+                    censusmat = censusmat,
+                    draws_prop = draws_prop,
+                    ess_draws_prop = ess_draws_prop,
+                    emitmat = emitmat,
+                    flow_matrix = flow_matrix,
+                    stoich_matrix = stoich_matrix,
+                    times = census_times,
+                    forcing_inds = forcing_inds,
+                    forcing_tcov_inds = forcing_tcov_inds,
+                    forcings_out = forcings_out,
+                    forcing_transfers = forcing_transfers,
+                    param_inds = param_inds,
+                    const_inds = const_inds,
+                    tcovar_inds = tcovar_inds,
+                    initdist_inds = initdist_inds,
+                    param_update_inds = param_update_inds,
+                    census_indices = census_indices,
+                    event_inds = event_inds,
+                    measproc_indmat = measproc_indmat,
+                    svd_d = svd_d,
+                    svd_U = svd_U,
+                    svd_V = svd_V,
+                    proc_pointer = proc_pointer,
+                    set_pars_pointer = set_pars_pointer,
+                    d_meas_pointer = d_meas_pointer,
+                    do_prevalence = do_prevalence,
+                    joint_initdist_update = joint_initdist_update,
+                    step_size = step_size
                 )
-                
-                if((iter-1) <= initdist_bracket_update) {
-                    
-                    # angle residual
-                    initdist_angle_resid <- 
-                        initdist_angle - initdist_angle_mean
-                    
-                    # angle variance
-                    initdist_angle_var   <- 
-                        (iter-2) / (iter-1) * initdist_angle_var + initdist_angle_resid^2 / (iter - 1)
-                    
-                    # angle mean
-                    initdist_angle_mean  <- 
-                        (iter-2) / (iter-1) * initdist_angle_mean + initdist_angle / (iter - 1)
-                    
-                    # set the new angle bracket
-                    if(((iter-1) == initdist_bracket_update)) {
-                        initdist_bracket_width <- 
-                            min(initdist_bracket_scaling * sqrt(initdist_angle_var), 2*pi)
-                    }
-                }
             }
             
             # update the tparam draws
@@ -1049,45 +1029,47 @@ fit_stem <-
             }
             
             # Update the path via elliptical slice sampling
-            lna_update(
-                path = path,
-                dat = dat,
-                iter = iter,
-                parmat = parmat,
-                lna_ess_schedule = lna_ess_schedule,
-                lna_ess_control = lna_ess_control,
-                initdist_objects = initdist_objects,
-                tparam = tparam,
-                pathmat_prop = pathmat_prop,
-                censusmat = censusmat,
-                draws_prop = draws_prop,
-                ess_draws_prop = ess_draws_prop,
-                emitmat = emitmat,
-                flow_matrix = flow_matrix,
-                stoich_matrix = stoich_matrix,
-                times = census_times,
-                forcing_inds = forcing_inds,
-                forcing_tcov_inds = forcing_tcov_inds,
-                forcings_out = forcings_out,
-                forcing_transfers = forcing_transfers,
-                param_inds = param_inds,
-                const_inds = const_inds,
-                tcovar_inds = tcovar_inds,
-                initdist_inds = initdist_inds,
-                param_update_inds = param_update_inds,
-                census_indices = census_indices,
-                event_inds = event_inds,
-                measproc_indmat = measproc_indmat,
-                svd_d = svd_d,
-                svd_U = svd_U,
-                svd_V = svd_V,
-                proc_pointer = proc_pointer,
-                set_pars_pointer = set_pars_pointer,
-                d_meas_pointer = d_meas_pointer,
-                do_prevalence = do_prevalence,
-                joint_initdist_update = joint_initdist_update,
-                step_size = step_size
-            )
+            if(method == "lna") {
+                lna_update(
+                    path = path,
+                    dat = dat,
+                    iter = iter,
+                    parmat = parmat,
+                    lna_ess_schedule = lna_ess_schedule,
+                    lna_ess_control = lna_ess_control,
+                    initdist_objects = initdist_objects,
+                    tparam = tparam,
+                    pathmat_prop = pathmat_prop,
+                    censusmat = censusmat,
+                    draws_prop = draws_prop,
+                    ess_draws_prop = ess_draws_prop,
+                    emitmat = emitmat,
+                    flow_matrix = flow_matrix,
+                    stoich_matrix = stoich_matrix,
+                    times = census_times,
+                    forcing_inds = forcing_inds,
+                    forcing_tcov_inds = forcing_tcov_inds,
+                    forcings_out = forcings_out,
+                    forcing_transfers = forcing_transfers,
+                    param_inds = param_inds,
+                    const_inds = const_inds,
+                    tcovar_inds = tcovar_inds,
+                    initdist_inds = initdist_inds,
+                    param_update_inds = param_update_inds,
+                    census_indices = census_indices,
+                    event_inds = event_inds,
+                    measproc_indmat = measproc_indmat,
+                    svd_d = svd_d,
+                    svd_U = svd_U,
+                    svd_V = svd_V,
+                    proc_pointer = proc_pointer,
+                    set_pars_pointer = set_pars_pointer,
+                    d_meas_pointer = d_meas_pointer,
+                    do_prevalence = do_prevalence,
+                    joint_initdist_update = joint_initdist_update,
+                    step_size = step_size
+                )
+            }
             
             # Save the latent process if called for in this iteration
             if ((iter-1) %% thin_latent_proc == 0) {
