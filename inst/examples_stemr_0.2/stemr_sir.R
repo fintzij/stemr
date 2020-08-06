@@ -141,7 +141,7 @@ measurement_process <-
 
 # put it all together into a stochastic epidemic model object
 stem_object <-
-  stem(dynamics = dynamics,
+  make_stemdynamics = dynamics,
        measurement_process = measurement_process)
 
 #' 
@@ -311,7 +311,7 @@ measurement_process <-
   stem_measure(emissions = emissions,
                dynamics = dynamics,
                data = sim_mjp$datasets[[1]])
-stem_object <- stem(dynamics = dynamics, measurement_process = measurement_process)
+stem_object <- make_stemdynamics = dynamics, measurement_process = measurement_process)
 
 #' 
 #' In order to perform inference, we'll need to specify a function for transforming the model parameters from their natural scale to the estimation scale on which the MCMC explores the posterior, a function for transforming parameters on their estimation scale to the natural scale on which they enter the model dynamics and measurement process, and a function that returns the log prior. We'll parameterize the MCMC estimation scale in terms of the log basic reproduction number, log recovery rate, logit mean case detection rate, and log of the negative binomial overdispersion parameter. The functions are specified as follows and placed into a list of functions (note that it is critical that the function signatures follow the specification given below):

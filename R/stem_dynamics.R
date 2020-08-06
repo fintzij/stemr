@@ -152,6 +152,11 @@ stem_dynamics <-
         if("TIME" %in% names(constants)) {
                 stop("'TIME' is a reserved word and should not be one of the names of constants.")
         }
+        
+        # check that the "_0" suffix is not used in any of the parameters or constants
+        if(any(grepl("_0", c(names(parameters), names(constants))))) {
+                stop("The suffix '_0' is reserved to indicate an initial condition. Please rename parameters and constants ending in '_0'")
+        }
 
         if(!all(sapply(state_initializer, is.list))) {
                 stop("The state_initializer argument must be a list of lists.")

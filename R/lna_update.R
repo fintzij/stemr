@@ -128,6 +128,20 @@ lna_update <-
                                         prop = TRUE,
                                         rowind = 0,
                                         mcmc_rec = FALSE)
+                        
+                        # compute the time-varying parameters if necessary
+                        if(!is.null(tparam)) {
+                            for(p in seq_along(tparam)) {
+                                insert_tparam(
+                                    tcovar = parmat,
+                                    values = 
+                                        tparam[[p]]$draws2par(
+                                            parameters = parmat[1,],
+                                            draws = tparam[[p]]$draws_cur),
+                                    col_ind = tparam[[p]]$col_ind,
+                                    tpar_inds = tparam[[p]]$tpar_inds)
+                            }
+                        }
                     }
                     
                     # construct the first proposal
@@ -262,6 +276,20 @@ lna_update <-
                                             prop = TRUE,
                                             rowind = 0,
                                             mcmc_rec = FALSE)
+                            
+                            # compute the time-varying parameters if necessary
+                            if(!is.null(tparam)) {
+                                for(p in seq_along(tparam)) {
+                                    insert_tparam(
+                                        tcovar = parmat,
+                                        values = 
+                                            tparam[[p]]$draws2par(
+                                                parameters = parmat[1,],
+                                                draws = tparam[[p]]$draws_cur),
+                                        col_ind = tparam[[p]]$col_ind,
+                                        tpar_inds = tparam[[p]]$tpar_inds)
+                                }
+                            }
                         }
                         
                         # construct the first proposal
@@ -358,6 +386,14 @@ lna_update <-
                                          orig = initdist_objects[[s]]$init_volumes_prop)
                             }
                         }
+                        
+                        # copy time-varying parameters
+                        if(!is.null(tparam)) {
+                            for(p in seq_along(tparam)) {
+                                copy_vec(dest = tparam[[p]]$tpar_cur,
+                                         orig = parmat[,tparam[[p]]$col_ind + 1])
+                            }
+                        }
                     }
                     
                     # copy the LNA draws
@@ -383,6 +419,17 @@ lna_update <-
                                         prop = FALSE,
                                         rowind = 0,
                                         mcmc_rec = FALSE)
+                        
+                        # recover the original time-varying parameter values
+                        if(!is.null(tparam)) {
+                            for(p in seq_along(tparam)) {
+                                insert_tparam(
+                                    tcovar = parmat,
+                                    values = tparam[[p]]$tpar_cur,
+                                    col_ind = tparam[[p]]$col_ind,
+                                    tpar_inds = tparam[[p]]$tpar_inds)
+                            }
+                        }
                     }
                 }
                 

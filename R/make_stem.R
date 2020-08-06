@@ -16,13 +16,11 @@
 #' @param measurement_process list of functions to simulate from or evaluate the
 #'   likelihood of the measurement process. These are most easily generated
 #'   using the \code{stem_measure} function.
-#' @param stem_settings otional list of inference settings, most
-#'   straightforwardly generated using the \code{stem_control} function.
 #'
 #' @return returns a \code{stem} object.
 #' @export
 #'
-stem <- function(stem_object = NULL, data = NULL, dynamics = NULL, measurement_process = NULL, stem_settings = NULL) {
+make_stem <- function(stem_object = NULL, data = NULL, dynamics = NULL, measurement_process = NULL) {
 
         if(is.null(stem_object)) {
                 stem_object <- 
@@ -47,13 +45,5 @@ stem <- function(stem_object = NULL, data = NULL, dynamics = NULL, measurement_p
                 stem_object$measurement_process <- measurement_process
         } 
         
-        if(!is.null(stem_settings)) {
-                if(!is.null(stem_object$stem_settings)) {
-                        stem_object$stem_settings = NULL
-                }
-                gc()
-                stem_object$stem_settings <- stem_settings
-        }      
-
         return(stem_object)
 }

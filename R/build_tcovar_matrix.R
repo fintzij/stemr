@@ -90,15 +90,7 @@ build_tcovar_matrix <- function(tcovar = NULL, tparam = NULL, forcings = NULL, t
                 # insert the time-varying parameters
                 if(!is.null(tparam)) {
                       for(s in seq_along(tparam)) {
-                            inds <- findInterval(TCOVAR_TIMES, tparam[[s]]$times, left.open = F)
-                            inds[inds==0] <- 1
-                            vals <- tparam[[s]]$draws2par(parameters = parameters, draws = tparam[[s]]$values)
-                            
-                            if(length(vals) != length(tparam[[s]]$times)) {
-                                  stop(paste0("The draws2pars argument in tparam function number ",s," must return as many values as there are times at which the time-varying parameter is evaluated."))
-                            } 
-                            
-                            TCOVAR[, tparam[[s]]$tparam_name] <- vals[inds]
+                            TCOVAR[, tparam[[s]]$tparam_name] <- 0.0
                       }
                 }
         }
