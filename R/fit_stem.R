@@ -417,8 +417,9 @@ fit_stem <-
                     
                     # indices
                     tparam[[s]]$col_ind   <- param_codes[tparam[[s]]$tparam_name]
-                    tparam[[s]]$tpar_inds <- findInterval(times, tparam[[s]]$times, left.open = F) - 1
-                    tparam[[s]]$tpar_inds[tparam[[s]]$tpar_inds == -1] <- 0
+                    tparam[[s]]$tpar_inds_R <- findInterval(times, tparam[[s]]$times, left.open = F)
+                    tparam[[s]]$tpar_inds_R[tparam[[s]]$tpar_inds_R == 0] <- 1
+                    tparam[[s]]$tpar_inds_Cpp <- tparam[[s]]$tpar_inds_R - 1
                     
                     # values
                     tparam[[s]]$draws_cur  <- rnorm(tparam[[s]]$n_draws)
@@ -426,34 +427,37 @@ fit_stem <-
                     tparam[[s]]$draws_ess  <- rnorm(tparam[[s]]$n_draws)
                     tparam[[s]]$log_lik  <- sum(dnorm(tparam[[s]]$draws_cur, log = TRUE))
                     
-                    # ess counters 
-                    tparam[[s]]$tparam_steps  <- rep(1.0, tparam_ess_control$n_updates)
-                    tparam[[s]]$tparam_angles <- rep(0.0, tparam_ess_control$n_updates)
-                    
                     # get values
                     tparam[[s]]$tpar_cur <- 
                         tparam[[s]]$draws2par(
                             parameters = parmat[1,],
-                            draws = tparam[[s]]$draws_cur) 
+                            draws = tparam[[s]]$draws_cur)[tparam[[s]]$tpar_inds_R] 
                     
                     # insert into the parameter matrix
-                    insert_tparam(tcovar    = parmat,
-                                  values    = tparam[[s]]$tpar_cur,
-                                  col_ind   = tparam[[s]]$col_ind,
-                                  tpar_inds = tparam[[s]]$tpar_inds)
+                    vec_2_mat(dest = parmat,
+                              orig = tparam[[s]]$tpar_cur,
+                              ind  = tparam[[s]]$col_ind)
+                    
+                    # ess counters 
+                    tparam[[s]]$tparam_steps  <- rep(1.0, tparam_ess_control$n_updates)
+                    tparam[[s]]$tparam_angles <- rep(0.0, tparam_ess_control$n_updates)
                 }
             } else {
                 
                 # if restarting, just copy the values into the parameter matrices
                 for (s in seq_along(tparam)) {
                     
-                    # get values
-                    insert_tparam(tcovar    = parmat,
-                                  values    = tparam[[s]]$tpar_cur,
-                                  col_ind   = tparam[[s]]$col_ind,
-                                  tpar_inds = tparam[[s]]$tpar_inds)
+                    # insert into the parameter matrix
+                    vec_2_mat(dest = parmat,
+                              orig = tparam[[s]]$tpar_cur,
+                              ind  = tparam[[s]]$col_ind)
                 }
             }
+            
+            # check if tparam[[s]] depends on initial conditions
+            tparam = check_tpar_depends(tparam = tparam, 
+                                        initdist_objects = initdist_objects,
+                                        parmat = parmat)
             
             if(return_ess_rec) {
                 ess_record$tparam_ess_record = 
@@ -694,11 +698,9 @@ fit_stem <-
         }
         
         # warmup the LNA, initial conditions, or time-varying parameters
-        if(ess_warmup != 0 && 
-           (method == "lna" | !is.null(tparam) | !joint_initdist_update)) {
+        for(warmup in seq_len(ess_warmup)) {
             
-            for(warmup in seq_len(ess_warmup)) {
-                    
+            if(method == "lna") {      
                 lna_update(
                     path = path,
                     dat = dat,
@@ -738,6 +740,51 @@ fit_stem <-
                     joint_initdist_update = joint_initdist_update,
                     step_size = step_size
                 )
+            }
+            
+            if(!fixed_inits && !joint_initdist_update) {
+                initdist_update(
+                    path = path,
+                    dat = dat,
+                    iter = 0,
+                    parmat = parmat,
+                    initdist_objects = initdist_objects,
+                    initdist_ess_control = initdist_ess_control,
+                    tparam = tparam,
+                    pathmat_prop = pathmat_prop,
+                    censusmat = censusmat,
+                    draws_prop = draws_prop,
+                    ess_draws_prop = ess_draws_prop,
+                    emitmat = emitmat,
+                    flow_matrix = flow_matrix,
+                    stoich_matrix = stoich_matrix,
+                    times = census_times,
+                    forcing_inds = forcing_inds,
+                    forcing_tcov_inds = forcing_tcov_inds,
+                    forcings_out = forcings_out,
+                    forcing_transfers = forcing_transfers,
+                    param_inds = param_inds,
+                    const_inds = const_inds,
+                    tcovar_inds = tcovar_inds,
+                    initdist_inds = initdist_inds,
+                    param_update_inds = param_update_inds,
+                    census_indices = census_indices,
+                    event_inds = event_inds,
+                    measproc_indmat = measproc_indmat,
+                    svd_d = svd_d,
+                    svd_U = svd_U,
+                    svd_V = svd_V,
+                    proc_pointer = proc_pointer,
+                    set_pars_pointer = set_pars_pointer,
+                    d_meas_pointer = d_meas_pointer,
+                    do_prevalence = do_prevalence,
+                    joint_initdist_update = joint_initdist_update,
+                    step_size = step_size
+                )
+            }
+            
+            if(!is.null(tparam)) {
+                
             }
         }
         
@@ -922,8 +969,7 @@ fit_stem <-
             }
             
             # update the initial compartment volumes
-            if(!fixed_inits && 
-               !(method == "lna" & lna_ess_control$joint_initdist_update)) {
+            if(!fixed_inits && !joint_initdist_update) {
                 
                 initdist_update(
                     path = path,

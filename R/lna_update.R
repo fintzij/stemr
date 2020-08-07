@@ -129,17 +129,19 @@ lna_update <-
                                         rowind = 0,
                                         mcmc_rec = FALSE)
                         
-                        # compute the time-varying parameters if necessary
                         if(!is.null(tparam)) {
                             for(p in seq_along(tparam)) {
-                                insert_tparam(
-                                    tcovar = parmat,
-                                    values = 
-                                        tparam[[p]]$draws2par(
-                                            parameters = parmat[1,],
-                                            draws = tparam[[p]]$draws_cur),
-                                    col_ind = tparam[[p]]$col_ind,
-                                    tpar_inds = tparam[[p]]$tpar_inds)
+                                if(tparam[[p]]$init_dep) {
+                                    
+                                    insert_tparam(
+                                        tcovar = parmat,
+                                        values = 
+                                            tparam[[p]]$draws2par(
+                                                parameters = parmat[1,],
+                                                draws = tparam[[p]]$draws_cur),
+                                        col_ind = tparam[[p]]$col_ind,
+                                        tpar_inds = tparam[[p]]$tpar_inds_Cpp)    
+                                }
                             }
                         }
                     }
@@ -279,15 +281,19 @@ lna_update <-
                             
                             # compute the time-varying parameters if necessary
                             if(!is.null(tparam)) {
-                                for(p in seq_along(tparam)) {
-                                    insert_tparam(
-                                        tcovar = parmat,
-                                        values = 
-                                            tparam[[p]]$draws2par(
-                                                parameters = parmat[1,],
-                                                draws = tparam[[p]]$draws_cur),
-                                        col_ind = tparam[[p]]$col_ind,
-                                        tpar_inds = tparam[[p]]$tpar_inds)
+                                for(s in seq_along(tparam)) {
+                                    if(tparam[[s]]$init_dep) {
+                                        
+                                        # copy into parmat
+                                        insert_tparam(
+                                            tcovar = parmat,
+                                            values = 
+                                                tparam[[s]]$draws2par(
+                                                    parameters = parmat[1,],
+                                                    draws = tparam[[s]]$draws_cur),
+                                            col_ind = tparam[[s]]$col_ind,
+                                            tpar_inds = tparam[[s]]$tpar_inds_Cpp)    
+                                    }
                                 }
                             }
                         }
@@ -390,8 +396,10 @@ lna_update <-
                         # copy time-varying parameters
                         if(!is.null(tparam)) {
                             for(p in seq_along(tparam)) {
-                                copy_vec(dest = tparam[[p]]$tpar_cur,
-                                         orig = parmat[,tparam[[p]]$col_ind + 1])
+                                if(tparam[[p]]$init_dep) {
+                                    copy_vec(dest = tparam[[p]]$tpar_cur,
+                                             orig = parmat[,tparam[[p]]$col_ind + 1])    
+                                }
                             }
                         }
                     }
@@ -423,11 +431,11 @@ lna_update <-
                         # recover the original time-varying parameter values
                         if(!is.null(tparam)) {
                             for(p in seq_along(tparam)) {
-                                insert_tparam(
-                                    tcovar = parmat,
-                                    values = tparam[[p]]$tpar_cur,
-                                    col_ind = tparam[[p]]$col_ind,
-                                    tpar_inds = tparam[[p]]$tpar_inds)
+                                if(tparam[[p]]$init_dep) {
+                                    vec_2_mat(dest = parmat,
+                                              orig = tparam[[p]]$tpar_cur,
+                                              ind = tparam[[p]]$col_ind)
+                                }
                             }
                         }
                     }

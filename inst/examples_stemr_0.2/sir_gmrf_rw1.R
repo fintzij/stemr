@@ -91,7 +91,7 @@ t0 <- 0; tmax <- 30;
 # RW in terms of log(R0), parameterized by differences
 foi_rw1 <- function(parameters, draws, log_pop = log_popsize) {
       
-      log_R0_t <- numeric(length = 1 + length(draws))
+      log_R0_t <- numeric(length = length(draws))
       log_R0_t[1] <- parameters["log_R0_init"] 
       
       for(t in 2:(length(log_R0_t))) {

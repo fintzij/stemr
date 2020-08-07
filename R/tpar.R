@@ -19,7 +19,7 @@
 #'   set of N(0,1) draws that are updated via elliptical slice sampling.}
 #' @export
 tpar <- function(tparam_name, draws2par, times, n_draws, values = NULL) {
-      
+   
       if(is.null(values)) values <- rep(0.0, length(times))
       
       return(list(

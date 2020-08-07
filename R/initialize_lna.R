@@ -70,8 +70,7 @@ initialize_lna <-
                  initdist_objects,
                  ess_warmup) {
 
-                # get the initial state parameters
-                init_state   <- parmat[1, initdist_inds + 1]
+                # initialize objects
                 data_log_lik <- NaN
                 attempt      <- 0
                 keep_going   <- TRUE
@@ -173,17 +172,16 @@ initialize_lna <-
                                                    orig = c(initdist_objects[[s]]$comp_mean +
                                                                 c(initdist_objects[[s]]$comp_sqrt_cov %*%
                                                                       initdist_objects[[s]]$draws_cur))) 
-                                     }
+                                      }
+                                    
+                                    # copy to the ode parameter matrix
+                                    insert_initdist(parmat = parmat,
+                                                    initdist_objects = initdist_objects[s], 
+                                                    prop = FALSE, 
+                                                    rowind = 0, 
+                                                    mcmc_rec = FALSE)
                                 }
                             }
-                                  
-                            # copy to the ode parameter matrix
-                            insert_initdist(parmat = parmat,
-                                            initdist_objects = initdist_objects, 
-                                            prop = FALSE, 
-                                            rowind = 0, 
-                                            mcmc_rec = FALSE)
-                        
                             
                             # draw new parameter values if called for
                             for(s in seq_along(param_blocks)) {
@@ -219,14 +217,16 @@ initialize_lna <-
                                       tparam[[s]]$log_lik <- 
                                           sum(dnorm(tparam[[s]]$draws_cur, log = TRUE))
                                       
-                                        # get values
-                                        insert_tparam(tcovar    = parmat,
-                                                      values    = 
-                                                          tparam[[s]]$draws2par(
-                                                              parameters = parmat[1,], 
-                                                              draws = tparam[[s]]$draws_cur),
-                                                      col_ind   = tparam[[s]]$col_ind,
-                                                      tpar_inds = tparam[[s]]$tpar_inds)
+                                      # get values
+                                      tparam[[s]]$tpar_cur <- 
+                                          tparam[[s]]$draws2par(
+                                              parameters = parmat[1,],
+                                              draws = tparam[[s]]$draws_cur)[tparam[[s]]$tpar_inds_R] 
+                                      
+                                      # insert into the parameter matrix
+                                      vec_2_mat(dest = parmat,
+                                                orig = tparam[[s]]$tpar_cur,
+                                                ind  = tparam[[s]]$col_ind)
                                   }
                             }      
                       }
@@ -336,16 +336,15 @@ initialize_lna <-
                                                             c(initdist_objects[[s]]$comp_sqrt_cov %*%
                                                                   initdist_objects[[s]]$draws_cur))) 
                                   }
+                                  
+                                  # copy to the ode parameter matrix
+                                  insert_initdist(parmat = parmat,
+                                                  initdist_objects = initdist_objects[s], 
+                                                  prop = FALSE, 
+                                                  rowind = 0,
+                                                  mcmc_rec = FALSE)
                               }
                           }
-                              
-                          # copy to the ode parameter matrix
-                          insert_initdist(parmat = parmat,
-                                          initdist_objects = initdist_objects, 
-                                          prop = FALSE, 
-                                          rowind = 0,
-                                          mcmc_rec = FALSE)
-                      
                           
                           # draw new parameter values if called for
                           for(s in seq_along(param_blocks)) {
@@ -382,13 +381,15 @@ initialize_lna <-
                                       sum(dnorm(tparam[[s]]$draws_cur, log = TRUE))
                                   
                                   # get values
-                                  insert_tparam(tcovar    = parmat,
-                                                values    = 
-                                                    tparam[[s]]$draws2par(
-                                                        parameters = parmat[1,], 
-                                                        draws = tparam[[s]]$draws_cur),
-                                                col_ind   = tparam[[s]]$col_ind,
-                                                tpar_inds = tparam[[s]]$tpar_inds)
+                                  tparam[[s]]$tpar_cur <- 
+                                      tparam[[s]]$draws2par(
+                                          parameters = parmat[1,],
+                                          draws = tparam[[s]]$draws_cur)[tparam[[s]]$tpar_inds_R] 
+                                  
+                                  # insert into the parameter matrix
+                                  vec_2_mat(dest = parmat,
+                                            orig = tparam[[s]]$tpar_cur,
+                                            ind  = tparam[[s]]$col_ind)
                               }
                           }      
                     }

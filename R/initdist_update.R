@@ -105,6 +105,21 @@ initdist_update <-
                                 rowind = 0,
                                 mcmc_rec = FALSE)
                 
+                if(!is.null(tparam)) {
+                    for(p in seq_along(tparam)) {
+                        if(tparam[[p]]$init_dep) {
+                            
+                            insert_tparam(
+                                tcovar = parmat,
+                                values = 
+                                    tparam[[p]]$draws2par(
+                                        parameters = parmat[1,],
+                                        draws = tparam[[p]]$draws_cur),
+                                col_ind = tparam[[p]]$col_ind,
+                                tpar_inds = tparam[[p]]$tpar_inds_Cpp)    
+                        }
+                    }
+                }
                 
                 # map the perturbations to a latent path
                 try({
@@ -252,6 +267,21 @@ initdist_update <-
                                     rowind = 0,
                                     mcmc_rec = FALSE)
                     
+                    if(!is.null(tparam)) {
+                        for(p in seq_along(tparam)) {
+                            if(tparam[[p]]$init_dep) {
+                                
+                                insert_tparam(
+                                    tcovar = parmat,
+                                    values = 
+                                        tparam[[p]]$draws2par(
+                                            parameters = parmat[1,],
+                                            draws = tparam[[p]]$draws_cur),
+                                    col_ind = tparam[[p]]$col_ind,
+                                    tpar_inds = tparam[[p]]$tpar_inds_Cpp)    
+                            }
+                        }
+                    }
                     
                     # map the perturbations to a latent path
                     try({
@@ -362,6 +392,16 @@ initdist_update <-
                 copy_mat(dest = path$latent_path, orig = pathmat_prop)
                 copy_vec(dest = path$data_log_lik, orig = data_log_lik_prop)
                 
+                # copy time-varying parameters
+                if(!is.null(tparam)) {
+                    for(p in seq_along(tparam)) {
+                        if(tparam[[p]]$init_dep) {
+                            copy_vec(dest = tparam[[p]]$tpar_cur,
+                                     orig = parmat[,tparam[[p]]$col_ind + 1])    
+                        }
+                    }
+                }
+                
                 # record the final angle
                 insert_elem(dest = initdist_ess_control$angles,
                             elem = theta,
@@ -370,12 +410,21 @@ initdist_update <-
             } else {
                 
                 # insert the original compartment counts back into the parameter matrix
-                if(joint_initdist_update) {
-                    insert_initdist(parmat = parmat,
-                                    initdist_objects = initdist_objects,
-                                    prop = FALSE,
-                                    rowind = 0,
-                                    mcmc_rec = FALSE)
+                insert_initdist(parmat = parmat,
+                                initdist_objects = initdist_objects,
+                                prop = FALSE,
+                                rowind = 0,
+                                mcmc_rec = FALSE)
+                
+                # recover the original time-varying parameter values
+                if(!is.null(tparam)) {
+                    for(p in seq_along(tparam)) {
+                        if(tparam[[p]]$init_dep) {
+                            vec_2_mat(dest = parmat,
+                                      orig = tparam[[p]]$tpar_cur,
+                                      ind = tparam[[p]]$col_ind)
+                        }
+                    }
                 }
             }
             

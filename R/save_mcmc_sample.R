@@ -74,7 +74,7 @@ save_mcmc_sample =
         # record time-varying parameters
         if(!is.null(tparam_inds)) {
             mat_2_arr(dest = mcmc_samples$tparam_samples,
-                      orig = parmat[, tparam_inds, drop=FALSE],
+                      orig = parmat[, tparam_inds + 1, drop=FALSE],
                       ind  = rec_ind)
             
             copy_elem(dest = mcmc_samples$tparam_log_lik,
