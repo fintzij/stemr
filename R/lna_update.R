@@ -223,7 +223,8 @@ lna_update <-
                 }
                 
                 # continue proposing if not accepted
-                while((upper - lower) > sqrt(.Machine$double.eps) && (data_log_lik_prop < threshold)) {
+                while((upper - lower) > sqrt(.Machine$double.eps) && 
+                      (data_log_lik_prop < threshold)) {
                     
                     # increment the number of ESS steps
                     increment_elem(lna_ess_schedule[[j]]$steps, k-1)
@@ -378,6 +379,18 @@ lna_update <-
                 # if the bracket width is not equal to zero, update the draws, path, and dat log likelihood
                 if((upper - lower) > sqrt(.Machine$double.eps)) {
                     
+                    # copy the LNA draws
+                    copy_2_rows(dest = path$draws,
+                                orig = draws_prop[lna_ess_schedule[[j]]$ess_inds,],
+                                inds = lna_ess_schedule[[j]]$ess_inds - 1)
+                    
+                    # copy the LNA path and the data log likelihood
+                    copy_vec(dest = path$data_log_lik, orig = data_log_lik_prop)
+                    
+                    if(k == lna_ess_control$n_updates & j == length(lna_ess_schedule)) {
+                        copy_mat(dest = path$latent_path, orig = pathmat_prop)    
+                    }
+                    
                     # transfer the new initial volumes and draws (volumes already in parameter matrix)
                     if(joint_initdist_update) {
                         for(s in initdist_codes) {
@@ -403,15 +416,6 @@ lna_update <-
                             }
                         }
                     }
-                    
-                    # copy the LNA draws
-                    copy_2_rows(dest = path$draws,
-                                orig = draws_prop[lna_ess_schedule[[j]]$ess_inds,],
-                                inds = lna_ess_schedule[[j]]$ess_inds-1)
-                    
-                    # copy the LNA path and the dat log likelihood
-                    copy_mat(dest = path$latent_path, orig = pathmat_prop)
-                    copy_vec(dest = path$data_log_lik, orig = data_log_lik_prop)
                     
                     # record the final angle
                     insert_elem(dest = lna_ess_schedule[[j]]$angles,
@@ -440,36 +444,37 @@ lna_update <-
                         }
                     }
                 }
+            }
+        }
+        
+        # update the lna bracket
+        if(iter != 0 && iter <= lna_ess_control$bracket_update_iter) {
+            
+            for(j in seq_len(lna_ess_schedule)) {
                 
-                # update the lna bracket
-                if(iter != 0 && iter <= lna_ess_control$bracket_update_iter) {
-                    
-                    # angle residual
-                    copy_vec(
-                        dest = lna_ess_schedule[[j]]$angle_resid,
-                        orig = mean(lna_ess_schedule[[j]]$angles) - 
-                                    lna_ess_schedule[[j]]$angle_mean)
-                    
-                    # angle variance
-                    copy_vec(
-                        dest = lna_ess_schedule[[j]]$angle_var,
-                        orig = lna_ess_schedule[[j]]$angle_resid^2 / (iter-1) + 
-                               lna_ess_schedule[[j]]$angle_var * (iter-2) / (iter-1))
-                        
-                    # angle mean
-                    copy_vec(
-                        dest = lna_ess_schedule[[j]]$angle_mean,
-                        orig = mean(lna_ess_schedule[[j]]$angles) / (iter-1) + 
-                               lna_ess_schedule[[j]]$angle_mean * (iter-2) / (iter-1))
-                    
-                    # set the new angle bracket
-                    copy_vec(
-                        dest = lna_ess_schedule[[j]]$bracket_width,
-                        orig = pmin(lna_ess_control$bracket_scaling * 
-                                        sqrt(lna_ess_schedule[[j]]$angle_var),
-                                    2*pi)
-                    )
-                }
+                # angle residual
+                copy_vec(
+                    dest = lna_ess_schedule[[j]]$angle_resid,
+                    orig = mean(lna_ess_schedule[[j]]$angles) - 
+                        lna_ess_schedule[[j]]$angle_mean)
+                
+                # angle variance
+                copy_vec(
+                    dest = lna_ess_schedule[[j]]$angle_var,
+                    orig = lna_ess_schedule[[j]]$angle_resid^2 / (iter-1) + 
+                        lna_ess_schedule[[j]]$angle_var * (iter-2) / (iter-1))
+                
+                # angle mean
+                copy_vec(
+                    dest = lna_ess_schedule[[j]]$angle_mean,
+                    orig = mean(lna_ess_schedule[[j]]$angles) / (iter-1) + 
+                        lna_ess_schedule[[j]]$angle_mean * (iter-2) / (iter-1))
+                
+                # set the new angle bracket
+                copy_vec(
+                    dest = lna_ess_schedule[[j]]$bracket_width,
+                    orig = pmin(lna_ess_control$bracket_scaling * 
+                                sqrt(lna_ess_schedule[[j]]$angle_var), 2*pi))    
             }
         }
     }

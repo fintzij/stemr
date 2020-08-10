@@ -97,8 +97,6 @@ mvnss_update <-
                 # compute the time-varying parameters if necessary
                 if(!is.null(tparam)) {
                     for(p in seq_along(tparam)) {
-                        if(tparam[[p]]$init_dep) {
-                            
                             insert_tparam(
                                 tcovar = parmat,
                                 values = 
@@ -107,7 +105,6 @@ mvnss_update <-
                                         draws = tparam[[p]]$draws_cur),
                                 col_ind = tparam[[p]]$col_ind,
                                 tpar_inds = tparam[[p]]$tpar_inds_Cpp)    
-                        }
                     }
                 }
                 
@@ -246,8 +243,6 @@ mvnss_update <-
                 # compute the time-varying parameters if necessary
                 if(!is.null(tparam)) {
                     for(p in seq_along(tparam)) {
-                        if(tparam[[p]]$init_dep) {
-                            
                             insert_tparam(
                                 tcovar = parmat,
                                 values = 
@@ -256,7 +251,6 @@ mvnss_update <-
                                         draws = tparam[[p]]$draws_cur),
                                 col_ind = tparam[[p]]$col_ind,
                                 tpar_inds = tparam[[p]]$tpar_inds_Cpp)    
-                        }
                     }
                 }
                 
@@ -398,8 +392,6 @@ mvnss_update <-
                 # compute the time-varying parameters if necessary
                 if(!is.null(tparam)) {
                     for(p in seq_along(tparam)) {
-                        if(tparam[[p]]$init_dep) {
-                            
                             insert_tparam(
                                 tcovar = parmat,
                                 values = 
@@ -408,7 +400,6 @@ mvnss_update <-
                                         draws = tparam[[p]]$draws_cur),
                                 col_ind = tparam[[p]]$col_ind,
                                 tpar_inds = tparam[[p]]$tpar_inds_Cpp)    
-                        }
                     }
                 }
                 
@@ -537,10 +528,8 @@ mvnss_update <-
             # copy time-varying parameters
             if(!is.null(tparam)) {
                 for(p in seq_along(tparam)) {
-                    if(tparam[[p]]$init_dep) {
                         copy_vec(dest = tparam[[p]]$tpar_cur,
                                  orig = parmat[,tparam[[p]]$col_ind + 1])    
-                    }
                 }
             }
             
@@ -556,11 +545,9 @@ mvnss_update <-
             
             if(!is.null(tparam)) {
                 for(p in seq_along(tparam)) {
-                    if(tparam[[p]]$init_dep) {
-                        vec_2_mat(dest = parmat,
-                                  orig = tparam[[p]]$tpar_cur,
-                                  ind = tparam[[p]]$col_ind)
-                    }
+                    vec_2_mat(dest = parmat,
+                              orig = tparam[[p]]$tpar_cur,
+                              ind = tparam[[p]]$col_ind)
                 }
             }
         }
@@ -598,6 +585,5 @@ mvnss_update <-
                             param_blocks[[ind]]$mvnss_objects$bracket_adaptations[iter] * 
                             (param_blocks[[ind]]$mvnss_objects$n_expansions / 
                                  (param_blocks[[ind]]$mvnss_objects$n_expansions + 
-                                      param_blocks[[ind]]$mvnss_objects$n_contractions) - 0.5))
-                ))
+                                      param_blocks[[ind]]$mvnss_objects$n_contractions) - 0.5))))
     }

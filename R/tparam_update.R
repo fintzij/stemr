@@ -4,14 +4,13 @@
 #'
 #' @return updates the initial conditions
 #' @export
-initdist_update <-
+tparam_update <-
     function(path,
              dat,
              iter,
              parmat,
-             initdist_objects,
-             initdist_ess_control,
              tparam,
+             tparam_ess_control,
              pathmat_prop,
              censusmat,
              draws_prop,
@@ -42,83 +41,50 @@ initdist_update <-
              step_size) {
         
     # reset ESS steps and angles
-    reset_vec(initdist_ess_control$steps, 1.0)
-    reset_vec(initdist_ess_control$angles, 0.0)
-    
+    for(p in seq_along(tparam)) {
+        reset_vec(tparam[[p]]$steps, 1.0)
+        reset_vec(tparam[[p]]$angles, 0.0)
+    }
+        
     # perform the elliptical slice sampling updates
-    for(k in seq_len(initdist_ess_control$n_updates)) {
+    for(k in seq_len(tparam_ess_control$n_updates)) {
         
-        # choose a likelihood threshold
-        threshold <- path$data_log_lik + log(runif(1))
+        # order of tparam updates
+        ess_order <- sample.int(length(tparam))
         
-        # initialize the data log likelihood for the proposed path
-        data_log_lik_prop <- NULL
+        for(p in ess_order) {
+    
+            # choose a likelihood threshold
+            threshold <- path$data_log_lik + log(runif(1))
+            
+            # initialize the data log likelihood for the proposed path
+            data_log_lik_prop <- NULL
+            
+            # initial proposal, which also defines a bracket
+            pos <- runif(1) 
+            lower <- -tparam[[p]]$bracket_width * pos
+            upper <- lower + tparam[[p]]$bracket_width
+            theta <- runif(1, lower, upper)
         
-        # initial proposal, which also defines a bracket
-        pos <- runif(1) 
-        lower <- -initdist_ess_control$bracket_width * pos
-        upper <- lower + initdist_ess_control$bracket_width
-        theta <- runif(1, lower, upper)
-        
-        # vector of logicals for whether boundary conditions are respected
-        bad_draws <- vector("logical", length(initdist_objects))
-        
-        # choose an ellipse
-        for(s in seq_along(initdist_objects)) {
+            # construct the first proposal
+            draw_normals(tparam[[p]]$draws_prop)
             
-            # if the state is not fixed draw new values
-            if(!initdist_objects[[s]]$fixed) {
-                    
-                # draw N(0,1)
-                draw_normals(initdist_objects[[s]]$draws_prop)
-                
-                # compute the linear combination
-                copy_vec(dest = initdist_objects[[s]]$draws_ess, 
-                         orig = 
-                             cos(theta) * initdist_objects[[s]]$draws_cur +
-                             sin(theta) * initdist_objects[[s]]$draws_prop)
-                
-                # map to volumes
-                copy_vec(dest = initdist_objects[[s]]$init_volumes_prop,
-                         orig = c(initdist_objects[[s]]$comp_mean +
-                                      c(initdist_objects[[s]]$comp_sqrt_cov %*%
-                                            initdist_objects[[s]]$draws_ess)))
-                
-                # check boundary conditions
-                bad_draws[s] <- 
-                    any(initdist_objects[[s]]$init_volumes_prop < 0 |
-                            initdist_objects[[s]]$init_volumes_prop > 
-                            initdist_objects[[s]]$comp_size)
-            }
-        }
+            # compute the proposal
+            copy_vec(
+                dest = tparam[[p]]$draws_ess,
+                orig = cos(theta) * tparam[[p]]$draws_cur + 
+                       sin(theta) * tparam[[p]]$draws_prop
+            )
             
-        if(any(bad_draws)) {
-            data_log_lik_prop <- -Inf
-            
-        } else {
-            
-            # copy the new initial compartment counts
-            insert_initdist(parmat = parmat,
-                            initdist_objects = initdist_objects,
-                            prop = TRUE,
-                            rowind = 0,
-                            mcmc_rec = FALSE)
-            
-            if(!is.null(tparam)) {
-                for(p in seq_along(tparam)) {
-                    if(tparam[[p]]$init_dep) {
-                        
-                        insert_tparam(
-                            tcovar = parmat,
-                            values = 
-                                tparam[[p]]$draws2par(
-                                    parameters = parmat[1,],
-                                    draws = tparam[[p]]$draws_cur),
-                            col_ind = tparam[[p]]$col_ind,
-                            tpar_inds = tparam[[p]]$tpar_inds_Cpp)    
-                    }
-                }
-            }
+            # insert time-varying parameters
+            insert_tparam(
+                tcovar = parmat,
+                values = 
+                    tparam[[p]]$draws2par(
+                        parameters = parmat[1,],
+                        draws = tparam[[p]]$draws_ess),
+                col_ind = tparam[[p]]$col_ind,
+                tpar_inds = tparam[[p]]$tpar_inds_Cpp)    
             
             # map the perturbations to a latent path
             try({
@@ -206,81 +172,40 @@ initdist_update <-
             
             # if proposal failed data_log_lik_prop is -Inf
             if(is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
-        }
-            
-        # continue proposing if not accepted
-        while((upper - lower) > sqrt(.Machine$double.eps) && 
-              (data_log_lik_prop < threshold)) {
-            
-            # increment the number of ESS steps
-            increment_elem(initdist_ess_control$steps, k-1)
-            
-            # shrink the bracket
-            if(theta < 0) {
-                lower <- theta
-            } else {
-                upper <- theta
-            }
-            
-            # sample a new point
-            theta <- runif(1, lower, upper)
-            
-            # construct the next initial distribution proposal
-            for(s in seq_along(initdist_objects)) {
+        
+            # continue proposing if not accepted
+            while((upper - lower) > sqrt(.Machine$double.eps) && 
+                  (data_log_lik_prop < threshold)) {
                 
-                # if the state is not fixed draw new values
-                if(!initdist_objects[[s]]$fixed) {
-                    
-                    # draw N(0,1)
-                    draw_normals(initdist_objects[[s]]$draws_prop)
-                    
-                    # compute the linear combination
-                    copy_vec(dest = initdist_objects[[s]]$draws_ess, 
-                             orig = 
-                                 cos(theta) * initdist_objects[[s]]$draws_cur +
-                                 sin(theta) * initdist_objects[[s]]$draws_prop)
-                    
-                    # map to volumes
-                    copy_vec(dest = initdist_objects[[s]]$init_volumes_prop,
-                             orig = c(initdist_objects[[s]]$comp_mean +
-                                          c(initdist_objects[[s]]$comp_sqrt_cov %*%
-                                                initdist_objects[[s]]$draws_ess)))
-                    
-                    # check boundary conditions
-                    bad_draws[s] <- 
-                        any(initdist_objects[[s]]$init_volumes_prop < 0 |
-                                initdist_objects[[s]]$init_volumes_prop > 
-                                initdist_objects[[s]]$comp_size)
+                # increment the number of ESS steps
+                increment_elem(tparam[[p]]$steps, k-1)
+                
+                # shrink the bracket
+                if(theta < 0) {
+                    lower <- theta
+                } else {
+                    upper <- theta
                 }
-            }
-            
-            if(any(bad_draws)) {
-                data_log_lik_prop <- -Inf
                 
-            } else {
+                # sample a new point
+                theta <- runif(1, lower, upper)
                 
-                # copy the new initial compartment counts
-                insert_initdist(parmat = parmat,
-                                initdist_objects = initdist_objects,
-                                prop = TRUE,
-                                rowind = 0,
-                                mcmc_rec = FALSE)
+                # compute the proposal
+                copy_vec(
+                    dest = tparam[[p]]$draws_ess,
+                    orig = cos(theta) * tparam[[p]]$draws_cur + 
+                        sin(theta) * tparam[[p]]$draws_prop
+                )
                 
-                if(!is.null(tparam)) {
-                    for(p in seq_along(tparam)) {
-                        if(tparam[[p]]$init_dep) {
-                            
-                            insert_tparam(
-                                tcovar = parmat,
-                                values = 
-                                    tparam[[p]]$draws2par(
-                                        parameters = parmat[1,],
-                                        draws = tparam[[p]]$draws_cur),
-                                col_ind = tparam[[p]]$col_ind,
-                                tpar_inds = tparam[[p]]$tpar_inds_Cpp)    
-                        }
-                    }
-                }
+                # insert time-varying parameters
+                insert_tparam(
+                    tcovar = parmat,
+                    values = 
+                        tparam[[p]]$draws2par(
+                            parameters = parmat[1,],
+                            draws = tparam[[p]]$draws_ess),
+                    col_ind = tparam[[p]]$col_ind,
+                    tpar_inds = tparam[[p]]$tpar_inds_Cpp)    
                 
                 # map the perturbations to a latent path
                 try({
@@ -369,97 +294,69 @@ initdist_update <-
                 # if proposal failed data_log_lik_prop is -Inf
                 if(is.null(data_log_lik_prop)) data_log_lik_prop <- -Inf
             }
-        }
                 
-        # if the bracket width is not equal to zero, update the draws, path, and dat log likelihood
-        if((upper - lower) > sqrt(.Machine$double.eps)) {
-            
-            # transfer the new initial volumes and draws (volumes already in parameter matrix)
-            for(s in seq_along(initdist_objects)) {
-                if(!initdist_objects[[s]]$fixed) {
-                    
-                    # copy the N(0,1) draws
-                    copy_vec(dest = initdist_objects[[s]]$draws_cur,
-                             orig = initdist_objects[[s]]$draws_ess)
-                    
-                    # copy the initial compartment volumes
-                    copy_vec(dest = initdist_objects[[s]]$init_volumes,
-                             orig = initdist_objects[[s]]$init_volumes_prop)
+            # if the bracket width is not equal to zero, update the draws, path, and dat log likelihood
+            if((upper - lower) > sqrt(.Machine$double.eps)) {
+                
+                # transfer the draws
+                copy_vec(dest = tparam[[p]]$draws_cur,
+                         orig = tparam[[p]]$draws_ess)
+                
+                # copy the values
+                copy_vec(dest = tparam[[p]]$tpar_cur,
+                         orig = parmat[,tparam[[p]]$col_ind + 1])
+                
+                # copy the LNA path and the dat log likelihood
+                copy_vec(dest = path$data_log_lik, orig = data_log_lik_prop)
+                
+                if(k == tparam_ess_control$n_updates & p == length(tparam)) {
+                    copy_mat(dest = path$latent_path, orig = pathmat_prop)    
                 }
-            }
-            
-            # copy the LNA path and the dat log likelihood
-            copy_vec(dest = path$data_log_lik, orig = data_log_lik_prop)
-            
-            if(k == initdist_ess_control$n_updates) {
-                copy_mat(dest = path$latent_path, orig = pathmat_prop)
-            }
-            
-            # copy time-varying parameters
-            if(!is.null(tparam)) {
-                for(p in seq_along(tparam)) {
-                    if(tparam[[p]]$init_dep) {
-                        copy_vec(dest = tparam[[p]]$tpar_cur,
-                                 orig = parmat[,tparam[[p]]$col_ind + 1])    
-                    }
-                }
-            }
-            
-            # record the final angle
-            insert_elem(dest = initdist_ess_control$angles,
-                        elem = theta,
-                        ind  = k-1)
-            
-        } else {
-            
-            # insert the original compartment counts back into the parameter matrix
-            insert_initdist(parmat = parmat,
-                            initdist_objects = initdist_objects,
-                            prop = FALSE,
-                            rowind = 0,
-                            mcmc_rec = FALSE)
-            
-            # recover the original time-varying parameter values
-            if(!is.null(tparam)) {
-                for(p in seq_along(tparam)) {
-                    if(tparam[[p]]$init_dep) {
-                        vec_2_mat(dest = parmat,
-                                  orig = tparam[[p]]$tpar_cur,
-                                  ind = tparam[[p]]$col_ind)
-                    }
-                }
+                
+                # record the final angle
+                insert_elem(dest = tparam[[p]]$angles,
+                            elem = theta,
+                            ind  = k-1)
+                
+            } else {
+                
+                # recover the original time-varying parameters
+                vec_2_mat(dest = parmat,
+                          orig = tparam[[p]]$tpar_cur,
+                          ind = tparam[[p]]$col_ind)
             }
         }
     }
-    
-    # update the ESS bracket
-    if(iter != 0 && iter <= initdist_ess_control$bracket_update_iter) {
         
-        # angle residual
-        copy_vec(
-            dest = initdist_ess_control$angle_resid,
-            orig = mean(initdist_ess_control$angles) - 
-                initdist_ess_control$angle_mean) 
+    # update the ESS brackets
+    if(iter != 0 && iter <= tparam_ess_control$bracket_update_iter) {
         
-        # angle variance
-        copy_vec(
-            dest = initdist_ess_control$angle_var,
-            orig = initdist_ess_control$angle_resid^2 / (iter-1) + 
-                initdist_ess_control$angle_var * (iter-2) / (iter-1))
-        
-        # angle mean
-        copy_vec(
-            dest = initdist_ess_control$angle_mean,
-            orig = mean(initdist_ess_control$angles) / (iter-1) + 
-                initdist_ess_control$angle_mean * (iter-2) / (iter-1))
-        
-        # set the new angle bracket
-        copy_vec(
-            dest = initdist_ess_control$bracket_width,
-            orig = pmin(initdist_ess_control$bracket_scaling * 
-                            sqrt(initdist_ess_control$angle_var),
-                        2*pi)
-        )
+        for(p in seq_along(tparam)) {
+            
+            # angle residual
+            copy_vec(
+                dest = tparam[[p]]$angle_resid,
+                orig = mean(tparam[[p]]$angles) - 
+                    tparam[[p]]$angle_mean) 
+            
+            # angle variance
+            copy_vec(
+                dest = tparam[[p]]$angle_var,
+                orig = tparam[[p]]$angle_resid^2 / (iter-1) + 
+                    tparam[[p]]$angle_var * (iter-2) / (iter-1))
+            
+            # angle mean
+            copy_vec(
+                dest = tparam[[p]]$angle_mean,
+                orig = mean(tparam[[p]]$angles) / (iter-1) + 
+                    tparam[[p]]$angle_mean * (iter-2) / (iter-1))
+            
+            # set the new angle bracket
+            copy_vec(
+                dest = tparam[[p]]$bracket_width,
+                orig = pmin(tparam_ess_control$bracket_scaling * 
+                            sqrt(tparam[[p]]$angle_var), 2*pi))    
+        }
     }
 }
     

@@ -438,9 +438,12 @@ fit_stem <-
                               orig = tparam[[s]]$tpar_cur,
                               ind  = tparam[[s]]$col_ind)
                     
+                    # bracket width
+                    tparam[[s]]$bracket_width <- tparam_ess_control$bracket_width
+                    
                     # ess counters 
-                    tparam[[s]]$tparam_steps  <- rep(1.0, tparam_ess_control$n_updates)
-                    tparam[[s]]$tparam_angles <- rep(0.0, tparam_ess_control$n_updates)
+                    tparam[[s]]$steps  <- rep(1.0, tparam_ess_control$n_updates)
+                    tparam[[s]]$angles <- rep(0.0, tparam_ess_control$n_updates)
                 }
             } else {
                 
@@ -784,7 +787,43 @@ fit_stem <-
             }
             
             if(!is.null(tparam)) {
-                
+                tparam_update(
+                    path = path, 
+                    dat = dat,
+                    iter = 0,
+                    parmat = parmat,
+                    tparam = tparam,
+                    tparam_ess_control = tparam_ess_control,
+                    pathmat_prop = pathmat_prop,
+                    censusmat = censusmat,
+                    draws_prop = draws_prop,
+                    ess_draws_prop = ess_draws_prop,
+                    emitmat = emitmat,
+                    flow_matrix = flow_matrix,
+                    stoich_matrix = stoich_matrix,
+                    times = census_times,
+                    forcing_inds = forcing_inds,
+                    forcing_tcov_inds = forcing_tcov_inds,
+                    forcings_out = forcings_out,
+                    forcing_transfers = forcing_transfers,
+                    param_inds = param_inds,
+                    const_inds = const_inds,
+                    tcovar_inds = tcovar_inds,
+                    initdist_inds = initdist_inds,
+                    param_update_inds = param_update_inds,
+                    census_indices = census_indices,
+                    event_inds = event_inds,
+                    measproc_indmat = measproc_indmat,
+                    svd_d = svd_d,
+                    svd_U = svd_U,
+                    svd_V = svd_V,
+                    proc_pointer = proc_pointer,
+                    set_pars_pointer = set_pars_pointer,
+                    d_meas_pointer = d_meas_pointer,
+                    do_prevalence = do_prevalence,
+                    joint_initdist_update = joint_initdist_update,
+                    step_size = step_size
+                )
             }
         }
         
@@ -1006,72 +1045,49 @@ fit_stem <-
                     set_pars_pointer = set_pars_pointer,
                     d_meas_pointer = d_meas_pointer,
                     do_prevalence = do_prevalence,
-                    joint_initdist_update = joint_initdist_update,
                     step_size = step_size
                 )
             }
             
             # update the tparam draws
-            if (!is.null(tparam) && !joint_tparam_update) {
+            if (!is.null(tparam)) {
                 
-                update_tparam_lna(
-                    tparam               = tparam,
-                    path_cur             = path,
-                    data                 = data,
-                    lna_parameters       = lna_parmat,
-                    lna_param_vec        = lna_param_vec,
-                    pathmat_prop         = pathmat_prop,
-                    censusmat            = censusmat,
-                    emitmat              = emitmat,
-                    flow_matrix          = flow_matrix,
-                    stoich_matrix        = stoich_matrix,
-                    lna_times            = lna_census_times,
-                    forcing_inds         = forcing_inds,
-                    forcing_tcov_inds    = forcing_tcov_inds,
-                    forcings_out         = forcings_out,
-                    forcing_transfers    = forcing_transfers,
-                    lna_param_inds       = lna_param_inds,
-                    lna_const_inds       = lna_const_inds,
-                    lna_tcovar_inds      = lna_tcovar_inds,
-                    lna_initdist_inds    = lna_initdist_inds,
-                    param_update_inds    = param_update_inds,
-                    census_indices       = census_indices,
-                    lna_event_inds       = lna_event_inds,
-                    measproc_indmat      = measproc_indmat,
-                    svd_d                = svd_d,
-                    svd_U                = svd_U,
-                    svd_V                = svd_V,
-                    lna_pointer          = lna_pointer,
-                    lna_set_pars_pointer = lna_set_pars_pointer,
-                    d_meas_pointer       = d_meas_pointer,
-                    do_prevalence        = do_prevalence,
-                    step_size            = step_size,
-                    tparam_angle         = tparam_angle,
-                    tparam_steps         = tparam_steps,
-                    tparam_bracket_width = tparam_bracket_width,
-                    n_tparam_updates     = n_tparam_updates
+                tparam_update(
+                    path = path, 
+                    dat = dat,
+                    iter = 0,
+                    parmat = parmat,
+                    tparam = tparam,
+                    tparam_ess_control = tparam_ess_control,
+                    pathmat_prop = pathmat_prop,
+                    censusmat = censusmat,
+                    draws_prop = draws_prop,
+                    ess_draws_prop = ess_draws_prop,
+                    emitmat = emitmat,
+                    flow_matrix = flow_matrix,
+                    stoich_matrix = stoich_matrix,
+                    times = census_times,
+                    forcing_inds = forcing_inds,
+                    forcing_tcov_inds = forcing_tcov_inds,
+                    forcings_out = forcings_out,
+                    forcing_transfers = forcing_transfers,
+                    param_inds = param_inds,
+                    const_inds = const_inds,
+                    tcovar_inds = tcovar_inds,
+                    initdist_inds = initdist_inds,
+                    param_update_inds = param_update_inds,
+                    census_indices = census_indices,
+                    event_inds = event_inds,
+                    measproc_indmat = measproc_indmat,
+                    svd_d = svd_d,
+                    svd_U = svd_U,
+                    svd_V = svd_V,
+                    proc_pointer = proc_pointer,
+                    set_pars_pointer = set_pars_pointer,
+                    d_meas_pointer = d_meas_pointer,
+                    do_prevalence = do_prevalence,
+                    step_size = step_size
                 )
-                
-                if((iter-1) <= tparam_bracket_update) {
-                    
-                    # angle residual
-                    tparam_angle_resid <- 
-                        tparam_angle - tparam_angle_mean
-                    
-                    # angle variance
-                    tparam_angle_var   <- 
-                        (iter-2) / (iter-1) * tparam_angle_var + tparam_angle_resid^2 / (iter - 1)
-                    
-                    # angle mean
-                    tparam_angle_mean  <- 
-                        (iter-2) / (iter-1) * tparam_angle_mean + tparam_angle / (iter - 1)
-                    
-                    # set the new angle bracket
-                    if(((iter-1) == tparam_bracket_update)) {
-                        tparam_bracket_width <- 
-                            min(tparam_bracket_scaling * sqrt(tparam_angle_var), 2*pi)
-                    }
-                }
             }
             
             # Update the path via elliptical slice sampling

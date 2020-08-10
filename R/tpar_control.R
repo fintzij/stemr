@@ -3,7 +3,7 @@
 #'
 #' @param n_updates number of elliptical slice sampling updates per MCMC
 #'   iteration, defaults to 1.
-#' @param bracket_widths width of the elliptical slice sampling brackets, must
+#' @param bracket_width width of the elliptical slice sampling brackets, must
 #'   be in (0,2*pi], and default to 2*pi.
 #' @param bracket_update_iter iteration at which the widths of the elliptical
 #'   slice sampling brackets should be shrunk, defaults to Inf and the bracket
@@ -18,17 +18,17 @@
 #' @export
 tpar_control <-
       function(n_updates = 1,
-               bracket_widths = 2 * pi,
+               bracket_width = 2 * pi,
                bracket_update_iter = Inf,
                bracket_scaling = 2 * sqrt(2 * log(10))) {
           
-            if (any(bracket_widths <= 0 | bracket_widths > 2 * pi)) {
+            if (any(bracket_width <= 0 | bracket_width > 2 * pi)) {
                   stop("The elliptical slice sampling bracket width must be in (0,2*pi].")
             }
             
             return(
                   list(n_updates           = n_updates,
-                       bracket_widths      = bracket_widths,
+                       bracket_width      = bracket_width,
                        bracket_update_iter = bracket_update_iter,
                        bracket_scaling     = bracket_scaling
                   )

@@ -90,8 +90,6 @@ mvnmh_update =
         # update time-varying parameters if necessary
         if(!is.null(tparam)) {
             for(p in seq_along(tparam)) {
-                if(tparam[[p]]$init_dep) {
-                    
                     insert_tparam(
                         tcovar = parmat,
                         values = 
@@ -100,7 +98,6 @@ mvnmh_update =
                                 draws = tparam[[p]]$draws_cur),
                         col_ind = tparam[[p]]$col_ind,
                         tpar_inds = tparam[[p]]$tpar_inds_Cpp)    
-                }
             }
         }
         
@@ -232,11 +229,9 @@ mvnmh_update =
             
             if(!is.null(tparam)) {
                 for(p in seq_along(tparam)) {
-                    if(tparam[[p]]$init_dep) {
-                        vec_2_mat(dest = parmat,
-                                  orig = tparam[[p]]$tpar_cur,
-                                  ind = tparam[[p]]$col_ind)
-                    }
+                    vec_2_mat(dest = parmat,
+                              orig = tparam[[p]]$tpar_cur,
+                              ind = tparam[[p]]$col_ind)
                 }
             }
         }
@@ -251,7 +246,6 @@ mvnmh_update =
                                  (min(exp(acceptance_prob), 1) - 
                                       param_blocks[[ind]]$control$target_acceptance)),
                          param_blocks[[ind]]$control$max_scaling))
-                
             
             # calculate the residual
             copy_vec(param_blocks[[ind]]$kernel_resid,
