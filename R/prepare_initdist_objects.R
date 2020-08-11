@@ -111,5 +111,33 @@ prepare_initdist_objects =
             names(initdist_objects[[s]]$init_volumes_prop) = initvol_names
         }
         
+        bad_draws = rep(TRUE, length(initdist_objects))
+        
+        # map draws to initial volumes
+        while(any(bad_draws)) {
+            for(s in seq_along(initdist_objects)) {
+                
+                if(!initializer[[s]]$fixed) {
+                    # map draws
+                    copy_vec(dest = initdist_objects[[s]]$init_volumes,
+                             orig = c(initdist_objects[[s]]$comp_mean +
+                                          c(initdist_objects[[s]]$comp_sqrt_cov %*% 
+                                                initdist_objects[[s]]$draws_cur)))
+                    
+                    # check boundary conditions
+                    bad_draws[s] = 
+                        any(initdist_objects[[s]]$init_volumes < 0) | 
+                        any(initdist_objects[[s]]$init_volumes > 
+                                initdist_objects[[s]]$comp_size)
+                    
+                    # if outside boundaries, resample
+                    if(bad_draws[s]) {
+                        initdist_objects[[s]]$draws_cur = 
+                            rnorm(initdist_objects[[s]]$draws_cur)        
+                    }     
+                }
+            }      
+        }
+        
     return(initdist_objects)
 }

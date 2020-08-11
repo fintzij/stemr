@@ -201,7 +201,7 @@ mcmc_kern <-
                # mvnss_control(stop_adaptation = 1e2))),
                mvnmh_control(stop_adaptation = 1e2))),
       lna_ess_control = lna_control(bracket_update_iter = 50,
-                                    joint_initdist_update = FALSE),
+                                    joint_initdist_update = FALSE, n_updates = 3),
       tparam_ess_control = tpar_control(bracket_update_iter = 50))
 
 res <-
