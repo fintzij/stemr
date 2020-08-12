@@ -119,7 +119,7 @@ prepare_param_blocks = function(param_blocks, parameters, param_codes, iteration
                param_blocks[[s]]$control$stop_adaptation != 0
             
             if(param_blocks[[s]]$control$adapt) {
-               param_blocks[[s]]$control$stop_adaptation = max_adaptation + 1
+               param_blocks[[s]]$control$stop_adaptation = max_adaptation
             } else {
                param_blocks[[s]]$control$stop_adaptation = 0
             }
@@ -127,7 +127,7 @@ prepare_param_blocks = function(param_blocks, parameters, param_codes, iteration
             # generate sequence of gain factors
             param_blocks[[s]]$gain_factors = 
                pmin(1, param_blocks[[s]]$control$scale_constant *
-                       (seq(0, iterations) * 
+                       (seq(1, iterations) * 
                            param_blocks[[s]]$control$step_size + 
                            param_blocks[[s]]$control$adaptation_offset + 1) ^ 
                        -param_blocks[[s]]$control$scale_cooling)
@@ -147,9 +147,9 @@ prepare_param_blocks = function(param_blocks, parameters, param_codes, iteration
             
             # zero out the adaptation and nugget sequence after adaptation ends
             param_blocks[[s]]$gain_factors[
-               seq(param_blocks[[s]]$control$stop_adaptation, (iterations + 1))] = 0.0
+               seq(param_blocks[[s]]$control$stop_adaptation + 1, iterations)] = 0.0
             param_blocks[[s]]$nugget_sequence[
-               seq(param_blocks[[s]]$control$stop_adaptation, (iterations + 1))] = 0.0
+               seq(param_blocks[[s]]$control$stop_adaptation + 1, iterations)] = 0.0
             
             # kernel_resid, _mean, and _cov for adaptation
             param_blocks[[s]]$kernel_resid = 

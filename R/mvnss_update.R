@@ -553,7 +553,7 @@ mvnss_update <-
         }
         
         # adapt the MCMC kernel
-        if(iter < param_blocks[[ind]]$control$stop_adaptation) {
+        if(iter <= param_blocks[[ind]]$control$stop_adaptation) {
             
             # calculate the residual
             copy_vec(param_blocks[[ind]]$kernel_resid,
@@ -578,12 +578,12 @@ mvnss_update <-
         }
         
         # adapt the bracket width
-        param_blocks[[ind]]$mvnss_objects$bracket_width = 
-            max(param_blocks[[ind]]$control$bracket_limits[1],
-                min(param_blocks[[ind]]$control$bracket_limits[2],
-                    exp(log(param_blocks[[ind]]$mvnss_objects$bracket_width) +
-                            param_blocks[[ind]]$mvnss_objects$bracket_adaptations[iter] * 
-                            (param_blocks[[ind]]$mvnss_objects$n_expansions / 
-                                 (param_blocks[[ind]]$mvnss_objects$n_expansions + 
-                                      param_blocks[[ind]]$mvnss_objects$n_contractions) - 0.5))))
+        copy_vec(param_blocks[[ind]]$mvnss_objects$bracket_width,
+                 max(param_blocks[[ind]]$control$bracket_limits[1],
+                     min(param_blocks[[ind]]$control$bracket_limits[2],
+                         exp(log(param_blocks[[ind]]$mvnss_objects$bracket_width) +
+                                 param_blocks[[ind]]$mvnss_objects$bracket_adaptations[iter] * 
+                                 (param_blocks[[ind]]$mvnss_objects$n_expansions / 
+                                      (param_blocks[[ind]]$mvnss_objects$n_expansions + 
+                                           param_blocks[[ind]]$mvnss_objects$n_contractions) - 0.5))))) 
     }

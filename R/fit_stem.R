@@ -11,7 +11,7 @@
 #' @param ess_warmup number of preliminary ESS iterations for the LNA, initial
 #'   conditions, and time varying parameters prior to starting MCMC
 #' @param thinning_interval thinning interval for posterior samples, defaults to
-#'   ceiling(iterations/100) so that every 100th sample will be saved
+#'   saving every 100th sample
 #' @param return_adapt_rec should the MCMC samples be returned during
 #'   adaptation? defaults to FALSE.
 #' @param return_ess_rec should elliptical slice sampling steps and angles be
@@ -31,7 +31,7 @@ fit_stem =
              iterations,
              initialization_attempts = 500,
              ess_warmup = 50,
-             thinning_interval = ceiling(iterations / 100),
+             thinning_interval = 100,
              return_adapt_rec = FALSE,
              return_ess_rec = FALSE,
              print_progress = 0,
@@ -1178,8 +1178,8 @@ fit_stem =
         if(return_ess_rec) stem_object$results$ess_record = ess_record
         
         # save inits for restart
-        stem_object$dynamics$parameters <- parmat[1, param_inds]
-        if(!fixed_inits) stem_object$dynamics$initdist_params <- parmat[1, initdist_inds]
+        stem_object$dynamics$parameters <- parmat[1, param_inds + 1]
+        if(!fixed_inits) stem_object$dynamics$initdist_params <- parmat[1, initdist_inds + 1]
         if(!is.null(tparam)) stem_object$dynamics$tparam <- tparam
         
         stem_object$restart = 

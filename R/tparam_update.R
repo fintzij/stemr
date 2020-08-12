@@ -352,10 +352,12 @@ tparam_update <-
                     tparam[[p]]$angle_mean * (iter-2) / (iter-1))
             
             # set the new angle bracket
-            copy_vec(
-                dest = tparam[[p]]$bracket_width,
-                orig = pmin(tparam_ess_control$bracket_scaling * 
-                            sqrt(tparam[[p]]$angle_var), 2*pi))    
+            if(iter == tparam_ess_control$bracket_update_iter) {
+                copy_vec(
+                    dest = tparam[[p]]$bracket_width,
+                    orig = pmin(tparam_ess_control$bracket_scaling * 
+                                    sqrt(tparam[[p]]$angle_var), 2*pi))    
+            }
         }
     }
 }

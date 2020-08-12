@@ -35,27 +35,27 @@ save_mcmc_sample =
                       prop         = FALSE,
                       rowind       = rec_ind)
         
-        copy_elem(dest = mcmc_samples$params_log_prior,
-                  orig = sum(sapply(param_blocks, "[[", "log_pd")),
-                  ind  = rec_ind)
+        insert_elem(dest = mcmc_samples$params_log_prior,
+                    elem = sum(sapply(param_blocks, "[[", "log_pd")),
+                    ind  = rec_ind)
         
         # copy latent path
         mat_2_arr(dest = mcmc_samples$latent_paths,
                   orig = path$latent_path,
                   ind  = rec_ind)
         
-        copy_elem(dest = mcmc_samples$data_log_lik,
-                  orig = path$data_log_lik,
-                  ind  = rec_ind)
+        insert_elem(dest = mcmc_samples$data_log_lik,
+                    elem = path$data_log_lik,
+                    ind  = rec_ind)
         
         if(method == "lna") {
             mat_2_arr(dest = mcmc_samples$lna_draws,
                       orig = path$draws,
                       ind = rec_ind)
             
-            copy_elem(dest = mcmc_samples$lna_log_lik,
-                      orig = sum(dnorm(path$draws, log = TRUE)),
-                      ind  = rec_ind)
+            insert_elem(dest = mcmc_samples$lna_log_lik,
+                        elem = sum(dnorm(path$draws, log = TRUE)),
+                        ind  = rec_ind)
         }
         
         # record initial compartment counts
@@ -66,9 +66,9 @@ save_mcmc_sample =
                             rowind = rec_ind,
                             mcmc_rec = TRUE)
             
-            copy_elem(dest = mcmc_samples$initdist_log_lik,
-                      orig = sum(dnorm(sapply(initdist_objects, "[[", "draws_cur"), log = T)),
-                      ind  = rec_ind)
+            insert_elem(dest = mcmc_samples$initdist_log_lik,
+                        elem = sum(dnorm(sapply(initdist_objects, "[[", "draws_cur"), log = T)),
+                        ind  = rec_ind)
         }
         
         # record time-varying parameters
@@ -77,9 +77,9 @@ save_mcmc_sample =
                       orig = parmat[, tparam_inds + 1, drop=FALSE],
                       ind  = rec_ind)
             
-            copy_elem(dest = mcmc_samples$tparam_log_lik,
-                      orig = sum(dnorm(sapply(tparam, "[[", "draws_cur"), log = T)),
-                      ind  = rec_ind)
+            insert_elem(dest = mcmc_samples$tparam_log_lik,
+                        elem = sum(dnorm(sapply(tparam, "[[", "draws_cur"), log = T)),
+                        ind  = rec_ind)
         }
         
         # increment rec_ind

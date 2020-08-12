@@ -454,12 +454,13 @@ initdist_update <-
                 initdist_ess_control$angle_mean * (iter-2) / (iter-1))
         
         # set the new angle bracket
-        copy_vec(
-            dest = initdist_ess_control$bracket_width,
-            orig = pmin(initdist_ess_control$bracket_scaling * 
-                            sqrt(initdist_ess_control$angle_var),
-                        2*pi)
-        )
+        if(iter == initdist_ess_control$bracket_update_iter) {
+            copy_vec(
+                dest = initdist_ess_control$bracket_width,
+                orig = pmin(initdist_ess_control$bracket_scaling * 
+                                sqrt(initdist_ess_control$angle_var),
+                            2*pi))    
+        }
     }
 }
     

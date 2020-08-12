@@ -471,10 +471,12 @@ lna_update <-
                         lna_ess_schedule[[j]]$angle_mean * (iter-2) / (iter-1))
                 
                 # set the new angle bracket
-                copy_vec(
-                    dest = lna_ess_schedule[[j]]$bracket_width,
-                    orig = pmin(lna_ess_control$bracket_scaling * 
-                                sqrt(lna_ess_schedule[[j]]$angle_var), 2*pi))    
+                if(iter == lna_ess_control$bracket_update_iter) {
+                    copy_vec(
+                        dest = lna_ess_schedule[[j]]$bracket_width,
+                        orig = pmin(lna_ess_control$bracket_scaling * 
+                                        sqrt(lna_ess_schedule[[j]]$angle_var), 2*pi))        
+                }
             }
         }
     }

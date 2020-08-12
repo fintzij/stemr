@@ -237,7 +237,7 @@ mvnmh_update =
         }
         
         # adapt the MCMC kernel
-        if (iter < param_blocks[[ind]]$control$stop_adaptation) {
+        if (iter <= param_blocks[[ind]]$control$stop_adaptation) {
             
             # Adapt the proposal kernel
             copy_vec(param_blocks[[ind]]$mvnmh_objects$proposal_scaling,
