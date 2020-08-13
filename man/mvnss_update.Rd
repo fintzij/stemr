@@ -8,8 +8,7 @@ mvnss_update(
   param_blocks,
   ind,
   iter,
-  params_cur,
-  params_prop,
+  parmat,
   dat,
   path,
   pathmat_prop,
@@ -43,10 +42,6 @@ mvnss_update(
 \item{ind}{index of parameter block to be updated}
 
 \item{iter}{MCMC iteration}
-
-\item{params_cur}{matrix with current parameters}
-
-\item{params_prop}{matrix with proposed parameters}
 
 \item{dat}{data matrix}
 

@@ -7,7 +7,7 @@ time-varying parameters via elliptical slice sampling.}
 \usage{
 tpar_control(
   n_updates = 1,
-  bracket_widths = 2 * pi,
+  bracket_width = 2 * pi,
   bracket_update_iter = Inf,
   bracket_scaling = 2 * sqrt(2 * log(10))
 )
@@ -16,7 +16,7 @@ tpar_control(
 \item{n_updates}{number of elliptical slice sampling updates per MCMC
 iteration, defaults to 1.}
 
-\item{bracket_widths}{width of the elliptical slice sampling brackets, must
+\item{bracket_width}{width of the elliptical slice sampling brackets, must
 be in (0,2*pi], and default to 2*pi.}
 
 \item{bracket_update_iter}{iteration at which the widths of the elliptical

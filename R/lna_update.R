@@ -450,7 +450,7 @@ lna_update <-
         # update the lna bracket
         if(iter != 0 && iter <= lna_ess_control$bracket_update_iter) {
             
-            for(j in seq_len(lna_ess_schedule)) {
+            for(j in seq_along(lna_ess_schedule)) {
                 
                 # angle residual
                 copy_vec(
@@ -461,14 +461,14 @@ lna_update <-
                 # angle variance
                 copy_vec(
                     dest = lna_ess_schedule[[j]]$angle_var,
-                    orig = lna_ess_schedule[[j]]$angle_resid^2 / (iter-1) + 
-                        lna_ess_schedule[[j]]$angle_var * (iter-2) / (iter-1))
+                    orig = lna_ess_schedule[[j]]$angle_resid^2 / iter + 
+                        lna_ess_schedule[[j]]$angle_var * (iter-1) / iter)
                 
                 # angle mean
                 copy_vec(
                     dest = lna_ess_schedule[[j]]$angle_mean,
-                    orig = mean(lna_ess_schedule[[j]]$angles) / (iter-1) + 
-                        lna_ess_schedule[[j]]$angle_mean * (iter-2) / (iter-1))
+                    orig = mean(lna_ess_schedule[[j]]$angles) / iter + 
+                        lna_ess_schedule[[j]]$angle_mean * (iter-1) / iter)
                 
                 # set the new angle bracket
                 if(iter == lna_ess_control$bracket_update_iter) {

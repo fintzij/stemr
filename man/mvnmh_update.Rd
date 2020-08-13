@@ -8,8 +8,7 @@ mvnmh_update(
   param_blocks,
   ind,
   iter,
-  params_cur,
-  params_prop,
+  parmat,
   dat,
   path,
   pathmat_prop,
@@ -43,10 +42,6 @@ mvnmh_update(
 \item{ind}{index of parameter block to be updated}
 
 \item{iter}{MCMC iteration}
-
-\item{params_cur}{matrix with current parameters}
-
-\item{params_prop}{matrix with proposed parameters}
 
 \item{dat}{data matrix}
 
@@ -93,6 +88,10 @@ mvnmh_update(
 \item{step_size}{initial step size for ODE solvers}
 
 \item{svd_d, svd_U, svd_V}{SVD objects for LNA, NULL if using the ODE approx}
+
+\item{params_cur}{matrix with current parameters}
+
+\item{params_prop}{matrix with proposed parameters}
 }
 \value{
 update the model parameters, path, and likelihood

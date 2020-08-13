@@ -444,14 +444,14 @@ initdist_update <-
         # angle variance
         copy_vec(
             dest = initdist_ess_control$angle_var,
-            orig = initdist_ess_control$angle_resid^2 / (iter-1) + 
-                initdist_ess_control$angle_var * (iter-2) / (iter-1))
+            orig = initdist_ess_control$angle_resid^2 / iter + 
+                initdist_ess_control$angle_var * (iter-1) / iter)
         
         # angle mean
         copy_vec(
             dest = initdist_ess_control$angle_mean,
-            orig = mean(initdist_ess_control$angles) / (iter-1) + 
-                initdist_ess_control$angle_mean * (iter-2) / (iter-1))
+            orig = mean(initdist_ess_control$angles) / iter + 
+                initdist_ess_control$angle_mean * (iter-1) / iter)
         
         # set the new angle bracket
         if(iter == initdist_ess_control$bracket_update_iter) {

@@ -12,9 +12,10 @@ tpar(tparam_name, draws2par, times, n_draws, values = NULL)
 
 \item{draws2par}{function for mapping a vector of N(0,1) draws of length
 equal to the length of the \code{times} argument. The function should have
-the following signature: \code{draws2par(draws, pars)}. Here, draws is a
-vector of N(0,1) draws and pars is a vector of parameters. The
-function should return a vector of time-varying parameter values.}
+the following signature: \code{draws2par(parameters, draws)}. Here, draws
+is a vector of N(0,1) draws and parameters is a vector of non-timevarying
+parameters. The function should return a vector of time-varying
+parameter values.}
 
 \item{times}{vector of times when the time-varying parameter changes.}
 

@@ -7,7 +7,7 @@ time-varying parameters via elliptical slice sampling.}
 \usage{
 initdist_control(
   n_updates = 1,
-  bracket_widths = 2 * pi,
+  bracket_width = 2 * pi,
   bracket_update_iter = Inf,
   bracket_scaling = 2 * sqrt(2 * log(10))
 )
@@ -15,9 +15,6 @@ initdist_control(
 \arguments{
 \item{n_updates}{number of elliptical slice sampling updates per MCMC
 iteration, defaults to 1.}
-
-\item{bracket_widths}{width of the elliptical slice sampling brackets, must
-be in (0,2*pi], and default to 2*pi.}
 
 \item{bracket_update_iter}{iteration at which the widths of the elliptical
 slice sampling brackets should be shrunk, defaults to Inf and the bracket
@@ -28,6 +25,9 @@ widths. If brackets are to be shrunk, the new width is set to the minimum
 of 2*pi or the scaling multiplied by the standard deviation of the previous
 ESS angles. The scalings default to the full width at one tenth maximum for
 a gaussian.}
+
+\item{bracket_widths}{width of the elliptical slice sampling bracket, must
+be in (0,2*pi], and default to 2*pi.}
 }
 \value{
 list with settings for elliptical slice sampling

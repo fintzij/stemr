@@ -12,12 +12,11 @@ fit_stem(
   iterations,
   initialization_attempts = 500,
   ess_warmup = 50,
-  thinning_interval = ceiling(iterations/100),
+  thinning_interval = 100,
   return_adapt_rec = FALSE,
   return_ess_rec = FALSE,
   print_progress = 0,
-  status_filename = NULL,
-  messages = FALSE
+  status_filename = NULL
 )
 }
 \arguments{
@@ -37,10 +36,10 @@ model dynamics, and measurement process.}
 conditions, and time varying parameters prior to starting MCMC}
 
 \item{thinning_interval}{thinning interval for posterior samples, defaults to
-ceiling(iterations/100) so that every 100th sample will be saved}
+saving every 100th sample}
 
-\item{return_adapt_rec}{should the MCMC adaptation record be returned?
-defaults to FALSE.}
+\item{return_adapt_rec}{should the MCMC samples be returned during
+adaptation? defaults to FALSE.}
 
 \item{return_ess_rec}{should elliptical slice sampling steps and angles be
 returned? defaults to FALSE}
@@ -50,8 +49,6 @@ returned? defaults to FALSE}
 
 \item{status_filename}{string to pre-append to status files, defaults to LNA
 or ODE depending on the method used.}
-
-\item{messages}{should status messages be printed? defaults to FALSE.}
 }
 \value{
 list with posterior samples for the parameters and the latent

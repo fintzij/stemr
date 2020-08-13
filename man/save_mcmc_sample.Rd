@@ -8,7 +8,7 @@ save_mcmc_sample(
   mcmc_samples,
   rec_ind,
   path,
-  params_cur,
+  parmat,
   param_blocks,
   initdist_objects,
   tparam,

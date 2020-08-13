@@ -342,14 +342,14 @@ tparam_update <-
             # angle variance
             copy_vec(
                 dest = tparam[[p]]$angle_var,
-                orig = tparam[[p]]$angle_resid^2 / (iter-1) + 
-                    tparam[[p]]$angle_var * (iter-2) / (iter-1))
+                orig = tparam[[p]]$angle_resid^2 / iter + 
+                    tparam[[p]]$angle_var * (iter-1) / iter)
             
             # angle mean
             copy_vec(
                 dest = tparam[[p]]$angle_mean,
-                orig = mean(tparam[[p]]$angles) / (iter-1) + 
-                    tparam[[p]]$angle_mean * (iter-2) / (iter-1))
+                orig = mean(tparam[[p]]$angles) / iter + 
+                    tparam[[p]]$angle_mean * (iter-1) / iter)
             
             # set the new angle bracket
             if(iter == tparam_ess_control$bracket_update_iter) {

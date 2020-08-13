@@ -69,10 +69,16 @@ save_mcmc_sample =
             insert_elem(dest = mcmc_samples$initdist_log_lik,
                         elem = sum(dnorm(sapply(initdist_objects, "[[", "draws_cur"), log = T)),
                         ind  = rec_ind)
+            
+            for(s in seq_along(initdist_objects)) {
+                vec_2_mat(dest = mcmc_samples$initdist_draws[[s]],
+                          orig = initdist_objects[[s]]$draws_cur,
+                          ind  = rec_ind)
+            }
         }
         
         # record time-varying parameters
-        if(!is.null(tparam_inds)) {
+        if(!is.null(tparam)) {
             mat_2_arr(dest = mcmc_samples$tparam_samples,
                       orig = parmat[, tparam_inds + 1, drop=FALSE],
                       ind  = rec_ind)
@@ -80,6 +86,12 @@ save_mcmc_sample =
             insert_elem(dest = mcmc_samples$tparam_log_lik,
                         elem = sum(dnorm(sapply(tparam, "[[", "draws_cur"), log = T)),
                         ind  = rec_ind)
+            
+            for(s in seq_along(tparam)) {
+                vec_2_mat(dest = mcmc_samples$tparam_draws[[s]],
+                          orig = tparam[[s]]$draws_cur,
+                          ind  = rec_ind)
+            }
         }
         
         # increment rec_ind

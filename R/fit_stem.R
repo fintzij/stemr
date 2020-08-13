@@ -427,6 +427,11 @@ fit_stem =
                     # ess counters 
                     tparam[[s]]$steps  = rep(1.0, tparam_ess_control$n_updates)
                     tparam[[s]]$angles = rep(0.0, tparam_ess_control$n_updates)
+                    
+                    # for tuning the bracket
+                    tparam[[s]]$angle_mean  = 0
+                    tparam[[s]]$angle_var   = pi^2/3
+                    tparam[[s]]$angle_resid = 0
                 }
             } else {
                 
@@ -832,6 +837,16 @@ fit_stem =
             mcmc_samples$initdist_samples = 
                 matrix(0.0, nrow = n_samples, ncol = n_compartments,
                        dimnames = list(NULL, initdist_names))
+            
+            mcmc_samples$initdist_draws = 
+                vector("list", length = length(initdist_objects))
+            
+            for(i in seq_along(initdist_objects)) {
+                mcmc_samples$initdist_draws[[i]] <- 
+                    matrix(0.0, 
+                           nrow = length(initdist_objects[[i]]$draws_cur),
+                           ncol = n_samples)
+            }
         } 
         
         if(!is.null(tparam)) {
@@ -840,6 +855,16 @@ fit_stem =
             
             mcmc_samples$tparam_samples =
                 array(0.0, dim = c(n_times, length(tparam), n_samples))
+            
+            mcmc_samples$tparam_draws = 
+                vector("list", length = length(initdist_objects))
+            
+            for(i in seq_along(tparam)) {
+                mcmc_samples$tparam_draws[[i]] <- 
+                    matrix(0.0, 
+                           nrow = tparam[[i]]$n_draws,
+                           ncol = n_samples)
+            }
         }
         
         # record the initial parameter values

@@ -13,7 +13,7 @@ check_tpar_depends = function(tparam, initdist_objects, parmat) {
     if(all(sapply(initdist_objects, "[[", "fixed"))) {
         
         for(s in seq_along(tparam)) {
-            tparam[[s]]$update_with_inits = FALSE    
+            tparam[[s]]$init_dep = FALSE    
         }
         
     } else {
@@ -59,7 +59,7 @@ check_tpar_depends = function(tparam, initdist_objects, parmat) {
             tparam[[s]]$init_dep = 
                 !all.equal(tp, tparam[[s]]$tpar_cur)
         }
-        
-        return(tparam)
     }
+    
+    return(tparam)
 }
