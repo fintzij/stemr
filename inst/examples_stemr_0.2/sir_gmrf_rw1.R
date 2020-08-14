@@ -122,7 +122,7 @@ dynamics <-
             tparam = tparam,
             messages = T,
             compile_ode = T,
-            compile_rates = T,
+            compile_rates = F,
             compile_lna = T,
             rtol = 1e-6,
             atol = 1e-6,
@@ -193,19 +193,25 @@ mcmc_kern <-
             pars_nat = c("log_R0_init", "mu", "omega", "rho", "phi", "sigma"),
             pars_est = c("log_R0_init_est", "log_mu", "log_omega", "logit_rho", "log_phi", "log_sigma"),
             priors = priors,
-            # alg = "mvnss",
-            alg = "mvnmh",
+            alg = "mvnss",
+            # alg = "mvnmh",
             sigma = diag(0.01, 6),
             initializer = par_initializer,
             control = 
-               # mvnss_control(stop_adaptation = 1e2))),
-               mvnmh_control(stop_adaptation = 1e2))),
-      lna_ess_control = lna_control(bracket_update_iter = 50,
-                                    joint_initdist_update = FALSE, n_updates = 3),
-      tparam_ess_control = tpar_control(bracket_update_iter = 50))
+               mvnss_control(stop_adaptation = 5e4))),
+               # mvnmh_control(stop_adaptation = 5e4))),
+      lna_ess_control = lna_control(bracket_update_iter = 1e4,
+                                    joint_initdist_update = TRUE),
+      tparam_ess_control = tpar_control(bracket_update_iter = 1e4))
 
-res <-
-   fit_stem(stem_object = stem_object,
-            method = "lna",
-            mcmc_kern = mcmc_kern,
-            iterations = 3.5e2)
+registerDoParallel(cores = future::availableCores())
+res <- foreach(chain = 1:4,
+               .packages = "stemr",
+               .export = ls()) %dorng% {
+                  
+                  fit_stem(stem_object = stem_object,
+                           method = "ode", # or "lna"
+                           mcmc_kern = mcmc_kern,
+                           iterations = 1e5,
+                           print_progress = 1e3)   
+}

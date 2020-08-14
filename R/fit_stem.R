@@ -1175,15 +1175,15 @@ fit_stem =
                 for(b in seq_along(param_blocks)) {
                     if(param_blocks[[b]]$alg == "mvnmh") {
                         cat(paste0("\t", "Parameter block: ", b),
-                            paste0("\t", "\t", "Acceptance rate: ", param_blocks[[b]]$mvnmh_objects$acceptances),
+                            paste0("\t", "\t", "Acceptance rate: ", param_blocks[[b]]$mvnmh_objects$acceptances / iter),
                             paste0("\t", "\t", "Proposal scaling: ", param_blocks[[b]]$mvnmh_objects$proposal_scaling),
                             file = status_file,
                             sep = "\n",
                             append = TRUE)    
                     } else {
                         cat(paste0("\t", "Parameter block: ", b),
-                            paste0("\t", "\t", "Contractions: ", param_blocks[[b]]$mvnss_objects$n_contractions),
-                            paste0("\t", "\t", "Expansions: ", param_blocks[[b]]$mvnss_objects$n_expansions),
+                            paste0("\t", "\t", "Contractions: ", param_blocks[[b]]$mvnss_objects$n_contractions - 0.5),
+                            paste0("\t", "\t", "Expansions: ", param_blocks[[b]]$mvnss_objects$n_expansions - 0.5),
                             file = status_file,
                             sep = "\n",
                             append = TRUE)    

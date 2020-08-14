@@ -73,8 +73,9 @@ popsize = 1e4 # population size
 true_pars =
       c(R0     = 1.5,  # basic reproduction number
         mu_inv = 2,    # infectious period duration = 2 days
-        rho    = 0.5,  # case detection rate
-        phi    = 10)   # negative binomial overdispersion
+        rho_0  = 4,    # beta-binomial intercept
+        rho_1  = 0.8,  # beta-binomial slope
+        kappa  = 0.25) # beta-binomial overdispersion
 
 # initialize model compartments and rates
 strata <- NULL # no strata
@@ -141,9 +142,8 @@ measurement_process <-
 
 # put it all together into a stochastic epidemic model object
 stem_object <-
-  make_stem(
-    dynamics = dynamics,
-    measurement_process = measurement_process)
+  make_stemdynamics = dynamics,
+       measurement_process = measurement_process)
 
 #' 
 #' ## Simulating an outbreak and data
@@ -312,8 +312,7 @@ measurement_process <-
   stem_measure(emissions = emissions,
                dynamics = dynamics,
                data = sim_mjp$datasets[[1]])
-stem_object <- make_stem(dynamics = dynamics, 
-                         measurement_process = measurement_process)
+stem_object <- make_stemdynamics = dynamics, measurement_process = measurement_process)
 
 #' 
 #' In order to perform inference, we'll need to specify a function for transforming the model parameters from their natural scale to the estimation scale on which the MCMC explores the posterior, a function for transforming parameters on their estimation scale to the natural scale on which they enter the model dynamics and measurement process, and a function that returns the log prior. We'll parameterize the MCMC estimation scale in terms of the log basic reproduction number, log recovery rate, logit mean case detection rate, and log of the negative binomial overdispersion parameter. The functions are specified as follows and placed into a list of functions (note that it is critical that the function signatures follow the specification given below):
@@ -366,8 +365,7 @@ priors <- list(logprior = logprior,
 # corresponding to parameters on their estimation scales
 
 par_initializer = function() {
-  priors$from_estimation_scale(priors$to_estimation_scale(parameters) + 
-                                 rnorm(4, 0, 0.1))
+  priors$from_estimation_scale(priors$to_estimation_scale(parameters) + rnorm(4, 0, 0.1))
 }
   
 # specify the kernel
@@ -384,9 +382,9 @@ mcmc_kern <-
                   initializer = par_initializer,
                   control = 
                     # mvnss_control(stop_adaptation = 1e2))),
-                    mvnmh_control(stop_adaptation = 2.5e4))),
+                    mvnmh_control(stop_adaptation = 1e2))),
           lna_ess_control = lna_control(bracket_update_iter = 50,
-                                        joint_initdist_update = TRUE))
+                                        joint_initdist_update = FALSE))
 
 #' 
 #' We now run the MCMC algorithm to fit the model via ODEs. To perform inference with the LNA, simply change the `method` argument to `method="lna"`.
@@ -394,17 +392,13 @@ mcmc_kern <-
 ## ----fit_mod, echo = TRUE------------------------------------------------
 res <-
     fit_stem(stem_object = stem_object,
-             method = "ode",
+             method = "lna",
              mcmc_kern = mcmc_kern,
-             iterations = 5e4, 
-             print_progress = 1e3)
+             iterations = 3.5e2)
 
-#'
-#' The `fit_stem` function returns a list with posterior samples, latent
-#' epidemic paths, and MCMC tuning parameters (e.g., global scaling parameter
-#' adapted in the MCMC). These can be accessed as follows:
 #' 
-
+#' The `fit_stem` function returns a list with posterior samples, latent epidemic paths, and MCMC tuning parameters (e.g., global scaling parameter adapted in the MCMC). These can be accessed as follows:
+#' 
 ## ----access_res, echo = TRUE---------------------------------------------
 runtime = res$results$time
 mcmc_samples = res$results$MCMC_results

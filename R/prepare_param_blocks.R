@@ -187,8 +187,8 @@ prepare_param_blocks = function(param_blocks, parameters, param_codes, iteration
             } else if(param_blocks[[s]]$alg == "mvnmh") {
                
                param_blocks[[s]]$mvnmh_objects = 
-                  list(proposal_scaling = 1,
-                       acceptances      = 0)
+                  list(proposal_scaling = 1.0,
+                       acceptances      = 0.0)
             }
       }
       
