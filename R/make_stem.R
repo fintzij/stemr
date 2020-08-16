@@ -19,7 +19,6 @@
 #'
 #' @return returns a \code{stem} object.
 #' @export
-#'
 make_stem <- function(stem_object = NULL, data = NULL, dynamics = NULL, measurement_process = NULL) {
 
         if(is.null(stem_object)) {
