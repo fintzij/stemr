@@ -177,18 +177,24 @@ initialize_ode <-
                         for(s in seq_along(param_blocks)) {
                             if(!is.null(param_blocks[[s]]$initializer)) {
                                 
-                                # initialize parameters
-                                param_blocks[[s]]$pars_nat = 
-                                    param_blocks[[s]]$initializer()
-                                
-                                param_blocks[[s]]$pars_est = 
-                                    param_blocks[[s]]$priors$to_estimation_scale(
-                                        param_blocks[[s]]$pars_nat)
-                                
-                                # calculate log prior
-                                param_blocks[[s]]$log_pd = 
-                                    param_blocks[[s]]$priors$logprior(
-                                        param_blocks[[s]]$pars_est)
+                                resamp = T
+                                while(resamp) {
+                                    # initialize parameters
+                                    param_blocks[[s]]$pars_nat = 
+                                        param_blocks[[s]]$initializer()
+                                    
+                                    param_blocks[[s]]$pars_est = 
+                                        param_blocks[[s]]$priors$to_estimation_scale(
+                                            param_blocks[[s]]$pars_nat)
+                                    
+                                    # calculate log prior
+                                    param_blocks[[s]]$log_pd = 
+                                        param_blocks[[s]]$priors$logprior(
+                                            param_blocks[[s]]$pars_est)
+                                    
+                                    # resample if log prior is -Inf
+                                    resamp = is.infinite(param_blocks[[s]]$log_pd)
+                                }
                             }
                         }
                         

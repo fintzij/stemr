@@ -21,6 +21,8 @@
 #' @export
 make_stem <- function(stem_object = NULL, data = NULL, dynamics = NULL, measurement_process = NULL) {
 
+        gc(full = T)
+        
         if(is.null(stem_object)) {
                 stem_object <- 
                         list(dynamics            = NULL,
@@ -32,7 +34,7 @@ make_stem <- function(stem_object = NULL, data = NULL, dynamics = NULL, measurem
                 if(!is.null(stem_object$dynamics)) {
                         stem_object$dynamics = NULL
                 }
-                gc()
+                gc(full = T)
                 stem_object$dynamics <- dynamics
         }
         
@@ -40,7 +42,7 @@ make_stem <- function(stem_object = NULL, data = NULL, dynamics = NULL, measurem
                 if(!is.null(stem_object$measurement_process)) {
                         stem_object$measurement_process = NULL
                 }
-                gc()
+                gc(full = T)
                 stem_object$measurement_process <- measurement_process
         } 
         

@@ -197,7 +197,7 @@ void copy_row(arma::mat& dest, const arma::mat& orig, int ind) {
 // [[Rcpp::export]]
 void copy_pathmat(arma::mat& dest, const arma::mat& orig) {
       
-      dest.cols(1, orig.n_cols-1) = orig.cols(1, orig.n_cols-1);
+      dest.cols(1, dest.n_cols-1) = orig.cols(1, orig.n_cols-1);
 }
 
 //' Copy some of the rows of one matrix into another

@@ -198,15 +198,19 @@ mvnmh_update =
         if (acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
             
             ### ACCEPTANCE
-            increment_vec(param_blocks[[ind]]$mvnmh_objects$acceptances, 1)
+            increment_elem(param_blocks[[ind]]$mvnmh_objects$acceptances, 0)
             
             # update log likelihood and prior
-            copy_vec(path$data_log_lik, data_log_lik_prop)  
-            copy_vec(param_blocks[[ind]]$log_pd, param_blocks[[ind]]$log_pd_prop) 
+            copy_vec(dest = path$data_log_lik, 
+                     orig = data_log_lik_prop)  
+            copy_vec(dest = param_blocks[[ind]]$log_pd, 
+                     orig = param_blocks[[ind]]$log_pd_prop) 
             
             # copy parameters
-            copy_vec(param_blocks[[ind]]$pars_nat, param_blocks[[ind]]$pars_prop_nat)
-            copy_vec(param_blocks[[ind]]$pars_est, param_blocks[[ind]]$pars_prop_est)
+            copy_vec(dest = param_blocks[[ind]]$pars_nat, 
+                     orig = param_blocks[[ind]]$pars_prop_nat)
+            copy_vec(dest = param_blocks[[ind]]$pars_est, 
+                     orig = param_blocks[[ind]]$pars_prop_est)
             
             # copy time-varying parameters
             if(!is.null(tparam)) {
@@ -222,6 +226,7 @@ mvnmh_update =
             copy_pathmat(path$latent_path, pathmat_prop)
             
         } else {
+            
             # need to reset the params_prop matrix
             pars2parmat(parmat  = parmat,
                         pars    = param_blocks[[ind]]$pars_nat,
@@ -240,33 +245,33 @@ mvnmh_update =
         if (iter <= param_blocks[[ind]]$control$stop_adaptation) {
             
             # Adapt the proposal kernel
-            copy_vec(param_blocks[[ind]]$mvnmh_objects$proposal_scaling,
-                     min(exp(log(param_blocks[[ind]]$mvnmh_objects$proposal_scaling) +
+            copy_vec(dest = param_blocks[[ind]]$mvnmh_objects$proposal_scaling,
+                     orig = min(exp(log(param_blocks[[ind]]$mvnmh_objects$proposal_scaling) +
                                  param_blocks[[ind]]$gain_factors[iter] * 
                                  (min(exp(acceptance_prob), 1) - 
                                       param_blocks[[ind]]$control$target_acceptance)),
                          param_blocks[[ind]]$control$max_scaling))
             
             # calculate the residual
-            copy_vec(param_blocks[[ind]]$kernel_resid,
-                     param_blocks[[ind]]$pars_est - param_blocks[[ind]]$kernel_mean)
+            copy_vec(dest = param_blocks[[ind]]$kernel_resid,
+                     orig = param_blocks[[ind]]$pars_est - param_blocks[[ind]]$kernel_mean)
             
             # update the empirical covariance matrix
-            copy_mat(param_blocks[[ind]]$kernel_cov,
-                     param_blocks[[ind]]$kernel_cov + 
+            copy_mat(dest = param_blocks[[ind]]$kernel_cov,
+                     orig = param_blocks[[ind]]$kernel_cov + 
                          param_blocks[[ind]]$gain_factors[iter] * 
                          (param_blocks[[ind]]$kernel_resid %o% param_blocks[[ind]]$kernel_resid - 
                               param_blocks[[ind]]$kernel_cov))
             
             # update the empirical mean
-            copy_vec(param_blocks[[ind]]$kernel_mean,
-                     param_blocks[[ind]]$kernel_mean + 
+            copy_vec(dest = param_blocks[[ind]]$kernel_mean,
+                     orig = param_blocks[[ind]]$kernel_mean + 
                          param_blocks[[ind]]$gain_factors[iter] * 
                          param_blocks[[ind]]$kernel_resid)
             
             # compute the cholesky
-            comp_chol(param_blocks[[ind]]$kernel_cov_chol, 
-                      param_blocks[[ind]]$mvnmh_objects$proposal_scaling * 
+            comp_chol(C = param_blocks[[ind]]$kernel_cov_chol, 
+                      M = param_blocks[[ind]]$mvnmh_objects$proposal_scaling * 
                           param_blocks[[ind]]$kernel_cov)
         }
     }

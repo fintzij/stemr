@@ -34,9 +34,9 @@ mvnmh_control <-
                step_size = 1,
                stop_adaptation = 0, 
                adaptation_offset = 0,
-               nugget = NULL,
-               nugget_cooling = 0.9, 
-               nugget_step_size = NULL) {
+               nugget = 1e-5,
+               nugget_cooling = 2/3, 
+               nugget_step_size = 1) {
           
         if(scale_cooling <=0.5 | scale_cooling > 1) {
           warning("The cooling rate must be between 0.5 and 1.")
