@@ -24,6 +24,7 @@ initdist_update <-
              forcing_tcov_inds,
              forcings_out,
              forcing_transfers,
+             param_vec,
              param_inds,
              const_inds,
              tcovar_inds,
