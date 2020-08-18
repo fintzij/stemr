@@ -107,15 +107,14 @@ fit_stem =
         max_adaptation <- max(sapply(param_blocks, function(x) x$control$stop_adaptation))
         
         # number of posterior samples
-        if(return_adapt_rec) {
-            n_samples  <- 1 + floor(iterations / thinning_interval)
-            n_ess_recs <- n_samples - 1
-            record_sample <- TRUE
-        } else {
-            n_samples <- floor((iterations - max_adaptation) / thinning_interval)
-            n_ess_recs <- n_samples
-            record_sample <- max_adaptation == 0
-        }
+        n_samples <- 
+            if(return_adapt_rec) {
+                floor(iterations / thinning_interval)
+            } else {
+                floor((iterations - max_adaptation) / thinning_interval) 
+            }
+        n_ess_recs <- n_samples 
+        record_sample <- FALSE
         
         # progress printing interval
         if(print_progress != 0) {
@@ -872,20 +871,6 @@ fit_stem =
         # record the initial parameter values
         rec_ind <- 0
         if(return_ess_rec) ess_rec_ind <- 0
-        
-        if(record_sample) {
-            save_mcmc_sample(
-                mcmc_samples     = mcmc_samples,
-                rec_ind          = rec_ind,
-                path             = path,
-                parmat           = parmat,
-                param_blocks     = param_blocks,
-                initdist_objects = initdist_objects,
-                tparam           = tparam,
-                tparam_inds      = tparam_inds,
-                method           = method
-            )
-        }
         
         # initialize the status file if status updates are required
         if (print_progress) {
