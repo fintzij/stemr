@@ -13,7 +13,7 @@ mvnss_update <-
              path,
              pathmat_prop,
              tparam,
-             times,
+             census_times,
              flow_matrix,
              stoich_matrix,
              censusmat,

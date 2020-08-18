@@ -19,7 +19,7 @@ initdist_update <-
              emitmat,
              flow_matrix,
              stoich_matrix,
-             times,
+             census_times,
              forcing_inds,
              forcing_tcov_inds,
              forcings_out,

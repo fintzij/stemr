@@ -40,7 +40,7 @@ mvnmh_update =
              path,
              pathmat_prop,
              tparam,
-             times,
+             census_times,
              flow_matrix,
              stoich_matrix,
              censusmat,
@@ -195,7 +195,7 @@ mvnmh_update =
             (path$data_log_lik + param_blocks[[ind]]$log_pd)
         
         # Accept/Reject via metropolis-hastings
-        if (acceptance_prob >= 0 || acceptance_prob >= log(runif(1))) {
+        if (acceptance_prob >= min(0, log(runif(1)))) {
             
             ### ACCEPTANCE
             increment_elem(param_blocks[[ind]]$mvnmh_objects$acceptances, 0)

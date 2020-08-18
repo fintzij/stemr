@@ -10,7 +10,7 @@
 #' @param stoich_matrix ODE stoichiometry matrix
 #' @param proc_pointer external LNA pointer
 #' @param set_pars_pointer pointer for setting the LNA parameters
-#' @param times times at which the LNA should be evaluated
+#' @param census_times times at which the LNA should be evaluated
 #' @param param_inds C++ column indices for parameters
 #' @param const_inds C++ column indices for constants
 #' @param tcovar_inds C++ column indices for time varying covariates
@@ -46,7 +46,7 @@ initialize_ode <-
                  stoich_matrix,
                  proc_pointer,
                  set_pars_pointer,
-                 times,
+                 census_times,
                  param_vec,
                  param_inds,
                  const_inds,
@@ -78,7 +78,7 @@ initialize_ode <-
                           # integrate the ODEs
                           path_init <- 
                               integrate_odes(
-                                  ode_times         = times,
+                                  ode_times         = census_times,
                                   ode_pars          = parmat,
                                   ode_param_inds    = param_inds,
                                   ode_tcovar_inds   = tcovar_inds,

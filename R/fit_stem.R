@@ -100,7 +100,8 @@ fit_stem =
                 param_blocks = param_blocks, 
                 parameters   = parameters,
                 param_codes  = param_codes,
-                iterations   = iterations)
+                iterations   = iterations,
+                mcmc_restart = mcmc_restart)
         
         # maximum number of adaptive iterations
         max_adaptation <- max(sapply(param_blocks, function(x) x$control$stop_adaptation))
@@ -142,8 +143,8 @@ fit_stem =
         
         # initialize the ess_record
         ess_record <- list(lna_ess_record = NULL,
-                          initdist_ess_record = NULL,
-                          tparam_ess_record = NULL)
+                           initdist_ess_record = NULL,
+                           tparam_ess_record = NULL)
         
         # dynamics and measurement process objects that are method specific
         if(method == "lna") {
@@ -303,15 +304,16 @@ fit_stem =
             }
         }
         
-        # full vector of times
-        times <- sort(unique(c(obstimes,
-                               stem_object$dynamics$tcovar[, 1],
-                               seq(stem_object$dynamics$t0,
-                                   stem_object$dynamics$tmax,
-                                   by = stem_object$dynamics$timestep),
-                               stem_object$dynamics$tmax)))
-        
-        n_times <- length(times)
+        # vector of census times
+        census_times <- 
+            sort(unique(c(obstimes,
+                          stem_object$dynamics$tcovar[, 1],
+                          seq(stem_object$dynamics$t0,
+                              stem_object$dynamics$tmax,
+                              by = stem_object$dynamics$timestep),
+                          stem_object$dynamics$tmax)))
+        census_indices <- unique(c(0, findInterval(obstimes, census_times) - 1))
+        n_times        <- length(census_times)
         
         # make sure no times are less than t0
         if(any(obstimes < stem_object$dynamics$t0)) {
@@ -321,13 +323,7 @@ fit_stem =
         if(any(stem_object$dynamics$tcovar[,1] < stem_object$dynamics$t0)) {
             stop("Cannot have time-varying covariates specified before time t0.")
         }
-        
-        # vector of times, constrained between t0 and tmax
-        census_times <- 
-            times[times >= min(stem_object$dynamics$t0, min(obstimes)) &
-                      times <= max(stem_object$dynamics$tmax, max(obstimes))]
-        census_indices <- unique(c(0, findInterval(obstimes, census_times) - 1))
-        
+
         ### Set up parameter objects ---------------------------------
         parmat <-  
             matrix(0.0,
@@ -362,7 +358,7 @@ fit_stem =
         if(!is.null(stem_object$dynamics$tcovar)) {
             
             tcovar_rowinds <-  
-                findInterval(times, stem_object$dynamics$tcovar[, 1],
+                findInterval(census_times, stem_object$dynamics$tcovar[, 1],
                              left.open = FALSE, all.inside = TRUE)
             parmat[, tcovar_inds + 1] <-  
                 stem_object$dynamics$tcovar[tcovar_rowinds, -1]
@@ -401,7 +397,7 @@ fit_stem =
                     
                     # indices
                     tparam[[s]]$col_ind <- param_codes[tparam[[s]]$tparam_name]
-                    tparam[[s]]$tpar_inds_R <- findInterval(times, tparam[[s]]$times, left.open = F)
+                    tparam[[s]]$tpar_inds_R <- findInterval(census_times, tparam[[s]]$times, left.open = F)
                     tparam[[s]]$tpar_inds_R[tparam[[s]]$tpar_inds_R == 0] <- 1
                     tparam[[s]]$tpar_inds_Cpp <- tparam[[s]]$tpar_inds_R - 1
                     
@@ -572,7 +568,7 @@ fit_stem =
                 # evaluate the density of the incidence counts
                 evaluate_d_measure_LNA(
                     emitmat           = emitmat,
-                    obsmat            = data,
+                    obsmat            = dat,
                     censusmat         = censusmat,
                     measproc_indmat   = measproc_indmat,
                     parameters        = parmat,
@@ -609,7 +605,7 @@ fit_stem =
                     stoich_matrix           = stoich_matrix,
                     proc_pointer            = proc_pointer,
                     set_pars_pointer        = set_pars_pointer,
-                    times                   = census_times,
+                    census_times            = census_times,
                     param_vec               = param_vec,
                     param_inds              = param_inds,
                     const_inds              = const_inds,
@@ -641,7 +637,7 @@ fit_stem =
                     stoich_matrix           = stoich_matrix,
                     proc_pointer            = proc_pointer,
                     set_pars_pointer        = set_pars_pointer,
-                    times                   = census_times,
+                    census_times            = census_times,
                     param_vec               = param_vec,
                     param_inds              = param_inds,
                     const_inds              = const_inds,
@@ -706,7 +702,7 @@ fit_stem =
                     emitmat = emitmat,
                     flow_matrix = flow_matrix,
                     stoich_matrix = stoich_matrix,
-                    times = census_times,
+                    census_times = census_times,
                     forcing_inds = forcing_inds,
                     forcing_tcov_inds = forcing_tcov_inds,
                     forcings_out = forcings_out,
@@ -747,7 +743,7 @@ fit_stem =
                     emitmat = emitmat,
                     flow_matrix = flow_matrix,
                     stoich_matrix = stoich_matrix,
-                    times = census_times,
+                    census_times = census_times,
                     forcing_inds = forcing_inds,
                     forcing_tcov_inds = forcing_tcov_inds,
                     forcings_out = forcings_out,
@@ -786,7 +782,7 @@ fit_stem =
                     emitmat = emitmat,
                     flow_matrix = flow_matrix,
                     stoich_matrix = stoich_matrix,
-                    times = census_times,
+                    census_times = census_times,
                     forcing_inds = forcing_inds,
                     forcing_tcov_inds = forcing_tcov_inds,
                     forcings_out = forcings_out,
@@ -908,7 +904,8 @@ fit_stem =
         for (iter in seq_len(iterations)) {
             
             # Sample new parameter values
-            for(ind in sample.int(length(param_blocks))) {
+            block_order = sample.int(length(param_blocks))
+            for(ind in block_order) {
                 
                 if(param_blocks[[ind]]$alg == "mvnmh") {
                     
@@ -937,7 +934,7 @@ fit_stem =
                         path              = path,
                         pathmat_prop      = pathmat_prop,
                         tparam            = tparam, 
-                        times             = census_times,
+                        census_times      = census_times,
                         flow_matrix       = flow_matrix,
                         stoich_matrix     = stoich_matrix,
                         censusmat         = censusmat,
@@ -987,7 +984,7 @@ fit_stem =
                         path              = path,
                         pathmat_prop      = pathmat_prop,
                         tparam            = tparam,
-                        times             = census_times,
+                        census_times      = census_times,
                         flow_matrix       = flow_matrix,
                         stoich_matrix     = stoich_matrix,
                         censusmat         = censusmat,
@@ -1029,7 +1026,7 @@ fit_stem =
                     emitmat = emitmat,
                     flow_matrix = flow_matrix,
                     stoich_matrix = stoich_matrix,
-                    times = census_times,
+                    census_times = census_times,
                     forcing_inds = forcing_inds,
                     forcing_tcov_inds = forcing_tcov_inds,
                     forcings_out = forcings_out,
@@ -1070,7 +1067,7 @@ fit_stem =
                     emitmat = emitmat,
                     flow_matrix = flow_matrix,
                     stoich_matrix = stoich_matrix,
-                    times = census_times,
+                    census_times = census_times,
                     forcing_inds = forcing_inds,
                     forcing_tcov_inds = forcing_tcov_inds,
                     forcings_out = forcings_out,
@@ -1112,7 +1109,7 @@ fit_stem =
                     emitmat = emitmat,
                     flow_matrix = flow_matrix,
                     stoich_matrix = stoich_matrix,
-                    times = census_times,
+                    census_times = census_times,
                     forcing_inds = forcing_inds,
                     forcing_tcov_inds = forcing_tcov_inds,
                     forcings_out = forcings_out,

@@ -48,5 +48,5 @@ save_ess_rec = function(ess_record,
     }
     
     # increment ess_rec_ind
-    increment_vec(ess_rec_ind, 1)
+    increment_elem(ess_rec_ind, 0)
 }

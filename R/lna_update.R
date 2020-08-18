@@ -24,7 +24,7 @@ lna_update <-
              emitmat,
              flow_matrix,
              stoich_matrix,
-             times,
+             census_times,
              forcing_inds,
              forcing_tcov_inds,
              forcings_out,
@@ -163,7 +163,7 @@ lna_update <-
                         map_draws_2_lna(
                             pathmat           = pathmat_prop,
                             draws             = draws_prop,
-                            lna_times         = times,
+                            lna_times         = census_times,
                             lna_pars          = parmat,
                             lna_param_vec     = param_vec,
                             lna_param_inds    = param_inds,

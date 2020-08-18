@@ -4,11 +4,12 @@
 #' @param parameters vector of parameters
 #' @param param_codes vector of parameter codes
 #' @param iterations number of MCMC iterations
+#' @param mcmc_restart is mcmc being restarted
 #'
 #' @return validated param_block list with mcmc bookkeeping objects
 #' @export
 prepare_param_blocks = 
-    function(param_blocks, parameters, param_codes, iterations) {
+    function(param_blocks, parameters, param_codes, iterations, mcmc_restart) {
         
         ### first validate the parameter blocks
         # check that all parameters are in a block
@@ -48,7 +49,7 @@ prepare_param_blocks =
             ind_est_0 <- ind_est_0 + length(param_inds_nat[[s]])
             
             # initialize the parameters
-            if(is.null(param_initializer[[s]])) {
+            if(is.null(param_initializer[[s]]) | mcmc_restart) {
                 
                 # initialize the parameters
                 param_blocks[[s]]$pars_nat <- parameters[param_inds_nat[[s]]]
@@ -150,7 +151,7 @@ prepare_param_blocks =
             
             # kernel_resid, _mean, and _cov for adaptation
             param_blocks[[s]]$kernel_resid <- 
-                rnorm(param_blocks[[s]]$block_size, 0, param_blocks[[s]]$control$nugget)
+                rep(0.0, param_blocks[[s]]$block_size)
             param_blocks[[s]]$kernel_mean  <- 
                 rep(0.0, param_blocks[[s]]$block_size)
             param_blocks[[s]]$kernel_cov   <- 
@@ -159,10 +160,12 @@ prepare_param_blocks =
             # fill out the mean, covariance, and cholesky
             copy_vec(dest = param_blocks[[s]]$kernel_mean, 
                      orig = param_blocks[[s]]$pars_est)
+            
             copy_mat(dest = param_blocks[[s]]$kernel_cov, 
                      orig = param_blocks[[s]]$sigma)
             
-            param_blocks[[s]]$kernel_cov_chol <- chol(param_blocks[[s]]$kernel_cov)
+            param_blocks[[s]]$kernel_cov_chol <- 
+                chol(param_blocks[[s]]$kernel_cov)
             
             # initialize the list of objects for mvnss in the block
             if(param_blocks[[s]]$alg == "mvnss") {

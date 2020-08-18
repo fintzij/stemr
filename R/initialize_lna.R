@@ -10,7 +10,7 @@
 #' @param stoich_matrix LNA stoichiometry matrix
 #' @param proc_pointer external LNA pointer
 #' @param set_pars_pointer pointer for setting the LNA parameters
-#' @param times times at which the LNA should be evaluated
+#' @param census_times times at which the LNA should be evaluated
 #' @param param_inds C++ column indices for parameters
 #' @param const_inds C++ column indices for constants
 #' @param tcovar_inds C++ column indices for time varying covariates
@@ -49,7 +49,7 @@ initialize_lna <-
                  stoich_matrix,
                  proc_pointer,
                  set_pars_pointer,
-                 times,
+                 census_times,
                  param_vec,
                  param_inds,
                  const_inds,
@@ -76,14 +76,14 @@ initialize_lna <-
                 keep_going   <- TRUE
                 flow_matrix  <- t(stoich_matrix)
                 
-                draws <- rnorm(ncol(stoich_matrix) * (length(times) - 1))
+                draws <- rnorm(ncol(stoich_matrix) * (length(census_times) - 1))
                 
                 while(keep_going && (attempt <= initialization_attempts)) {
                 
                       try({
                             # propose another LNA path
                             path_init <- propose_lna(
-                                  lna_times         = times,
+                                  lna_times         = census_times,
                                   lna_draws         = draws,
                                   lna_pars          = parmat,
                                   lna_param_inds    = param_inds,
@@ -145,7 +145,7 @@ initialize_lna <-
                       if(keep_going) {
                             
                           # new LNA draws
-                          draws <- rnorm(ncol(stoich_matrix) * (length(times) - 1))
+                          draws <- rnorm(ncol(stoich_matrix) * (length(census_times) - 1))
                             
                           for(s in seq_along(initdist_objects)) {
                                 
@@ -234,7 +234,7 @@ initialize_lna <-
                 
                 if(keep_going) {
                       attempt <- 1
-                      draws <- numeric(ncol(stoich_matrix) * (length(times) - 1))
+                      draws <- numeric(ncol(stoich_matrix) * (length(census_times) - 1))
                 } 
                 
                 while(keep_going && (attempt <= initialization_attempts)) {
@@ -242,7 +242,7 @@ initialize_lna <-
                       try({
                             # propose another LNA path - includes ESS warmup
                             path_init <- propose_lna_approx(
-                                  lna_times         = times,
+                                  lna_times         = census_times,
                                   lna_draws         = draws,
                                   lna_pars          = parmat,
                                   lna_param_inds    = param_inds, 
@@ -308,7 +308,7 @@ initialize_lna <-
                       if(keep_going) {
                             
                           # new LNA draws
-                          draws <- rnorm(ncol(stoich_matrix) * (length(times) - 1))
+                          draws <- rnorm(ncol(stoich_matrix) * (length(census_times) - 1))
                       
                           for(s in seq_along(initdist_objects)) {
                               

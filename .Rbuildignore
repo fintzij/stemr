@@ -1,14 +1,2 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
-^\.travis\.yml$
-^cran-comments\.md$
-^\.Rhistory$
-^\.Rdata$
-^README-.*\.png$
-^README\.RMD$
-^README\.md$
-^README\.Rmd$
-^.developement_files/
-^tests\.extended_tests/
-^.development_files/depracated_files
-^\.txt
