@@ -8,7 +8,6 @@ src/*.o
 src/*.so
 src/*.dll
 inst/doc
-.developement_files/
 
 *.Rdata
 
