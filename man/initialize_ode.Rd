@@ -14,7 +14,7 @@ initialize_ode(
   stoich_matrix,
   proc_pointer,
   set_pars_pointer,
-  times,
+  census_times,
   param_vec,
   param_inds,
   const_inds,
@@ -53,7 +53,7 @@ observation times}
 
 \item{set_pars_pointer}{pointer for setting the LNA parameters}
 
-\item{times}{times at which the LNA should be evaluated}
+\item{census_times}{times at which the LNA should be evaluated}
 
 \item{param_vec}{vector for storing lna parameters when evaluating the
 measurement process}

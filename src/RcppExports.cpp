@@ -507,18 +507,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// g_prop2c_prop
-void g_prop2c_prop(arma::mat& g2c_mat, const arma::rowvec& params_cur, const arma::rowvec& params_prop);
-RcppExport SEXP _stemr_g_prop2c_prop(SEXP g2c_matSEXP, SEXP params_curSEXP, SEXP params_propSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::mat& >::type g2c_mat(g2c_matSEXP);
-    Rcpp::traits::input_parameter< const arma::rowvec& >::type params_cur(params_curSEXP);
-    Rcpp::traits::input_parameter< const arma::rowvec& >::type params_prop(params_propSEXP);
-    g_prop2c_prop(g2c_mat, params_cur, params_prop);
-    return R_NilValue;
-END_RCPP
-}
 // insert_tparam
 void insert_tparam(arma::mat& tcovar, const arma::vec& values, int col_ind, const arma::uvec& tpar_inds);
 RcppExport SEXP _stemr_insert_tparam(SEXP tcovarSEXP, SEXP valuesSEXP, SEXP col_indSEXP, SEXP tpar_indsSEXP) {
@@ -666,31 +654,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// mvn_g_adaptive
-void mvn_g_adaptive(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& kernel_cov_chol, double nugget);
-RcppExport SEXP _stemr_mvn_g_adaptive(SEXP params_propSEXP, SEXP params_curSEXP, SEXP kernel_cov_cholSEXP, SEXP nuggetSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::rowvec& >::type params_prop(params_propSEXP);
-    Rcpp::traits::input_parameter< const arma::rowvec& >::type params_cur(params_curSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type kernel_cov_chol(kernel_cov_cholSEXP);
-    Rcpp::traits::input_parameter< double >::type nugget(nuggetSEXP);
-    mvn_g_adaptive(params_prop, params_cur, kernel_cov_chol, nugget);
-    return R_NilValue;
-END_RCPP
-}
-// mvn_rw
-void mvn_rw(arma::rowvec& params_prop, const arma::rowvec& params_cur, const arma::mat& sigma_chol);
-RcppExport SEXP _stemr_mvn_rw(SEXP params_propSEXP, SEXP params_curSEXP, SEXP sigma_cholSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::rowvec& >::type params_prop(params_propSEXP);
-    Rcpp::traits::input_parameter< const arma::rowvec& >::type params_cur(params_curSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type sigma_chol(sigma_cholSEXP);
-    mvn_rw(params_prop, params_cur, sigma_chol);
-    return R_NilValue;
-END_RCPP
-}
 // normalise
 void normalise(arma::vec& v, int p);
 RcppExport SEXP _stemr_normalise(SEXP vSEXP, SEXP pSEXP) {
@@ -806,20 +769,6 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// reset_slice_ratios
-void reset_slice_ratios(arma::vec& n_expansions, arma::vec& n_contractions, arma::vec& n_expansions_c, arma::vec& n_contractions_c, arma::vec& slice_ratios);
-RcppExport SEXP _stemr_reset_slice_ratios(SEXP n_expansionsSEXP, SEXP n_contractionsSEXP, SEXP n_expansions_cSEXP, SEXP n_contractions_cSEXP, SEXP slice_ratiosSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec& >::type n_expansions(n_expansionsSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type n_contractions(n_contractionsSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type n_expansions_c(n_expansions_cSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type n_contractions_c(n_contractions_cSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type slice_ratios(slice_ratiosSEXP);
-    reset_slice_ratios(n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios);
-    return R_NilValue;
-END_RCPP
-}
 // retrieve_census_path
 void retrieve_census_path(arma::mat& censusmat, Rcpp::NumericMatrix& path, Rcpp::NumericVector& census_times, Rcpp::IntegerVector& census_columns);
 RcppExport SEXP _stemr_retrieve_census_path(SEXP censusmatSEXP, SEXP pathSEXP, SEXP census_timesSEXP, SEXP census_columnsSEXP) {
@@ -874,35 +823,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// update_factors
-void update_factors(arma::vec& slice_eigenvals, arma::mat& slice_eigenvecs, const arma::mat& kernel_cov);
-RcppExport SEXP _stemr_update_factors(SEXP slice_eigenvalsSEXP, SEXP slice_eigenvecsSEXP, SEXP kernel_covSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec& >::type slice_eigenvals(slice_eigenvalsSEXP);
-    Rcpp::traits::input_parameter< arma::mat& >::type slice_eigenvecs(slice_eigenvecsSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type kernel_cov(kernel_covSEXP);
-    update_factors(slice_eigenvals, slice_eigenvecs, kernel_cov);
-    return R_NilValue;
-END_RCPP
-}
-// update_interval_widths
-void update_interval_widths(arma::vec& interval_widths, arma::vec& n_expansions_afss, arma::vec& n_contractions_afss, const arma::vec& c_expansions_afss, const arma::vec& c_contractions_afss, arma::vec& slice_ratios, double adaptation_factor, double target_ratio);
-RcppExport SEXP _stemr_update_interval_widths(SEXP interval_widthsSEXP, SEXP n_expansions_afssSEXP, SEXP n_contractions_afssSEXP, SEXP c_expansions_afssSEXP, SEXP c_contractions_afssSEXP, SEXP slice_ratiosSEXP, SEXP adaptation_factorSEXP, SEXP target_ratioSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec& >::type interval_widths(interval_widthsSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type n_expansions_afss(n_expansions_afssSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type n_contractions_afss(n_contractions_afssSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type c_expansions_afss(c_expansions_afssSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type c_contractions_afss(c_contractions_afssSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type slice_ratios(slice_ratiosSEXP);
-    Rcpp::traits::input_parameter< double >::type adaptation_factor(adaptation_factorSEXP);
-    Rcpp::traits::input_parameter< double >::type target_ratio(target_ratioSEXP);
-    update_interval_widths(interval_widths, n_expansions_afss, n_contractions_afss, c_expansions_afss, c_contractions_afss, slice_ratios, adaptation_factor, target_ratio);
-    return R_NilValue;
-END_RCPP
-}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_stemr_CALL_D_MEASURE", (DL_FUNC) &_stemr_CALL_D_MEASURE, 9},
@@ -943,7 +863,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_evaluate_d_measure", (DL_FUNC) &_stemr_evaluate_d_measure, 8},
     {"_stemr_evaluate_d_measure_LNA", (DL_FUNC) &_stemr_evaluate_d_measure_LNA, 12},
     {"_stemr_find_interval", (DL_FUNC) &_stemr_find_interval, 4},
-    {"_stemr_g_prop2c_prop", (DL_FUNC) &_stemr_g_prop2c_prop, 3},
     {"_stemr_insert_tparam", (DL_FUNC) &_stemr_insert_tparam, 4},
     {"_stemr_integrate_odes", (DL_FUNC) &_stemr_integrate_odes, 14},
     {"_stemr_lna_incid2prev", (DL_FUNC) &_stemr_lna_incid2prev, 8},
@@ -952,8 +871,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_comp_chol", (DL_FUNC) &_stemr_comp_chol, 2},
     {"_stemr_rmvtn", (DL_FUNC) &_stemr_rmvtn, 3},
     {"_stemr_dmvtn", (DL_FUNC) &_stemr_dmvtn, 4},
-    {"_stemr_mvn_g_adaptive", (DL_FUNC) &_stemr_mvn_g_adaptive, 4},
-    {"_stemr_mvn_rw", (DL_FUNC) &_stemr_mvn_rw, 3},
     {"_stemr_normalise", (DL_FUNC) &_stemr_normalise, 2},
     {"_stemr_normalise2", (DL_FUNC) &_stemr_normalise2, 2},
     {"_stemr_propose_lna", (DL_FUNC) &_stemr_propose_lna, 16},
@@ -961,12 +878,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_propose_mvnmh", (DL_FUNC) &_stemr_propose_mvnmh, 4},
     {"_stemr_rate_update_event", (DL_FUNC) &_stemr_rate_update_event, 3},
     {"_stemr_rate_update_tcovar", (DL_FUNC) &_stemr_rate_update_tcovar, 3},
-    {"_stemr_reset_slice_ratios", (DL_FUNC) &_stemr_reset_slice_ratios, 5},
     {"_stemr_retrieve_census_path", (DL_FUNC) &_stemr_retrieve_census_path, 4},
     {"_stemr_simulate_gillespie", (DL_FUNC) &_stemr_simulate_gillespie, 15},
     {"_stemr_simulate_r_measure", (DL_FUNC) &_stemr_simulate_r_measure, 6},
-    {"_stemr_update_factors", (DL_FUNC) &_stemr_update_factors, 3},
-    {"_stemr_update_interval_widths", (DL_FUNC) &_stemr_update_interval_widths, 8},
     {NULL, NULL, 0}
 };
 

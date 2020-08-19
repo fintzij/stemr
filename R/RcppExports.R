@@ -517,18 +517,6 @@ find_interval <- function(x, breaks, rightmost_closed, all_inside) {
     .Call(`_stemr_find_interval`, x, breaks, rightmost_closed, all_inside)
 }
 
-#' Get componentwise proposals from a global proposal.
-#'
-#' @param g2c_mat matrix in which to keep the componentwise proposals
-#' @param params_cur vector containing the current parameter vector
-#' @param params_prop vector in which the proposed parameters
-#'
-#' @return fill g2c_mat with componentwise proposals
-#' @export
-g_prop2c_prop <- function(g2c_mat, params_cur, params_prop) {
-    invisible(.Call(`_stemr_g_prop2c_prop`, g2c_mat, params_cur, params_prop))
-}
-
 #' Insert time-varying parameters into a tcovar matrix.
 #'
 #' @param tcovar matrix into which the parameter values should be copied
@@ -691,32 +679,6 @@ dmvtn <- function(x, mu, sigma, logd = FALSE) {
     .Call(`_stemr_dmvtn`, x, mu, sigma, logd)
 }
 
-#' Global Metropolis random walk with global adaptive scaling
-#'
-#' @param params_prop vector in which the proposed parameters should be stored
-#' @param params_cur vector containing the current parameter vector
-#' @param kernel_cov_chol cholesky of the kernel covariance
-#' @param nugget fixed covariance nugget contribution
-#'
-#' @return propose new parameter values in place
-#' @export
-mvn_g_adaptive <- function(params_prop, params_cur, kernel_cov_chol, nugget) {
-    invisible(.Call(`_stemr_mvn_g_adaptive`, params_prop, params_cur, kernel_cov_chol, nugget))
-}
-
-#' Random walk Metropolis-Hastings transition kernel.
-#'
-#' @param params_prop vector in which the proposed parameters should be stored
-#' @param params_cur vector containing the current parameter vector
-#' @param sigma_chol upper triangular portion of the Cholesky decomposition of
-#'   the proposal covariance matrix
-#'
-#' @return propose new parameter values in place
-#' @export
-mvn_rw <- function(params_prop, params_cur, sigma_chol) {
-    invisible(.Call(`_stemr_mvn_rw`, params_prop, params_cur, sigma_chol))
-}
-
 #' normalise a vector in place
 #'
 #' @param v vector to be normalised
@@ -838,21 +800,6 @@ rate_update_tcovar <- function(rate_inds, M, I) {
     invisible(.Call(`_stemr_rate_update_tcovar`, rate_inds, M, I))
 }
 
-#' Reset counters for interval expansions/contractions and slice ratios
-#'
-#' @param n_expansions vector with number of expansion
-#' @param n_contractions vector with number of contractions
-#' @param n_expansions_c cumulative numbers of expansions
-#' @param n_contractions_c cumulative numbers of contractions
-#' @param slice_ratios vector for storing ratio of cumulative number of 
-#'   expansions over number of interval width changes
-#'
-#' @return reset objects in place
-#' @export
-reset_slice_ratios <- function(n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios) {
-    invisible(.Call(`_stemr_reset_slice_ratios`, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios))
-}
-
 #' Insert the compartment counts at a sequence of census times into an existing census matrix.
 #'
 #' @param censusmat matrix of compartment counts at census times, to be updated
@@ -911,34 +858,5 @@ simulate_gillespie <- function(flow, parameters, constants, tcovar, t_max, init_
 #' @export
 simulate_r_measure <- function(censusmat, measproc_indmat, parameters, constants, tcovar, r_measure_ptr) {
     .Call(`_stemr_simulate_r_measure`, censusmat, measproc_indmat, parameters, constants, tcovar, r_measure_ptr)
-}
-
-#' Update slice factor directions for automated factor slice sampling
-#'
-#' @param slice_eigenvals vector of singular values
-#' @param slice_eigenvecs vector of singular vectors
-#' @param kernel_cov empirical covariance matrix of model params
-#' 
-#' @return update eigenvalues and eigenvectors in place
-#' @export
-update_factors <- function(slice_eigenvals, slice_eigenvecs, kernel_cov) {
-    invisible(.Call(`_stemr_update_factors`, slice_eigenvals, slice_eigenvecs, kernel_cov))
-}
-
-#' Update factors and interval widths for automated factor slice sampling
-#'
-#' @param interval_widths vector of interval widths
-#' @param n_expansions_afss vector with number of expansion
-#' @param n_contractions_afss vector with number of contractions
-#' @param c_expansions_afss cumulative numbers of expansions
-#' @param c_contractions_afss cumulative numbers of contractions
-#' @param slice_ratios vector for storing ratio of cumulative number of 
-#'   expansions over number of interval width changes
-#' @param adaptation_factor 
-#'
-#' @return adapt interval widths in place
-#' @export
-update_interval_widths <- function(interval_widths, n_expansions_afss, n_contractions_afss, c_expansions_afss, c_contractions_afss, slice_ratios, adaptation_factor, target_ratio) {
-    invisible(.Call(`_stemr_update_interval_widths`, interval_widths, n_expansions_afss, n_contractions_afss, c_expansions_afss, c_contractions_afss, slice_ratios, adaptation_factor, target_ratio))
 }
 

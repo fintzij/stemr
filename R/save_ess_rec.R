@@ -8,11 +8,12 @@
 #'
 #' @return inserts ESS steps and angles into the ESS record objects
 #' @export
-save_ess_rec = function(ess_record,
-                        ess_rec_ind,
-                        lna_ess_schedule = NULL,
-                        tparam = NULL,
-                        initdist_ess_control = NULL) {
+save_ess_rec = 
+    function(ess_record,
+             ess_rec_ind,
+             lna_ess_schedule = NULL,
+             tparam = NULL,
+             initdist_ess_control = NULL) {
     
     # LNA steps and angles
     if(!is.null(ess_record$lna_ess_record)) {

@@ -20,11 +20,12 @@ lna_update(
   emitmat,
   flow_matrix,
   stoich_matrix,
-  times,
+  census_times,
   forcing_inds,
   forcing_tcov_inds,
   forcings_out,
   forcing_transfers,
+  param_vec,
   param_inds,
   const_inds,
   tcovar_inds,
@@ -65,8 +66,6 @@ lna_update(
 
 \item{stoich_matrix}{stoichiometry matrix}
 
-\item{times}{vector of census times}
-
 \item{forcing_inds}{forcing indices}
 
 \item{forcing_tcov_inds}{time varying covariate forcings}
@@ -74,6 +73,8 @@ lna_update(
 \item{forcings_out}{matrix with outflow from forcings}
 
 \item{forcing_transfers}{transfer matrix}
+
+\item{param_vec}{parameter vector for use in emission distribution}
 
 \item{initdist_inds}{indices of initial compartment counts}
 

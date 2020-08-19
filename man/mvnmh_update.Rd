@@ -13,13 +13,17 @@ mvnmh_update(
   path,
   pathmat_prop,
   tparam,
-  times,
+  census_times,
   flow_matrix,
   stoich_matrix,
   censusmat,
   emitmat,
   param_vec,
+  param_inds,
+  const_inds,
+  tcovar_inds,
   initdist_inds,
+  param_update_inds,
   census_indices,
   event_inds,
   measproc_indmat,
@@ -28,6 +32,7 @@ mvnmh_update(
   forcings_out,
   forcing_transfers,
   proc_pointer,
+  set_pars_pointer,
   d_meas_pointer,
   do_prevalence,
   step_size,
@@ -50,8 +55,6 @@ mvnmh_update(
 \item{pathmat_prop}{matrix for proposed paths}
 
 \item{tparam}{list of time-varying parameters}
-
-\item{times}{vector of census times}
 
 \item{flow_matrix}{flow matrix}
 
@@ -92,6 +95,8 @@ mvnmh_update(
 \item{params_cur}{matrix with current parameters}
 
 \item{params_prop}{matrix with proposed parameters}
+
+\item{times}{vector of census times}
 }
 \value{
 update the model parameters, path, and likelihood
