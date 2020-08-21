@@ -13,5 +13,7 @@ sub_powers(string)
 string suitable for C++
 }
 \description{
-Parse a string and substitute powers of the form a^b with pow(a,b).
+The function for accomplishing this was proposed by Roland on the following
+\href{https://stackoverflow.com/questions/40606723/substitute-the-power-symbol-with-cs-pow-syntax-in-mathematical-expression/40612497}{stack
+overflow thread.}
 }

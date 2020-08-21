@@ -54,14 +54,17 @@ function.
   distributions in the stochastic epidemic model are assumed to be
   conditionally independent.
 
-  The available emission distributions are the binomial, poisson, negative
-  binomial, and gaussian distributions. The negative binomial distribution is
-  parameterized by its mean and dispersion (mu, size). The user specifies the
-  parameters as strings in the canonical order they are presented. Thus,
-  \enumerate{\item poisson: lambda \item binomial: size, prob \item negative
-  binomial: size, mu. (N.B. the negative binomial emissions are parameterized
-  by mean, NOT probability! Thus, the size argument corresponds to the
-  negative binomial overdispersion parameter.) \item gaussian: mean, sd}. The
+  The available emission distributions are the binomial, beta-binomial,
+  poisson, negative binomial, and gaussian distributions. The negative
+  binomial distribution is parameterized by its mean and dispersion (mu,
+  size). The user specifies the parameters as strings in the canonical order
+  they are presented. Thus, \enumerate{\item poisson: lambda \item binomial:
+  size, prob \item beta-binomial size, alpha, beta (N.B. the hyperparameters
+  are interpretable as the prior success count, plus one, equal to alpha and
+  the prior failure count, plus one, equal to beta) \item negative binomial:
+  size, mu. (N.B. the negative binomial emissions are parameterized by mean,
+  NOT probability! Thus, the size argument corresponds to the negative
+  binomial overdispersion parameter.) \item gaussian: mean, sd}. The
   \code{strata} argument may either be supplied as a character vector of
   model strata, or may be specified as "ALL" to indicate all model strata.
   The case-sensitive key word, "SELF", may be used in the name of the

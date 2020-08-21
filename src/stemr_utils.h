@@ -128,20 +128,6 @@ void draw_normals(arma::vec& v);
 void draw_normals2(arma::mat& M);
 void sample_unit_sphere(arma::vec& v);
 
-// beta-binomial functions
-Rcpp::NumericVector rbbinom(
-        const int& n,
-        const NumericVector& size,
-        const NumericVector& alpha,
-        const NumericVector& beta);
-
-Rcpp::NumericVector dbbinom(
-        const Rcpp::NumericVector& x,
-        const Rcpp::NumericVector& size,
-        const Rcpp::NumericVector& alpha,
-        const Rcpp::NumericVector& beta,
-        const bool& log_prob = false);
-
 // copy functions
 void add2vec(arma::rowvec& target, const arma::rowvec& increments, const arma::uvec& inds);
 void copy_2_rows(arma::mat& dest, const arma::mat& orig, const arma::uvec& inds);

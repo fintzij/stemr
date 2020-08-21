@@ -83,35 +83,6 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// dbbinom
-Rcpp::NumericVector dbbinom(const Rcpp::NumericVector& x, const Rcpp::NumericVector& size, const Rcpp::NumericVector& alpha, const Rcpp::NumericVector& beta, const bool& log_prob);
-RcppExport SEXP _stemr_dbbinom(SEXP xSEXP, SEXP sizeSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP log_probSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type size(sizeSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type alpha(alphaSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type beta(betaSEXP);
-    Rcpp::traits::input_parameter< const bool& >::type log_prob(log_probSEXP);
-    rcpp_result_gen = Rcpp::wrap(dbbinom(x, size, alpha, beta, log_prob));
-    return rcpp_result_gen;
-END_RCPP
-}
-// rbbinom
-Rcpp::NumericVector rbbinom(const int& n, const NumericVector& size, const NumericVector& alpha, const NumericVector& beta);
-RcppExport SEXP _stemr_rbbinom(SEXP nSEXP, SEXP sizeSEXP, SEXP alphaSEXP, SEXP betaSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const int& >::type n(nSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type size(sizeSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type alpha(alphaSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type beta(betaSEXP);
-    rcpp_result_gen = Rcpp::wrap(rbbinom(n, size, alpha, beta));
-    return rcpp_result_gen;
-END_RCPP
-}
 // build_census_path
 arma::mat build_census_path(Rcpp::NumericMatrix& path, Rcpp::NumericVector& census_times, Rcpp::IntegerVector& census_columns);
 RcppExport SEXP _stemr_build_census_path(SEXP pathSEXP, SEXP census_timesSEXP, SEXP census_columnsSEXP) {
@@ -859,8 +830,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_CALL_RATE_FCN", (DL_FUNC) &_stemr_CALL_RATE_FCN, 7},
     {"_stemr_CALL_R_MEASURE", (DL_FUNC) &_stemr_CALL_R_MEASURE, 8},
     {"_stemr_CALL_SET_ODE_PARAMS", (DL_FUNC) &_stemr_CALL_SET_ODE_PARAMS, 2},
-    {"_stemr_dbbinom", (DL_FUNC) &_stemr_dbbinom, 5},
-    {"_stemr_rbbinom", (DL_FUNC) &_stemr_rbbinom, 4},
     {"_stemr_build_census_path", (DL_FUNC) &_stemr_build_census_path, 3},
     {"_stemr_census_incidence", (DL_FUNC) &_stemr_census_incidence, 3},
     {"_stemr_census_latent_path", (DL_FUNC) &_stemr_census_latent_path, 13},
