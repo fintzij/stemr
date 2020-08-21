@@ -31,7 +31,9 @@
 #'   binomial distribution is parameterized by its mean and dispersion (mu,
 #'   size). The user specifies the parameters as strings in the canonical order
 #'   they are presented. Thus, \enumerate{\item poisson: lambda \item binomial:
-#'   size, prob \item beta-binomial size, alpha, beta \item negative binomial:
+#'   size, prob \item beta-binomial size, alpha, beta (N.B. the hyperparameters
+#'   are interpretable as the prior success count, plus one, equal to alpha and
+#'   the prior failure count, plus one, equal to beta) \item negative binomial:
 #'   size, mu. (N.B. the negative binomial emissions are parameterized by mean,
 #'   NOT probability! Thus, the size argument corresponds to the negative
 #'   binomial overdispersion parameter.) \item gaussian: mean, sd}. The

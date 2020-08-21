@@ -71,11 +71,11 @@ library(stemr)
 popsize = 1e4 # population size
 
 true_pars =
-      c(R0       = 1.5,  # basic reproduction number
-        mu_inv   = 2,    # infectious period duration = 2 days
-        alpha0   = 4,    # beta-binomial intercept
-        alpha1   = 0.8,  # beta-binomial slope
-        kappa    = 0.25) # beta-binomial overdispersion
+      c(R0       = 1.5,    # basic reproduction number
+        mu_inv   = 2,      # infectious period duration = 2 days
+        alpha0   = exp(4), # beta-binomial intercept
+        alpha1   = 0.8,    # beta-binomial slope
+        kappa    = 50)     # beta-binomial overdispersion
 
 # initialize model compartments and rates
 strata <- NULL # no strata
@@ -277,7 +277,7 @@ cowplot::plot_grid(
 #' 
 ## ---- plot_dat-----------------------------------------------------------
 ggplot(data = as.data.frame(sim_mjp$datasets[[1]]),
-       aes(x=time, y = S2I)) +
+       aes(x=time, y = cases)) +
   geom_point() +
   theme_minimal() +
   labs(x = "Week", y = "Count", title = "Observed Incidence")
@@ -316,11 +316,22 @@ measurement_process <-
   stem_measure(emissions = emissions,
                dynamics = dynamics,
                data = sim_mjp$datasets[[1]])
-stem_object <- make_stemdynamics = dynamics, measurement_process = measurement_process)
 
+stem_object <- make_stem(dynamics = dynamics, measurement_process = measurement_process)
+
+#'
+#' In order to perform inference, we'll need to specify a function for
+#' transforming the model parameters from their natural scale to the estimation
+#' scale on which the MCMC explores the posterior, a function for transforming
+#' parameters on their estimation scale to the natural scale on which they enter
+#' the model dynamics and measurement process, and a function that returns the
+#' log prior. We'll parameterize the MCMC estimation scale in terms of the log
+#' basic reproduction number, log infectious period duration rate, and
+#' unconstrained beta-binomial hyperparameters. The functions are specified as
+#' follows and placed into a list of functions (note that it is critical that
+#' the function signatures follow the specification given below):
 #' 
-#' In order to perform inference, we'll need to specify a function for transforming the model parameters from their natural scale to the estimation scale on which the MCMC explores the posterior, a function for transforming parameters on their estimation scale to the natural scale on which they enter the model dynamics and measurement process, and a function that returns the log prior. We'll parameterize the MCMC estimation scale in terms of the log basic reproduction number, log recovery rate, logit mean case detection rate, and log of the negative binomial overdispersion parameter. The functions are specified as follows and placed into a list of functions (note that it is critical that the function signatures follow the specification given below):
-#' 
+
 ## ----priors_est_scale_fcns, echo = TRUE----------------------------------
 
 ### Parameterization in terms of log(R0) and log(mu)
@@ -331,26 +342,29 @@ stem_object <- make_stemdynamics = dynamics, measurement_process = measurement_p
 # function to take params_nat and return params_est
 to_estimation_scale = function(params_nat) {
       c(log(params_nat[1] * popsize / params_nat[2] - 1), # (beta,mu,N) -> log(R0-1)
-        log(params_nat[2]),                     # mu -> log(mu)
-        logit(params_nat[3]),                   # rho -> logit(rho)
-        log(params_nat[4]))                     # phi -> log(phi)
+        -log(params_nat[2]),                              # mu -> log(1/mu)
+        log(params_nat[3]),                               # alpha0 -> log(alpha0)
+        qlogis(params_nat[4]),                            # alpha1 -> logit(alpha1)
+        -0.5 * log(params_nat[5]))                        # kappa -> log(1/sqrt(kappa))
 }
 
 # function to take params_est and return params_nat
 from_estimation_scale = function(params_est) {
-      c(exp(log(exp(params_est[1])+1) + params_est[2] - log(popsize)), # (log(R0), log(mu), N) -> beta = exp(log(R0) + log(mu) - log(N))
-        exp(params_est[2]), # log(mu) -> mu
-        expit(params_est[3]), # logit(rho) -> rho
-        exp(params_est[4])) # log(phi) -> phi
+      c(exp(log(exp(params_est[1])+1) - params_est[2] - log(popsize)), # (log(R0), log(1/mu), N) -> beta = exp(log(R0) - log(1/mu) - log(N))
+        exp(-params_est[2]),
+        exp(params_est[3]), 
+        plogis(params_est[4]),
+        exp(-2*params_est[5])) 
 }
 
 # calculate the log prior density. note the jacobian for phi
 logprior =
       function(params_est) {
             sum(dnorm(params_est[1], 0, 0.5, log = TRUE),
-                dnorm(params_est[2], -0.7, 0.35, log = TRUE),
-                dnorm(params_est[3], 0, 1, log = TRUE),
-                dexp(exp(params_est[4]), 0.1, log = TRUE) + params_est[4])
+                dnorm(params_est[2], 0.7, 0.35, log = TRUE),
+                dgamma(params_est[3], 2, 0.5, log = TRUE),
+                dnorm(params_est[4], 1.4, 1, log = TRUE),
+                dexp(exp(params_est[5]), 1, log = TRUE) + params_est[5])
       }
 
 # return all three functions in a list
@@ -369,7 +383,7 @@ priors <- list(logprior = logprior,
 # corresponding to parameters on their estimation scales
 
 par_initializer = function() {
-  priors$from_estimation_scale(priors$to_estimation_scale(parameters) + rnorm(4, 0, 0.1))
+  priors$from_estimation_scale(priors$to_estimation_scale(parameters) + rnorm(5, 0, 0.1))
 }
   
 # specify the kernel
@@ -377,17 +391,20 @@ mcmc_kern <-
         mcmc_kernel(
           parameter_blocks = 
               list(parblock(
-                  pars_nat = c("beta", "mu", "rho", "phi"),
-                  pars_est = c("log_R0", "log_mu", "logit_rho", "log_phi"),
+                  pars_nat = c("beta", "mu", "alpha0", "alpha1", "kappa"),
+                  pars_est = c("log_R0", "log_mu_inv", "log_alpha0", "logit_alpha1", "log_sqrt_kappa_inv"),
                   priors = priors,
                   # alg = "mvnss",
                   alg = "mvnmh",
-                  sigma = diag(0.01, 4),
+                  sigma = diag(0.01, 5),
                   initializer = par_initializer,
                   control = 
                     # mvnss_control(stop_adaptation = 1e2))),
-                    mvnmh_control(stop_adaptation = 1e2))),
-          lna_ess_control = lna_control(bracket_update_iter = 50,
+                    mvnmh_control(stop_adaptation = 1e4,
+                                  scale_cooling = 0.8,
+                                  scale_constant = 1, 
+                                  step_size = 0.4))),
+          lna_ess_control = lna_control(bracket_update_iter = 5e3,
                                         joint_initdist_update = FALSE))
 
 #' 
@@ -396,115 +413,21 @@ mcmc_kern <-
 ## ----fit_mod, echo = TRUE------------------------------------------------
 res <-
     fit_stem(stem_object = stem_object,
-             method = "lna",
+             method = "ode",
              mcmc_kern = mcmc_kern,
-             iterations = 3.5e2)
+             iterations = 6e4,
+             print_progress = 1e3)
 
 #' 
 #' The `fit_stem` function returns a list with posterior samples, latent epidemic paths, and MCMC tuning parameters (e.g., global scaling parameter adapted in the MCMC). These can be accessed as follows:
 #' 
 ## ----access_res, echo = TRUE---------------------------------------------
-runtime = res$results$time
-mcmc_samples = res$results$MCMC_results
+runtime = res$results$runtime
+mcmc_samples = res$results$posterior
 ode_paths = res$results$ode_paths # or res$results$lna_paths if using the LNA for inference
 adapt_par = res$results$adaptation_record$adaptation_scale_record
 
-#' 
-#' # Fitting the SIR model with pomp
-#' 
-#' We can fit the model using the `pomp` package as follows. Note that pomp version 1.17 was used as a benchmark method in the paper.
-#' 
-## ----pomp_fit, echo = TRUE, warning=FALSE, eval = FALSE------------------
-## require(pomp)
-## S0 <- 1e4 - 10
-## I0 <- 10
-## R0 <- 0
-## popsize = 1e4
-## cases <- sim_mjp$datasets[[1]][,2]
-## 
-## # Set up pomp objects -----------------------------------------------------
-## 
-## # Measurement process objects
-## rmeas <- "
-##   cases=rnbinom_mu(exp(log_phi),exp(logit_rho)*S2I/(1+exp(logit_rho)));    // simulates the data
-## "
-## 
-## dmeas<-"
-##   lik=dnbinom_mu(cases,exp(log_phi),exp(logit_rho)*S2I/(1+exp(logit_rho)),give_log); // emission density
-## "
-## 
-## # define the stepper
-## sir.step<-paste0("
-##   double rate[2];
-##   double dN[2];
-##   rate[0]=exp(log(exp(log_R0)+1) + log_mu - log(10000))*I; // Infection rate
-##   rate[1]=exp(log_mu);                         // recovery rate
-##   reulermultinom(1,S,&rate[0],dt,&dN[0]);      // generate the number of newly infected people
-##   reulermultinom(1,I,&rate[1],dt,&dN[1]);      // generate the number of newly recovered people
-##   S+=-dN[0];                                   // update the number of Susceptibles
-##   I+=dN[0]-dN[1];                              // update the number of Infections
-##   R+=dN[1];                                    // update the number of Recoveries
-##   S2I += dN[0];
-##   I2R += dN[1];
-## ")
-## 
-## # instatiate the euler stepper function
-## SIR_sim <- euler.sim(step.fun = Csnippet(sir.step), delta.t = 1/7)
-## 
-## # Define the priors
-## sir.dprior <- function(params, ..., log) {
-##   l <- dnorm(params["log_R0"], 0, 0.5, log = TRUE) +
-##     dnorm(params["log_mu"], -0.7, 0.35, log = TRUE) +
-##     dnorm(params["logit_rho"], log = T) +
-##     dexp(exp(params["log_phi"]), 0.1, log = T) + params["log_phi"]
-##   if(!log) l <- exp(l)
-##   return(l)
-## }
-## 
-## # instatiate the pomp object
-## sir_mod <- pomp(
-##   data = data.frame(time = seq(1, tmax, by = 1), cases = cases),  #"cases" is the dataset, "time" is the observation time
-##   times = "time",
-##   t0 = 0,                      # initial time point
-##   dmeasure = Csnippet(dmeas),  # evaluates the density of the measurement process
-##   rmeasure = Csnippet(rmeas),  # simulates from the measurement process
-##   rprocess = SIR_sim,          # simulates from the latent process
-##   statenames = c("S", "I", "R", "S2I", "I2R"),  #state space variable name
-##   paramnames = c("log_R0", "log_mu", "logit_rho", "log_phi"), #parameters name
-##   zeronames = c("S2I", "I2R"),
-##   initializer = function(params, t0, ...) {
-##                         return(c(S = S0, I = I0, R = R0, S2I = 0, I2R = 0))
-##                 },
-##   params = c(log_R0    = log(1.5),
-##              log_mu    = log(1),
-##              logit_rho = logit(0.5),
-##              log_phi   = log(5)),
-##   dprior = sir.dprior
-## )
-## 
-## # Metropolis kernel proposal covariance matrix
-## init = c(log_R0 = log(true_pars[1]), log_mu = log(true_pars[2]), logit_rho = logit(true_pars[3]), log_phi = log(true_pars[4])) + rnorm(4, 0, c(0.1, 0.1, 0.1, 0.1))
-## names(init) <- c("log_R0", "log_mu", "logit_rho", "log_phi")
-## cov_init <- diag(1e-3, 4); colnames(cov_init) <- rownames(cov_init) <- names(init)
-## 
-## # adaptive phase of MCMC
-## res_adapt <- pmcmc(sir_mod,
-##                    Nmcmc = 1e2, # number of adaptive iterations
-##                    Np = 50, # number of particles in pmmh (set to 500 in paper)
-##                    start = init,
-##                   proposal = mvn.rw.adaptive(rw.var = cov_init))
-## 
-## # final sample
-## sigma <- covmat(res_adapt)
-## res_pomp <- pmcmc(res_adapt,
-##                   Nmcmc = 2.5e2, #number of mcmc iterations
-##                   Np = 50,  # number of particles in PMMH (set to 500 in paper)
-##                   start = init,
-##                   proposal = mvn.rw(rw.var = sigma))
-## 
 
-#' 
-#' 
 #' # References
 #' 
 #' Andrieu, C., and Thoms, J.. "A tutorial on adaptive MCMC." __Statistics and Computing__ 18.4 (2008): 343-373.
