@@ -128,15 +128,19 @@ void draw_normals(arma::vec& v);
 void draw_normals2(arma::mat& M);
 void sample_unit_sphere(arma::vec& v);
 
-// MCMC transition kernel functions
-void mvn_rw(arma::rowvec& params_prop,
-            const arma::rowvec& params_cur,
-            const arma::mat& sigma_chol);
+// beta-binomial functions
+Rcpp::NumericVector rbbinom(
+        const int& n,
+        const NumericVector& size,
+        const NumericVector& alpha,
+        const NumericVector& beta);
 
-void mvn_g_adaptive(arma::rowvec& params_prop,
-                    const arma::rowvec& params_cur,
-                    const arma::mat& kernel_cov_chol,
-                    double nugget);
+Rcpp::NumericVector dbbinom(
+        const Rcpp::NumericVector& x,
+        const Rcpp::NumericVector& size,
+        const Rcpp::NumericVector& alpha,
+        const Rcpp::NumericVector& beta,
+        const bool& log_prob = false);
 
 // copy functions
 void add2vec(arma::rowvec& target, const arma::rowvec& increments, const arma::uvec& inds);
@@ -144,41 +148,25 @@ void copy_2_rows(arma::mat& dest, const arma::mat& orig, const arma::uvec& inds)
 void copy_col(arma::mat& dest, const arma::mat& orig, int ind);
 void copy_elem(arma::rowvec& dest, const arma::rowvec& orig, int ind);
 void copy_elem2(arma::rowvec& dest, const arma::rowvec& orig, const arma::uvec& inds);
-void g_prop2c_prop(arma::mat& g2c_mat, const arma::rowvec& params_cur, const arma::rowvec& params_prop);
 void copy_pathmat(arma::mat& dest, const arma::mat& orig);
+void copy_row(arma::mat& dest, const arma::mat& orig, int ind);
 void copy_vec(arma::rowvec& dest, const arma::rowvec& orig);
 void copy_vec2(arma::rowvec& dest, const arma::rowvec& orig, const arma::uvec& inds);
 void copy_mat(arma::mat& dest, const arma::mat& orig);
+void increment_vec(arma::rowvec& target, const arma::rowvec& increments);
 void increment_elem(arma::vec& vec, int ind);
 void insert_block(arma::mat& dest, const arma::mat& orig, const arma::uvec& rowinds, const arma::uvec& colinds);
+void insert_elem(arma::rowvec& dest, double elem, int ind);
 void insert_tparam(arma::mat& tcovar, const arma::vec& values, int col_ind, const arma::uvec& tpar_inds);
 void mat_2_arr(arma::cube& dest, const arma::mat& orig, int ind);
 void pars2lnapars(arma::mat& lnapars, const arma::rowvec& parameters);
 void pars2lnapars2(arma::mat& lnapars, const arma::rowvec& parameters, int c_start);
+void pars2parmat(arma::mat& parmat, const arma::rowvec pars, const arma::uvec colinds, const arma::uvec rowind = 0);
 void reset_vec(arma::vec& v, double value = 0);
+void vec_2_arr(arma::cube& dest, const arma::vec& orig, int col_ind, int slice_ind);
+void vec_2_mat(arma::mat& dest, const arma::vec& orig, int ind);
 
 // comp_chol
 void comp_chol(arma::mat& C, arma::mat& M);
-
-// reset slice ratios
-void reset_slice_ratios(arma::vec& n_expansions,
-                        arma::vec& n_contractions,
-                        arma::vec& n_expansions_c,
-                        arma::vec& n_contractions_c,
-                        arma::vec& slice_ratios);
-
-// update factors
-void update_factors(arma::vec& slice_eigenvals,
-                    arma::mat& slice_eigenvecs,
-                    const arma::mat& kernel_cov);
-
-void update_interval_widths(arma::vec& interval_widths,
-                            arma::vec& n_expansions_afss,
-                            arma::vec& n_contractions_afss,
-                            const arma::vec& c_expansions_afss,
-                            const arma::vec& c_contractions_afss,
-                            arma::vec& slice_ratios,
-                            double adaptation_factor,
-                            double target_ratio);
 
 #endif // stemr_UTILITIES_H

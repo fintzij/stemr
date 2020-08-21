@@ -118,8 +118,8 @@ stem_dynamics <-
                  adjacency = NULL,
                  messages = FALSE,
                  compile_rates = TRUE,
-                 compile_lna = FALSE,
-                 compile_ode = FALSE,
+                 compile_lna = TRUE,
+                 compile_ode = TRUE,
                  step_size = 1e-6,
                  stepper = "rk54_a",
                  rtol = 1e-6,
@@ -852,12 +852,15 @@ stem_dynamics <-
 
         # compile the rate functions and get the pointers
         if(is.character(compile_rates) | compile_rates) {
-                rate_ptrs <-
+                exact_rates <-
                         parse_rates_exact(rates = rate_fcns,
                                           compile_rates = compile_rates,
                                           messages = messages)
+                rate_ptrs  <- exact_rates$pointers
+                exact_code <- exact_rates$code
         } else {
-                rate_ptrs <- NULL
+                rate_ptrs  <- NULL
+                exact_code <- NULL
         }
 
         # compile LNA and/or ODE
@@ -910,6 +913,9 @@ stem_dynamics <-
                                                     atol        = atol,
                                                     rtol        = rtol,
                                                     stepper     = stepper)
+                        
+                        lna_code <- lna_pointers$LNA_code
+                        lna_pointers$LNA_code <- NULL
 
                         # get the C++ indices for the initial distribution parameters in the lna_pars matrix
                         lna_initdist_inds <- sapply(paste0(names(compartment_codes), "_0"),
@@ -944,6 +950,9 @@ stem_dynamics <-
                                                     atol        = atol,
                                                     rtol        = rtol,
                                                     stepper     = stepper)
+                        
+                        ode_code <- ode_pointers$ODE_code
+                        ode_pointers$ODE_code <- NULL
 
                         # get the C++ indices for the initial distribution parameters in the lna_pars matrix
                         ode_initdist_inds <- sapply(paste0(names(compartment_codes), "_0"),
@@ -955,18 +964,20 @@ stem_dynamics <-
 
         if(!do_lna) {
                 lna_rates         <- list(hazards = NULL, derivatives = NULL, lna_param_codes = NULL)
-                stoich_matrix_lna <- NULL
-                lna_initdist_inds <- NULL
-                lna_pointers      <- NULL
                 flow_matrix_lna   <- NULL
+                stoich_matrix_lna <- NULL
+                lna_pointers      <- NULL
+                lna_initdist_inds <- NULL
+                lna_code          <- NULL
         }
 
         if(!do_ode) {
                 ode_rates         <- list(hazards = NULL, ode_param_codes = NULL)
                 flow_matrix_ode   <- NULL
+                stoich_matrix_ode <- NULL
                 ode_pointers      <- NULL
                 ode_initdist_inds <- NULL
-                stoich_matrix_ode <- NULL
+                ode_code          <- NULL
         }
 
         # create the list determining the stem dynamics
@@ -1017,7 +1028,10 @@ stem_dynamics <-
                          n_params            = n_params,
                          n_tcovar            = n_tcovar,
                          n_consts            = n_consts,
-                         dynamics_args       = dynamics_args)
+                         dynamics_args       = dynamics_args,
+                         compiled_code       = list(exact_code = exact_code,
+                                                    lna_code   = lna_code,
+                                                    ode_code   = ode_code))
 
         return(dynamics)
         }

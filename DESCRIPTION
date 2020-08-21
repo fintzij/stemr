@@ -15,12 +15,10 @@ LazyData: TRUE
 Imports:
     Ryacas,
     odeintr,
-    MASS,
-    extraDistr,
-    stats,
     Rcpp
 LinkingTo: Rcpp,
     RcppArmadillo,
+    extraDistr,
     BH
 RoxygenNote: 7.1.1
 Suggests: knitr,

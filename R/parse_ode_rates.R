@@ -55,19 +55,26 @@ parse_ode_rates <- function(ode_rates, param_codes, const_codes, tcovar_codes, o
         # replace the hash codes with the names of the vector elements
         for(s in seq_along(hazards)) {
                 for(j in seq_len(nrow(lookup_table))) {
-                        hazards[s]      <- gsub(pattern = paste0('\\<',lookup_table[j,"code"],'\\>'), replacement = lookup_table[j,"varname"], x = hazards[s])
-                        hazards[s]      <- gsub(" ", "", hazards[s])
+                        hazards[s] <- 
+                                gsub(pattern = paste0('\\<',lookup_table[j,"code"],'\\>'),
+                                     replacement = lookup_table[j,"varname"], x = hazards[s])
                 }
-                hazards[s] <- sub_powers(hazards[s])
+                
+                hazards[s] <- 
+                        paste0(deparse(sub_powers(parse(text = hazards[s]))[[1]]), collapse = "")
+                hazards[s] <- gsub(" ", "", hazards[s])
         }
 
         for(s in seq_along(ode_rates)) {
                 for(j in seq_len(nrow(lookup_table))) {
-                        ode_rates[s]      <- gsub(pattern = paste0('\\<',lookup_table[j,"code"],'\\>'),
-                                                  replacement = lookup_table[j,"varname"], x = ode_rates[s])
-                        ode_rates[s]      <- gsub(" ", "", ode_rates[s])
+                        ode_rates[s] <- 
+                                gsub(pattern = paste0('\\<',lookup_table[j,"code"],'\\>'),
+                                     replacement = lookup_table[j,"varname"], x = ode_rates[s])
                 }
-                ode_rates[s] <- sub_powers(ode_rates[s])
+                
+                ode_rates[s] <- 
+                        paste0(deparse(sub_powers(parse(text = ode_rates[s]))[[1]]), collapse = "")
+                ode_rates[s] <- gsub(" ", "", ode_rates[s])
         }
 
         return(list(hazards = hazards, ode_param_codes = ode_param_codes))

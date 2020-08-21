@@ -71,11 +71,11 @@ library(stemr)
 popsize = 1e4 # population size
 
 true_pars =
-      c(R0     = 1.5,  # basic reproduction number
-        mu_inv = 2,    # infectious period duration = 2 days
-        rho_0  = 4,    # beta-binomial intercept
-        rho_1  = 0.8,  # beta-binomial slope
-        kappa  = 0.25) # beta-binomial overdispersion
+      c(R0       = 1.5,  # basic reproduction number
+        mu_inv   = 2,    # infectious period duration = 2 days
+        alpha0   = 4,    # beta-binomial intercept
+        alpha1   = 0.8,  # beta-binomial slope
+        kappa    = 0.25) # beta-binomial overdispersion
 
 # initialize model compartments and rates
 strata <- NULL # no strata
@@ -103,12 +103,13 @@ state_initializer <-
 parameters =
   c(true_pars["R0"] / popsize / true_pars["mu_inv"], # R0 = beta * P / mu
     1/true_pars["mu_inv"],
-    true_pars["rho"],
-    true_pars["phi"])
-names(parameters) <- c("beta", "mu", "rho", "phi")
+    true_pars["alpha0"],
+    true_pars["alpha1"],
+    true_pars["kappa"])
+names(parameters) <- c("beta", "mu", "alpha0", "alpha1", "kappa")
 
 # declare the initial time to be constant
-constants <- c(t0 = 0)
+constants <- c(t0 = 0, tests = 1000.0)
 t0 <- 0; tmax <- 40
 
 # compile the model
@@ -128,9 +129,12 @@ dynamics <-
 
 # list of emission distribution lists (analogous to rate specification)
 emissions <-
-  list(emission(meas_var = "S2I", # transition or compartment being measured (S->I transitions)
-                distribution    = "negbinomial",         # emission distribution
-                emission_params = c("phi", "S2I * rho"), # distribution pars, here overdispersion and mean
+  list(emission(meas_var = "cases", # transition or compartment being measured (S->I transitions)
+                distribution    = "betabinomial",        # emission distribution
+                emission_params = 
+                  c("tests", 
+                    "kappa * (alpha0 * (S2I / popsize) ^ alpha1) / (alpha0 * (S2I / popsize) ^ alpha1 + (1 - S2I/popsize) ^ alpha1)", 
+                    "kappa * ((1 - S2I/popsize) ^ alpha1) / (alpha0 * (S2I / popsize) ^ alpha1 + (1 - S2I/popsize) ^ alpha1)"), # distribution pars, here overdispersion and mean
                 incidence       = TRUE,                  # is the data incidence
                 obstimes        = seq(1, tmax, by =1)))  # vector of observation times
 
@@ -142,7 +146,7 @@ measurement_process <-
 
 # put it all together into a stochastic epidemic model object
 stem_object <-
-  make_stemdynamics = dynamics,
+  make_stem(dynamics = dynamics,
        measurement_process = measurement_process)
 
 #' 

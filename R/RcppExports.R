@@ -74,6 +74,14 @@ CALL_SET_ODE_PARAMS <- function(p, set_ode_params_ptr) {
     invisible(.Call(`_stemr_CALL_SET_ODE_PARAMS`, p, set_ode_params_ptr))
 }
 
+dbbinom <- function(x, size, alpha, beta, log_prob = FALSE) {
+    .Call(`_stemr_dbbinom`, x, size, alpha, beta, log_prob)
+}
+
+rbbinom <- function(n, size, alpha, beta) {
+    .Call(`_stemr_rbbinom`, n, size, alpha, beta)
+}
+
 #' Construct a matrix containing the compartment counts at a sequence of census times.
 #'
 #' @param path matrix containing the path to be censused.
