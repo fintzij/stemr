@@ -4,8 +4,8 @@
 #' @param meas_var character vector supplying the name of the measurement
 #'   variable, either the name of a column in a dataset, or the name of a
 #'   variable in a dataset to be simulated.
-#' @param distribution emission distribution, one of "binomial", "poisson",
-#'   "negbinomial", "gaussian"
+#' @param distribution emission distribution, one of "binomial", "betabinomial",
+#'   "poisson", "negbinomial", "gaussian"
 #' @param emission_params character vector of emission distribution parameters,
 #'   generally a function of model compartments and parameters.
 #' @param incidence do the data represent incidence counts (as opposed to
