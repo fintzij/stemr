@@ -1512,7 +1512,7 @@ res <-
                                          lna_bracket_width = 2*pi,
                                          lna_bracket_update = 5e3,
                                          joint_strata_update = FALSE),
-                 print_progress = 0,
+                 print_progress = 1e3,
                  messages = F)
 ```
 
