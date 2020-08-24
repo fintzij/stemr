@@ -6,7 +6,7 @@
 evaluation for a stochastic epidemic model measurement process and return a
 vector of function pointers.}
 \usage{
-parse_meas_procs(meas_procs, compile_moments = FALSE, messages = TRUE)
+parse_meas_procs(meas_procs, messages = TRUE)
 }
 \arguments{
 \item{meas_procs}{list of measurement process functions}

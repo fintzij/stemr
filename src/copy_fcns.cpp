@@ -31,6 +31,37 @@ void pars2lnapars2(arma::mat& lnapars, const arma::rowvec& parameters, int c_sta
       lnapars(0, arma::span(c_start, c_start + c_end)) = parameters;
 }
 
+//' Insert parameters into the first row of a parameter matrix
+//' 
+//' @param parmat parameter matrics
+//' @param pars vector of parameters to insert
+//' @param colinds vector of column indices
+//' @param rowinds vector of row indices, just the first row by default.
+//' 
+//' @return modifies the parameter matrix in place
+//' @export
+// [[Rcpp::export]]
+void pars2parmat(arma::mat& parmat, 
+                 const arma::rowvec pars,
+                 const arma::uvec colinds,
+                 const arma::uvec rowind = 0) {
+  parmat.submat(rowind, colinds) = pars; 
+}
+
+//' insert an element into a vector
+//'
+//' @param dest destination row vector
+//' @param orig elem
+//' @param ind C++ style index for the element to be copied
+//'
+//' @return copy an element of one row vector into another.
+//' @export
+// [[Rcpp::export]]
+void insert_elem(arma::rowvec& dest, double elem, int ind) {
+  
+  dest[ind] = elem;
+}
+
 //' Copy an element from one vector into another
 //'
 //' @param dest destination row vector
@@ -141,6 +172,20 @@ void copy_col(arma::mat& dest, const arma::mat& orig, int ind) {
       dest.col(ind) = orig.col(ind);
 }
 
+//' Copy the contents of one matrix into another
+//'
+//' @param dest destination matrix
+//' @param orig origin matrix
+//' @param ind row index
+//'
+//' @return copy the elements of one matrix into another.
+//' @export
+// [[Rcpp::export]]
+void copy_row(arma::mat& dest, const arma::mat& orig, int ind) {
+  
+  dest.row(ind) = orig.row(ind);
+}
+
 //' Copy the columns of one matrix into another
 //'
 //' @param dest destination matrix
@@ -152,7 +197,7 @@ void copy_col(arma::mat& dest, const arma::mat& orig, int ind) {
 // [[Rcpp::export]]
 void copy_pathmat(arma::mat& dest, const arma::mat& orig) {
       
-      dest.cols(1, orig.n_cols-1) = orig.cols(1, orig.n_cols-1);
+      dest.cols(1, dest.n_cols-1) = orig.cols(1, orig.n_cols-1);
 }
 
 //' Copy some of the rows of one matrix into another
@@ -183,6 +228,35 @@ void mat_2_arr(arma::cube& dest, const arma::mat& orig, int ind) {
       dest.slice(ind) = orig;
 }
 
+//' Copy a matrix into a column of a slice of an array
+//'
+//' @param dest array into which to copy
+//' @param orig matrix to copy
+//' @param col_ind column index (C++)
+//' @param slice_ind slice index (C++)
+//'
+//' @return copy a matrix into an array.
+//' @export
+// [[Rcpp::export]]
+void vec_2_arr(arma::cube& dest, const arma::vec& orig, int col_ind, int slice_ind) {
+  
+  dest.slice(slice_ind).col(col_ind) = orig;
+}
+
+//' Copy a vector into a matrix
+//'
+//' @param dest array into which to copy
+//' @param orig matrix to copy
+//' @param ind column index (C++)
+//'
+//' @return copy a matrix into an array.
+//' @export
+// [[Rcpp::export]]
+void vec_2_mat(arma::mat& dest, const arma::vec& orig, int ind) {
+  
+  dest.col(ind) = orig;
+}
+
 //' Reset a vector by filling it with an element
 //'
 //' @param v vector to fill with zeros
@@ -206,4 +280,16 @@ void reset_vec(arma::vec& v, double value = 0) {
 // [[Rcpp::export]]
 void add2vec(arma::rowvec& target, const arma::rowvec& increments, const arma::uvec& inds) {
       target.elem(inds) += increments;
+}
+
+//' Add one vector to another
+//'
+//' @param dest target vector
+//' @param orig vector to be added
+//'
+//' @return add the elements of one row vector to another.
+//' @export
+// [[Rcpp::export]]
+void increment_vec(arma::rowvec& target, const arma::rowvec& increments) {
+  target += increments;
 }

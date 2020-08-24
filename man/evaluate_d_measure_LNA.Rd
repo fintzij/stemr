@@ -10,13 +10,13 @@ evaluate_d_measure_LNA(
   obsmat,
   censusmat,
   measproc_indmat,
-  lna_parameters,
-  lna_param_inds,
-  lna_const_inds,
-  lna_tcovar_inds,
+  parameters,
+  param_inds,
+  const_inds,
+  tcovar_inds,
   param_update_inds,
   census_indices,
-  lna_param_vec,
+  param_vec,
   d_meas_ptr
 )
 }
@@ -31,21 +31,21 @@ observation times}
 \item{measproc_indmat}{logical matrix indicating which compartments are
 observed at every observation time}
 
-\item{lna_parameters}{matrix containing the LNA parameters, constants and
+\item{parameters}{matrix containing the LNA parameters, constants and
 time-varying coariates.}
 
-\item{lna_param_inds}{indices for the model parameters.}
+\item{param_inds}{indices for the model parameters.}
 
-\item{lna_const_inds}{indices for the constants.}
+\item{const_inds}{indices for the constants.}
 
-\item{lna_tcovar_inds}{indices for the time-varying covariates.}
+\item{tcovar_inds}{indices for the time-varying covariates.}
 
 \item{param_update_inds}{logical vector indicating when model parameters
 should be updated.}
 
 \item{census_indices}{vector of indices when the LNA path has been censused.}
 
-\item{lna_param_vec}{vector for keeping the current lna parameters}
+\item{param_vec}{vector for keeping the current lna parameters}
 
 \item{d_meas_ptr}{external pointer to measurement process density function}
 }

@@ -43,8 +43,18 @@ parse_rates_exact <- function(rates, compile_rates, messages = TRUE) {
 
                 # ensure powers are converted
                 for(r in seq_along(rates)) {
-                        if(!is.null(rates[[r]]$unlumped)) rates[[r]]$unlumped <- sub_powers(rates[[r]]$unlumped)
-                        if(!is.null(rates[[r]]$lumped))   rates[[r]]$lumped   <- sub_powers(rates[[r]]$lumped)
+                  
+                    if(!is.null(rates[[r]]$unlumped)) {
+                      rates[[r]]$unlumped <- 
+                        paste0(deparse(sub_powers(parse(text = rates[[r]]$unlumped))[[1]]), collapse = "")
+                      rates[[r]]$unlumped <- gsub(" ", "", rates[[r]]$unlumped)
+                    } 
+              
+                    if(!is.null(rates[[r]]$lumped)) {
+                      rates[[r]]$lumped <- 
+                        paste0(deparse(sub_powers(parse(text = rates[[r]]$lumped))[[1]]), collapse = "")
+                      rates[[r]]$lumped <- gsub(" ", "", rates[[r]]$lumped)
+                    } 
                 }
 
                 arg_strings <- "Rcpp::NumericVector& rates, const Rcpp::LogicalVector& inds, const arma::rowvec& state, const Rcpp::NumericVector& parameters, const Rcpp::NumericVector& constants, const arma::rowvec& tcovar"
@@ -114,14 +124,14 @@ parse_rates_exact <- function(rates, compile_rates, messages = TRUE) {
               }
               
               Rcpp::sourceCpp(code = exact_code,
-                              # env = globalenv(), 
                               verbose = FALSE,
-                              rebuild = TRUE)
+                              rebuild = TRUE,
+                              cleanupCacheDir = TRUE)
               
               rate_pointers <- c(lumped_ptr = LUMPED_XPtr())
               
               if(sum(unlumped_inds) == length(rates)) rate_pointers <- c(rate_pointers, unlumped_ptr = UNLUMPED_XPtr())
               
-              return(rate_pointers)
+              return(list(pointers = rate_pointers, code = exact_code))
         }
 }

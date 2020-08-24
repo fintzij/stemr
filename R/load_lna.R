@@ -114,29 +114,30 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol, stepper) {
             stemr_LNA_code <- paste(LNA_integrator, param_setter, sep = "\n \n")
             
             # get the code for the LNA ODEs
-            LNA_code <- odeintr::compile_sys(name = "INTEGRATE_LNA",
-                                             sys = LNA_odes,
-                                             sys_dim = n_rates + n_rates^2,
-                                             pars = n_params,
-                                             method = stepper,
-                                             rtol = rtol,
-                                             atol = atol,
-                                             globals = paste(paste(
-                                                   "\n",
-                                                   paste0("static arma::vec Z(", n_rates,",arma::fill::zeros);"),
-                                                   paste0("static arma::vec exp_Z(", n_rates,",arma::fill::zeros);"),
-                                                   paste0("static arma::vec expm1_Z(", n_rates,",arma::fill::zeros);"),
-                                                   paste0("static arma::vec exp_neg_Z(", n_rates,",arma::fill::zeros);"),
-                                                   paste0("static arma::vec exp_neg_2Z(", n_rates,",arma::fill::zeros);"),
-                                                   paste0("static arma::vec hazards(",n_rates,",arma::fill::zeros);"),
-                                                   paste0("static arma::mat jacobian(", n_rates,",",n_rates, ",arma::fill::zeros);"), sep = "\n"),
-                                                   paste0("static arma::mat diffusion(", n_rates,",",n_rates,",arma::fill::zeros);"),
-                                                   sep = "\n"),
-                                             headers = paste("// [[Rcpp::depends(RcppArmadillo)]]",
-                                                             "#include <RcppArmadillo.h>",
-                                                             "using namespace arma;",
-                                                             sep = "\n"),
-                                             compile = F) # get the C++ code
+            LNA_code <- 
+               odeintr::compile_sys(name = "INTEGRATE_LNA",
+                                    sys = LNA_odes,
+                                    sys_dim = n_rates + n_rates^2,
+                                    pars = n_params,
+                                    method = stepper,
+                                    rtol = rtol,
+                                    atol = atol,
+                                    globals = paste(paste(
+                                       "\n",
+                                       paste0("static arma::vec Z(", n_rates,",arma::fill::zeros);"),
+                                       paste0("static arma::vec exp_Z(", n_rates,",arma::fill::zeros);"),
+                                       paste0("static arma::vec expm1_Z(", n_rates,",arma::fill::zeros);"),
+                                       paste0("static arma::vec exp_neg_Z(", n_rates,",arma::fill::zeros);"),
+                                       paste0("static arma::vec exp_neg_2Z(", n_rates,",arma::fill::zeros);"),
+                                       paste0("static arma::vec hazards(",n_rates,",arma::fill::zeros);"),
+                                       paste0("static arma::mat jacobian(", n_rates,",",n_rates, ",arma::fill::zeros);"), sep = "\n"),
+                                       paste0("static arma::mat diffusion(", n_rates,",",n_rates,",arma::fill::zeros);"),
+                                       sep = "\n"),
+                                    headers = paste("// [[Rcpp::depends(RcppArmadillo)]]",
+                                                    "#include <RcppArmadillo.h>",
+                                                    "using namespace arma;",
+                                                    sep = "\n"),
+                                    compile = F) # get the C++ code
             
             # RcppArmadillo is included, so remove the include tag for Rcpp
             LNA_code <- gsub("#include <Rcpp.h>", "", LNA_code)
@@ -162,10 +163,11 @@ load_lna <- function(lna_rates, compile_lna, messages, atol, rtol, stepper) {
       if(compile_code) {
             # compile the LNA code
             if(messages) print("Compiling LNA functions.")
-            Rcpp::sourceCpp(code = LNA_code, 
-                            # env = globalenv(),
-                            rebuild = TRUE,
-                            verbose = FALSE)
+               Rcpp::sourceCpp(
+                  code = LNA_code, 
+                  rebuild = TRUE,
+                  verbose = FALSE,
+                  cleanupCacheDir = TRUE)
             
             # get the LNA function pointers
             lna_pointer <- c(lna_ptr = LNA_XPtr(),

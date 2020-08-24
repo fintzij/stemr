@@ -5,23 +5,24 @@
 \title{Initialize the LNA path}
 \usage{
 initialize_lna(
-  data,
-  lna_parameters,
+  dat,
+  parmat,
+  param_blocks,
   tparam,
   censusmat,
   emitmat,
   stoich_matrix,
-  lna_pointer,
-  lna_set_pars_pointer,
-  lna_times,
-  lna_param_vec,
-  lna_param_inds,
-  lna_const_inds,
-  lna_tcovar_inds,
-  lna_initdist_inds,
+  proc_pointer,
+  set_pars_pointer,
+  census_times,
+  param_vec,
+  param_inds,
+  const_inds,
+  tcovar_inds,
+  initdist_inds,
   param_update_inds,
   census_indices,
-  lna_event_inds,
+  event_inds,
   measproc_indmat,
   d_meas_pointer,
   do_prevalence,
@@ -31,18 +32,14 @@ initialize_lna(
   forcing_transfers,
   initialization_attempts,
   step_size,
-  fixed_inits,
   initdist_objects,
-  init_volumes_cur,
-  par_init_fcn = NULL,
   ess_warmup
 )
 }
 \arguments{
-\item{data}{matrix containing the dataset}
+\item{parmat}{matrix with parameters, contants, time-varying pars and covars}
 
-\item{lna_parameters}{parameters, contants, time-varying covariates at LNA
-times}
+\item{param_blocks}{list of parameter blocks}
 
 \item{tparam}{list of time-varying parameters}
 
@@ -53,22 +50,22 @@ observation times}
 
 \item{stoich_matrix}{LNA stoichiometry matrix}
 
-\item{lna_pointer}{external LNA pointer}
+\item{proc_pointer}{external LNA pointer}
 
-\item{lna_set_pars_pointer}{pointer for setting the LNA parameters}
+\item{set_pars_pointer}{pointer for setting the LNA parameters}
 
-\item{lna_times}{times at whicht eh LNA should be evaluated}
+\item{census_times}{times at which the LNA should be evaluated}
 
-\item{lna_param_vec}{vector for storing lna parameters when evaluating the
+\item{param_vec}{vector for storing lna parameters when evaluating the
 measurement process}
 
-\item{lna_param_inds}{C++ column indices for parameters}
+\item{param_inds}{C++ column indices for parameters}
 
-\item{lna_const_inds}{C++ column indices for constants}
+\item{const_inds}{C++ column indices for constants}
 
-\item{lna_tcovar_inds}{C++ column indices for time varying covariates}
+\item{tcovar_inds}{C++ column indices for time varying covariates}
 
-\item{lna_initdist_inds}{C++ column indices in the LNA parameter matrix for
+\item{initdist_inds}{C++ column indices in the LNA parameter matrix for
 the initial state}
 
 \item{param_update_inds}{logical vector indicating when to update the
@@ -77,7 +74,7 @@ parameters}
 \item{census_indices}{C++ row indices of LNA times when the path is to be
 censused}
 
-\item{lna_event_inds}{vector of column indices in the LNA path for which
+\item{event_inds}{vector of column indices in the LNA path for which
 incidence will be computed.}
 
 \item{measproc_indmat}{logical matrix for evaluating the measuement process}
@@ -94,11 +91,13 @@ time-varying covariance matrix a forcing is applied.}
 \item{step_size}{initial step size for the ODE solver (adapted internally,
 but too large of an initial step can lead to failure in stiff systems).}
 
-\item{par_init_fcn}{function for initializing the parameter values}
-
 \item{ess_warmup}{number of elliptical slice sampling updates where
 likelihood is over indicators for monotonicity and non-negativity of LNA
 increments}
+
+\item{data}{matrix containing the dataset}
+
+\item{par_init_fcn}{function for initializing the parameter values}
 }
 \value{
 LNA path along with its stochastic perturbations

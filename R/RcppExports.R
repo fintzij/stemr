@@ -104,6 +104,27 @@ census_incidence <- function(incid_mat, census_times, interval_inds) {
 #' @param path matrix containing the path to be censused (cumulative incidence).
 #' @param census_path matrix to be filled out with the path.
 #' @param census_inds vector of indices for census interval endpoints.
+#' @param event_inds vector of column indices in the path matrix for events that
+#'   should be censused.
+#' @param flow_matrix matrix containing the flow matrix for the LNA (no incidence)
+#' @param do_prevalence should the prevalence be computed
+#' @param init_state the initial compartment counts
+#' @param forcing_inds logical vector of indicating at which times in the
+#'   time-varying covariance matrix a forcing is applied.
+#' @param parmat matrix with parameters, constants, and time varying 
+#'   covariates and parameters.
+#'
+#' @return matrix containing the compartment counts at census times.
+#' @export
+census_latent_path <- function(path, census_path, census_inds, event_inds, flow_matrix, do_prevalence, parmat, initdist_inds, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, row0 = 0L) {
+    invisible(.Call(`_stemr_census_latent_path`, path, census_path, census_inds, event_inds, flow_matrix, do_prevalence, parmat, initdist_inds, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, row0))
+}
+
+#' Construct a matrix containing the compartment counts and the incidence at a sequence of census times.
+#'
+#' @param path matrix containing the path to be censused (cumulative incidence).
+#' @param census_path matrix to be filled out with the path.
+#' @param census_inds vector of indices for census interval endpoints.
 #' @param lna_event_inds vector of column indices in the path matrix for events that
 #'   should be censused.
 #' @param flow_matrix_lna matrix containing the flow matrix for the LNA (no incidence)
@@ -172,6 +193,31 @@ pars2lnapars <- function(lnapars, parameters) {
 #' @export
 pars2lnapars2 <- function(lnapars, parameters, c_start) {
     invisible(.Call(`_stemr_pars2lnapars2`, lnapars, parameters, c_start))
+}
+
+#' Insert parameters into the first row of a parameter matrix
+#' 
+#' @param parmat parameter matrics
+#' @param pars vector of parameters to insert
+#' @param colinds vector of column indices
+#' @param rowinds vector of row indices, just the first row by default.
+#' 
+#' @return modifies the parameter matrix in place
+#' @export
+pars2parmat <- function(parmat, pars, colinds, rowind = 0L) {
+    invisible(.Call(`_stemr_pars2parmat`, parmat, pars, colinds, rowind))
+}
+
+#' insert an element into a vector
+#'
+#' @param dest destination row vector
+#' @param orig elem
+#' @param ind C++ style index for the element to be copied
+#'
+#' @return copy an element of one row vector into another.
+#' @export
+insert_elem <- function(dest, elem, ind) {
+    invisible(.Call(`_stemr_insert_elem`, dest, elem, ind))
 }
 
 #' Copy an element from one vector into another
@@ -268,6 +314,18 @@ copy_col <- function(dest, orig, ind) {
     invisible(.Call(`_stemr_copy_col`, dest, orig, ind))
 }
 
+#' Copy the contents of one matrix into another
+#'
+#' @param dest destination matrix
+#' @param orig origin matrix
+#' @param ind row index
+#'
+#' @return copy the elements of one matrix into another.
+#' @export
+copy_row <- function(dest, orig, ind) {
+    invisible(.Call(`_stemr_copy_row`, dest, orig, ind))
+}
+
 #' Copy the columns of one matrix into another
 #'
 #' @param dest destination matrix
@@ -304,6 +362,31 @@ mat_2_arr <- function(dest, orig, ind) {
     invisible(.Call(`_stemr_mat_2_arr`, dest, orig, ind))
 }
 
+#' Copy a matrix into a column of a slice of an array
+#'
+#' @param dest array into which to copy
+#' @param orig matrix to copy
+#' @param col_ind column index (C++)
+#' @param slice_ind slice index (C++)
+#'
+#' @return copy a matrix into an array.
+#' @export
+vec_2_arr <- function(dest, orig, col_ind, slice_ind) {
+    invisible(.Call(`_stemr_vec_2_arr`, dest, orig, col_ind, slice_ind))
+}
+
+#' Copy a vector into a matrix
+#'
+#' @param dest array into which to copy
+#' @param orig matrix to copy
+#' @param ind column index (C++)
+#'
+#' @return copy a matrix into an array.
+#' @export
+vec_2_mat <- function(dest, orig, ind) {
+    invisible(.Call(`_stemr_vec_2_mat`, dest, orig, ind))
+}
+
 #' Reset a vector by filling it with an element
 #'
 #' @param v vector to fill with zeros
@@ -325,6 +408,17 @@ reset_vec <- function(v, value = 0) {
 #' @export
 add2vec <- function(target, increments, inds) {
     invisible(.Call(`_stemr_add2vec`, target, increments, inds))
+}
+
+#' Add one vector to another
+#'
+#' @param dest target vector
+#' @param orig vector to be added
+#'
+#' @return add the elements of one row vector to another.
+#' @export
+increment_vec <- function(target, increments) {
+    invisible(.Call(`_stemr_increment_vec`, target, increments))
 }
 
 #' Draw new N(0,1) values and fill a vector.
@@ -385,22 +479,22 @@ evaluate_d_measure <- function(emitmat, obsmat, statemat, measproc_indmat, param
 #'   observation times
 #' @param measproc_indmat logical matrix indicating which compartments are
 #'   observed at every observation time
-#' @param lna_parameters matrix containing the LNA parameters, constants and
+#' @param parameters matrix containing the LNA parameters, constants and
 #'   time-varying coariates.
-#' @param lna_param_vec container for storing the LNA parameters at each
+#' @param param_vec container for storing the LNA parameters at each
 #'   observation time.
-#' @param lna_param_inds indices for the model parameters.
-#' @param lna_const_inds indices for the constants.
-#' @param lna_tcovar_inds indices for the time-varying covariates.
+#' @param param_inds indices for the model parameters.
+#' @param const_inds indices for the constants.
+#' @param tcovar_inds indices for the time-varying covariates.
 #' @param param_update_inds logical vector indicating when model parameters
 #'   should be updated.
 #' @param census_indices vector of indices when the LNA path has been censused.
-#' @param lna_param_vec vector for keeping the current lna parameters
+#' @param param_vec vector for keeping the current lna parameters
 #' @param d_meas_ptr external pointer to measurement process density function
 #'
 #' @export
-evaluate_d_measure_LNA <- function(emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, lna_param_vec, d_meas_ptr) {
-    invisible(.Call(`_stemr_evaluate_d_measure_LNA`, emitmat, obsmat, censusmat, measproc_indmat, lna_parameters, lna_param_inds, lna_const_inds, lna_tcovar_inds, param_update_inds, census_indices, lna_param_vec, d_meas_ptr))
+evaluate_d_measure_LNA <- function(emitmat, obsmat, censusmat, measproc_indmat, parameters, param_inds, const_inds, tcovar_inds, param_update_inds, census_indices, param_vec, d_meas_ptr) {
+    invisible(.Call(`_stemr_evaluate_d_measure_LNA`, emitmat, obsmat, censusmat, measproc_indmat, parameters, param_inds, const_inds, tcovar_inds, param_update_inds, census_indices, param_vec, d_meas_ptr))
 }
 
 #' Given a vector of interval endpoints \code{breaks}, determine in which
@@ -421,18 +515,6 @@ evaluate_d_measure_LNA <- function(emitmat, obsmat, censusmat, measproc_indmat, 
 #' @export
 find_interval <- function(x, breaks, rightmost_closed, all_inside) {
     .Call(`_stemr_find_interval`, x, breaks, rightmost_closed, all_inside)
-}
-
-#' Get componentwise proposals from a global proposal.
-#'
-#' @param g2c_mat matrix in which to keep the componentwise proposals
-#' @param params_cur vector containing the current parameter vector
-#' @param params_prop vector in which the proposed parameters
-#'
-#' @return fill g2c_mat with componentwise proposals
-#' @export
-g_prop2c_prop <- function(g2c_mat, params_cur, params_prop) {
-    invisible(.Call(`_stemr_g_prop2c_prop`, g2c_mat, params_cur, params_prop))
 }
 
 #' Insert time-varying parameters into a tcovar matrix.
@@ -552,8 +634,8 @@ map_draws_2_lna <- function(pathmat, draws, lna_times, lna_pars, lna_param_vec, 
 #' @return List containing the ODE incidence and prevalence paths.
 #'
 #' @export
-map_pars_2_ode <- function(pathmat, ode_times, ode_pars, ode_param_inds, ode_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, step_size, ode_pointer, set_pars_pointer) {
-    invisible(.Call(`_stemr_map_pars_2_ode`, pathmat, ode_times, ode_pars, ode_param_inds, ode_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, step_size, ode_pointer, set_pars_pointer))
+map_pars_2_ode <- function(pathmat, ode_times, ode_pars, ode_param_vec, ode_param_inds, ode_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, step_size, ode_pointer, set_pars_pointer) {
+    invisible(.Call(`_stemr_map_pars_2_ode`, pathmat, ode_times, ode_pars, ode_param_vec, ode_param_inds, ode_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, step_size, ode_pointer, set_pars_pointer))
 }
 
 #' Cholesky decomposition
@@ -595,32 +677,6 @@ rmvtn <- function(n, mu, sigma) {
 #' @export
 dmvtn <- function(x, mu, sigma, logd = FALSE) {
     .Call(`_stemr_dmvtn`, x, mu, sigma, logd)
-}
-
-#' Global Metropolis random walk with global adaptive scaling
-#'
-#' @param params_prop vector in which the proposed parameters should be stored
-#' @param params_cur vector containing the current parameter vector
-#' @param kernel_cov_chol cholesky of the kernel covariance
-#' @param nugget fixed covariance nugget contribution
-#'
-#' @return propose new parameter values in place
-#' @export
-mvn_g_adaptive <- function(params_prop, params_cur, kernel_cov_chol, nugget) {
-    invisible(.Call(`_stemr_mvn_g_adaptive`, params_prop, params_cur, kernel_cov_chol, nugget))
-}
-
-#' Random walk Metropolis-Hastings transition kernel.
-#'
-#' @param params_prop vector in which the proposed parameters should be stored
-#' @param params_cur vector containing the current parameter vector
-#' @param sigma_chol upper triangular portion of the Cholesky decomposition of
-#'   the proposal covariance matrix
-#'
-#' @return propose new parameter values in place
-#' @export
-mvn_rw <- function(params_prop, params_cur, sigma_chol) {
-    invisible(.Call(`_stemr_mvn_rw`, params_prop, params_cur, sigma_chol))
 }
 
 #' normalise a vector in place
@@ -707,6 +763,19 @@ propose_lna_approx <- function(lna_times, lna_draws, lna_pars, lna_param_inds, l
     .Call(`_stemr_propose_lna_approx`, lna_times, lna_draws, lna_pars, lna_param_inds, lna_tcovar_inds, init_start, param_update_inds, stoich_matrix, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, max_attempts, ess_updates, ess_warmup, lna_bracket_width, step_size, lna_pointer, set_pars_pointer)
 }
 
+#' Multivariate normal Metropolis-Hastings proposal
+#'
+#' @param params_prop vector in which the proposed parameters should be stored
+#' @param params_cur vector containing the current parameter vector
+#' @param kernel_cov_chol cholesky of the kernel covariance
+#' @param nugget zero if adaptation is not ongoing
+#'
+#' @return propose new parameter values in place
+#' @export
+propose_mvnmh <- function(params_prop, params_cur, kernel_cov_chol, nugget) {
+    invisible(.Call(`_stemr_propose_mvnmh`, params_prop, params_cur, kernel_cov_chol, nugget))
+}
+
 #' Identify which rates to update when a state transition event occurs.
 #'
 #' @param rate_inds vector of rate indices to be modified
@@ -729,21 +798,6 @@ rate_update_event <- function(rate_inds, M, event_code) {
 #' @export
 rate_update_tcovar <- function(rate_inds, M, I) {
     invisible(.Call(`_stemr_rate_update_tcovar`, rate_inds, M, I))
-}
-
-#' Reset counters for interval expansions/contractions and slice ratios
-#'
-#' @param n_expansions vector with number of expansion
-#' @param n_contractions vector with number of contractions
-#' @param n_expansions_c cumulative numbers of expansions
-#' @param n_contractions_c cumulative numbers of contractions
-#' @param slice_ratios vector for storing ratio of cumulative number of 
-#'   expansions over number of interval width changes
-#'
-#' @return reset objects in place
-#' @export
-reset_slice_ratios <- function(n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios) {
-    invisible(.Call(`_stemr_reset_slice_ratios`, n_expansions, n_contractions, n_expansions_c, n_contractions_c, slice_ratios))
 }
 
 #' Insert the compartment counts at a sequence of census times into an existing census matrix.
@@ -804,34 +858,5 @@ simulate_gillespie <- function(flow, parameters, constants, tcovar, t_max, init_
 #' @export
 simulate_r_measure <- function(censusmat, measproc_indmat, parameters, constants, tcovar, r_measure_ptr) {
     .Call(`_stemr_simulate_r_measure`, censusmat, measproc_indmat, parameters, constants, tcovar, r_measure_ptr)
-}
-
-#' Update slice factor directions for automated factor slice sampling
-#'
-#' @param slice_eigenvals vector of singular values
-#' @param slice_eigenvecs vector of singular vectors
-#' @param kernel_cov empirical covariance matrix of model params
-#' 
-#' @return update eigenvalues and eigenvectors in place
-#' @export
-update_factors <- function(slice_eigenvals, slice_eigenvecs, kernel_cov) {
-    invisible(.Call(`_stemr_update_factors`, slice_eigenvals, slice_eigenvecs, kernel_cov))
-}
-
-#' Update factors and interval widths for automated factor slice sampling
-#'
-#' @param interval_widths vector of interval widths
-#' @param n_expansions_afss vector with number of expansion
-#' @param n_contractions_afss vector with number of contractions
-#' @param c_expansions_afss cumulative numbers of expansions
-#' @param c_contractions_afss cumulative numbers of contractions
-#' @param slice_ratios vector for storing ratio of cumulative number of 
-#'   expansions over number of interval width changes
-#' @param adaptation_factor 
-#'
-#' @return adapt interval widths in place
-#' @export
-update_interval_widths <- function(interval_widths, n_expansions_afss, n_contractions_afss, c_expansions_afss, c_contractions_afss, slice_ratios, adaptation_factor, target_ratio) {
-    invisible(.Call(`_stemr_update_interval_widths`, interval_widths, n_expansions_afss, n_contractions_afss, c_expansions_afss, c_contractions_afss, slice_ratios, adaptation_factor, target_ratio))
 }
 

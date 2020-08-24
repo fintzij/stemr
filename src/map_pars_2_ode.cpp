@@ -34,6 +34,7 @@ using namespace arma;
 void map_pars_2_ode(arma::mat& pathmat,
                     const arma::rowvec& ode_times,
                     const Rcpp::NumericMatrix& ode_pars,
+                    Rcpp::NumericVector& ode_param_vec,
                     const Rcpp::IntegerVector& ode_param_inds,
                     const Rcpp::IntegerVector& ode_tcovar_inds,
                     const int init_start,
@@ -61,11 +62,15 @@ void map_pars_2_ode(arma::mat& pathmat,
         // initialize the objects used in each time interval
         double t_L = 0;
         double t_R = 0;
-        Rcpp::NumericVector current_params = ode_pars.row(0);   // vector for storing the current parameter values
-        CALL_SET_ODE_PARAMS(current_params, set_pars_pointer);  // set the parameters in the odeintr namespace
 
+        // vector of parameters, initial compartment columes, constants, and time-varying covariates
+        std::copy(ode_pars.row(0).begin(), ode_pars.row(0).end(), ode_param_vec.begin());
+        
         // initial state vector - copy elements from the current parameter vector
-        arma::vec init_volumes(current_params.begin() + init_start, n_comps);
+        arma::vec init_volumes(ode_param_vec.begin() + init_start, n_comps);
+        
+        // set the parameters in the odeintr namespace
+        CALL_SET_ODE_PARAMS(ode_param_vec, set_pars_pointer); 
 
         // initialize the ODE objects - the vector for storing the current state
         Rcpp::NumericVector ode_state_vec(n_events);   // vector to store the ODEs
@@ -130,14 +135,14 @@ void map_pars_2_ode(arma::mat& pathmat,
                       // time-varying covariates and parameters
                       std::copy(ode_pars.row(j+1).end() - n_tcovar,
                                 ode_pars.row(j+1).end(),
-                                current_params.end() - n_tcovar);
+                                ode_param_vec.end() - n_tcovar);
                       
                 }
 
                 // copy the compartment volumes to the current parameters
-                std::copy(init_volumes.begin(), init_volumes.end(), current_params.begin() + init_start);
+                std::copy(init_volumes.begin(), init_volumes.end(), ode_param_vec.begin() + init_start);
 
                 // set the ODE parameters and reset the ODE state vector
-                CALL_SET_ODE_PARAMS(current_params, set_pars_pointer);
+                CALL_SET_ODE_PARAMS(ode_param_vec, set_pars_pointer);
         }
 }

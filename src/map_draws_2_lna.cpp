@@ -76,10 +76,11 @@ void map_draws_2_lna(arma::mat& pathmat,
         // vector of parameters, initial compartment columes, constants, and time-varying covariates
         std::copy(lna_pars.row(0).begin(), lna_pars.row(0).end(), lna_param_vec.begin());
 
-        CALL_SET_ODE_PARAMS(lna_param_vec, set_pars_pointer); // set the parameters in the odeintr namespace
-
         // initial state vector - copy elements from the current parameter vector
         arma::vec init_volumes(lna_param_vec.begin() + init_start, n_comps);
+
+        // set the parameters in the odeintr namespace
+        CALL_SET_ODE_PARAMS(lna_param_vec, set_pars_pointer); 
 
         // initialize the LNA objects
         bool good_svd = true;

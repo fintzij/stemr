@@ -106,38 +106,57 @@ parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, l
       # replace the hash codes with the names of the vector elements
       for(s in seq_along(lna_rates)) {
             for(j in seq_len(nrow(lookup_table))) {
-                  lna_rates[s]      <- gsub(pattern = paste0('\\<', lookup_table[j,"code"], '\\>'),
-                                            replacement = lookup_table[j,"varname"], x = lna_rates[s])
-                  lna_rates[s]      <- gsub(" ", "", lna_rates[s])
+                  lna_rates[s] <- 
+                     gsub(pattern = paste0('\\<', lookup_table[j,"code"], '\\>'),
+                          replacement = lookup_table[j,"varname"], x = lna_rates[s])
             }
-            lna_rates[s] <- sub_powers(lna_rates[s])
+         
+            lna_rates[s] <- 
+               paste0(deparse(sub_powers(parse(text = lna_rates[s]))[[1]]), collapse = "")
+            lna_rates[s] <- gsub(" ", "", lna_rates[s])
       }
       
       for(s in seq_along(ito_coefs)) {
             for(j in seq_len(nrow(lookup_table))) {
-                  ito_coefs[s]      <- gsub(pattern = paste0('\\<', lookup_table[j,"code"], '\\>'),
-                                            replacement = lookup_table[j,"varname"], x = ito_coefs[s])
-                  ito_coefs[s]      <- gsub(" ", "", ito_coefs[s])
+                  ito_coefs[s] <- 
+                     gsub(pattern = paste0('\\<', lookup_table[j,"code"], '\\>'),
+                          replacement = lookup_table[j,"varname"], x = ito_coefs[s])
             }
-            ito_coefs[s] <- sub_powers(ito_coefs[s])
+         
+         ito_coefs[s] <- 
+            paste0(deparse(sub_powers(parse(text = ito_coefs[s]))[[1]]), collapse = "")
+         ito_coefs[s] <- gsub(" ", "", ito_coefs[s])
       }
       
       for(s in seq_along(hazards)) {
             for(j in seq_len(nrow(lookup_table))) {
-                  hazards[s]      <- gsub(pattern = paste0('\\<', lookup_table[j,"code"], '\\>'), replacement = lookup_table[j,"varname"], x = hazards[s])
-                  hazards[s]      <- gsub(" ", "", hazards[s])
-                  time_derivs[s]  <- gsub(pattern = paste0('\\<', lookup_table[j,"code"], '\\>'), replacement = lookup_table[j,"varname"], x = time_derivs[s])
+                  hazards[s] <-
+                     gsub(pattern = paste0('\\<', lookup_table[j,"code"], '\\>'),
+                          replacement = lookup_table[j,"varname"], x = hazards[s])
+                  
+                  time_derivs[s] <-
+                     gsub(pattern = paste0('\\<', lookup_table[j,"code"], '\\>'), 
+                          replacement = lookup_table[j,"varname"], x = time_derivs[s])
             }
-            hazards[s]     <- sub_powers(hazards[s])
-            time_derivs[s] <- sub_powers(time_derivs[s])
+         
+         hazards[s] <- 
+            paste0(deparse(sub_powers(parse(text = hazards[s]))[[1]]), collapse = "")
+         hazards[s] <- gsub(" ", "", hazards[s])
+         
+         time_derivs[s] <- 
+            paste0(deparse(sub_powers(parse(text = time_derivs[s]))[[1]]), collapse = "")
+         time_derivs[s] <- gsub(" ", "", time_derivs[s])
       }
       
       for(s in seq_along(derivatives)) {
             for(j in seq_len(nrow(lookup_table))) {
-                  derivatives[s] <- gsub(pattern = paste0('\\<', lookup_table[j,"code"], '\\>'), replacement = lookup_table[j,"varname"], x = derivatives[s])
-                  derivatives[s] <- gsub(" ", "", derivatives[s])
+                  derivatives[s] <- 
+                     gsub(pattern = paste0('\\<', lookup_table[j,"code"], '\\>'), 
+                          replacement = lookup_table[j,"varname"], x = derivatives[s])
             }
-            derivatives[s] <- sub_powers(derivatives[s])
+         derivatives[s] <- 
+            paste0(deparse(sub_powers(parse(text = derivatives[s]))[[1]]), collapse = "")
+         derivatives[s] <- gsub(" ", "", derivatives[s])
       }
       
       # substitute exp(Z[*]), expm1(Z[*]), exp(-Z[*]), and exp(-2*Z[*]) for precomputed vector elements

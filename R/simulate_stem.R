@@ -325,7 +325,9 @@ simulate_stem <-
                   
                   # generate forcing matrix
                   if(!is.null(stem_object$dynamics$dynamics_args$forcings)) {
-                        
+                      
+                        forcings <- stem_object$dynamic_args$forcings  
+                      
                         # names and indices
                         forcing_tcovars   <- sapply(forcings, function(x) x$tcovar_name)
                         forcing_tcov_inds <- match(forcing_tcovars, colnames(stem_object$dynamics$tcovar)) - 1
@@ -1428,13 +1430,8 @@ simulate_stem <-
                   if(method == "gillespie") {
                         
                         measproc_indmat = as.matrix(stem_object$measurement_process$measproc_indmat)
-                        constants = as.numeric(stem_object$dynamics$constants)
-                        r_measure_ptr = 
-                              if(!is.null(stem_object$measurement_process$meas_pointers_lna)) {
-                                    stem_object$measurement_process$meas_pointers_lna$r_measure_ptr
-                              } else {
-                                    stem_object$measurement_process$meas_pointers$r_measure_ptr
-                              }
+                        constants       = as.numeric(stem_object$dynamics$constants)
+                        r_measure_ptr   = stem_object$measurement_process$meas_pointers$r_measure_ptr
                         
                         # should incidence be computed?
                         if(do_incidence) incidence_codes <- stem_object$dynamics$incidence_codes + 1
