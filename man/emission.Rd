@@ -19,8 +19,8 @@ emission(
 variable, either the name of a column in a dataset, or the name of a
 variable in a dataset to be simulated.}
 
-\item{distribution}{emission distribution, one of "binomial", "poisson",
-"negbinomial", "gaussian"}
+\item{distribution}{emission distribution, one of "binomial", "betabinomial",
+"poisson", "negbinomial", "gaussian"}
 
 \item{emission_params}{character vector of emission distribution parameters,
 generally a function of model compartments and parameters.}

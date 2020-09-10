@@ -1,7 +1,7 @@
 Package: stemr
 Type: Package
 Title: Stochastic Epidemic Model Simulation and Estimation
-Version: 0.1.0
+Version: 0.2.0
 Authors@R: as.person(c(
     "Jon Fintzi <fintzij@uw.edu> [aut, cre]",
     "Jon Wakefield <jonno@uw.edu> [aut]",
