@@ -22,31 +22,24 @@ knitr::opts_chunk$set(
 This vignette demonstrates the basic functionalities of the  `stemr` package.
 Broadly, the package simulates and fits stochastic epidemic models to partially
 observed incidence and prevalence data, and implements the Bayesian data
-augmentation framework presented in Fintzi, Wakefield, and Minin (2019).
+augmentation framework presented in Fintzi, Wakefield, and Minin (2020).
 Simulation can be conducted using ordinary  differential equations (ODEs),
 Gillespie's direct algorithm (Gillespie, 1976), and using a restarting version
-of the linear noise approximation (LNA; Fintzi et al., 2019). Inference is
+of the linear noise approximation (LNA; Fintzi et al., 2020). Inference is
 conducted using ODEs or the LNA. This vignette, in particular, demonstrates how
 to simulating partially observed incidence data from an outbreak with SIR
 dyanmics and fit an SIR model to the data via the linear noise approximation.
 This corresponds to the procedure used in the coverage simulation in Fintzi et
-al., (2019).
+al., (2020).
 
 # Installing and loading the `stemr` package
 
-To install the `stemr` package, clone this repository and build the package from sources. There are two important things to note. First, the package depends on having version 0.4.1 of the `Ryacas` package installed. This can be accomplished, using the `devtools` package: `devtools::install_version("Ryacas", "0.4.1")`. It is also critical that the `stemr` package is installed without byte compilation. See [this page](https://support.rstudio.com/hc/en-us/articles/200486518-Customizing-Package-Build-Options) for how to do this. You should be able to rebuild in the usual way once you clone the package repo and install the other dependencies (odeintr, MASS, extraDistr, stats, ggplot2, cowplot, Rcpp, RcppArmadillo, and BH).
-
-```{r, include=FALSE}
-require(ggplot2)
-require(cowplot)
-set.seed(12511)
-```
+To install the `stemr` package, clone this repository and build the package from sources. Since `stemr` relies on compiled code, you . You should be able to rebuild in the usual way once you clone the package repo and install the other dependencies (odeintr, extraDistr, ggplot2, patchwork, Rcpp, RcppArmadillo, and BH).
 
 # Basic example: partially observed incidence from an outbreak with SIR dynamics
 
 As a basic example, we will simulate an outbreak with SIR dynamics and generate
-negative binomial incidence counts with a mean case detection rate of 0.5. This
-corresponds to the coverage simulation conducted in Fintzi et al. (2019).
+negative binomial incidence counts with a mean case detection rate of 0.5.
 Briefly, the SIR model describes the time-evolution of an outbreak homogeneously
 mixing population where each individual exists in one of three states -
 susceptible (S), infected (I), and recovered (R). Infection implies that an
@@ -67,6 +60,9 @@ e.g., `help(rate)`.
 
 ```{r, echo = TRUE, warnings = FALSE}
 library(stemr)
+library(patchwork)
+library(ggplot2)
+
 popsize = 1e4 # population size
 
 true_pars =
@@ -139,9 +135,9 @@ measurement_process <-
                messages  = F)
 
 # put it all together into a stochastic epidemic model object
-stem_object <-
-  stem(dynamics = dynamics,
-       measurement_process = measurement_process)
+stem_object <- 
+  make_stem(dynamics = dynamics,
+            measurement_process = measurement_process)
 ```
 
 ## Simulating an outbreak and data
@@ -168,13 +164,10 @@ sim_paths =
 sim_paths =
   sim_paths[!((
     sim_paths$Compartment %in% c("S", "I", "R") &
-      sim_paths$Type == "Incidence"
-  ) |
-    (
-      sim_paths$Compartment %in% c("S2I", "I2R") &
-        sim_paths$Type == "Prevalence"
-    )
-  ), ]
+      sim_paths$Type == "Incidence") |
+      (sim_paths$Compartment %in% c("S2I", "I2R") &
+         sim_paths$Type == "Prevalence")), ]
+
 sim_paths$Compartment = factor(sim_paths$Compartment, levels = c("S", "I", "R", "S2I", "I2R"))
 sim_paths = sim_paths[with(sim_paths, order(Method, Compartment, Type, time)), ]
 sim_paths$Count =
@@ -192,76 +185,70 @@ mjp_prev =
              Count = c(sim_mjp$full_paths[[1]][,3:5]))
 
 mjp_counts =
-  ggplot(mjp_prev, aes(x = time, y = Count,
-                       colour = Compartment,
-                       group = Compartment)) +
-  geom_step() +
-  theme_minimal() +
-  scale_color_brewer(type = "qual", palette = 6) +
-  scale_y_continuous(trans = "sqrt",
+  ggplot2::ggplot(mjp_prev, 
+                  ggplot2::aes(x = time, y = Count,
+                      colour = Compartment, group = Compartment)) +
+  ggplot2::geom_step() +
+  ggplot2::theme_minimal() +
+  ggplot2::scale_color_brewer(type = "qual", palette = 6) +
+  ggplot2::scale_y_continuous(trans = "sqrt",
                      breaks = c(0,50, 250, 1000, 2.5e3, 5e3,7.5e3,1e4),
                      expand = c(0,0)) +
-  labs(title = "Compartment counts", subtitle = "MJP")
+  ggplot2::labs(title = "Compartment counts", subtitle = "MJP")
 
 mjp_incid =
-  ggplot(subset(sim_paths, Method == "Gillespie" & Type == "Incidence"),
-         aes(x = time, y = Count,
-             colour = Compartment,
-             group = Compartment)) +
-  geom_point() +
-  theme_minimal() +
-  scale_color_brewer("Transition", type = "qual", palette = 2) +
-  labs(title = "Incident transition events",subtitle = "MJP")
+  ggplot2::ggplot(subset(sim_paths, Method == "Gillespie" & Type == "Incidence"),
+                  ggplot2::aes(x = time, y = Count,
+                               colour = Compartment, group = Compartment)) +
+  ggplot2::geom_point() +
+  ggplot2::theme_minimal() +
+  ggplot2::scale_color_brewer("Transition", type = "qual", palette = 2) +
+  ggplot2::labs(title = "Incident transition events",subtitle = "MJP")
 
 lna_prev =
-  ggplot(subset(sim_paths, Method == "LNA" & Type == "Prevalence"),
-         aes(x = time, y = Count,
-             colour = Compartment,
-             group = Compartment)) +
-  geom_line(linetype = 2) +
-  theme_minimal() +
-  scale_color_brewer("Compartment", type = "qual", palette = 6) +
-  scale_y_continuous(trans = "sqrt",
+  ggplot2::ggplot(subset(sim_paths, Method == "LNA" & Type == "Prevalence"),
+                  ggplot2::aes(x = time, y = Count,
+                      colour = Compartment, group = Compartment)) +
+  ggplot2::geom_line(linetype = 2) +
+  ggplot2::theme_minimal() +
+  ggplot2::scale_color_brewer("Compartment", type = "qual", palette = 6) +
+  ggplot2::scale_y_continuous(trans = "sqrt",
                      breaks = c(0,50, 250, 1000, 2.5e3, 5e3,7.5e3,1e4),
                      expand = c(0,0)) +
-  labs(title = "", subtitle = "LNA")
+  ggplot2::labs(title = "", subtitle = "LNA")
 
 lna_incid =
-  ggplot(subset(sim_paths, Method == "LNA" & Type == "Incidence"),
-         aes(x = time, y = Count,
-             colour = Compartment,
-             group = Compartment)) +
-  geom_point(shape = 2) +
-  theme_minimal() +
-  scale_color_brewer("Transition", type = "qual", palette = 2) +
-  labs(title = "",subtitle = "LNA")
+  ggplot2::ggplot(subset(sim_paths, Method == "LNA" & Type == "Incidence"),
+                  ggplot2::aes(x = time, y = Count,
+                      colour = Compartment, group = Compartment)) +
+  ggplot2::geom_point(shape = 2) +
+  ggplot2::theme_minimal() +
+  ggplot2::scale_color_brewer("Transition", type = "qual", palette = 2) +
+  ggplot2::labs(title = "",subtitle = "LNA")
 
 ode_prev =
-  ggplot(subset(sim_paths, Method == "ODE" & Type == "Prevalence"),
-         aes(x = time, y = Count,
-             colour = Compartment,
-             group = Compartment)) +
-  geom_line(linetype = 3) +
-  theme_minimal() +
-  scale_color_brewer("Compartment", type = "qual", palette = 6) +
-  scale_y_continuous(trans = "sqrt",
+  ggplot2::ggplot(subset(sim_paths, Method == "ODE" & Type == "Prevalence"),
+                  ggplot2::aes(x = time, y = Count,
+                      colour = Compartment, group = Compartment)) +
+  ggplot2::geom_line(linetype = 3) +
+  ggplot2::theme_minimal() +
+  ggplot2::scale_color_brewer("Compartment", type = "qual", palette = 6) +
+  ggplot2::scale_y_continuous(trans = "sqrt",
                      breaks = c(0,50, 250, 1000, 2.5e3, 5e3,7.5e3,1e4),
                      expand = c(0,0)) +
-  labs(title = "", subtitle = "ODE")
+  ggplot2::labs(title = "", subtitle = "ODE")
 
 ode_incid =
-  ggplot(subset(sim_paths, Method == "ODE" & Type == "Incidence"),
-         aes(x = time, y = Count,
-             colour = Compartment,
-             group = Compartment)) +
-  geom_point(shape = 3) +
-  theme_minimal() +
-  scale_color_brewer("Transition", type = "qual", palette = 2) +
-  labs(title = "", subtitle = "ODE")
+  ggplot2::ggplot(subset(sim_paths, Method == "ODE" & Type == "Incidence"),
+                  ggplot2::aes(x = time, y = Count,
+                               colour = Compartment, group = Compartment)) +
+  ggplot2::geom_point(shape = 3) +
+  ggplot2::theme_minimal() +
+  ggplot2::scale_color_brewer("Transition", type = "qual", palette = 2) +
+  ggplot2::labs(title = "", subtitle = "ODE")
 
-cowplot::plot_grid(
-  mjp_counts, lna_prev, ode_prev, mjp_incid, lna_incid, ode_incid
-)
+(mjp_counts + lna_prev + ode_prev) / 
+  (mjp_incid + lna_incid + ode_incid)
 ```
 
 ## Fitting the model to data
@@ -270,11 +257,11 @@ We'll keep the dataset simulated under the MJP (shown below) and fit an SIR
 model to the data.
 
 ```{r, plot_dat}
-ggplot(data = as.data.frame(sim_mjp$datasets[[1]]),
-       aes(x=time, y = S2I)) +
-  geom_point() +
-  theme_minimal() +
-  labs(x = "Week", y = "Count", title = "Observed Incidence")
+ggplot2::ggplot(data = as.data.frame(sim_mjp$datasets[[1]]),
+                ggplot2::aes(x=time, y = S2I)) +
+  ggplot2::geom_point() +
+  ggplot2::theme_minimal() +
+  ggplot2::labs(x = "Week", y = "Count", title = "Observed Incidence")
 ```
 
 We'll need to recompile the measurement process with the simulated data fed to
@@ -288,7 +275,9 @@ measurement_process <-
   stem_measure(emissions = emissions,
                dynamics = dynamics,
                data = sim_mjp$datasets[[1]])
-stem_object <- stem(dynamics = dynamics, measurement_process = measurement_process)
+stem_object <- 
+  make_stem(dynamics = dynamics, 
+            measurement_process = measurement_process)
 ```
 
 In order to perform inference, we'll need to specify a function for transforming the model parameters from their natural scale to the estimation scale on which the MCMC explores the posterior, a function for transforming parameters on their estimation scale to the natural scale on which they enter the model dynamics and measurement process, and a function that returns the log prior. We'll parameterize the MCMC estimation scale in terms of the log basic reproduction number, log recovery rate, logit mean case detection rate, and log of the negative binomial overdispersion parameter. The functions are specified as follows and placed into a list of functions (note that it is critical that the function signatures follow the specification given below):
@@ -317,8 +306,8 @@ from_estimation_scale = function(params_est) {
 }
 
 # calculate the log prior density. note the jacobian for phi
-prior_density =
-      function(params_nat, params_est) {
+logprior =
+      function(params_est) {
             sum(dnorm(params_est[1], 0, 0.5, log = TRUE),
                 dnorm(params_est[2], -0.7, 0.35, log = TRUE),
                 dnorm(params_est[3], 0, 1, log = TRUE),
@@ -326,72 +315,51 @@ prior_density =
       }
 
 # return all three functions in a list
-priors <- list(prior_density = prior_density,
+priors <- list(logprior = logprior,
                to_estimation_scale = to_estimation_scale,
                from_estimation_scale = from_estimation_scale)
 
 ```
 
-We now specify the MCMC transition kernel. In this simple example, we'll update
-the model hyperparameters using a multivariate Metropolis algorithm. We'll tune
-the algorithm using a global adaptive scheme (algorithm 4 in Andrieu and Thoms). We'll also initialize the parameters at random values, which is done by replacing the vector of parameters in the stem object with a function that returns a named vector of parameters.
+We now specify the MCMC transition kernel. The main building block in the MCMC kernel is a list of parameter block lists, each specified via a call to the `parblock()` function. In this simple example, we'll update the model hyperparameters using a multivariate normal Metropolis-Hastings algorithm. We'll tune the algorithm using a global adaptive scheme (algorithm 4 in Andrieu and Thoms). We'll also initialize the parameters at random values, which is accomplished by specifying a function that adds noise to the parameters on their estimation scale. 
 
 ```{r mcmc_kern, echo = TRUE}
-# specify the initial proposal covariance matrix with row and column names
-# corresponding to parameters on their estimation scales
-covmat <- diag(0.01, 4)
-rownames(covmat) <- colnames(covmat) <- c("log_R0", "log_mu", "logit_rho", "log_phi")
-
-# specify the kernel
-mcmc_kernel <-
-        kernel(
-                method = "mvn_g_adaptive",
-                stop_adaptation = 1e2, # number of iterations for adaptation,  1e4 in coverage simulation
-                sigma = covmat,
-                scale_constant = 0.25,
-                scale_cooling = 0.5+1e-5,
-                step_size = 0.05,
-                nugget = 1e-5,
-                messages = FALSE
-        )
-
-# for initializing the parameters at random functions
-stem_object$dynamics$parameters <- function() {
-      priors$from_estimation_scale(priors$to_estimation_scale(parameters) + rnorm(4, 0, 0.1))
+par_initializer = function() {
+  priors$from_estimation_scale(priors$to_estimation_scale(parameters) + 
+                                 rnorm(4, 0, 0.1))
 }
+  
+# specify the kernel
+mcmc_kern <-
+        mcmc_kernel(
+          parameter_blocks = 
+              list(parblock(
+                  pars_nat = c("beta", "mu", "rho", "phi"),
+                  pars_est = c("log_R0", "log_mu", "logit_rho", "log_phi"),
+                  priors = priors,
+                  alg = "mvnmh",
+                  sigma = diag(0.01, 4),
+                  initializer = par_initializer,
+                  control = 
+                    mvnmh_control(stop_adaptation = 2.5e2))), 
+          lna_ess_control = lna_control(bracket_update_iter = 50))
 ```
 
-We now run the MCMC algorithm to fit the model via ODEs. To perform inference with the LNA, simply change the `method` argument to `method="lna"`.
+We now run the MCMC algorithm to fit the model via ODEs (for the sake of time in compiling the vignette). To perform inference with the LNA, simply change the `method` argument to `method="lna"`.
 
 ```{r fit_mod, echo = TRUE}
 res <-
-  stem_inference(stem_object = stem_object,
-                 method = "lna", # or set to "ode"
-                 iterations = 3.5e2, # number of iterations, set to 3.5e4 for the paper
-                 thin_params = 10,
-                 thin_latent_proc = 10,
-                 initialization_attempts = 500,
-                 priors = priors,
-                 mcmc_kernel = mcmc_kernel,
-                 ess_args = # settings elliptical slice sampling for LNA
-                   ess_settings(n_ess_updates = 1,
-                        ess_warmup = 100,
-                        initdist_bracket_width = 2*pi,
-                        initdist_bracket_update = 5e3,
-                        lna_bracket_width = 2*pi,
-                        lna_bracket_update = 5e3,
-                        joint_strata_update = FALSE),
-                 print_progress = 0,
-                 messages = FALSE)
+    fit_stem(stem_object = stem_object,
+             method = "ode",
+             mcmc_kern = mcmc_kern,
+             iterations = 5e2)
 ```
 
-The `stem_inference` function returns a list of MCMC samples, latent epidemic paths, and MCMC tuning parameters (e.g., global scaling parameter adapted in the MCMC). These can be accessed as follows:
+The `fit_stem` function fits the model and returns a list of MCMC samples and latent epidemic paths. These can be accessed as follows:
 
 ```{r access_res, echo = TRUE}
-runtime = res$results$time
-mcmc_samples = res$results$MCMC_results
-ode_paths = res$results$ode_paths # or res$results$lna_paths if using the LNA for inference
-adapt_par = res$results$adaptation_record$adaptation_scale_record
+runtime = res$results$runtime
+posterior = res$results$posterior # list with posterior objects
 ```
 
 # Fitting the SIR model with pomp

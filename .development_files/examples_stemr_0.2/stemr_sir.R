@@ -384,7 +384,7 @@ mcmc_kern <-
                   initializer = par_initializer,
                   control = 
                     # mvnss_control(stop_adaptation = 2.5e4))),
-                    mvnmh_control(stop_adaptation = 2.5e4))),
+                    mvnmh_control(stop_adaptation = 2.5e2))),
           lna_ess_control = lna_control(bracket_update_iter = 50,
                                         joint_initdist_update = TRUE))
 
@@ -396,8 +396,8 @@ res <-
     fit_stem(stem_object = stem_object,
              method = "ode",
              mcmc_kern = mcmc_kern,
-             iterations = 5e4, 
-             print_progress = 1e3)
+             iterations = 5e2, 
+             print_progress = 0)
 
 #'
 #' The `fit_stem` function returns a list with posterior samples, latent

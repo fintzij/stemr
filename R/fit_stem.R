@@ -111,7 +111,8 @@ fit_stem =
             if(return_adapt_rec) {
                 floor(iterations / thinning_interval)
             } else {
-                floor((iterations - max_adaptation) / thinning_interval) 
+                floor((iterations - max_adaptation) / thinning_interval) + 
+                    (iterations %% thinning_interval == 0)
             }
         n_ess_recs <- n_samples 
         record_sample <- FALSE

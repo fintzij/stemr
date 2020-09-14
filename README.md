@@ -37,14 +37,7 @@ is set up properly, e.g., by following instructions given in the
 [Stan](https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started)
 documentation, and that Rtools has been added to your system path. If
 you are working on a Windows machine, you may need to take additional
-steps to ensure your toolset is in order. IMPORTANT: 1) The package is
-currently being refactored and vignettes will not build properly. For
-now, you should set `build_vignettes=FALSE` when installing the package.
-2) `stemr` links to the extraDistr package, which as of this writing
-does not provide a C++ header file. Until such an update is pushed to
-CRAN (it is in progress), you should install the development branch of
-the package via:
-`devtools::install_github("https://github.com/fintzij/extraDistr")`.
+steps to ensure your toolset is in order.
 
 <!-- ## Vignettes -->
 <!-- There are two vignettes included in this package to help familiarize users  -->

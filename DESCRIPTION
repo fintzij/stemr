@@ -23,5 +23,7 @@ LinkingTo: Rcpp,
 RoxygenNote: 7.1.1
 Suggests: knitr,
     rmarkdown,
+    ggplot2,
+    patchwork,
     testthat
 VignetteBuilder: knitr
