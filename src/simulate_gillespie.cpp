@@ -1,7 +1,6 @@
 // [[Rcpp::depends(RcppArmadillo)]]
 #include "stemr_types.h"
 #include "stemr_utils.h"
-#include <RcppArmadilloExtensions/sample.h>
 
 using namespace arma;
 using namespace Rcpp;
@@ -103,9 +102,9 @@ arma::mat simulate_gillespie(const arma::mat& flow,
       Rcpp::NumericVector rates(flow_dims[0]);           // initialize vector of rates
       CALL_RATE_FCN(rates, rate_inds, state, parameters, constants, tcovs, rate_ptr); // compute rates
       
-      // vector for storing the event probabilities - Rcpp's sample function modifies probs (and hence rates) in place
-      Rcpp::NumericVector event_probs(flow_dims[0]);
-      event_probs = rates / sum(rates);
+      // vector for storing the event probabilities - Rcpp's sample function no longer modifies probs in place
+      // Rcpp::NumericVector event_probs(flow_dims[0]);
+      // event_probs = rates / sum(rates);
       
       // set keep_going and the row index
       bool keep_going = true;
@@ -182,13 +181,13 @@ arma::mat simulate_gillespie(const arma::mat& flow,
                         CALL_RATE_FCN(rates, rate_inds, state, parameters, constants, tcovs, rate_ptr);
                         
                         // update event probabilities
-                        event_probs = rates / sum(rates);
+                        // event_probs = rates / sum(rates);
                   }
                   
             } else {
-                  
+               
                   // sample the next event
-                  next_event = Rcpp::RcppArmadillo::sample(events, 1, false, event_probs);
+                  next_event = Rcpp::sample(events, 1, false, rates);
                   
                   // update the state vector
                   state += flow.row(next_event[0]);
@@ -211,10 +210,10 @@ arma::mat simulate_gillespie(const arma::mat& flow,
                   rate_update_event(rate_inds, rate_adjmat, next_event[0]);                       // identify rates that need to be updated
                   CALL_RATE_FCN(rates, rate_inds, state, parameters, constants, tcovs, rate_ptr); // update the rate functions
                   
-                  event_probs = rates / sum(rates); // update the event probabilities
+                  // event_probs = rates / sum(rates); // update the event probabilities
                   
                   // if all rates equal zero, stop simulating
-                  // keep_going = Rcpp::is_true(any(rates != 0));
+                  keep_going = Rcpp::is_true(any(rates != 0));
             }
       }
       
