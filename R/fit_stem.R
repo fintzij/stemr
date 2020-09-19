@@ -111,8 +111,7 @@ fit_stem =
             if(return_adapt_rec) {
                 floor(iterations / thinning_interval)
             } else {
-                floor((iterations - max_adaptation) / thinning_interval) + 
-                    (iterations %% thinning_interval == 0)
+                floor((iterations - max_adaptation) / thinning_interval) 
             }
         n_ess_recs <- n_samples 
         record_sample <- FALSE
@@ -1136,11 +1135,6 @@ fit_stem =
                 )
             }
             
-            # check if the sample should be recorded
-            if(!record_sample && iter == (max_adaptation+1)) {
-                record_sample = TRUE
-            }
-            
             # Save the MCMC sample if called for in this iteration
             if(record_sample && iter %% thinning_interval == 0) {
                 save_mcmc_sample(
@@ -1164,6 +1158,11 @@ fit_stem =
                         initdist_ess_control  = initdist_ess_control
                     )
                 }
+            }
+            
+            # check if the sample should be recorded
+            if(!record_sample && iter == (max_adaptation+1)) {
+                record_sample = TRUE
             }
             
             # print status messages if called for
