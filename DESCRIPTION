@@ -3,9 +3,9 @@ Type: Package
 Title: Stochastic Epidemic Model Simulation and Estimation
 Version: 0.2.0
 Authors@R: as.person(c(
-    "Jon Fintzi <fintzij@uw.edu> [aut, cre]",
+    "Jon Fintzi <fintzijr@nih.gov> [aut, cre]",
     "Jon Wakefield <jonno@uw.edu> [aut]",
-    "Vladimir Minin <vminin@uw.edu> [aut]"
+    "Vladimir Minin <vminin@uci.edu> [aut]"
   ))
 URL: https://github.com/fintzij/stemr
 BugReports: https://github.com/fintzij/stemr/issues
