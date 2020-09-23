@@ -102,6 +102,9 @@ prepare_param_blocks =
             param_blocks[[s]]$param_names_nat <- param_names_nat[[s]]
             param_blocks[[s]]$param_names_est <- param_names_est[[s]]
             
+            names(param_blocks[[s]]$pars_nat) <- param_names_nat[[s]]
+            names(param_blocks[[s]]$pars_est) <- param_names_est[[s]]
+            
             # parameter indices in the params_cur and params_prop matrices
             param_blocks[[s]]$param_inds_Cpp <- 
                 param_codes[match(param_names_nat[[s]], names(param_codes))]
@@ -116,6 +119,9 @@ prepare_param_blocks =
             
             copy_vec(param_blocks[[s]]$pars_prop_nat, param_blocks[[s]]$pars_nat)
             copy_vec(param_blocks[[s]]$pars_prop_est, param_blocks[[s]]$pars_est)
+            
+            names(param_blocks[[s]]$pars_prop_nat) <- param_names_nat[[s]]
+            names(param_blocks[[s]]$pars_prop_est) <- param_names_est[[s]]
             
             # should the proposals be adapted
             if(param_blocks[[s]]$control$stop_adaptation > 0) {
