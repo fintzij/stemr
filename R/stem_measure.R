@@ -41,10 +41,26 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = FALSE) {
 
         if(is.null(data)) {
                 if(any(unlist(lapply(lapply(emissions, "[[", "obstimes"), is.null)))) {
-                        stop("If no dataset is provided, the observation times for each measurement process must be supplied in an emission list.")
+                    stop("If no dataset is provided, the observation times for each measurement process must be supplied in an emission list.")
+                }
+                
+                if(max(unlist(sapply(emissions, "[[", "obstimes"))) != dynamics$tmax) {
+                    warning("The tmax argument in dynamics is not equal to the maximum observation time.")
                 }
         } else {
               if(is.data.frame(data)) data <- as.matrix(data)
+              
+              if(max(unlist(sapply(emissions, "[[", "obstimes"))) != dynamics$tmax) {
+                warning("The tmax argument in dynamics is not equal to the maximum observation time in the emission lists.")
+              }
+              
+              if(max(unlist(sapply(emissions, "[[", "obstimes"))) != max(data[,1])) {
+                warning("The tmax argument in dynamics is not equal to the maximum observation time in the data object.")
+              }
+              
+              if(max(data[,1]) != dynamics$tmax) {
+                warning("The maximum observation time in the data object is not equal to the maximum observation time in the emission lists.")
+              }
         }
       
         # determine whether the measurement process should be compiled for the LNA/ODE and/or for gillespie

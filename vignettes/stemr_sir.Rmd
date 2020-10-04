@@ -352,6 +352,7 @@ res <-
     fit_stem(stem_object = stem_object,
              method = "ode",
              mcmc_kern = mcmc_kern,
+             thinning_interval = 50,
              iterations = 5e2)
 ```
 
