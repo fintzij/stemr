@@ -26,8 +26,7 @@ make_stem <- function(stem_object = NULL, data = NULL, dynamics = NULL, measurem
         if(is.null(stem_object)) {
                 stem_object <- 
                         list(dynamics            = NULL,
-                             measurement_process = NULL,
-                             stem_settings       = NULL)
+                             measurement_process = NULL)
         }
 
         if(!is.null(dynamics)) {
