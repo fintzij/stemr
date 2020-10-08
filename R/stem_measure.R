@@ -54,8 +54,15 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = FALSE) {
                 warning("The tmax argument in dynamics is not equal to the maximum observation time in the emission lists.")
               }
               
-              if(max(unlist(sapply(emissions, "[[", "obstimes"))) != max(data[,1])) {
+              if((is.matrix(data) | is.data.frame(data)) && 
+                 max(unlist(sapply(emissions, "[[", "obstimes"))) != max(data[,1])) {
                 warning("The tmax argument in dynamics is not equal to the maximum observation time in the data object.")
+              }
+              
+              if((is.matrix(data) | is.data.frame(data)) && 
+                 !identical(sort(unique(unlist(sapply(emissions, "[[", "obstimes")))),
+                            sort(unique(data[,1])))) {
+                warnings("The observation times in the emission lists do not concord with the observation times in the data object.")
               }
               
               if(max(data[,1]) != dynamics$tmax) {
