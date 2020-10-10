@@ -354,22 +354,22 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = FALSE) {
                   
                   meas_procs[[k]]$rmeasure <- 
                     paste0("extraDistr::cpp_rbbinom(1,", 
-                           paste(paste0("Rcpp::wrap(", c("", "1+", "1+"), meas_procs[[k]]$emission_params, ")"),
+                           paste(paste0("Rcpp::wrap(", meas_procs[[k]]$emission_params, ")"),
                                  collapse = ", "), ")")
                   
                   meas_procs[[k]]$dmeasure <- 
                     paste0("extraDistr::cpp_dbbinom(obs,", 
-                           paste(paste0("Rcpp::wrap(", c("", "1+", "1+"), meas_procs[[k]]$emission_params, ")"),
+                           paste(paste0("Rcpp::wrap(", meas_procs[[k]]$emission_params, ")"),
                              collapse = ","), ",true)")
                   
                   meas_procs_lna[[k]]$rmeasure <- 
                     paste0("extraDistr::cpp_rbbinom(1,", 
-                           paste(paste0("Rcpp::wrap(", c("", "1+", "1+"), meas_procs_lna[[k]]$emission_params, ")"),
+                           paste(paste0("Rcpp::wrap(", meas_procs_lna[[k]]$emission_params, ")"),
                                  collapse = ","), ")")
                   
                   meas_procs_lna[[k]]$dmeasure <- 
                     paste0("extraDistr::cpp_dbbinom(obs,", 
-                           paste(paste0("Rcpp::wrap(", c("", "1+", "1+"), meas_procs_lna[[k]]$emission_params, ")"), 
+                           paste(paste0("Rcpp::wrap(", meas_procs_lna[[k]]$emission_params, ")"), 
                                  collapse = ","), ",true)")
                   
                 } else if(meas_procs[[k]]$distribution == "gaussian") {
