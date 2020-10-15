@@ -109,8 +109,9 @@ parameters =
 names(parameters) <- c("beta", "mu", "alpha0", "alpha1", "kappa")
 
 # declare the initial time to be constant
-constants <- c(t0 = 0, tests = 1000.0)
+constants <- c(t0 = 0)
 t0 <- 0; tmax <- 40
+tcovar = data.frame(time = seq_len(tmax), tests = rpois(tmax, 1e3))
 
 # compile the model
 dynamics <-
@@ -121,6 +122,7 @@ dynamics <-
             state_initializer = state_initializer,
             compartments = compartments,
             constants = constants,
+            tcovar = tcovar,
             compile_ode = T,   # compile ODE functions
             compile_rates = T, # compile MJP functions for Gillespie simulation
             compile_lna = T,   # compile LNA functions
@@ -298,6 +300,8 @@ state_initializer <-
       fixed = FALSE,
       prior = c(popsize, 10, 0)/10)) # we now do inference on the initial compartment counts
 
+tcovar = data.frame(time = seq_len(tmax), tests = rpois(tmax, 1e3))
+
 dynamics <-
   stem_dynamics(
     rates = rates,
@@ -306,6 +310,7 @@ dynamics <-
     state_initializer = state_initializer,
     compartments = compartments,
     constants = constants,
+    tcovar = tcovar,
     compile_ode = T,   # compile ODE functions
     compile_rates = F, # compile MJP functions for Gillespie simulation
     compile_lna = T,   # compile LNA functions

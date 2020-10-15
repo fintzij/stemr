@@ -1412,20 +1412,30 @@ simulate_stem <-
                   measvar_names    <- colnames(stem_object$measurement_process$obsmat)
                   
                   # grab the time-varying covariate values at observation times
-                  tcovar_obstimes <- build_census_path(path           = stem_object$dynamics$tcovar,
-                                                       census_times   = stem_object$measurement_process$obstimes,
-                                                       census_columns = 1:(ncol(stem_object$dynamics$tcovar)-1))
+                  tcovar_obstimes <- 
+                      build_census_path(path           = stem_object$dynamics$tcovar,
+                                        census_times   = stem_object$measurement_process$obstimes,
+                                        census_columns = 1:(ncol(stem_object$dynamics$tcovar)-1))
                   colnames(tcovar_obstimes) <- colnames(stem_object$dynamics$tcovar)
                   
+                  if(method != "gillespie") {
+                      # ditch the first column of tcovar_obstimes
+                      tcovar_obstimes = tcovar_obstimes[,-1]
+                  }
+                  
                   # if incidence, the incidence codes are not null
-                  do_incidence <- !is.null(stem_object$dynamics$incidence_codes) & !(method %in% c("lna", "ode"))
+                  do_incidence <- 
+                      !is.null(stem_object$dynamics$incidence_codes) & 
+                      !(method %in% c("lna", "ode"))
                   
                   # census if computing incidence or if computing prevalence and the obstimes != census_times
                   do_census <- !is.null(census_times) &&
-                        !identical(as.numeric(stem_object$measurement_process$obstimes), as.numeric(census_times))
+                        !identical(as.numeric(stem_object$measurement_process$obstimes), 
+                                   as.numeric(census_times))
                   
                   # get the indices in the censused matrices for the observation times
-                  if(do_census) cens_inds <- findInterval(stem_object$measurement_process$obstimes, census_times)
+                  if(do_census) cens_inds <- 
+                      findInterval(stem_object$measurement_process$obstimes, census_times)
                   
                   if(method == "gillespie") {
                         
@@ -1456,7 +1466,8 @@ simulate_stem <-
                                     }
                                     
                                     # get the new simulation parameters if a list was supplied
-                                    if(!is.null(simulation_parameters)) sim_pars <- as.numeric(simulation_parameters[[k]])
+                                    if(!is.null(simulation_parameters)) 
+                                        sim_pars <- as.numeric(simulation_parameters[[k]])
                                     
                                     # insert the time-varying parameters into the tcovar matrix
                                     if(!is.null(tparam_draws)) {
@@ -1464,17 +1475,23 @@ simulate_stem <-
                                           for(s in seq_along(stem_object$dynamics$tparam)) {
                                                 
                                                 # insert the tparam values into the tcovar matrix
-                                                insert_tparam(tcovar = stem_object$dynamics$tcovar, 
-                                                              values = tparam_values[[k]][[s]],
-                                                              col_ind   = stem_object$dynamics$tparam[[s]]$col_ind,
-                                                              tpar_inds = stem_object$dynamics$tparam[[s]]$tpar_inds)
-                                                
-                                                # grab the time-varying covariate values at observation times
-                                                tcovar_obstimes <- build_census_path(path           = stem_object$dynamics$tcovar,
-                                                                                     census_times   = stem_object$measurement_process$obstimes,
-                                                                                     census_columns = 1:(ncol(stem_object$dynamics$tcovar)-1))
-                                                colnames(tcovar_obstimes) <- colnames(stem_object$dynamics$tcovar)
+                                                insert_tparam(
+                                                    tcovar = stem_object$dynamics$tcovar, 
+                                                    values = tparam_values[[k]][[s]],
+                                                    col_ind   = stem_object$dynamics$tparam[[s]]$col_ind,
+                                                    tpar_inds =
+                                                        stem_object$dynamics$tparam[[s]]$tpar_inds)
                                           }
+                                        
+                                        # grab the time-varying covariate values at observation times
+                                        tcovar_obstimes <- 
+                                            build_census_path(
+                                                path           = stem_object$dynamics$tcovar,
+                                                census_times = stem_object$measurement_process$obstimes,
+                                                census_columns = 1:(ncol(stem_object$dynamics$tcovar)-1))
+                                        
+                                        colnames(tcovar_obstimes) <- 
+                                            colnames(stem_object$dynamics$tcovar)
                                     }
                                     
                                     # simulate the data
@@ -1496,9 +1513,11 @@ simulate_stem <-
                         sim_pars         <- as.numeric(stem_object$dynamics$parameters)
                         constants        <- as.numeric(stem_object$dynamics$constants)
                         tcovar           <- stem_object$dynamics$tcovar
-                        r_measure_ptr    <- stem_object$measurement_process$meas_pointers_lna$r_measure_ptr
-                        cens_inds        <- c(0,match(round(stem_object$measurement_process$obstimes, digits = 8),
-                                                      round(census_times, digits = 8)) - 1)
+                        r_measure_ptr    <-
+                            stem_object$measurement_process$meas_pointers_lna$r_measure_ptr
+                        cens_inds        <- 
+                            c(0,match(round(stem_object$measurement_process$obstimes, digits = 8),
+                                      round(census_times, digits = 8)) - 1)
                         do_prevalence    <- stem_object$measurement_process$lna_prevalence
                         do_incidence     <- stem_object$measurement_process$lna_incidence
                         obstime_inds     <- stem_object$measurement_process$obstime_inds
@@ -1510,13 +1529,19 @@ simulate_stem <-
                         if(!is.null(stem_object$dynamics$tparam)) {
                               # reinitialize the tparam indices if necessary
                               for(s in seq_along(stem_object$dynamics$tparam)) {
-                                    stem_object$dynamics$tparam[[s]]$col_ind  <- 
-                                          stem_object$dynamics$tcovar_codes[stem_object$dynamics$tparam[[s]]$tparam_name]
+                                    stem_object$dynamics$tparam[[s]]$col_ind <- stem_object$dynamics$tcovar_codes[stem_object$dynamics$tparam[[s]]$tparam_name]
+                                    
                                     stem_object$dynamics$tparam[[s]]$tpar_inds <- 
-                                          findInterval(stem_object$dynamics$tcovar[,1], stem_object$dynamics$tparam[[s]]$times, left.open = F) - 1
-                                    stem_object$dynamics$tparam[[s]]$tpar_inds[stem_object$dynamics$tparam[[s]]$tpar_inds == -1] <- 0
+                                          findInterval(stem_object$dynamics$tcovar[,1],
+                                                       stem_object$dynamics$tparam[[s]]$times, 
+                                                       left.open = F) - 1
+                                    
+                        stem_object$dynamics$tparam[[s]]$tpar_inds[stem_object$dynamics$tparam[[s]]$tpar_inds == -1] <- 0
                               }
                         }
+
+                        # ditch the time column of tcovar
+                        tcovar <- tcovar[,-1, drop = FALSE]
                         
                         for(k in seq_along(census_paths)) {
                               
@@ -1546,13 +1571,19 @@ simulate_stem <-
                                                             values = tparam_values[[k]][[s]],
                                                             col_ind   = stem_object$dynamics$tparam[[s]]$col_ind,
                                                             tpar_inds = stem_object$dynamics$tparam[[s]]$tpar_inds)
-                                              
-                                              # grab the time-varying covariate values at observation times
-                                              tcovar_obstimes <- build_census_path(path           = stem_object$dynamics$tcovar,
-                                                                                   census_times   = stem_object$measurement_process$obstimes,
-                                                                                   census_columns = 1:(ncol(stem_object$dynamics$tcovar)-1))
-                                              colnames(tcovar_obstimes) <- colnames(stem_object$dynamics$tcovar)
                                         }
+                                      
+                                      # grab the time-varying covariate values at observation times
+                                      tcovar_obstimes <- 
+                                          build_census_path(
+                                              path = stem_object$dynamics$tcovar,
+                                              census_times = stem_object$measurement_process$obstimes,
+                                              census_columns = 1:(ncol(stem_object$dynamics$tcovar)-1))
+                                      
+                                      colnames(tcovar_obstimes) <- colnames(stem_object$dynamics$tcovar)
+                                      
+                                      # ditch the first column of tcovar_obstimes
+                                      tcovar_obstimes = tcovar_obstimes[,-1]
                                   }
 
                                   # simulate the dataset
@@ -1572,26 +1603,32 @@ simulate_stem <-
                           sim_pars         <- as.numeric(stem_object$dynamics$parameters)
                           constants        <- as.numeric(stem_object$dynamics$constants)
                           tcovar           <- stem_object$dynamics$tcovar
-                          r_measure_ptr    <- stem_object$measurement_process$meas_pointers_lna$r_measure_ptr
-                          cens_inds        <- c(0,match(round(stem_object$measurement_process$obstimes, digits = 8),
-                                                        round(census_times, digits = 8)) - 1)
+                          r_measure_ptr    <-
+                              stem_object$measurement_process$meas_pointers_lna$r_measure_ptr
+                          cens_inds        <- 
+                              c(0,match(round(stem_object$measurement_process$obstimes, digits = 8),
+                                        round(census_times, digits = 8)) - 1)
                           do_prevalence    <- stem_object$measurement_process$ode_prevalence
                           do_incidence     <- stem_object$measurement_process$ode_incidence
                           obstime_inds     <- stem_object$measurement_process$obstime_inds
                           pathmat          <- stem_object$measurement_process$censusmat
                           flow_matrix_ode  <- stem_object$dynamics$flow_matrix_ode
                           ode_event_inds   <- stem_object$measurement_process$incidence_codes_ode
-
+                          
                           if(!is.null(stem_object$dynamics$tparam)) {
                                 # reinitialize the tparam indices if necessary
                                 for(s in seq_along(stem_object$dynamics$tparam)) {
                                       stem_object$dynamics$tparam[[s]]$col_ind  <- 
-                                            stem_object$dynamics$tcovar_codes[stem_object$dynamics$tparam[[s]]$tparam_name]
+                        stem_object$dynamics$tcovar_codes[stem_object$dynamics$tparam[[s]]$tparam_name] 
                                       stem_object$dynamics$tparam[[s]]$tpar_inds <- 
                                             findInterval(stem_object$dynamics$tcovar[,1], stem_object$dynamics$tparam[[s]]$times, left.open = F) - 1
+                        
                                       stem_object$dynamics$tparam[[s]]$tpar_inds[stem_object$dynamics$tparam[[s]]$tpar_inds == -1] <- 0
                                 }
                           }
+                          
+                          # ditch the time column of tcovar
+                          tcovar <- tcovar[,-1, drop = FALSE]
                           
                           if(!fixed_parameters) {
 
@@ -1611,7 +1648,8 @@ simulate_stem <-
                                                      forcings_out        = forcings_out,
                                                      forcing_transfers   = forcing_transfers)
 
-                                          if(!is.null(simulation_parameters)) sim_pars <- as.numeric(simulation_parameters[[k]])
+                                          if(!is.null(simulation_parameters)) 
+                                              sim_pars <- as.numeric(simulation_parameters[[k]])
 
                                           # insert the time-varying parameters into the tcovar matrix
                                           if(!is.null(tparam_values)) {
@@ -1621,15 +1659,23 @@ simulate_stem <-
                                                       # insert the tparam values into the tcovar matrix
                                                       insert_tparam(tcovar = stem_object$dynamics$tcovar, 
                                                                     values = tparam_values[[k]][[s]],
-                                                                    col_ind   = stem_object$dynamics$tparam[[s]]$col_ind,
-                                                                    tpar_inds = stem_object$dynamics$tparam[[s]]$tpar_inds)
-                                                      
-                                                      # grab the time-varying covariate values at observation times
-                                                      tcovar_obstimes <- build_census_path(path           = stem_object$dynamics$tcovar,
-                                                                                           census_times   = stem_object$measurement_process$obstimes,
-                                                                                           census_columns = 1:(ncol(stem_object$dynamics$tcovar)-1))
-                                                      colnames(tcovar_obstimes) <- colnames(stem_object$dynamics$tcovar)
+                                                                    col_ind =
+                                                                    stem_object$dynamics$tparam[[s]]$col_ind,
+                                                                    tpar_inds = 
+                                                                    stem_object$dynamics$tparam[[s]]$tpar_inds)
                                                 }
+                                              
+                                              # grab the time-varying covariate values at observation times
+                                              tcovar_obstimes <-
+                                                  build_census_path(path = stem_object$dynamics$tcovar,
+                                                                    census_times = 
+                                                                        stem_object$measurement_process$obstimes,
+                                                                    
+                                                                    census_columns = 1:(ncol(stem_object$dynamics$tcovar)-1))
+                                              colnames(tcovar_obstimes) <- colnames(stem_object$dynamics$tcovar)
+                                              
+                                              # ditch the first column of tcovar_obstimes
+                                              tcovar_obstimes = tcovar_obstimes[,-1]
                                           }
                                           
                                           # simulate the dataset
@@ -1668,23 +1714,28 @@ simulate_stem <-
                                                                   values = tparam_values[[k]][[s]],
                                                                   col_ind   = stem_object$dynamics$tparam[[s]]$col_ind,
                                                                   tpar_inds = stem_object$dynamics$tparam[[s]]$tpar_inds)
-                                                    
-                                                    # grab the time-varying covariate values at observation times
-                                                    tcovar_obstimes <- build_census_path(path           = stem_object$dynamics$tcovar,
-                                                                                         census_times   = stem_object$measurement_process$obstimes,
-                                                                                         census_columns = 1:(ncol(stem_object$dynamics$tcovar)-1))
-                                                    colnames(tcovar_obstimes) <- colnames(stem_object$dynamics$tcovar)
                                               }
+                                            
+                                            # grab the time-varying covariate values at observation times
+                                            tcovar_obstimes <- 
+                                                build_census_path(path = stem_object$dynamics$tcovar,
+                                                                  census_times   = 
+                                                                      stem_object$measurement_process$obstimes,
+                                                                  census_columns = 1:(ncol(stem_object$dynamics$tcovar)-1))
+                                            colnames(tcovar_obstimes) <- colnames(stem_object$dynamics$tcovar)
+                                            
+                                            # ditch the first column of tcovar_obstimes
+                                            tcovar_obstimes = tcovar_obstimes[,-1]
                                         }
-                                        
-                                          # simulate the dataset
-                                          datasets[[k]] <- simulate_r_measure(pathmat,
-                                                                              measproc_indmat,
-                                                                              sim_pars,
-                                                                              constants,
-                                                                              tcovar_obstimes,
-                                                                              r_measure_ptr)
-                                          colnames(datasets[[k]]) <- measvar_names
+                                      
+                                      # simulate the dataset
+                                      datasets[[k]] <- simulate_r_measure(pathmat,
+                                                                          measproc_indmat,
+                                                                          sim_pars,
+                                                                          constants,
+                                                                          tcovar_obstimes,
+                                                                          r_measure_ptr)
+                                      colnames(datasets[[k]]) <- measvar_names
                                   }
                           }
                   }
