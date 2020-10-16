@@ -60,7 +60,7 @@ Rcpp::List integrate_odes(const arma::rowvec& ode_times,
         double t_R = 0;
         Rcpp::NumericVector current_params = ode_pars.row(0);   // vector for storing the current parameter values
         CALL_SET_ODE_PARAMS(current_params, set_pars_pointer);  // set the parameters in the odeintr namespace
-
+        
         // initial state vector - copy elements from the current parameter vector
         arma::vec init_volumes(current_params.begin() + init_start, n_comps);
 
@@ -99,7 +99,7 @@ Rcpp::List integrate_odes(const arma::rowvec& ode_times,
 
                 // compute the compartment volumes
                 init_volumes += stoich_matrix * Rcpp::as<arma::vec>(ode_state_vec);
-
+                
                 // Save the increment and volumes
                 incid_path(arma::span(1, n_events), j+1) = Rcpp::as<arma::vec>(ode_state_vec);
                 prev_path(arma::span(1, n_comps), j+1)  = init_volumes;

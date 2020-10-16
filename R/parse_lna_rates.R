@@ -12,15 +12,16 @@ parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, l
       
       lna_param_codes <- c(param_codes, const_codes + length(param_codes), tcovar_codes + length(param_codes) + length(const_codes) - 1)
       
-      lookup_table <- data.frame(varname     = c(paste("odeintr::pars[", lna_param_codes, "]", sep = ""),
-                                                 paste("Z[", lna_comp_codes, "]", sep = "")),
-                                 search_name = c(names(param_codes),
-                                                 names(const_codes),
-                                                 names(tcovar_codes),
-                                                 names(lna_comp_codes)),
-                                 code        = NA,
-                                 log_code    = NA,
-                                 stringsAsFactors = FALSE)
+      lookup_table <- 
+         data.frame(varname     = c(paste("odeintr::pars[", lna_param_codes, "]", sep = ""),
+                                    paste("Z[", lna_comp_codes, "]", sep = "")),
+                    search_name = c(names(param_codes),
+                                    names(const_codes),
+                                    names(tcovar_codes),
+                                    names(lna_comp_codes)),
+                    code        = NA,
+                    log_code    = NA,
+                    stringsAsFactors = FALSE)
       
       # get indices for which rows correspond to the compartments
       if("TIME" %in% names(tcovar_codes)){
@@ -30,16 +31,26 @@ parse_lna_rates <- function(lna_rates, param_codes, const_codes, tcovar_codes, l
       time_ind  <- match("t", lookup_table[,1])
       
       # generate the code strings
-      lookup_table$code <- replicate(nrow(lookup_table),
-                                     paste(sample(c(letters, LETTERS), 15, replace = TRUE), collapse = ""),
-                                     simplify = T)
+      lookup_table$code <- 
+         sapply(seq_len(nrow(lookup_table)),
+                function(i) paste(sample(c(letters, LETTERS), 15, replace = TRUE), collapse = ""))
       
       # make sure there are no partial matches between columns in the lookup table
       while(any(sapply(lookup_table[,"search_name"], grepl, x = lookup_table[,"code"]))) {
-            which_match <- which(apply(sapply(lookup_table[,"search_name"], grepl, x = lookup_table[,"code"]), 1, any))
-            for(m in which_match) {
-                  lookup_table[which_match,"code"] <- paste(sample(c(letters,LETTERS), 15, replace = TRUE), collapse = "")
+            which_match <- 
+               which(apply(sapply(lookup_table[,"search_name"], 
+                                  grepl, x = lookup_table[,"code"]), 1, any))
+            
+            for(m in seq_along(which_match)) {
+                  lookup_table[which_match[m],"code"] <- 
+                     paste(sample(c(letters,LETTERS), 15, replace = TRUE), collapse = "")
             }
+      }
+      
+      while(any(duplicated(lookup_table$code))) {
+         lookup_table$code[duplicated(lookup_table$code)] = 
+            sapply(seq_len(sum(duplicated(lookup_table$code))),
+                   function(i) paste(sample(c(letters, LETTERS), 15, replace = TRUE), collapse = ""))
       }
       
       lookup_table$log_code[comp_inds] <- paste0("(exp(", lookup_table$code[comp_inds], ")-1)")

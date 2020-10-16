@@ -182,6 +182,9 @@ arma::mat simulate_gillespie(const arma::mat& flow,
                         
                         // update event probabilities
                         // event_probs = rates / sum(rates);
+                        
+                        // if all rates equal zero, stop simulating
+                        keep_going = Rcpp::is_true(any(rates != 0));
                   }
                   
             } else {
