@@ -1420,7 +1420,7 @@ simulate_stem <-
                   
                   if(method != "gillespie") {
                       # ditch the first column of tcovar_obstimes
-                      tcovar_obstimes = tcovar_obstimes[,-1]
+                      tcovar_obstimes = tcovar_obstimes[,-1, drop = FALSE]
                   }
                   
                   # if incidence, the incidence codes are not null
@@ -1583,7 +1583,7 @@ simulate_stem <-
                                       colnames(tcovar_obstimes) <- colnames(stem_object$dynamics$tcovar)
                                       
                                       # ditch the first column of tcovar_obstimes
-                                      tcovar_obstimes = tcovar_obstimes[,-1]
+                                      tcovar_obstimes = tcovar_obstimes[,-1, drop = FALSE]
                                   }
 
                                   # simulate the dataset
@@ -1675,7 +1675,7 @@ simulate_stem <-
                                               colnames(tcovar_obstimes) <- colnames(stem_object$dynamics$tcovar)
                                               
                                               # ditch the first column of tcovar_obstimes
-                                              tcovar_obstimes = tcovar_obstimes[,-1]
+                                              tcovar_obstimes = tcovar_obstimes[,-1, drop = FALSE]
                                           }
                                           
                                           # simulate the dataset
@@ -1725,7 +1725,7 @@ simulate_stem <-
                                             colnames(tcovar_obstimes) <- colnames(stem_object$dynamics$tcovar)
                                             
                                             # ditch the first column of tcovar_obstimes
-                                            tcovar_obstimes = tcovar_obstimes[,-1]
+                                            tcovar_obstimes = tcovar_obstimes[,-1, drop = FALSE]
                                         }
                                       
                                       # simulate the dataset
