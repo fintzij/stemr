@@ -361,8 +361,7 @@ fit_stem =
         if(!is.null(stem_object$dynamics$tcovar)) {
             
             tcovar_rowinds <-  
-                findInterval(census_times, stem_object$dynamics$tcovar[, 1],
-                             left.open = FALSE, all.inside = TRUE)
+                findInterval(census_times, stem_object$dynamics$tcovar[, 1])
             parmat[, tcovar_inds + 1] <-  
                 stem_object$dynamics$tcovar[tcovar_rowinds, -1]
             
@@ -400,7 +399,8 @@ fit_stem =
                     
                     # indices
                     tparam[[s]]$col_ind <- param_codes[tparam[[s]]$tparam_name]
-                    tparam[[s]]$tpar_inds_R <- findInterval(census_times, tparam[[s]]$times, left.open = F)
+                    tparam[[s]]$tpar_inds_R <- 
+                        findInterval(census_times, tparam[[s]]$times, left.open = F)
                     tparam[[s]]$tpar_inds_R[tparam[[s]]$tpar_inds_R == 0] <- 1
                     tparam[[s]]$tpar_inds_Cpp <- tparam[[s]]$tpar_inds_R - 1
                     
