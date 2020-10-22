@@ -50,8 +50,8 @@ a measurement process be defined in the stem object.}
 simulating paths of the deterministic limit of the underlying Markov jump
 process.}
 
-\item{tmax}{the time at which simulation of the system is terminated. If not
-supplied, defaults to the last observation time if not supplied.}
+\item{tmax}{the time at which simulation of the system is terminated.
+Defaults to the last observation time if not supplied.}
 
 \item{census_times}{vector of times at which compartment counts should be
 recorded.}
@@ -79,7 +79,7 @@ Returns a list with the simulated paths, subject-level paths, and/or
   paths and datasets, each returned either as a list or array, is returned.
 
   If \code{paths = TRUE} and \code{observations = FALSE}, a list or array of
-  simulated population-level paths is returned. 
+  simulated population-level paths is returned.
 
   If \code{paths = FALSE} and \code{observations = TRUE}, a list or array of
   simulated datasets is returned.
