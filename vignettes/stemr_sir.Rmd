@@ -126,7 +126,7 @@ emissions <-
                 distribution    = "negbinomial",         # emission distribution
                 emission_params = c("phi", "S2I * rho"), # distribution pars, here overdispersion and mean
                 incidence       = TRUE,                  # is the data incidence
-                obstimes        = seq(1, tmax, by =1)))  # vector of observation times
+                obstimes        = seq(1, tmax, by = 1)))  # vector of observation times
 
 # compile the measurement process
 measurement_process <-

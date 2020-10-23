@@ -15,7 +15,9 @@ using namespace Rcpp;
 //' @return matrix containing the compartment counts at census times.
 //' @export
 // [[Rcpp::export]]
-arma::mat build_census_path(Rcpp::NumericMatrix& path, Rcpp::NumericVector& census_times, Rcpp::IntegerVector& census_columns) {
+arma::mat build_census_path(Rcpp::NumericMatrix& path,
+                            Rcpp::NumericVector& census_times, 
+                            Rcpp::IntegerVector& census_columns) {
 
         // get dimensions
         int n_census_times = census_times.size();

@@ -427,7 +427,10 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = FALSE) {
                                                                       round(obstimes, digits = 8)) - 1)
 
         # census the time-varying covariates at observation times
-        tcovar_censmat <- build_census_path(dynamics$tcovar, obstimes, seq_len(ncol(dynamics$tcovar) - 1))
+        tcovar_censmat <- 
+          build_census_path(dynamics$tcovar, 
+                            obstimes, 
+                            seq_len(ncol(dynamics$tcovar) - 1))
         colnames(tcovar_censmat) <- colnames(dynamics$tcovar)
 
         # incidence and prevalence codes for the LNA. if prevalence is required
