@@ -1,7 +1,5 @@
 ---
-output:
-  md_document:
-    variant: markdown_github
+output: github_document
 ---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
@@ -10,11 +8,12 @@ output:
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  fig.path = "README-"
+  fig.path = "man/figures/"
 )
 ```
 
-# stemr
+# stemr <img src="man/figures/logo.png" align="right" alt="" width="120" />
+
 ## Baysian Inference for Stochastic Epidemic Models via the Linear Noise Approximation
 
 The __stemr__ R package implements a Bayesian data augmentation algorithm for 
