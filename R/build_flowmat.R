@@ -25,10 +25,15 @@ build_flowmat <- function(rates, compartment_names) {
         incidence_rates <- sapply(rates, "[[", "incidence")
 
         if(any(incidence_rates)) {
-                incidence_matrix           <- diag(1, nrow = length(rates), ncol = sum(incidence_rates))
+                incidence_matrix <- matrix(0, nrow = length(rates), ncol = sum(incidence_rates))
                 rownames(incidence_matrix) <- rate_names
                 colnames(incidence_matrix) <- rate_names[incidence_rates]
+                
+                # bind the incidence matrix to the flow matrix
                 flow_matrix                <- cbind(flow_matrix, incidence_matrix)
+                
+                # fill out the incident transitions
+                flow_matrix[rate_names[incidence_rates], rate_names[incidence_rates]] = 1
         }
 
         return(flow_matrix)

@@ -61,6 +61,7 @@ simulate_stem <-
              lna_bracket_width = 2 * pi,
              ess_warmup = 100,
              messages = TRUE) {
+        
         # ensure that the method is correctly specified
         if (!method %in% c("gillespie", "lna", "ode")) {
             stop("The simulation method must either be 'gillespie', 'lna', or 'ode'.")
@@ -193,6 +194,7 @@ simulate_stem <-
         # build the time varying covariate matrix (includes, at a minimum, the endpoints of the simulation interval)
         # if timestep is null, there are no time-varying covariates
         if (method == "gillespie") {
+            
             # if any of t0, tmax, or a timestep was supplied,
             # check if they differ from the parameters supplied in the stem_object$dynamics.
             # if they differ, reconstruct the tcovar matrix and associated objects
@@ -369,8 +371,7 @@ simulate_stem <-
             }
 
             # guess the initial dimensions. need an extra column for event times and another for event IDs.
-            if (stem_object$dynamics$progressive &
-                any(stem_object$dynamics$absorbing_states)) {
+            if (stem_object$dynamics$progressive & any(stem_object$dynamics$absorbing_states)) {
                 if (stem_object$dynamics$n_strata == 1) {
                     init_dims <-
                         c(
@@ -570,8 +571,7 @@ simulate_stem <-
             }
 
             # initialize the list of paths
-            if (full_paths)
-                paths_full <- vector(mode = "list", length = nsim)
+            if (full_paths) paths_full <- vector(mode = "list", length = nsim)
 
             census_paths    <- vector(mode = "list", length = nsim)
             census_colnames <-
@@ -1806,10 +1806,8 @@ simulate_stem <-
 
                 # column codes in the path matrix for compartments to be censused
                 census_codes    <-
-                    c(
-                        stem_object$dynamics$comp_codes,
-                        stem_object$dynamics$incidence_codes
-                    ) + 2
+                    c(stem_object$dynamics$comp_codes, stem_object$dynamics$incidence_codes) + 2
+                
                 pathmat         <-
                     stem_object$measurement_process$censusmat
 
