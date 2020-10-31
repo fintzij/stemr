@@ -29,23 +29,24 @@
 #'   observation time.
 #' @export
 #'
-#' @examples Random initial state where for a single subject P(X_j=S)=0.5,P(X_j=I)=0.2,
-#' P(X_j=R=0.3), and one set of initial state probabilities govern the
-#' distribution of initial compartment counts in all strata:
+#' @examples
+#' # Random initial state where for a single subject P(X_j=S)=0.5,P(X_j=I)=0.2,
+#' # P(X_j=R=0.3), and one set of initial state probabilities govern the
+#' # distribution of initial compartment counts in all strata:
 #' stem_initializer(c(S=500, I = 200, R = 300), fixed = FALSE, strata = "ALL")
 #'
 #' # All strata are of size 1000. At the first observation time, there are 200
 #' # susceptible, 100 infected, and 700 recovered adults, and there are 900
 #' # susceptibles children, 50 infected children, and 50 recovered children:
 #' list(stem_initializer(c(S=200,I=100,R=700), fixed = TRUE, strata = "adults"),
-#'      stem_initializer(c(S=900,I=50,R=50), fixed=TRUE, strata = "children")))
+#'      stem_initializer(c(S=900,I=50,R=50), fixed=TRUE, strata = "children"))
 stem_initializer <- function(init_states, fixed, strata = NULL, prior = NULL, dist = "multinom") {
 
         # make sure that strata is of length 1
         if(!is.null(strata) && length(strata) != 1) {
               stop("The strata argument must be either the name of a single stratum or the keyword ALL.")
         }
-      
+
         if(is.null(names(init_states))) {
                 stop("Compartment names must be specified in each initial probability vector.")
         }

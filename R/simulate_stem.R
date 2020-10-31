@@ -371,8 +371,7 @@ simulate_stem <-
             }
 
             # guess the initial dimensions. need an extra column for event times and another for event IDs.
-            if (stem_object$dynamics$progressive &
-                any(stem_object$dynamics$absorbing_states)) {
+            if (stem_object$dynamics$progressive & any(stem_object$dynamics$absorbing_states)) {
                 if (stem_object$dynamics$n_strata == 1) {
                     init_dims <-
                         c(
@@ -572,8 +571,7 @@ simulate_stem <-
             }
 
             # initialize the list of paths
-            if (full_paths)
-                paths_full <- vector(mode = "list", length = nsim)
+            if (full_paths) paths_full <- vector(mode = "list", length = nsim)
 
             census_paths    <- vector(mode = "list", length = nsim)
             census_colnames <-
@@ -1578,7 +1576,7 @@ simulate_stem <-
                             insert_tparam(
                                 tcovar    = ode_pars,
                                 values    =
-                                    tparam[[m]]$draws2par(
+                                    stem_object$dynamics$tparam[[m]]$draws2par(
                                         parameters = ode_pars[1, ],
                                         draws = tparam_draws[[n]][[m]]
                                     ),
@@ -1588,8 +1586,9 @@ simulate_stem <-
 
                             # copy_values
                             tparam_values[[n]][[m]] <-
-                                tparam[[m]]$draws2par(parameters = ode_pars[1, ],
-                                                      draws = tparam_draws[[n]][[m]])
+                                stem_object$dynamics$tparam[[m]]$draws2par(
+                                    parameters = ode_pars[1, ],
+                                    draws = tparam_draws[[n]][[m]])
                         }
                     }
 
@@ -1816,11 +1815,9 @@ simulate_stem <-
                     incidence_codes <- stem_object$dynamics$incidence_codes + 1
 
                 # column codes in the path matrix for compartments to be censused
-                census_codes    <-
-                    c(
-                        stem_object$dynamics$comp_codes,
-                        stem_object$dynamics$incidence_codes
-                    ) + 2
+                census_codes <-
+                    c(stem_object$dynamics$comp_codes, 
+                      stem_object$dynamics$incidence_codes) + 2
                 
                 pathmat         <-
                     stem_object$measurement_process$censusmat

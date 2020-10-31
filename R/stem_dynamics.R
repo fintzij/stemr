@@ -336,7 +336,8 @@ stem_dynamics <-
             initializer                 <- state_initializer
             initdist_params             <- initializer[[1]]$init_states
             initializer[[1]]$param_inds <- seq_along(initdist_params)
-            initializer[[1]]$codes      <- match(names(initializer[[1]]$init_states), names(compartment_codes))
+            initializer[[1]]$codes      <- 
+                match(names(initializer[[1]]$init_states), names(compartment_codes))
             
             if(is.null(initializer[[1]]$prior)) {
                 if(is.character(compile_lna)||compile_lna) {
@@ -825,8 +826,9 @@ stem_dynamics <-
         incidence_codes <- which(incidence_comps) - 1
         if(length(incidence_codes)) {
             names(incidence_codes) <- colnames(flow_matrix)[incidence_comps]
-            incidence_sources      <- sapply(names(incidence_codes),
-                                             function(x) compartment_codes[which(flow_matrix[x,] == -1)])
+            incidence_sources      <- 
+                sapply(names(incidence_codes),
+                       function(x) compartment_codes[which(flow_matrix[x,] == -1)])
         } else {
             incidence_codes   <- NULL
             incidence_sources <- NULL

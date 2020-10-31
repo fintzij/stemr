@@ -1,10 +1,9 @@
+
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-stemr
-=====
+# stemr <img src="man/figures/logo.png" align="right" alt="" width="120" />
 
-Baysian Inference for Stochastic Epidemic Models via the Linear Noise Approximation
------------------------------------------------------------------------------------
+## Baysian Inference for Stochastic Epidemic Models via the Linear Noise Approximation
 
 The **stemr** R package implements a Bayesian data augmentation
 algorithm for fitting stochastic epidemic models (SEMs) with arbitrary
@@ -24,8 +23,7 @@ parameters, and deterministic forcings. These functionalities are not
 yet fully documented, but sample code is available in the
 ‘/.development\_files’ directory on the GitHub repository.
 
-Package installation
---------------------
+## Package installation
 
 To install the `stemr` package, clone this repository and build the
 package from sources. You should be able to rebuild in the usual way
@@ -40,12 +38,21 @@ you are working on a Windows machine, you may need to take additional
 steps to ensure your toolset is in order.
 
 <!-- ## Vignettes -->
+
 <!-- There are two vignettes included in this package to help familiarize users  -->
+
 <!-- with its basic functionality and that reproduce models the SEMs fit via the LNA  -->
+
 <!-- in Fintzi, et al. (2020). The [stemr_sir](https://github.com/fintzij/stemr/blob/master/vignettes/stemr_sir.Rmd) vignette provides an introduction to -->
+
 <!-- the `stemr` package, and demonstrates how to simulate from and fit an SIR model  -->
+
 <!-- via the LNA and ODE. The [ebola_westafrica](https://github.com/fintzij/stemr/blob/master/vignettes/ebola_westafrica.Rmd) vignette demonstrates how to simulate -->
+
 <!-- from and fit a multi-country model for Ebola transmission, and then provides code -->
+
 <!-- to fit the model to data from the 2014-2015 outbreak in West Africa. Both vignettes  -->
+
 <!-- also include annotated `pomp` code for fitting the respective models (version  -->
+
 <!-- 1.17 was used as a benchmark in the paper).  -->
