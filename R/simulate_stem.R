@@ -1260,6 +1260,7 @@ simulate_stem <-
             }
 
         } else if (method == "ode") {
+            
             # set the vectors of times when the ODE is evaluated and censused
             ode_times <-
                 sort(unique(
@@ -1569,7 +1570,7 @@ simulate_stem <-
                             insert_tparam(
                                 tcovar    = ode_pars,
                                 values    =
-                                    tparam[[m]]$draws2par(
+                                    stem_object$dynamics$tparam[[m]]$draws2par(
                                         parameters = ode_pars[1, ],
                                         draws = tparam_draws[[n]][[m]]
                                     ),
@@ -1579,8 +1580,9 @@ simulate_stem <-
 
                             # copy_values
                             tparam_values[[n]][[m]] <-
-                                tparam[[m]]$draws2par(parameters = ode_pars[1, ],
-                                                      draws = tparam_draws[[n]][[m]])
+                                stem_object$dynamics$tparam[[m]]$draws2par(
+                                    parameters = ode_pars[1, ],
+                                    draws = tparam_draws[[n]][[m]])
                         }
                     }
 
