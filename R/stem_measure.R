@@ -423,15 +423,18 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = FALSE) {
         censusmat[,"time"] <- obstimes
 
         # get the list of vectors of observation times for each measurement process
-        obstime_inds <- lapply(meas_procs, FUN = function(proc) match(round(proc$obstimes, digits = 8),
-                                                                      round(obstimes, digits = 8)) - 1)
+        obstime_inds <- 
+          lapply(meas_procs,
+                 FUN = function(proc) 
+                   match(round(proc$obstimes, digits = 8),
+                         round(obstimes, digits = 8)) - 1)
 
         # census the time-varying covariates at observation times
-        tcovar_censmat <- 
-          build_census_path(dynamics$tcovar, 
-                            obstimes, 
-                            seq_len(ncol(dynamics$tcovar) - 1))
-        colnames(tcovar_censmat) <- colnames(dynamics$tcovar)
+        # tcovar_censmat <- 
+          # build_census_path(dynamics$tcovar, 
+                            # obstimes, 
+                            # seq_len(ncol(dynamics$tcovar) - 1))
+        # colnames(tcovar_censmat) <- colnames(dynamics$tcovar)
 
         # incidence and prevalence codes for the LNA. if prevalence is required
         # for any of the measurement processes, compute prevalence (otherwise
@@ -447,6 +450,8 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = FALSE) {
                         # C++ column indices of LNA count compartments for which incidence is desired
                         incidence_codes_lna <- which(!is.na(match(rate_names, colnames(censusmat))))
                         names(incidence_codes_lna) <- rate_names[incidence_codes_lna]
+                } else {
+                  incidence_codes_lna <- NULL
                 }
         } else {
                 incidence_codes_lna <- -1
@@ -460,6 +465,8 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = FALSE) {
                         # C++ column indices of LNA count compartments for which incidence is desired
                         incidence_codes_ode <- which(!is.na(match(rate_names, colnames(censusmat))))
                         names(incidence_codes_ode) <- rate_names[incidence_codes_ode]
+                } else {
+                  incidence_codes_ode <- NULL
                 }
         } else {
                 incidence_codes_ode <- -1
@@ -477,7 +484,7 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = FALSE) {
                              measproc_indmat     = measproc_indmat,
                              meas_inds           = meas_inds,
                              censusmat           = censusmat,
-                             tcovar_censmat      = tcovar_censmat,
+                             # tcovar_censmat      = tcovar_censmat,
                              lna_incidence       = lna_incidence,
                              lna_prevalence      = lna_prevalence,
                              ode_incidence       = lna_incidence,

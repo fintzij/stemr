@@ -61,6 +61,7 @@ simulate_stem <-
              lna_bracket_width = 2 * pi,
              ess_warmup = 100,
              messages = TRUE) {
+        
         # ensure that the method is correctly specified
         if (!method %in% c("gillespie", "lna", "ode")) {
             stop("The simulation method must either be 'gillespie', 'lna', or 'ode'.")
@@ -193,6 +194,7 @@ simulate_stem <-
         # build the time varying covariate matrix (includes, at a minimum, the endpoints of the simulation interval)
         # if timestep is null, there are no time-varying covariates
         if (method == "gillespie") {
+            
             # if any of t0, tmax, or a timestep was supplied,
             # check if they differ from the parameters supplied in the stem_object$dynamics.
             # if they differ, reconstruct the tcovar matrix and associated objects
@@ -595,6 +597,7 @@ simulate_stem <-
             }
 
             for (k in seq_len(nsim)) {
+                
                 attempt <- 0
                 path_full <- NULL
 
@@ -1260,11 +1263,13 @@ simulate_stem <-
             }
 
         } else if (method == "ode") {
+            
             # set the vectors of times when the ODE is evaluated and censused
             ode_times <-
                 sort(unique(
                     c(t0, census_times, stem_object$dynamics$tcovar[, 1], tmax)
                 ))
+            
             ode_census_times <-
                 ode_times[ode_times >= t0 & ode_times <= tmax]
 
@@ -1285,8 +1290,10 @@ simulate_stem <-
                     stem_object$dynamics$param_codes,
                     stem_object$dynamics$ode_initdist_inds
                 )
+            
             constant_inds  <-
                 length(stem_object$dynamics$param_codes) + seq_along(stem_object$dynamics$const_codes) - 1
+            
             tcovar_inds    <-
                 length(stem_object$dynamics$param_codes) + length(constant_inds) + seq_along(stem_object$dynamics$tcovar_codes) - 1
 
@@ -1347,6 +1354,7 @@ simulate_stem <-
             # generate some auxilliary objects
             param_update_inds <-
                 ode_times %in% unique(c(t0, tmax, stem_object$dynamics$tcovar[, 1]))
+            
             census_interval_inds <-
                 findInterval(ode_times, census_times, left.open = T)
 
@@ -1456,6 +1464,7 @@ simulate_stem <-
                 matrix(0.0,
                        nrow = nsim,
                        ncol = length(stem_object$dynamics$comp_codes))
+            
             colnames(init_states) <-
                 names(stem_object$dynamics$comp_codes)
 
@@ -1756,8 +1765,10 @@ simulate_stem <-
         }
 
         if (observations && length(failed_runs) != nsim) {
+            
             datasets         <-
                 vector(mode = "list", length = length(census_paths)) # list for storing the datasets
+            
             measvar_names    <-
                 colnames(stem_object$measurement_process$obsmat)
 
@@ -1810,6 +1821,7 @@ simulate_stem <-
                         stem_object$dynamics$comp_codes,
                         stem_object$dynamics$incidence_codes
                     ) + 2
+                
                 pathmat         <-
                     stem_object$measurement_process$censusmat
 
@@ -1988,6 +2000,7 @@ simulate_stem <-
                 }
 
             } else if (method == "ode") {
+                
                 # get the objects for simulating from the measurement process
                 measproc_indmat  <-
                     stem_object$measurement_process$measproc_indmat
@@ -2041,16 +2054,16 @@ simulate_stem <-
 
                 if (!fixed_parameters) {
                     for (k in seq_along(census_paths)) {
-                        # fill out the census matrix
-                        census_lna(
+                        
+                        census_latent_path(
                             path                = census_paths[[k]],
                             census_path         = pathmat,
                             census_inds         = cens_inds,
-                            lna_event_inds      = ode_event_inds,
-                            flow_matrix_lna     = flow_matrix_ode,
+                            event_inds          = ode_event_inds,
+                            flow_matrix         = flow_matrix_ode,
                             do_prevalence       = do_prevalence,
-                            init_state          = init_states[k, ],
-                            lna_pars            = ode_pars,
+                            parmat              = ode_pars,
+                            initdist_inds       = init_states[k, ],
                             forcing_inds        = forcing_inds,
                             forcing_tcov_inds   = forcing_tcov_inds,
                             forcings_out        = forcings_out,
@@ -2105,16 +2118,16 @@ simulate_stem <-
                         colnames(datasets[[k]]) <- measvar_names
                     }
                 } else {
-                    # fill out the census matrix
-                    census_lna(
+                    
+                    census_latent_path(
                         path                = census_paths[[1]],
                         census_path         = pathmat,
                         census_inds         = cens_inds,
-                        lna_event_inds      = ode_event_inds,
-                        flow_matrix_lna     = flow_matrix_ode,
+                        event_inds          = ode_event_inds,
+                        flow_matrix         = flow_matrix_ode,
                         do_prevalence       = do_prevalence,
-                        init_state          = init_states[1, ],
-                        lna_pars            = ode_pars,
+                        parmat              = ode_pars,
+                        initdist_inds       = init_states[1, ],
                         forcing_inds        = forcing_inds,
                         forcing_tcov_inds   = forcing_tcov_inds,
                         forcings_out        = forcings_out,
