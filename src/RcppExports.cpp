@@ -110,14 +110,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // census_latent_path
-void census_latent_path(const arma::mat& path, arma::mat& census_path, const arma::uvec& census_inds, const arma::uvec& event_inds, const arma::mat& flow_matrix, bool do_prevalence, const arma::mat& parmat, const arma::uvec& initdist_inds, const Rcpp::LogicalVector& forcing_inds, const arma::uvec& forcing_tcov_inds, const arma::mat& forcings_out, const arma::cube& forcing_transfers, arma::uvec row0);
+void census_latent_path(const arma::mat& path, arma::mat& census_path, const arma::uvec& census_inds, const Rcpp::Nullable<Rcpp::IntegerVector>& event_inds, const arma::mat& flow_matrix, bool do_prevalence, const arma::mat& parmat, const arma::uvec& initdist_inds, const Rcpp::LogicalVector& forcing_inds, const arma::uvec& forcing_tcov_inds, const arma::mat& forcings_out, const arma::cube& forcing_transfers, arma::uvec row0);
 RcppExport SEXP _stemr_census_latent_path(SEXP pathSEXP, SEXP census_pathSEXP, SEXP census_indsSEXP, SEXP event_indsSEXP, SEXP flow_matrixSEXP, SEXP do_prevalenceSEXP, SEXP parmatSEXP, SEXP initdist_indsSEXP, SEXP forcing_indsSEXP, SEXP forcing_tcov_indsSEXP, SEXP forcings_outSEXP, SEXP forcing_transfersSEXP, SEXP row0SEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::mat& >::type path(pathSEXP);
     Rcpp::traits::input_parameter< arma::mat& >::type census_path(census_pathSEXP);
     Rcpp::traits::input_parameter< const arma::uvec& >::type census_inds(census_indsSEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type event_inds(event_indsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::Nullable<Rcpp::IntegerVector>& >::type event_inds(event_indsSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type flow_matrix(flow_matrixSEXP);
     Rcpp::traits::input_parameter< bool >::type do_prevalence(do_prevalenceSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type parmat(parmatSEXP);
@@ -128,27 +128,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::cube& >::type forcing_transfers(forcing_transfersSEXP);
     Rcpp::traits::input_parameter< arma::uvec >::type row0(row0SEXP);
     census_latent_path(path, census_path, census_inds, event_inds, flow_matrix, do_prevalence, parmat, initdist_inds, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, row0);
-    return R_NilValue;
-END_RCPP
-}
-// census_lna
-void census_lna(const arma::mat& path, arma::mat& census_path, const arma::uvec& census_inds, const arma::uvec& lna_event_inds, const arma::mat& flow_matrix_lna, bool do_prevalence, const arma::rowvec& init_state, const arma::mat& lna_pars, const Rcpp::LogicalVector& forcing_inds, const arma::uvec& forcing_tcov_inds, const arma::mat& forcings_out, const arma::cube& forcing_transfers);
-RcppExport SEXP _stemr_census_lna(SEXP pathSEXP, SEXP census_pathSEXP, SEXP census_indsSEXP, SEXP lna_event_indsSEXP, SEXP flow_matrix_lnaSEXP, SEXP do_prevalenceSEXP, SEXP init_stateSEXP, SEXP lna_parsSEXP, SEXP forcing_indsSEXP, SEXP forcing_tcov_indsSEXP, SEXP forcings_outSEXP, SEXP forcing_transfersSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type path(pathSEXP);
-    Rcpp::traits::input_parameter< arma::mat& >::type census_path(census_pathSEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type census_inds(census_indsSEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type lna_event_inds(lna_event_indsSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type flow_matrix_lna(flow_matrix_lnaSEXP);
-    Rcpp::traits::input_parameter< bool >::type do_prevalence(do_prevalenceSEXP);
-    Rcpp::traits::input_parameter< const arma::rowvec& >::type init_state(init_stateSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type lna_pars(lna_parsSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type forcing_inds(forcing_indsSEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type forcing_tcov_inds(forcing_tcov_indsSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type forcings_out(forcings_outSEXP);
-    Rcpp::traits::input_parameter< const arma::cube& >::type forcing_transfers(forcing_transfersSEXP);
-    census_lna(path, census_path, census_inds, lna_event_inds, flow_matrix_lna, do_prevalence, init_state, lna_pars, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers);
     return R_NilValue;
 END_RCPP
 }
@@ -833,7 +812,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stemr_build_census_path", (DL_FUNC) &_stemr_build_census_path, 3},
     {"_stemr_census_incidence", (DL_FUNC) &_stemr_census_incidence, 3},
     {"_stemr_census_latent_path", (DL_FUNC) &_stemr_census_latent_path, 13},
-    {"_stemr_census_lna", (DL_FUNC) &_stemr_census_lna, 12},
     {"_stemr_compute_incidence", (DL_FUNC) &_stemr_compute_incidence, 3},
     {"_stemr_convert_lna2", (DL_FUNC) &_stemr_convert_lna2, 4},
     {"_stemr_pars2lnapars", (DL_FUNC) &_stemr_pars2lnapars, 2},

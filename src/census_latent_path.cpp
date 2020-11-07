@@ -26,7 +26,7 @@ void census_latent_path(
                 const arma::mat& path,
                 arma::mat& census_path,
                 const arma::uvec& census_inds,
-                const arma::uvec& event_inds,
+                const Rcpp::Nullable<Rcpp::IntegerVector>& event_inds,
                 const arma::mat& flow_matrix,
                 bool do_prevalence,
                 const arma::mat& parmat,
@@ -39,7 +39,6 @@ void census_latent_path(
 
         // get dimensions
         int n_census_times  = census_inds.n_elem;
-        int n_census_events = event_inds.n_elem;
         int n_comps         = flow_matrix.n_cols;
         int n_rates         = flow_matrix.n_rows;
         int n_forcings      = forcing_tcov_inds.n_elem;
@@ -48,17 +47,25 @@ void census_latent_path(
         double forcing_flow = 0;
         arma::vec forcing_distvec(n_comps, arma::fill::zeros);
         
-        // get indices in the census_path matrix to keep incidence
-        int incid_start = flow_matrix.n_cols + 1;
-        
-        // census the incidence increments
-        for(int k = 1; k < n_census_times; ++k) {
-              
-              for(int j = 0; j < n_census_events; ++j) {
-                    census_path(k-1, incid_start + j) = arma::sum(path(arma::span(census_inds[k-1]+1, census_inds[k]),
-                                                                  event_inds[j]));
-              }
-              
+        // get incidence indices 
+        if (event_inds.isNotNull()) {
+                
+                // convert incidence indices to an arma::uvec   
+                arma::uvec incid_inds = Rcpp::as<arma::uvec>(event_inds);
+                
+                // get indices in the census_path matrix to keep incidence
+                int n_census_events = incid_inds.n_elem;
+                int incid_start = flow_matrix.n_cols + 1;
+                
+                // census the incidence increments
+                for(int k = 1; k < n_census_times; ++k) {
+                        
+                        for(int j = 0; j < n_census_events; ++j) {
+                                census_path(k-1, incid_start + j) = 
+                                        arma::sum(path(arma::span(census_inds[k-1]+1, census_inds[k]), incid_inds[j]));
+                        }
+                        
+                }
         }
         
         // compute the prevalence if called for

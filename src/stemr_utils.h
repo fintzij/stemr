@@ -88,14 +88,20 @@ arma::mat build_census_path(Rcpp::NumericMatrix& path,
                             Rcpp::IntegerVector& census_columns);
 
 // census the lna path matrix, possibly computing prevalence and filling out cumulative incidence
-void census_lna(const arma::mat& path,
-                arma::mat& census_path,
-                const arma::uvec& census_inds,
-                const arma::uvec& lna_event_inds,
-                const arma::mat& flow_matrix_lna,
-                bool do_prevalence,
-                const arma::rowvec& init_state,
-                const arma::mat& forcing_matrix);
+void census_latent_path(
+        const arma::mat& path,
+        arma::mat& census_path,
+        const arma::uvec& census_inds,
+        const Rcpp::Nullable<Rcpp::IntegerVector>& event_inds,
+        const arma::mat& flow_matrix,
+        bool do_prevalence,
+        const arma::mat& parmat,
+        const arma::uvec& initdist_inds,
+        const Rcpp::LogicalVector& forcing_inds,
+        const arma::uvec& forcing_tcov_inds,
+        const arma::mat& forcings_out,
+        const arma::cube& forcing_transfers,
+        arma::uvec row0 = 0);
 
 // update a census matrix with compartment counts at observation times
 void retrieve_census_path(arma::mat& cencusmat,

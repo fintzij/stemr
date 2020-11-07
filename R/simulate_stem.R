@@ -982,7 +982,7 @@ simulate_stem <-
                             # grab parameters
                             if (!is.null(simulation_parameters)) {
                                 sim_pars <- as.numeric(simulation_parameters[[n]])
-                                lna_pars[lna_param_inds + 1, ] <-
+                                lna_pars[parameter_inds + 1, ] <-
                                     sim_pars
                             }
 
@@ -1021,7 +1021,7 @@ simulate_stem <-
                         for (m in seq_along(stem_object$dynamics$tparam)) {
                             if (!is.null(simulation_parameters)) {
                                 sim_pars <- as.numeric(simulation_parameters[[n]])
-                                lna_pars[lna_param_inds + 1, ] <-
+                                lna_pars[parameter_inds + 1, ] <-
                                     sim_pars
                             }
 
@@ -1133,7 +1133,7 @@ simulate_stem <-
             for (k in seq_len(nsim)) {
                 if (!is.null(simulation_parameters)) {
                     sim_pars <- as.numeric(simulation_parameters[[k]])
-                    lna_pars[lna_param_inds + 1, ] <- sim_pars
+                    lna_pars[parameter_inds + 1, ] <- sim_pars
                 }
 
                 if (!stem_object$dynamics$fixed_inits) {
@@ -1765,20 +1765,17 @@ simulate_stem <-
 
         if (observations && length(failed_runs) != nsim) {
             
-            datasets         <-
-                vector(mode = "list", length = length(census_paths)) # list for storing the datasets
-            
-            measvar_names    <-
-                colnames(stem_object$measurement_process$obsmat)
+            datasets <- vector(mode = "list", length = length(census_paths))
+            measvar_names <- colnames(stem_object$measurement_process$obsmat)
 
             # grab the time-varying covariate values at observation times
             tcovar_obstimes <-
                 build_census_path(
                     path           = stem_object$dynamics$tcovar,
                     census_times   = stem_object$measurement_process$obstimes,
-                    census_columns = 1:(ncol(stem_object$dynamics$tcovar) -
-                                            1)
+                    census_columns = 1:(ncol(stem_object$dynamics$tcovar) - 1)
                 )
+            
             colnames(tcovar_obstimes) <-
                 colnames(stem_object$dynamics$tcovar)
 
@@ -1827,6 +1824,7 @@ simulate_stem <-
                     as.numeric(stem_object$dynamics$parameters)
 
                 for (k in seq_len(nsim)) {
+                    
                     # get the state at observation times
                     if (!is.null(census_paths[[k]])) {
                         if (do_census) {
@@ -1882,6 +1880,7 @@ simulate_stem <-
                 }
 
             } else if (method == "lna") {
+                
                 # get the objects for simulating from the measurement process
                 measproc_indmat  <-
                     stem_object$measurement_process$measproc_indmat
@@ -1893,13 +1892,13 @@ simulate_stem <-
                 r_measure_ptr    <-
                     stem_object$measurement_process$meas_pointers_lna$r_measure_ptr
                 cens_inds        <-
-                    c(0, match(
+                    match(
                         round(
                             stem_object$measurement_process$obstimes,
                             digits = 8
                         ),
                         round(census_times, digits = 8)
-                    ) - 1)
+                    )
                 do_prevalence    <-
                     stem_object$measurement_process$lna_prevalence
                 do_incidence     <-
@@ -1910,7 +1909,7 @@ simulate_stem <-
                     stem_object$measurement_process$censusmat
                 flow_matrix_lna  <-
                     stem_object$dynamics$flow_matrix_lna
-                lna_event_inds   <-
+                event_inds   <-
                     stem_object$measurement_process$incidence_codes_lna
 
                 # reinitialize the tparam indices if necessary
@@ -1936,21 +1935,26 @@ simulate_stem <-
                 tcovar <- tcovar[, -1, drop = FALSE]
 
                 for (k in seq_along(census_paths)) {
+                    
                     # fill out the census matrix
-                    census_lna(
-                        path                = census_paths[[k]],
-                        census_path         = pathmat,
-                        census_inds         = cens_inds,
-                        lna_event_inds      = lna_event_inds,
-                        flow_matrix_lna     = flow_matrix_lna,
-                        do_prevalence       = do_prevalence,
-                        init_state          = init_states[k, ],
-                        lna_pars            = lna_pars,
-                        forcing_inds        = forcing_inds,
-                        forcing_tcov_inds   = forcing_tcov_inds,
-                        forcings_out        = forcings_out,
-                        forcing_transfers   = forcing_transfers
-                    )
+                    sim_path =
+                        cbind(lna_paths[[k]][cens_inds,],
+                              census_paths[[k]][cens_inds,-1])[,colnames(pathmat)]
+                    
+                    # census_latent_path(
+                    #     path                = census_paths[[k]],
+                    #     census_path         = pathmat,
+                    #     census_inds         = cens_inds,
+                    #     event_inds          = event_inds,
+                    #     flow_matrix         = flow_matrix_lna,
+                    #     do_prevalence       = do_prevalence,
+                    #     parmat              = ode_pars,
+                    #     initdist_inds       = init_states[k, ],
+                    #     forcing_inds        = forcing_inds,
+                    #     forcing_tcov_inds   = forcing_tcov_inds,
+                    #     forcings_out        = forcings_out,
+                    #     forcing_transfers   = forcing_transfers
+                    # )
 
                     if (!is.null(simulation_parameters))
                         sim_pars <- as.numeric(simulation_parameters[[k]])
@@ -1986,7 +1990,8 @@ simulate_stem <-
 
                     # simulate the dataset
                     datasets[[k]] <- simulate_r_measure(
-                        pathmat,
+                        sim_path,
+                        # pathmat,
                         measproc_indmat,
                         sim_pars,
                         constants,
@@ -2009,13 +2014,9 @@ simulate_stem <-
                 r_measure_ptr    <-
                     stem_object$measurement_process$meas_pointers_lna$r_measure_ptr
                 cens_inds        <-
-                    c(0, match(
-                        round(
-                            stem_object$measurement_process$obstimes,
-                            digits = 8
-                        ),
-                        round(census_times, digits = 8)
-                    ) - 1)
+                    match(
+                        round(stem_object$measurement_process$obstimes, digits = 8),
+                        round(census_times, digits = 8))
                 do_prevalence    <-
                     stem_object$measurement_process$ode_prevalence
                 do_incidence     <-
@@ -2026,10 +2027,11 @@ simulate_stem <-
                     stem_object$measurement_process$censusmat
                 flow_matrix_ode  <-
                     stem_object$dynamics$flow_matrix_ode
-                ode_event_inds   <-
+                event_inds   <-
                     stem_object$measurement_process$incidence_codes_ode
 
                 if (!is.null(stem_object$dynamics$tparam)) {
+                    
                     # reinitialize the tparam indices if necessary
                     for (s in seq_along(stem_object$dynamics$tparam)) {
                         stem_object$dynamics$tparam[[s]]$col_ind  <-
@@ -2052,20 +2054,24 @@ simulate_stem <-
                 if (!fixed_parameters) {
                     for (k in seq_along(census_paths)) {
                         
-                        census_latent_path(
-                            path                = census_paths[[k]],
-                            census_path         = pathmat,
-                            census_inds         = cens_inds,
-                            event_inds          = ode_event_inds,
-                            flow_matrix         = flow_matrix_ode,
-                            do_prevalence       = do_prevalence,
-                            parmat              = ode_pars,
-                            initdist_inds       = init_states[k, ],
-                            forcing_inds        = forcing_inds,
-                            forcing_tcov_inds   = forcing_tcov_inds,
-                            forcings_out        = forcings_out,
-                            forcing_transfers   = forcing_transfers
-                        )
+                        sim_path =
+                            cbind(ode_paths[[k]][cens_inds,],
+                                  census_paths[[k]][cens_inds,-1])[,colnames(pathmat)]
+                        
+                        # census_latent_path(
+                        #     path                = sim_path,
+                        #     census_path         = pathmat,
+                        #     census_inds         = cens_inds,
+                        #     event_inds          = event_inds,
+                        #     flow_matrix         = flow_matrix_ode,
+                        #     do_prevalence       = do_prevalence,
+                        #     parmat              = ode_pars,
+                        #     initdist_inds       = init_states[k, ],
+                        #     forcing_inds        = forcing_inds,
+                        #     forcing_tcov_inds   = forcing_tcov_inds,
+                        #     forcings_out        = forcings_out,
+                        #     forcing_transfers   = forcing_transfers
+                        # )
 
                         if (!is.null(simulation_parameters))
                             sim_pars <-
@@ -2105,7 +2111,8 @@ simulate_stem <-
 
                         # simulate the dataset
                         datasets[[k]] <- simulate_r_measure(
-                            pathmat,
+                            sim_path,
+                            # pathmat,
                             measproc_indmat,
                             sim_pars,
                             constants,
@@ -2116,20 +2123,24 @@ simulate_stem <-
                     }
                 } else {
                     
-                    census_latent_path(
-                        path                = census_paths[[1]],
-                        census_path         = pathmat,
-                        census_inds         = cens_inds,
-                        event_inds          = ode_event_inds,
-                        flow_matrix         = flow_matrix_ode,
-                        do_prevalence       = do_prevalence,
-                        parmat              = ode_pars,
-                        initdist_inds       = init_states[1, ],
-                        forcing_inds        = forcing_inds,
-                        forcing_tcov_inds   = forcing_tcov_inds,
-                        forcings_out        = forcings_out,
-                        forcing_transfers   = forcing_transfers
-                    )
+                    sim_path =
+                        cbind(ode_paths[[1]][cens_inds,],
+                              census_paths[[1]][cens_inds,-1])[,colnames(pathmat)]
+                    
+                    # census_latent_path(
+                    #     path                = census_paths[[1]],
+                    #     census_path         = pathmat,
+                    #     census_inds         = cens_inds,
+                    #     event_inds          = event_inds,
+                    #     flow_matrix         = flow_matrix_ode,
+                    #     do_prevalence       = do_prevalence,
+                    #     parmat              = ode_pars,
+                    #     initdist_inds       = init_states[1, ],
+                    #     forcing_inds        = forcing_inds,
+                    #     forcing_tcov_inds   = forcing_tcov_inds,
+                    #     forcings_out        = forcings_out,
+                    #     forcing_transfers   = forcing_transfers
+                    # )
 
                     for (k in seq_len(nsim)) {
                         # insert the time-varying parameters into the tcovar matrix
@@ -2163,7 +2174,8 @@ simulate_stem <-
 
                         # simulate the dataset
                         datasets[[k]] <- simulate_r_measure(
-                            pathmat,
+                            sim_path,
+                            # pathmat,
                             measproc_indmat,
                             sim_pars,
                             constants,

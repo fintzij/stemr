@@ -120,27 +120,6 @@ census_latent_path <- function(path, census_path, census_inds, event_inds, flow_
     invisible(.Call(`_stemr_census_latent_path`, path, census_path, census_inds, event_inds, flow_matrix, do_prevalence, parmat, initdist_inds, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers, row0))
 }
 
-#' Construct a matrix containing the compartment counts and the incidence at a sequence of census times.
-#'
-#' @param path matrix containing the path to be censused (cumulative incidence).
-#' @param census_path matrix to be filled out with the path.
-#' @param census_inds vector of indices for census interval endpoints.
-#' @param lna_event_inds vector of column indices in the path matrix for events that
-#'   should be censused.
-#' @param flow_matrix_lna matrix containing the flow matrix for the LNA (no incidence)
-#' @param do_prevalence should the prevalence be computed
-#' @param init_state the initial compartment counts
-#' @param forcing_inds logical vector of indicating at which times in the
-#'   time-varying covariance matrix a forcing is applied.
-#' @param lna_pars matrix with parameters, constants, and time varying 
-#'   covariates and parameters.
-#'
-#' @return matrix containing the compartment counts at census times.
-#' @export
-census_lna <- function(path, census_path, census_inds, lna_event_inds, flow_matrix_lna, do_prevalence, init_state, lna_pars, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers) {
-    invisible(.Call(`_stemr_census_lna`, path, census_path, census_inds, lna_event_inds, flow_matrix_lna, do_prevalence, init_state, lna_pars, forcing_inds, forcing_tcov_inds, forcings_out, forcing_transfers))
-}
-
 #' Difference an incidence variable in a census matrix.
 #'
 #' @param censusmat matrix of compartment counts at census times, to be updated
