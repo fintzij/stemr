@@ -81,7 +81,7 @@
       <h1 data-toc-skip>stemr: Baysian Inference for Stochastic Epidemic Models via the Linear Noise Approximation</h1>
                         <h4 class="author">Jonathan Fintz, Jon Wakefield, and Vladimir N. Minin</h4>
             
-            <h4 class="date">2020-10-31</h4>
+            <h4 class="date">2020-11-07</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/fintzij/stemr/blob/master/vignettes/stemr.Rmd"><code>vignettes/stemr.Rmd</code></a></small>
       <div class="hidden name"><code>stemr.Rmd</code></div>
@@ -105,8 +105,8 @@
 <a href="#basic-example-partially-observed-incidence-from-an-outbreak-with-sir-dynamics" class="anchor"></a>Basic example: partially observed incidence from an outbreak with SIR dynamics</h1>
 <p>As a basic example, we will simulate an outbreak with SIR dynamics and generate negative binomial incidence counts with a mean case detection rate of 0.5. Briefly, the SIR model describes the time-evolution of an outbreak homogeneously mixing population where each individual exists in one of three states - susceptible (S), infected (I), and recovered (R). Infection implies that an individual is infectious with no latent period, while recovery confers lifelong immunity. The waiting times between infection and recovery events are taken to be exponentially distributed and the rates of state transition change every time the population jumps to a different state. Hence, the transmission process is a Markov jump process. The rates at which infection and recovery events take place are <span class="math display">\[\lambda_{SI} = \beta S I,\ \text{and}\ \lambda_{IR} = \mu I,\]</span> where <span class="math inline">\(\beta\)</span> is the per-contact rate of infection, <span class="math inline">\(\mu\)</span> is the recovery rate, and <span class="math inline">\(S\)</span> and <span class="math inline">\(I\)</span> denote the numbers of susceptible and infectious individuals. The basic reproduction number under SIR dynamics is <span class="math inline">\(R_0 = \beta P/\mu\)</span>, where <span class="math inline">\(P=S+I+R\)</span> is the population size.</p>
 <p>We initialize parameters and instatiate the SIR model in the code block below. The functions in the <code>stemr</code> package are documented and can be accessed in the usual way, e.g., <code><a href="../reference/rate.html">help(rate)</a></code>.</p>
-<div class="sourceCode" id="cb1"><pre class="downlit">
-<span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/fintzij/stemr">stemr</a></span><span class="op">)</span>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/fintzij/stemr">stemr</a></span><span class="op">)</span>
 <span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://patchwork.data-imaginist.com">patchwork</a></span><span class="op">)</span>
 <span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="http://ggplot2.tidyverse.org">ggplot2</a></span><span class="op">)</span>
 
@@ -184,40 +184,40 @@
 <span class="co"># put it all together into a stochastic epidemic model object</span>
 <span class="va">stem_object</span> <span class="op">&lt;-</span> 
   <span class="fu"><a href="../reference/make_stem.html">make_stem</a></span><span class="op">(</span>dynamics <span class="op">=</span> <span class="va">dynamics</span>,
-            measurement_process <span class="op">=</span> <span class="va">measurement_process</span><span class="op">)</span></pre></div>
+            measurement_process <span class="op">=</span> <span class="va">measurement_process</span><span class="op">)</span></code></pre></div>
 <div id="simulating-an-outbreak-and-data" class="section level2">
 <h2 class="hasAnchor">
 <a href="#simulating-an-outbreak-and-data" class="anchor"></a>Simulating an outbreak and data</h2>
 <p>Having compiled the model, we can simulate an outbreak and incidence (or prevalence) data using Gillespie’s direct algorith to simulate a MJP path, with the LNA, or deterministically with ODEs. Since we specified that the data should consist of incidence counts in instatiating the model, the simulation function will produce incidence data. The prevalence and incidence curves are plotted below.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit">
-<span class="va">sim_mjp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_stem.html">simulate_stem</a></span><span class="op">(</span>stem_object <span class="op">=</span> <span class="va">stem_object</span>, method <span class="op">=</span> <span class="st">"gillespie"</span>, full_paths <span class="op">=</span> <span class="cn">T</span><span class="op">)</span>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">sim_mjp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_stem.html">simulate_stem</a></span><span class="op">(</span>stem_object <span class="op">=</span> <span class="va">stem_object</span>, method <span class="op">=</span> <span class="st">"gillespie"</span>, full_paths <span class="op">=</span> <span class="cn">T</span><span class="op">)</span>
 <span class="va">sim_lna</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_stem.html">simulate_stem</a></span><span class="op">(</span>stem_object <span class="op">=</span> <span class="va">stem_object</span>, method <span class="op">=</span> <span class="st">"lna"</span>, lna_method <span class="op">=</span> <span class="st">"approx"</span><span class="op">)</span>
-<span class="va">sim_ode</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_stem.html">simulate_stem</a></span><span class="op">(</span>stem_object <span class="op">=</span> <span class="va">stem_object</span>, method <span class="op">=</span> <span class="st">"ode"</span><span class="op">)</span></pre></div>
+<span class="va">sim_ode</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_stem.html">simulate_stem</a></span><span class="op">(</span>stem_object <span class="op">=</span> <span class="va">stem_object</span>, method <span class="op">=</span> <span class="st">"ode"</span><span class="op">)</span></code></pre></div>
 <p><img src="stemr_files/figure-html/plot_sims-1.png" width="768"></p>
 </div>
 <div id="fitting-the-model-to-data" class="section level2">
 <h2 class="hasAnchor">
 <a href="#fitting-the-model-to-data" class="anchor"></a>Fitting the model to data</h2>
 <p>We’ll keep the dataset simulated under the MJP (shown below) and fit an SIR model to the data.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit">
-<span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html">ggplot</a></span><span class="op">(</span>data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html">as.data.frame</a></span><span class="op">(</span><span class="va">sim_mjp</span><span class="op">$</span><span class="va">datasets</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>,
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html">ggplot</a></span><span class="op">(</span>data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html">as.data.frame</a></span><span class="op">(</span><span class="va">sim_mjp</span><span class="op">$</span><span class="va">datasets</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>,
                 <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html">aes</a></span><span class="op">(</span>x<span class="op">=</span><span class="va">time</span>, y <span class="op">=</span> <span class="va">S2I</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span>
   <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html">geom_point</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span>
   <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html">theme_minimal</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span>
-  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html">labs</a></span><span class="op">(</span>x <span class="op">=</span> <span class="st">"Week"</span>, y <span class="op">=</span> <span class="st">"Count"</span>, title <span class="op">=</span> <span class="st">"Observed Incidence"</span><span class="op">)</span></pre></div>
+  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html">labs</a></span><span class="op">(</span>x <span class="op">=</span> <span class="st">"Week"</span>, y <span class="op">=</span> <span class="st">"Count"</span>, title <span class="op">=</span> <span class="st">"Observed Incidence"</span><span class="op">)</span></code></pre></div>
 <p><img src="stemr_files/figure-html/plot_dat-1.png" width="700"></p>
 <p>We’ll need to recompile the measurement process with the simulated data fed to the data argument of the <code>stem_measure</code> function since the data was not present when the measurement process was originally compiled. There is no need to recompile the model dynamics object, although we’ll have to regenerate the object with the new measurement process.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit">
-<span class="va">measurement_process</span> <span class="op">&lt;-</span>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">measurement_process</span> <span class="op">&lt;-</span>
   <span class="fu"><a href="../reference/stem_measure.html">stem_measure</a></span><span class="op">(</span>emissions <span class="op">=</span> <span class="va">emissions</span>,
                dynamics <span class="op">=</span> <span class="va">dynamics</span>,
                data <span class="op">=</span> <span class="va">sim_mjp</span><span class="op">$</span><span class="va">datasets</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>
 <span class="va">stem_object</span> <span class="op">&lt;-</span> 
   <span class="fu"><a href="../reference/make_stem.html">make_stem</a></span><span class="op">(</span>dynamics <span class="op">=</span> <span class="va">dynamics</span>, 
-            measurement_process <span class="op">=</span> <span class="va">measurement_process</span><span class="op">)</span></pre></div>
+            measurement_process <span class="op">=</span> <span class="va">measurement_process</span><span class="op">)</span></code></pre></div>
 <p>In order to perform inference, we’ll need to specify a function for transforming the model parameters from their natural scale to the estimation scale on which the MCMC explores the posterior, a function for transforming parameters on their estimation scale to the natural scale on which they enter the model dynamics and measurement process, and a function that returns the log prior. We’ll parameterize the MCMC estimation scale in terms of the log basic reproduction number, log recovery rate, logit mean case detection rate, and log of the negative binomial overdispersion parameter. The functions are specified as follows and placed into a list of functions (note that it is critical that the function signatures follow the specification given below):</p>
-<div class="sourceCode" id="cb5"><pre class="downlit">
-
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R">
 <span class="co">### Parameterization in terms of log(R0) and log(mu)</span>
 <span class="co">## Priors for log(R0), log(mu), logit(rho), phi</span>
 <span class="co"># Parameters (natural scale): beta, mu, rho, phi</span>
@@ -251,10 +251,10 @@
 <span class="co"># return all three functions in a list</span>
 <span class="va">priors</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>logprior <span class="op">=</span> <span class="va">logprior</span>,
                to_estimation_scale <span class="op">=</span> <span class="va">to_estimation_scale</span>,
-               from_estimation_scale <span class="op">=</span> <span class="va">from_estimation_scale</span><span class="op">)</span></pre></div>
+               from_estimation_scale <span class="op">=</span> <span class="va">from_estimation_scale</span><span class="op">)</span></code></pre></div>
 <p>We now specify the MCMC transition kernel. The main building block in the MCMC kernel is a list of parameter block lists, each specified via a call to the <code><a href="../reference/parblock.html">parblock()</a></code> function. In this simple example, we’ll update the model hyperparameters using a multivariate normal Metropolis-Hastings algorithm. We’ll tune the algorithm using a global adaptive scheme (algorithm 4 in Andrieu and Thoms). We’ll also initialize the parameters at random values, which is accomplished by specifying a function that adds noise to the parameters on their estimation scale.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit">
-<span class="va">par_initializer</span> <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">par_initializer</span> <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span>
   <span class="va">priors</span><span class="op">$</span><span class="fu">from_estimation_scale</span><span class="op">(</span><span class="va">priors</span><span class="op">$</span><span class="fu">to_estimation_scale</span><span class="op">(</span><span class="va">parameters</span><span class="op">)</span> <span class="op">+</span> 
                                  <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">rnorm</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">0</span>, <span class="fl">0.1</span><span class="op">)</span><span class="op">)</span>
 <span class="op">}</span>
@@ -272,19 +272,19 @@
                   initializer <span class="op">=</span> <span class="va">par_initializer</span>,
                   control <span class="op">=</span> 
                     <span class="fu"><a href="../reference/mvnmh_control.html">mvnmh_control</a></span><span class="op">(</span>stop_adaptation <span class="op">=</span> <span class="fl">2.5e2</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>, 
-          lna_ess_control <span class="op">=</span> <span class="fu"><a href="../reference/lna_control.html">lna_control</a></span><span class="op">(</span>bracket_update_iter <span class="op">=</span> <span class="fl">50</span><span class="op">)</span><span class="op">)</span></pre></div>
+          lna_ess_control <span class="op">=</span> <span class="fu"><a href="../reference/lna_control.html">lna_control</a></span><span class="op">(</span>bracket_update_iter <span class="op">=</span> <span class="fl">50</span><span class="op">)</span><span class="op">)</span></code></pre></div>
 <p>We now run the MCMC algorithm to fit the model via ODEs (for the sake of time in compiling the vignette). To perform inference with the LNA, simply change the <code>method</code> argument to <code>method="lna"</code>.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit">
-<span class="va">res</span> <span class="op">&lt;-</span>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">res</span> <span class="op">&lt;-</span>
     <span class="fu"><a href="../reference/fit_stem.html">fit_stem</a></span><span class="op">(</span>stem_object <span class="op">=</span> <span class="va">stem_object</span>,
              method <span class="op">=</span> <span class="st">"ode"</span>,
              mcmc_kern <span class="op">=</span> <span class="va">mcmc_kern</span>,
              thinning_interval <span class="op">=</span> <span class="fl">50</span>,
-             iterations <span class="op">=</span> <span class="fl">5e2</span><span class="op">)</span></pre></div>
+             iterations <span class="op">=</span> <span class="fl">5e2</span><span class="op">)</span></code></pre></div>
 <p>The <code>fit_stem</code> function fits the model and returns a list of MCMC samples and latent epidemic paths. These can be accessed as follows:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit">
-<span class="va">runtime</span> <span class="op">=</span> <span class="va">res</span><span class="op">$</span><span class="va">results</span><span class="op">$</span><span class="va">runtime</span>
-<span class="va">posterior</span> <span class="op">=</span> <span class="va">res</span><span class="op">$</span><span class="va">results</span><span class="op">$</span><span class="va">posterior</span> <span class="co"># list with posterior objects</span></pre></div>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">runtime</span> <span class="op">=</span> <span class="va">res</span><span class="op">$</span><span class="va">results</span><span class="op">$</span><span class="va">runtime</span>
+<span class="va">posterior</span> <span class="op">=</span> <span class="va">res</span><span class="op">$</span><span class="va">results</span><span class="op">$</span><span class="va">posterior</span> <span class="co"># list with posterior objects</span></code></pre></div>
 </div>
 </div>
 <div id="references" class="section level1">
