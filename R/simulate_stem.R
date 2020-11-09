@@ -1773,7 +1773,7 @@ simulate_stem <-
         }
 
         if (observations && length(failed_runs) != nsim) {
-            
+
             datasets <- vector(mode = "list", length = length(census_paths))
             measvar_names <- colnames(stem_object$measurement_process$obsmat)
 
@@ -1784,7 +1784,7 @@ simulate_stem <-
                     census_times   = stem_object$measurement_process$obstimes,
                     census_columns = 1:(ncol(stem_object$dynamics$tcovar) - 1)
                 )
-            
+
             colnames(tcovar_obstimes) <-
                 colnames(stem_object$dynamics$tcovar)
 
@@ -1943,12 +1943,12 @@ simulate_stem <-
                 tcovar <- tcovar[, -1, drop = FALSE]
 
                 for (k in seq_along(census_paths)) {
-                    
+
                     # fill out the census matrix
                     sim_path =
                         cbind(lna_paths[[k]][cens_inds,],
                               census_paths[[k]][cens_inds,-1])[,colnames(pathmat)]
-                    
+
                     # census_latent_path(
                     #     path                = census_paths[[k]],
                     #     census_path         = pathmat,
@@ -1964,8 +1964,11 @@ simulate_stem <-
                     #     forcing_transfers   = forcing_transfers
                     # )
 
-                    if (!is.null(simulation_parameters))
-                        sim_pars <- as.numeric(simulation_parameters[[k]])
+                    if (!is.null(simulation_parameters)) {
+                      sim_pars <- simulation_parameters[[k]]
+                      class(sim_pars) <- "numeric"
+                    }
+
 
                     # insert the time-varying parameters into the tcovar matrix
                     if (!is.null(tparam_draws)) {
@@ -2010,12 +2013,12 @@ simulate_stem <-
                 }
 
             } else if (method == "ode") {
-                
+
                 # get the objects for simulating from the measurement process
                 measproc_indmat  <-
                     stem_object$measurement_process$measproc_indmat
-                sim_pars         <-
-                    as.numeric(stem_object$dynamics$parameters)
+                sim_pars <- stem_object$dynamics$parameters
+                class(sim_pars) <- "numeric"
                 constants        <-
                     as.numeric(stem_object$dynamics$constants)
                 tcovar           <- stem_object$dynamics$tcovar
@@ -2039,7 +2042,7 @@ simulate_stem <-
                     stem_object$measurement_process$incidence_codes_ode
 
                 if (!is.null(stem_object$dynamics$tparam)) {
-                    
+
                     # reinitialize the tparam indices if necessary
                     for (s in seq_along(stem_object$dynamics$tparam)) {
                         stem_object$dynamics$tparam[[s]]$col_ind  <-
@@ -2061,11 +2064,11 @@ simulate_stem <-
 
                 if (!fixed_parameters) {
                     for (k in seq_along(census_paths)) {
-                        
+
                         sim_path =
                             cbind(ode_paths[[k]][cens_inds,],
                                   census_paths[[k]][cens_inds,-1])[,colnames(pathmat)]
-                        
+
                         # census_latent_path(
                         #     path                = sim_path,
                         #     census_path         = pathmat,
@@ -2081,9 +2084,10 @@ simulate_stem <-
                         #     forcing_transfers   = forcing_transfers
                         # )
 
-                        if (!is.null(simulation_parameters))
-                            sim_pars <-
-                                as.numeric(simulation_parameters[[k]])
+                        if (!is.null(simulation_parameters)) {
+                          sim_pars <- simulation_parameters[[k]]
+                          class(sim_pars) <- "numeric"
+                        }
 
                         # insert the time-varying parameters into the tcovar matrix
                         if (!is.null(tparam_values)) {
@@ -2130,11 +2134,11 @@ simulate_stem <-
                         colnames(datasets[[k]]) <- measvar_names
                     }
                 } else {
-                    
+
                     sim_path =
                         cbind(ode_paths[[1]][cens_inds,],
                               census_paths[[1]][cens_inds,-1])[,colnames(pathmat)]
-                    
+
                     # census_latent_path(
                     #     path                = census_paths[[1]],
                     #     census_path         = pathmat,
