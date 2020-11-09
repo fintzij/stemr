@@ -61,7 +61,7 @@ simulate_stem <-
              lna_bracket_width = 2 * pi,
              ess_warmup = 100,
              messages = TRUE) {
-        
+
         # ensure that the method is correctly specified
         if (!method %in% c("gillespie", "lna", "ode")) {
             stop("The simulation method must either be 'gillespie', 'lna', or 'ode'.")
@@ -194,7 +194,7 @@ simulate_stem <-
         # build the time varying covariate matrix (includes, at a minimum, the endpoints of the simulation interval)
         # if timestep is null, there are no time-varying covariates
         if (method == "gillespie") {
-            
+
             # if any of t0, tmax, or a timestep was supplied,
             # check if they differ from the parameters supplied in the stem_object$dynamics.
             # if they differ, reconstruct the tcovar matrix and associated objects
@@ -528,7 +528,8 @@ simulate_stem <-
                         for (m in seq_along(stem_object$dynamics$tparam)) {
                             # grab parameters
                             if (!is.null(simulation_parameters)) {
-                                sim_pars <- as.numeric(simulation_parameters[[n]])
+                                sim_pars <- simulation_parameters[[n]]
+                                class(sim_pars) <- "numeric"
                             }
 
                             # draw values
@@ -554,7 +555,8 @@ simulate_stem <-
                         for (m in seq_along(stem_object$dynamics$tparam)) {
                             # grab parameters
                             if (!is.null(simulation_parameters)) {
-                                sim_pars <- as.numeric(simulation_parameters[[n]])
+                                sim_pars <- simulation_parameters[[n]]
+                                class(sim_pars) <- "numeric"
                             }
 
                             # compute values
@@ -595,12 +597,13 @@ simulate_stem <-
             }
 
             for (k in seq_len(nsim)) {
-                
+
                 attempt <- 0
                 path_full <- NULL
 
                 if (!is.null(simulation_parameters)) {
-                    sim_pars <- as.numeric(simulation_parameters[[k]])
+                    sim_pars <- simulation_parameters[[k]]
+                    class(sim_pars) <- "numeric"
                 }
 
                 # draw new time-varying parameters if necessary
@@ -981,8 +984,9 @@ simulate_stem <-
                         for (m in seq_along(stem_object$dynamics$tparam)) {
                             # grab parameters
                             if (!is.null(simulation_parameters)) {
-                                sim_pars <- as.numeric(simulation_parameters[[n]])
-                                lna_pars[parameter_inds + 1, ] <-
+                                sim_pars <- simulation_parameters[[n]]
+                                class(sim_pars) <- "numeric"
+                                lna_pars[lna_param_inds + 1, ] <-
                                     sim_pars
                             }
 
@@ -1020,8 +1024,9 @@ simulate_stem <-
                     for (n in seq_len(nsim)) {
                         for (m in seq_along(stem_object$dynamics$tparam)) {
                             if (!is.null(simulation_parameters)) {
-                                sim_pars <- as.numeric(simulation_parameters[[n]])
-                                lna_pars[parameter_inds + 1, ] <-
+                                sim_pars <- simulation_parameters[[n]]
+                                class(sim_pars) <- "numeric"
+                                lna_pars[lna_param_inds + 1, ] <-
                                     sim_pars
                             }
 
@@ -1132,8 +1137,9 @@ simulate_stem <-
 
             for (k in seq_len(nsim)) {
                 if (!is.null(simulation_parameters)) {
-                    sim_pars <- as.numeric(simulation_parameters[[k]])
-                    lna_pars[parameter_inds + 1, ] <- sim_pars
+                    sim_pars <- simulation_parameters[[k]]
+                    class(sim_pars) <- "numeric"
+                    lna_pars[lna_param_inds + 1, ] <- sim_pars
                 }
 
                 if (!stem_object$dynamics$fixed_inits) {
@@ -1261,13 +1267,13 @@ simulate_stem <-
             }
 
         } else if (method == "ode") {
-            
+
             # set the vectors of times when the ODE is evaluated and censused
             ode_times <-
                 sort(unique(
                     c(t0, census_times, stem_object$dynamics$tcovar[, 1], tmax)
                 ))
-            
+
             ode_census_times <-
                 ode_times[ode_times >= t0 & ode_times <= tmax]
 
@@ -1288,10 +1294,10 @@ simulate_stem <-
                     stem_object$dynamics$param_codes,
                     stem_object$dynamics$ode_initdist_inds
                 )
-            
+
             constant_inds  <-
                 length(stem_object$dynamics$param_codes) + seq_along(stem_object$dynamics$const_codes) - 1
-            
+
             tcovar_inds    <-
                 length(stem_object$dynamics$param_codes) + length(constant_inds) + seq_along(stem_object$dynamics$tcovar_codes) - 1
 
@@ -1352,7 +1358,7 @@ simulate_stem <-
             # generate some auxilliary objects
             param_update_inds <-
                 ode_times %in% unique(c(t0, tmax, stem_object$dynamics$tcovar[, 1]))
-            
+
             census_interval_inds <-
                 findInterval(ode_times, census_times, left.open = T)
 
@@ -1462,7 +1468,7 @@ simulate_stem <-
                 matrix(0.0,
                        nrow = nsim,
                        ncol = length(stem_object$dynamics$comp_codes))
-            
+
             colnames(init_states) <-
                 names(stem_object$dynamics$comp_codes)
 
@@ -1553,7 +1559,8 @@ simulate_stem <-
                     for (n in seq_len(nsim)) {
                         for (m in seq_along(stem_object$dynamics$tparam)) {
                             if (!is.null(simulation_parameters)) {
-                                sim_pars <- as.numeric(simulation_parameters[[n]])
+                                sim_pars <- simulation_parameters[[n]]
+                                class(sim_pars) <- "numeric"
                             }
 
                             if (!stem_object$dynamics$fixed_inits) {
@@ -1605,7 +1612,8 @@ simulate_stem <-
                         for (m in seq_along(stem_object$dynamics$tparam)) {
                             # grab parameters
                             if (!is.null(simulation_parameters)) {
-                                sim_pars <- as.numeric(simulation_parameters[[n]])
+                                sim_pars <- simulation_parameters[[n]]
+                                class(sim_pars) <- "numeric"
                             }
 
                             # compute values
@@ -1686,7 +1694,8 @@ simulate_stem <-
 
             for (k in seq_along(census_paths)) {
                 if (!is.null(simulation_parameters)) {
-                    sim_pars <- as.numeric(simulation_parameters[[k]])
+                    sim_pars <- simulation_parameters[[k]]
+                    class(sim_pars) <- "numeric"
                 }
 
                 if (!stem_object$dynamics$fixed_inits) {
@@ -1813,18 +1822,17 @@ simulate_stem <-
 
                 # column codes in the path matrix for compartments to be censused
                 census_codes <-
-                    c(stem_object$dynamics$comp_codes, 
+                    c(stem_object$dynamics$comp_codes,
                       stem_object$dynamics$incidence_codes) + 2
-                
+
                 pathmat         <-
                     stem_object$measurement_process$censusmat
 
                 # initialize simulation parameters
-                sim_pars <-
-                    as.numeric(stem_object$dynamics$parameters)
+                sim_pars <- stem_object$dynamics$parameters
+                class(sim_pars) <- "numeric"
 
                 for (k in seq_len(nsim)) {
-                    
                     # get the state at observation times
                     if (!is.null(census_paths[[k]])) {
                         if (do_census) {
@@ -1834,9 +1842,10 @@ simulate_stem <-
                         }
 
                         # get the new simulation parameters if a list was supplied
-                        if (!is.null(simulation_parameters))
-                            sim_pars <-
-                                as.numeric(simulation_parameters[[k]])
+                        if (!is.null(simulation_parameters)) {
+                          sim_pars <- simulation_parameters[[k]]
+                          class(sim_pars) <- "numeric"
+                        }
 
                         # insert the time-varying parameters into the tcovar matrix
                         if (!is.null(tparam_draws)) {
@@ -1880,25 +1889,24 @@ simulate_stem <-
                 }
 
             } else if (method == "lna") {
-                
                 # get the objects for simulating from the measurement process
                 measproc_indmat  <-
                     stem_object$measurement_process$measproc_indmat
-                sim_pars         <-
-                    as.numeric(stem_object$dynamics$parameters)
+                sim_pars <- stem_object$dynamics$parameters
+                class(sim_pars) <- "numeric"
                 constants        <-
                     as.numeric(stem_object$dynamics$constants)
                 tcovar           <- stem_object$dynamics$tcovar
                 r_measure_ptr    <-
                     stem_object$measurement_process$meas_pointers_lna$r_measure_ptr
                 cens_inds        <-
-                    match(
+                    c(0, match(
                         round(
                             stem_object$measurement_process$obstimes,
                             digits = 8
                         ),
                         round(census_times, digits = 8)
-                    )
+                    ) - 1)
                 do_prevalence    <-
                     stem_object$measurement_process$lna_prevalence
                 do_incidence     <-
