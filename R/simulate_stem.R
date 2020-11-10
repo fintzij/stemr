@@ -107,8 +107,8 @@ simulate_stem <-
             }
 
             if (!all(sapply(simulation_parameters, function(x)
-                all(
-                    names(x) == names(stem_object$dynamics$parameters)
+                all(names(x) == 
+                    names(stem_object$dynamics$parameters)[!grepl("_0", names(stem_object$dynamics$parameters))]
                 )))) {
                 stop(
                     "The simulation parameters list must consist of named vectors with elements given in the same order as the parameters in the stem object."
