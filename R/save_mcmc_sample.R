@@ -84,7 +84,7 @@ save_mcmc_sample =
                       ind  = rec_ind)
             
             insert_elem(dest = mcmc_samples$tparam_log_lik,
-                        elem = sum(dnorm(sapply(tparam, "[[", "draws_cur"), log = T)),
+                        elem = sum(dnorm(unlist(sapply(tparam, "[[", "draws_cur")), log = T)),
                         ind  = rec_ind)
             
             for(s in seq_along(tparam)) {
