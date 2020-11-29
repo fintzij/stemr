@@ -56,6 +56,18 @@
 <li>
   <a href="reference/index.html">Reference</a>
 </li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+    Articles
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+<li>
+      <a href="articles/ebola_westafrica.html">Fitting a multi-country model for Ebola transmission in West Africa using the stemr package</a>
+    </li>
+  </ul>
+</li>
       </ul>
 <ul class="nav navbar-nav navbar-right">
 <li>
@@ -89,16 +101,11 @@
 <h2 class="hasAnchor">
 <a href="#package-installation" class="anchor"></a>Package installation</h2>
 <p>To install the <code>stemr</code> package, clone this repository and build the package from sources. You should be able to rebuild in the usual way once you clone the package repo and install the other dependencies (<code>odeintr</code>, <code>extraDistr</code>, <code>Rcpp</code>, <code>RcppArmadillo</code>, and <code>BH</code>). Computationally intensive components in <code>stemr</code> package are implemented in C++. Hence, it is important to also make sure that your C++ toolchain is set up properly, e.g., by following instructions given in the <a href="https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started">Stan</a> documentation, and that Rtools has been added to your system path. If you are working on a Windows machine, you may need to take additional steps to ensure your toolset is in order.</p>
-<!-- ## Vignettes -->
-<!-- There are two vignettes included in this package to help familiarize users  -->
-<!-- with its basic functionality and that reproduce models the SEMs fit via the LNA  -->
-<!-- in Fintzi, et al. (2020). The [stemr_sir](https://github.com/fintzij/stemr/blob/master/vignettes/stemr_sir.Rmd) vignette provides an introduction to -->
-<!-- the `stemr` package, and demonstrates how to simulate from and fit an SIR model  -->
-<!-- via the LNA and ODE. The [ebola_westafrica](https://github.com/fintzij/stemr/blob/master/vignettes/ebola_westafrica.Rmd) vignette demonstrates how to simulate -->
-<!-- from and fit a multi-country model for Ebola transmission, and then provides code -->
-<!-- to fit the model to data from the 2014-2015 outbreak in West Africa. Both vignettes  -->
-<!-- also include annotated `pomp` code for fitting the respective models (version  -->
-<!-- 1.17 was used as a benchmark in the paper).  -->
+</div>
+<div id="vignettes-and-simulation-code" class="section level2">
+<h2 class="hasAnchor">
+<a href="#vignettes-and-simulation-code" class="anchor"></a>Vignettes and Simulation Code</h2>
+<p>The code for reproducing the simulations in Fintzi, et. al (2020) can be found in the <a href="https://github.com/fintzij/stemr/tree/master/.development_files/incidence_lna_simulations">‘/.development_files/incidence_lna_simulations’</a> folder. There are two vignettes included in this package to help familiarize users with its basic functionality and that reproduce models the SEMs fit via the LNA in Fintzi, et al. (2020). The <a href="https://github.com/fintzij/stemr/blob/master/vignettes/stemr_sir.Rmd">stemr_sir</a> vignette provides an introduction to the <code>stemr</code> package, and demonstrates how to simulate from and fit an SIR model via the LNA and ODE. The <a href="https://github.com/fintzij/stemr/blob/master/vignettes/ebola_westafrica.Rmd">ebola_westafrica</a> vignette demonstrates how to simulate from and fit a multi-country model for Ebola transmission, and then provides code to fit the model to data from the 2014-2015 outbreak in West Africa.</p>
 </div>
 </div>
   </div>
