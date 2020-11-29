@@ -30,10 +30,10 @@ build_flowmat <- function(rates, compartment_names) {
                 colnames(incidence_matrix) <- rate_names[incidence_rates]
                 
                 # bind the incidence matrix to the flow matrix
-                flow_matrix                <- cbind(flow_matrix, incidence_matrix)
+                flow_matrix <- cbind(flow_matrix, incidence_matrix)
                 
                 # fill out the incident transitions
-                flow_matrix[rate_names[incidence_rates], rate_names[incidence_rates]] = 1
+                flow_matrix[cbind(rate_names[incidence_rates], rate_names[incidence_rates])] = 1
         }
 
         return(flow_matrix)

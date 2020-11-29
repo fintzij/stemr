@@ -20,7 +20,7 @@ prepare_param_blocks =
         
         ### get index for when MCMC adaptation is to be stopped
         adapt_iters <- sapply(param_blocks, function(x) x$control$stop_adaptation)
-        if(!all.equal(adapt_iters, adapt_iters[1])) {
+        if(!all(adapt_iters == adapt_iters[1])) {
             message("MCMC proposals for some parameter blocks are adapted longer than 
                     others. All blocks will be adapted until the maximum adaptation.")
         }

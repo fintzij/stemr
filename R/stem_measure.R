@@ -178,26 +178,16 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = FALSE) {
                     gsub(" ", "", meas_procs[[k]]$emission_params[j])
                 }
         }
+        
+        # set the observation times in meas_procs
+        for(s in seq_along(meas_procs)) {
+          meas_procs[[s]]$obstimes <- emissions[[s]]$obstimes
+        }
 
         # if a dataset or list of datasets is supplied, extract the observation times, combine them and generate the indicator matrix
         if(!is.null(data)) {
               
                 if(class(data)[1] == "data.frame") data <- as.matrix(data)
-
-                if(!is.list(data)) {
-                        obstimes <- data[,1]
-                        for(s in seq_along(meas_procs)){
-                                meas_procs[[s]]$obstimes <- obstimes
-                        }
-                } else {
-                        for(s in seq_along(meas_procs)) {
-                                for(t in seq_along(data)) {
-                                        if(meas_procs[[s]]$meas_var %in% colnames(data[[t]])) {
-                                                meas_procs[[s]]$obstimes <- data[[t]][,1]
-                                        }
-                                }
-                        }
-                }
               
                 obsmat          <- build_obsmat(datasets = data)                # observation matrix
                 obstimes        <- obsmat[,"time"]                              # vector of observation times
@@ -414,6 +404,11 @@ stem_measure <- function(emissions, dynamics, data = NULL, messages = FALSE) {
           meas_pointers_lna$meas_proc_code <- NULL
         } else {
           meas_proc_code$approx_meas_code <- NULL
+        }
+        
+        # reconcile measproc_indmat with the supplied observation times
+        for(s in seq_along(meas_procs)) {
+          measproc_indmat[,s] = obstimes %in% meas_procs[[s]]$obstimes
         }
         
         # initialize a matrix for storing the compartment counts at observation times

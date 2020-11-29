@@ -39,12 +39,13 @@ prepare_lna_ess_schedule = function(stem_object, initializer, lna_ess_control) {
         ess_schedule[[1]]$n_updates   = lna_ess_control$n_updates 
         
     } else {
+        
         ess_inds =
             lapply(paste0("_", names(stem_object$dynamics$strata_codes)),
                    function(x) grep(x, rownames(stem_object$dynamics$flow_matrix)))
         
         initdist_codes = 
-            lapply(names(ess_schedule$strata_codes),
+            lapply(names(stem_object$dynamics$strata_codes),
                    function(x) match(x, sapply(initializer, "[[", "strata")))
         
         complementary_inds <- 
