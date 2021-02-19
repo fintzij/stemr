@@ -46,7 +46,7 @@
       <ul class="nav navbar-nav">
 <li>
   <a href="../index.html">
-    <span class="fas fa fas fa-home fa-lg"></span>
+    <span class="fas fa-home fa-lg"></span>
      
   </a>
 </li>
@@ -72,7 +72,7 @@
 <ul class="nav navbar-nav navbar-right">
 <li>
   <a href="https://github.com/fintzij/stemr/">
-    <span class="fab fa fab fa-github fa-lg"></span>
+    <span class="fab fa-github fa-lg"></span>
      
   </a>
 </li>
@@ -86,14 +86,13 @@
 
       
 
-      </header><script src="ebola_westafrica_files/accessible-code-block-0.0.1/empty-anchor.js"></script><link href="ebola_westafrica_files/anchor-sections-1.0/anchor-sections.css" rel="stylesheet">
-<script src="ebola_westafrica_files/anchor-sections-1.0/anchor-sections.js"></script><div class="row">
+      </header><script src="ebola_westafrica_files/accessible-code-block-0.0.1/empty-anchor.js"></script><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>Fitting a multi-country model for Ebola transmission in West Africa using the stemr package</h1>
                         <h4 class="author">Jonathan Fintz, Jon Wakefield, and Vladimir N. Minin</h4>
             
-            <h4 class="date">2020-11-29</h4>
+            <h4 class="date">2021-02-19</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/fintzij/stemr/blob/master/vignettes/ebola_westafrica.Rmd"><code>vignettes/ebola_westafrica.Rmd</code></a></small>
       <div class="hidden name"><code>ebola_westafrica.Rmd</code></div>
@@ -445,7 +444,7 @@
 <span class="va">dat</span>         <span class="op">&lt;-</span> <span class="va">sim</span><span class="op">$</span><span class="va">datasets</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span> <span class="co"># data</span>
 <span class="va">total_cases</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colSums.html">colSums</a></span><span class="op">(</span><span class="va">dat</span><span class="op">[</span>,<span class="op">-</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span> <span class="co"># for priors as in Web Appendix G of Fintzi. et al. (2020)</span></code></pre></div>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html">require</a></span><span class="op">(</span><span class="va"><a href="http://ggplot2.tidyverse.org">ggplot2</a></span><span class="op">)</span>
+<code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html">require</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org">ggplot2</a></span><span class="op">)</span>
 <span class="kw"><a href="https://rdrr.io/r/base/library.html">require</a></span><span class="op">(</span><span class="va">cowplot</span><span class="op">)</span>
 
 <span class="va">sim_dat</span> <span class="op">=</span> 
