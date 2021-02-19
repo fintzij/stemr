@@ -14,14 +14,14 @@ rsbln <- function(n, logit_stick_means, stick_sds, stick_size) {
 
   partial_stick_proportions <- cbind(
     matrix(
-      expit(rnorm(n = n * n_half_parameters,
+      expit(rnorm(n = n * (n_compartments - 1),
                   mean = logit_stick_means,
                   sd = stick_sds)),
       nrow = n, ncol = n_compartments - 1, byrow = T),
     1)
 
   full_stick_proportions <- matrix(nrow = n, ncol = n_compartments)
-  full_stick_proportions[, 1] = partial_stick_proportions[, 1]
-  for (i in 2:n_compartments) full_stick_proportions[, i] <- (1 - rowSums(full_stick_proportions[ , 1:(i-1), drop = F])) * partial_stick_proportions[, i, drop = F]
-  full_stick_proportions * stick_size
+  full_stick_proportions[, 1] = round(partial_stick_proportions[, 1] * stick_size)
+  for (i in 2:n_compartments) full_stick_proportions[, i] <- round((stick_size - rowSums(full_stick_proportions[ , 1:(i-1), drop = F])) * partial_stick_proportions[, i, drop = F])
+  full_stick_proportions
 }

@@ -290,6 +290,13 @@ simulate_stem <-
                     names(stem_object$dynamics$comp_codes)
 
             } else {
+                init_states <-
+                    matrix(
+                        0,
+                        nrow = nsim,
+                        ncol = length(stem_object$dynamics$comp_codes)
+                    )
+
                 if (stem_object$dynamics$n_strata == 1) {
                     # simulate the initial compartment counts
                     if(stem_object$dynamics$initializer[[1]]$dist == "multinom") {
@@ -312,6 +319,13 @@ simulate_stem <-
                                     stem_object$dynamics$initdist_priors != 0,
                                     stem_object$dynamics$initdist_priors,
                                     .Machine$double.eps))
+                    }  else { # if sbln
+                        prior_length <- length(stem_object$dynamics$initializer[[1]]$prior)
+                        logit_stick_means <- stem_object$dynamics$initializer[[1]]$prior[1:(prior_length / 2)]
+                        stick_sds <- stem_object$dynamics$initializer[[1]]$prior[((prior_length / 2) + 1):prior_length]
+
+                        init_states[, stem_object$dynamics$initializer[[1]]$codes] <-
+                            stemr::rsbln(nsim, logit_stick_means, stick_sds, stem_object$dynamics$popsize)
                     }
                     colnames(init_states) <-
                         names(stem_object$dynamics$comp_codes)
@@ -351,12 +365,11 @@ simulate_stem <-
                                     )
                             } else {
                                 prior_length <- length(stem_object$dynamics$initializer[[s]]$prior)
-                                logit_stick_means <- stem_object$dynamics$initializer[[s]]$prior[1:((prior_length - 1) / 2)]
-                                stick_sds <- stem_object$dynamics$initializer[[s]]$prior[((prior_length - 1) / 2) + 1:(prior_length - 1)]
-                                stick_size <- stem_object$dynamics$initializer[[s]]$prior[prior_length]
+                                logit_stick_means <- stem_object$dynamics$initializer[[s]]$prior[1:(prior_length / 2)]
+                                stick_sds <- stem_object$dynamics$initializer[[s]]$prior[((prior_length / 2) + 1):prior_length]
 
                                 init_states[, stem_object$dynamics$initializer[[s]]$codes] <-
-                                    stemr::rsbln(nsim, logit_stick_means, stick_sds, stick_size)
+                                    stemr::rsbln(nsim, logit_stick_means, stick_sds, stem_object$dynamics$strata_sizes[s])
                             }
 
                         } else {
@@ -646,7 +659,7 @@ simulate_stem <-
                                 constants         = stem_object$dynamics$constants,
                                 tcovar            = stem_object$dynamics$tcovar,
                                 t_max             = max(census_times),
-                                init_states       = init_states[k,],
+                                init_states       = round(init_states[k,]),
                                 rate_adjmat       = stem_object$dynamics$rate_adjmat,
                                 tcovar_adjmat     = stem_object$dynamics$tcovar_adjmat,
                                 tcovar_changemat  = stem_object$dynamics$tcovar_changemat,
