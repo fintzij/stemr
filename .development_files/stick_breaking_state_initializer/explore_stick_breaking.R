@@ -60,4 +60,5 @@ target_lower <- c(E = 10000, I = 20000, R = 3e+05, D = 1000)
 target_upper <- c(E = 40000, I = 120000, R = 4e+05, D = 1200)
 width <- 0.9
 
-stick_breaking_explorer(target_median, target_lower, target_upper, n = 5000, width = 0.9)
+tmp <- stick_breaking_explorer(target_median, target_lower, target_upper, n = 5000, width = 0.9)
+tmp$stick_sd %>% dput()

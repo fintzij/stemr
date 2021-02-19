@@ -107,7 +107,7 @@ simulate_stem <-
             }
 
             if (!all(sapply(simulation_parameters, function(x)
-                all(names(x) == 
+                all(names(x) ==
                     names(stem_object$dynamics$parameters)[!grepl("_0", names(stem_object$dynamics$parameters))]
                 )))) {
                 stop(
@@ -325,7 +325,7 @@ simulate_stem <-
                                             stem_object$dynamics$initializer[[s]]$prior
                                         )
                                     ))
-                            } else {
+                            } else if (stem_object$dynamics$iniitializer[[s]]$dist == "dirmultinom") {
                                 init_states[, stem_object$dynamics$initializer[[s]]$codes] <-
                                     extraDistr::rdirmnom(
                                         nsim,
@@ -336,6 +336,14 @@ simulate_stem <-
                                             .Machine$double.eps
                                         )
                                     )
+                            } else {
+                                prior_length <- length(stem_object$dynamics$initializer[[s]]$prior)
+                                logit_stick_means <- stem_object$dynamics$initializer[[s]]$prior[1:((prior_length - 1) / 2)]
+                                stick_sds <- stem_object$dynamics$initializer[[s]]$prior[((prior_length - 1) / 2) + 1:(prior_length - 1)]
+                                stick_size <- stem_object$dynamics$initializer[[s]]$prior[prior_length]
+
+                                init_states[, stem_object$dynamics$initializer[[s]]$codes] <-
+                                    stemr::rsbln(nsim, logit_stick_means, stick_sds, stick_size)
                             }
 
                         } else {

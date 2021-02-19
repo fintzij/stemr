@@ -501,18 +501,21 @@ stem_dynamics <-
         param_inds     <- unlist(lapply(initializer, function(x) x$param_inds))
         initdist_codes <- unlist(lapply(initializer, function(x) x$codes))
 
-        # reorder the initial distribution parameters
-        initdist_parameters        <- as.numeric(initdist_params[order(initdist_codes)])
-        initdist_priors            <- as.numeric(initdist_priors[order(initdist_codes)])
-        names(initdist_parameters) <- paste0(names(compartment_codes), "_0")
+        # reorder the initial distribution parameters if using multinomial or dirmultinom
+        if (initializer[[1]]$dist %in% c("multinomial", "dirmultinom")) {
+            initdist_params <- as.numeric(initdist_params[order(initdist_codes)])
+            initdist_prior <- as.numeric(initdist_priors[order(initdist_codes)])
+        }
+
+        names(initdist_params) <- paste0(names(compartment_codes), "_0")
 
         # add the initial state parameters either to the parameters or to the constants
         if(fixed_inits) {
-            constants          <- c(initdist_parameters, constants)
+            constants          <- c(initdist_params, constants)
             const_codes        <- c(const_codes, seq_along(initdist_codes) + length(const_codes) - 1)
             names(const_codes) <- names(constants)
         } else {
-            parameters         <- c(parameters, initdist_parameters)
+            parameters         <- c(parameters, initdist_params)
             param_codes        <- c(param_codes, seq_along(initdist_codes) + length(param_codes) - 1)
             names(param_codes) <- names(parameters)
         }
@@ -1017,7 +1020,7 @@ stem_dynamics <-
                          forcings            = forcings,
                          constants           = constants,
                          initializer         = initializer,
-                         initdist_params     = initdist_parameters,
+                         initdist_params     = initdist_params,
                          initdist_priors     = initdist_priors,
                          fixed_inits         = fixed_inits,
                          flow_matrix         = flow_matrix,
