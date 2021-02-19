@@ -292,14 +292,27 @@ simulate_stem <-
             } else {
                 if (stem_object$dynamics$n_strata == 1) {
                     # simulate the initial compartment counts
-                    init_states <-
-                        t(as.matrix(
-                            rmultinom(
+                    if(stem_object$dynamics$initializer[[1]]$dist == "multinom") {
+
+                        init_states <-
+                            t(as.matrix(
+                                rmultinom(
+                                    nsim,
+                                    stem_object$dynamics$popsize,
+                                    stem_object$dynamics$initdist_priors
+                                )
+                            ))
+                    } else if (stem_object$dynamics$initializer[[1]]$dist == "dirmultinom") {
+
+                        init_states <-
+                            extraDistr::rdirmnom(
                                 nsim,
                                 stem_object$dynamics$popsize,
-                                stem_object$dynamics$initdist_priors
-                            )
-                        ))
+                                ifelse(
+                                    stem_object$dynamics$initdist_priors != 0,
+                                    stem_object$dynamics$initdist_priors,
+                                    .Machine$double.eps))
+                    }
                     colnames(init_states) <-
                         names(stem_object$dynamics$comp_codes)
 
