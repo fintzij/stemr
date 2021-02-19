@@ -441,12 +441,7 @@ simulate_stem <-
             init_dims[1] <- pmin(init_dims[1], 2 ^ 23)
 
             # make the initial dimensions a little bigger (round up to nearest power of 2)
-            p <- 1
-            while (2 ^ p < init_dims[1] & p < 1e6) {
-                p <- p + 1
-                if (2 ^ p > init_dims[1])
-                    init_dims[1] <- 2 ^ p
-            }
+            p <- ceiling(log(init_dims[[1]])/log(2))
 
             # get the compartment names
             path_colnames <-
