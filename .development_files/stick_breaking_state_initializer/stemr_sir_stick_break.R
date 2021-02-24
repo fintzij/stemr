@@ -35,6 +35,13 @@ state_initializer <-
     fixed = F)) # initial state fixed for simulation, we'll change this later
 
 # state_initializer <-
+#   list(stem_initializer(
+#     init_states = c(S = popsize-10, I = 10, R = 0), # must match compartment names
+#     prior = c(popsize-10, -10, 0),
+#     dist = "multinomial",
+#     fixed = F)) # initial state fixed for simulation, we'll change this later
+
+# state_initializer <-
 #   list(
 #     stem_initializer(
 #       init_states = c(S_guin = 19970, E_guin = 15, I_guin = 10, R_guin = 5),
@@ -118,7 +125,20 @@ stem_object <-
 
 ## ----sim_paths, echo = TRUE----------------------------------------------
 set.seed(100)
-sim_mjp_NULL <- simulate_stem(stem_object = stem_object, method = "gillespie", full_paths = T)
-
+# debugonce(simulate_stem)
 # Need to check the ordering of compartments for this
-sim_mjp_blank <- simulate_stem(stem_object = stem_object, method = "gillespie", full_paths = T)
+sim_mjp_200 <- simulate_stem(stem_object = stem_object, method = "gillespie", nsim = 200)
+sim_mjp_200$paths
+library(tidyverse)
+sim_mjp_200$datasets %>% imap_dfr(~ as_tibble(.x) %>% mutate(i = .y)) %>%
+  ggplot(aes(time, S2I, group = i, color = i)) +
+  geom_step() +
+  geom_jitter()
+sim_mjp_200$failed_runs
+sim_mjp_1 <- simulate_stem(stem_object = stem_object, method = "gillespie", nsim = 200)
+
+# fais :(
+sim_ode <- simulate_stem(stem_object = stem_object, method = "ode", nsim = 1)
+# sim_mjp_blank <- simulate_stem(stem_object = stem_object, method = "gillespie", full_paths = T, nsim = 200)
+
+

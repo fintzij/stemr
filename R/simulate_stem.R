@@ -67,6 +67,10 @@ simulate_stem <-
             stop("The simulation method must either be 'gillespie', 'lna', or 'ode'.")
         }
 
+        if(method != "gillespie" & full_paths) {
+            stop("Full paths only available for Gillespie simulation.")
+        }
+
         # make sure the object was appropriately compiled
         if (method == "gillespie" &
             is.null(stem_object$dynamics$rate_ptrs)) {
@@ -714,6 +718,8 @@ simulate_stem <-
                     paths_full <- paths_full[-failed_runs]
             }
 
+            # Method == lna -----------------------------------------------------------
+
         } else if (method == "lna") {
             # pull out logical vector for which rates are of order > 1
             higher_order_rates <-
@@ -879,13 +885,12 @@ simulate_stem <-
                 }
 
                 # unconstrained moments
-                comp_mean  <- comp_size_vec[t] * comp_probs
-                comp_cov   <-
-                    comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs))
+                comp_mean <- comp_size_vec[t] * comp_probs
+                comp_cov <- comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs))
 
-                if (initializer[[t]]$dist == "dirmultinom")
-                    comp_cov <-
-                    comp_cov * ((comp_size_vec[t] + sum(comp_prior)) / (1 + sum(comp_prior)))
+                if (initializer[[t]]$dist == "dirmultinom") {
+                    comp_cov <- comp_cov * ((comp_size_vec[t] + sum(comp_prior)) / (1 + sum(comp_prior)))
+                }
 
                 comp_cov_svd <- svd(comp_cov)
                 comp_cov_svd$d[length(comp_cov_svd$d)] <- 0
@@ -936,9 +941,7 @@ simulate_stem <-
                             copy_vec2(
                                 dest = init_state,
                                 orig = initdist_objects[[s]]$comp_mean +
-                                    c(
-                                        initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur
-                                    ),
+                                    c(initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur),
                                 inds = initdist_objects[[s]]$comp_inds_Cpp
                             )
 
@@ -1295,6 +1298,7 @@ simulate_stem <-
                 lna_draws    <- lna_draws[-failed_runs]
             }
 
+            # Method == ODE -----------------------------------------------------------
         } else if (method == "ode") {
 
             # set the vectors of times when the ODE is evaluated and censused
@@ -1456,7 +1460,7 @@ simulate_stem <-
                             rep(0.0, length(initializer[[t]]$init_states))
                         }
                     }
-
+                ## This is skippable for sbln
                 # compartment probabilities
                 comp_probs <- if (sum(comp_prior) != 0) {
                     comp_prior / sum(comp_prior)
@@ -1466,12 +1470,11 @@ simulate_stem <-
 
                 # unconstrained moments
                 comp_mean  <- comp_size_vec[t] * comp_probs
-                comp_cov   <-
-                    comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs))
+                comp_cov   <- comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs))
 
-                if (initializer[[t]]$dist == "dirmultinom")
-                    comp_cov <-
-                    comp_cov * ((comp_size_vec[t] + sum(comp_prior)) / (1 + sum(comp_prior)))
+                if (initializer[[t]]$dist == "dirmultinom") {
+                    comp_cov <- comp_cov * ((comp_size_vec[t] + sum(comp_prior)) / (1 + sum(comp_prior)))
+                }
 
                 comp_cov_svd <- svd(comp_cov)
                 comp_cov_svd$d[length(comp_cov_svd$d)] <- 0
@@ -1484,9 +1487,9 @@ simulate_stem <-
                         comp_size          = comp_size_vec[t],
                         comp_mean          = comp_mean,
                         comp_sqrt_cov      = comp_sqrt_cov[, -length(comp_mean)],
-                        draws_cur          = rep(0.0, length(comp_mean) - 1),
-                        draws_prop         = rep(0.0, length(comp_mean) - 1),
-                        draws_ess          = rep(0.0, length(comp_mean) - 1),
+                        draws_cur          = rep(0.0, length(initializer[[t]]$init_states) - 1),
+                        draws_prop         = rep(0.0, length(initializer[[t]]$init_states) - 1),
+                        draws_ess          = rep(0.0, length(initializer[[t]]$init_states) - 1),
                         comp_inds_R        = initializer[[t]]$codes,
                         comp_inds_Cpp      = initializer[[t]]$codes - 1
                     )
@@ -1519,13 +1522,18 @@ simulate_stem <-
                             # N(0,1) draws
                             draw_normals(initdist_objects[[s]]$draws_cur)
 
+                            if (stem_object$dynamics$initializer[[s]]$dist == "rsbln") {
+                                orig <- sbln_normal_to_volume(normal_draws = initdist_objects[[s]]$draws_cur,
+                                                              logit_stick_means = comp_prior[1:length(initdist_objects[[s]]$draws_cur)],
+                                                              stick_sds = comp_prior[(length(initdist_objects[[s]]$draws_cur) + 1):length(comp_prior)],
+                                                              stick_size = initdist_objects[[s]]$comp_size)
+                            } else {
+                                orig <- initdist_objects[[s]]$comp_mean + c(initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur)
+                            }
                             # map to volumes
                             copy_vec2(
                                 dest = init_state,
-                                orig = initdist_objects[[s]]$comp_mean +
-                                    c(
-                                        initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur
-                                    ),
+                                orig = orig,
                                 inds = initdist_objects[[s]]$comp_inds_Cpp
                             )
 
@@ -1872,8 +1880,8 @@ simulate_stem <-
 
                         # get the new simulation parameters if a list was supplied
                         if (!is.null(simulation_parameters)) {
-                          sim_pars <- simulation_parameters[[k]]
-                          class(sim_pars) <- "numeric"
+                            sim_pars <- simulation_parameters[[k]]
+                            class(sim_pars) <- "numeric"
                         }
 
                         # insert the time-varying parameters into the tcovar matrix
@@ -1994,8 +2002,8 @@ simulate_stem <-
                     # )
 
                     if (!is.null(simulation_parameters)) {
-                      sim_pars <- simulation_parameters[[k]]
-                      class(sim_pars) <- "numeric"
+                        sim_pars <- simulation_parameters[[k]]
+                        class(sim_pars) <- "numeric"
                     }
 
 
@@ -2114,8 +2122,8 @@ simulate_stem <-
                         # )
 
                         if (!is.null(simulation_parameters)) {
-                          sim_pars <- simulation_parameters[[k]]
-                          class(sim_pars) <- "numeric"
+                            sim_pars <- simulation_parameters[[k]]
+                            class(sim_pars) <- "numeric"
                         }
 
                         # insert the time-varying parameters into the tcovar matrix

@@ -1,6 +1,14 @@
 library(stemr)
 library(tidyverse)
 
+
+
+
+
+
+stemr::rsbln()
+
+
 rsbln <- function(n, compartments, logit_stick_means, stick_sds) {
   n_compartments <- length(compartments)
 
@@ -64,54 +72,7 @@ explore_stick_breaking <- function(n, target_median, target_lower, target_upper,
 
 ################################################################################
 
-explore_stick_breaking_bad <- function(n, target_median, target_lower, target_upper, width = 0.9) {
-  popsize <- sum(target_median)
-  lower_p <- (1 - width) / 2
-  upper_p <- 1 - ((1 - width) / 2)
 
-  compartments_original_order <- names(target_median)
-  target_median_original_order <- target_median
-  target_lower_original_order <- target_lower
-  target_upper_original_order <- target_upper
-
-  n_compartments <- length(compartments_original_order)
-  missing_compartment_index <- which(is.na(target_lower))
-
-  compartments <- c(names(sort(target_median[-missing_compartment_index], decreasing = F)), compartments_original_order[missing_compartment_index])
-  target_median <- target_median[compartments]
-  target_lower <- target_lower[compartments]
-  target_upper <- target_upper[compartments]
-
-  stick_means <- head(target_median / rev(cumsum(rev(target_median))), -1)
-  logit_stick_means <- logit(stick_means)
-
-  stick_sd_upper_limit <- sapply(1:(n_compartments - 1), function(i) optimize(f = function(x) norm(as.matrix(expit(qnorm(p = c(lower_p, upper_p), mean = logit_stick_means[[i]], sd = x)) * popsize - c(target_lower_original_order[-missing_compartment_index][[i]], target_upper_original_order[-missing_compartment_index][[i]])), type = "f"), interval = c(0, 5))$minimum)
-  names(stick_sd_upper_limit) <- names(stick_means)
-
-  stick_sds <- numeric(n_compartments - 1)
-  names(stick_sds) <- names(stick_means)
-  stick_sds[1] <- stick_sd_upper_limit[1]
-  to_allocate <- (1 - expit(rnorm(n, logit_stick_means[1], stick_sd_upper_limit[1]))) * popsize
-
-  for (i in 2:(n_compartments - 1)) {
-    stick_sds[i] <- optimize(f = function(x) norm(as.matrix(quantile(to_allocate * expit(rnorm(n, logit_stick_means[i], x)), c(lower_p, upper_p)) - c(target_lower[i], target_upper[i]))), lower = 0, upper = stick_sd_upper_limit[i])$minimum
-    to_allocate <- (1 - expit(rnorm(n, logit_stick_means[i], stick_sds[i]))) * to_allocate
-  }
-
-  samples <- rsbln(n = n, compartments, logit_stick_means, stick_sds) * popsize
-
-  reduce(.x =
-           list(enframe(compartments_original_order, name = NULL, value = "name"),
-                enframe(logit_stick_means, value = "stick_mean"),
-                enframe(stick_sds, value = "stick_sd"),
-                enframe(target_median, value = "target_median"),
-                samples %>% as_tibble() %>% pivot_longer(everything()) %>% group_by(name) %>% summarize(observed_median = quantile(value, 0.5), .groups = "drop"),
-                enframe(target_lower, value = "target_lower"),
-                samples %>% as_tibble() %>% pivot_longer(everything()) %>% group_by(name) %>% summarize(observed_lower = quantile(value, lower_p), .groups = "drop"),
-                enframe(target_upper, value = "target_upper"),
-                samples %>% as_tibble() %>% pivot_longer(everything()) %>% group_by(name) %>% summarize(observed_upper = quantile(value, upper_p), .groups = "drop")),
-         .f = full_join, by = "name")
-}
 
 
 summarize_stick_breaking <- function(n, target_median, target_lower, target_upper, width = 0.9) {
