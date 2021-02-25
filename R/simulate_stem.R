@@ -903,9 +903,9 @@ simulate_stem <-
                         comp_size          = comp_size_vec[t],
                         comp_mean          = comp_mean,
                         comp_sqrt_cov      = comp_sqrt_cov[, -length(comp_mean)],
-                        draws_cur          = rep(0.0, length(comp_mean) - 1),
-                        draws_prop         = rep(0.0, length(comp_mean) - 1),
-                        draws_ess          = rep(0.0, length(comp_mean) - 1),
+                        draws_cur          = rep(0.0, length(initializer[[t]]$init_states) - 1),
+                        draws_prop         = rep(0.0, length(initializer[[t]]$init_states) - 1),
+                        draws_ess          = rep(0.0, length(initializer[[t]]$init_states) - 1),
                         comp_inds_R        = initializer[[t]]$codes,
                         comp_inds_Cpp      = initializer[[t]]$codes - 1
                     )
@@ -937,11 +937,19 @@ simulate_stem <-
                             # N(0,1) draws
                             draw_normals(initdist_objects[[s]]$draws_cur)
 
+                            if (stem_object$dynamics$initializer[[s]]$dist == "rsbln") {
+                                orig <- sbln_normal_to_volume(normal_draws = initdist_objects[[s]]$draws_cur,
+                                                              logit_stick_means = comp_prior[1:length(initdist_objects[[s]]$draws_cur)],
+                                                              stick_sds = comp_prior[(length(initdist_objects[[s]]$draws_cur) + 1):length(comp_prior)],
+                                                              stick_size = initdist_objects[[s]]$comp_size)
+                            } else {
+                                orig <- initdist_objects[[s]]$comp_mean + c(initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur)
+                            }
+
                             # map to volumes
                             copy_vec2(
                                 dest = init_state,
-                                orig = initdist_objects[[s]]$comp_mean +
-                                    c(initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur),
+                                orig = orig,
                                 inds = initdist_objects[[s]]$comp_inds_Cpp
                             )
 

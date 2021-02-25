@@ -30,7 +30,7 @@ rates <-
 state_initializer <-
   list(stem_initializer(
     init_states = c(S = popsize-10, I = 10, R = 0), # must match compartment names
-    prior = c(-5.05439386925471, -3.96216160104193, 0.508799264231241, 0.447697131924911),
+    prior = c(3, 3, 0.5, 0.5),
     dist = "rsbln",
     fixed = F)) # initial state fixed for simulation, we'll change this later
 
@@ -124,10 +124,17 @@ stem_object <-
 
 
 ## ----sim_paths, echo = TRUE----------------------------------------------
+
+# Need check storage of initial compartments
 set.seed(100)
 # debugonce(simulate_stem)
-# Need to check the ordering of compartments for this
-sim_mjp_200 <- simulate_stem(stem_object = stem_object, method = "gillespie", nsim = 200)
+sim_mjp_200 <- simulate_stem(stem_object = stem_object, method = "gillespie", nsim = 20)
+set.seed(100)
+sim_ode_200 <- simulate_stem(stem_object = stem_object, method = "ode", nsim = 20)
+set.seed(100)
+sim_lna_200 <- simulate_stem(stem_object = stem_object, method = "lna", nsim = 20)
+
+
 sim_mjp_200$paths
 library(tidyverse)
 sim_mjp_200$datasets %>% imap_dfr(~ as_tibble(.x) %>% mutate(i = .y)) %>%
@@ -138,7 +145,20 @@ sim_mjp_200$failed_runs
 sim_mjp_1 <- simulate_stem(stem_object = stem_object, method = "gillespie", nsim = 200)
 
 # fais :(
-sim_ode <- simulate_stem(stem_object = stem_object, method = "ode", nsim = 1)
+sim_ode <- simulate_stem(stem_object = stem_object, method = "ode", nsim = 200)
+library(tidyverse)
+library(tidybayes)
+sim_ode$natural_paths %>%
+  imap_dfr(~as_tibble(.x) %>% mutate(sim = .y)) %>%
+  pivot_longer(-c(time, sim)) %>%
+  select(-sim) %>%
+  group_by(time, name) %>%
+  median_qi(.width = c(0.5, 0.8, 0.95)) %>%
+  ggplot(aes(time, value, ymin = .lower, ymax = .upper)) +
+  facet_wrap(. ~ name, scales = "free_y") +
+  geom_lineribbon() +
+  scale_fill_brewer()
+
 # sim_mjp_blank <- simulate_stem(stem_object = stem_object, method = "gillespie", full_paths = T, nsim = 200)
 
 
