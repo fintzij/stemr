@@ -34,42 +34,45 @@ parblock <-
              sigma,
              initializer = NULL,
              control = NULL) {
-        
+
     if(!alg %in% c("mvnmh", "mvnss")) {
         stop("MCMC algorithm for updating parameters must be one of 'mvnmh' or 'mvnss'.")
     }
-    
+
     if(length(pars_nat) != length(pars_est)) {
         stop("pars_nat and pars_est must have the same length.")
     }
-    
+
     # make sure sigma has row and column names
     if(is.null(rownames(sigma))) rownames(sigma) = pars_est
     if(is.null(colnames(sigma))) colnames(sigma) = pars_est
-    
+
     if(is.null(control)) {
-        control = 
+        control =
             if(alg == "mvnmh") {
                 mvnmh_control()
             } else {
                 mvnss_control()
             }
     }
-    
+
     if(is.null(control$nugget)) {
-        control$nugget = 
+        control$nugget =
             if(alg == "mvnmh") {
                 control$nugget = 0.001 * min(diag(sigma))
             } else {
                 control$nugget = 0.5
             }
     }
-    
-    return(list(pars_nat = pars_nat, 
+
+    if(alg == "mvnmh" & is.null(control$target_acceptance)) stop('alg is "mvnmh", but control is "mvnss_control"')
+    if(alg == "mvnss" & is.null(control$bracket_limits)) stop('alg is "mvnss", but control is "mvnmh_control"')
+
+    return(list(pars_nat = pars_nat,
                 pars_est = pars_est,
                 priors = priors,
-                alg = alg, 
-                sigma = sigma, 
+                alg = alg,
+                sigma = sigma,
                 initializer = initializer,
                 control = control))
 }
