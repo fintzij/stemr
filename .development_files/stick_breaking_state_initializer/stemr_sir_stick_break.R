@@ -1,7 +1,8 @@
-require(ggplot2)
+library(tidyverse)
+library(tidybayes)
 require(cowplot)
-set.seed(12511)
 library(stemr)
+set.seed(12511)
 popsize = 1e4 # population size
 
 true_pars =
@@ -30,7 +31,7 @@ rates <-
 state_initializer <-
   list(stem_initializer(
     init_states = c(S = popsize-10, I = 10, R = 0), # must match compartment names
-    prior = c(3, 3, 0.5, 0.5),
+    prior = c(4.5, 36, 0.5, 0.5),
     dist = "rsbln",
     fixed = F)) # initial state fixed for simulation, we'll change this later
 
@@ -115,19 +116,8 @@ stem_object <-
 
 
 
-
-
-
-
-
-
-
-
-## ----sim_paths, echo = TRUE----------------------------------------------
-
-# Need check storage of initial compartments
+# Need check storage of initial compartments ------------------------------
 set.seed(100)
-# debugonce(simulate_stem)
 sim_mjp_200 <- simulate_stem(stem_object = stem_object, method = "gillespie", nsim = 20)
 set.seed(100)
 sim_ode_200 <- simulate_stem(stem_object = stem_object, method = "ode", nsim = 20)
@@ -135,30 +125,127 @@ set.seed(100)
 sim_lna_200 <- simulate_stem(stem_object = stem_object, method = "lna", nsim = 20)
 
 
-sim_mjp_200$paths
-library(tidyverse)
-sim_mjp_200$datasets %>% imap_dfr(~ as_tibble(.x) %>% mutate(i = .y)) %>%
-  ggplot(aes(time, S2I, group = i, color = i)) +
-  geom_step() +
-  geom_jitter()
-sim_mjp_200$failed_runs
-sim_mjp_1 <- simulate_stem(stem_object = stem_object, method = "gillespie", nsim = 200)
+to_estimation_scale = function(params_nat) {
+  c(log(params_nat[1] * popsize / params_nat[2] - 1), # (beta,mu,N) -> log(R0-1)
+    log(params_nat[2]),                     # mu -> log(mu)
+    logit(params_nat[3]),                   # rho -> logit(rho)
+    log(params_nat[4]))                     # phi -> log(phi)
+}
 
-# fais :(
-sim_ode <- simulate_stem(stem_object = stem_object, method = "ode", nsim = 200)
-library(tidyverse)
-library(tidybayes)
-sim_ode$natural_paths %>%
-  imap_dfr(~as_tibble(.x) %>% mutate(sim = .y)) %>%
-  pivot_longer(-c(time, sim)) %>%
-  select(-sim) %>%
-  group_by(time, name) %>%
-  median_qi(.width = c(0.5, 0.8, 0.95)) %>%
-  ggplot(aes(time, value, ymin = .lower, ymax = .upper)) +
-  facet_wrap(. ~ name, scales = "free_y") +
-  geom_lineribbon() +
-  scale_fill_brewer()
+# function to take params_est and return params_nat
+from_estimation_scale = function(params_est) {
+  c(exp(log(exp(params_est[1])+1) + params_est[2] - log(popsize)), # (log(R0), log(mu), N) -> beta = exp(log(R0) + log(mu) - log(N))
+    exp(params_est[2]), # log(mu) -> mu
+    expit(params_est[3]), # logit(rho) -> rho
+    exp(params_est[4])) # log(phi) -> phi
+}
 
-# sim_mjp_blank <- simulate_stem(stem_object = stem_object, method = "gillespie", full_paths = T, nsim = 200)
+# calculate the log prior density. note the jacobian for phi
+logprior =
+  function(params_est) {
+    sum(dnorm(params_est[1], 0, 1, log = TRUE),
+        dnorm(params_est[2], -0.7, 0.35, log = TRUE),
+        dnorm(params_est[3], 0, 1, log = TRUE),
+        dexp(exp(params_est[4]), 0.1, log = TRUE) + params_est[4])
+  }
 
+# return all three functions in a list
+priors <- list(logprior = logprior,
+               to_estimation_scale = to_estimation_scale,
+               from_estimation_scale = from_estimation_scale)
+
+
+#'
+#' We now specify the MCMC transition kernel. In this simple example, we'll update
+#' the model hyperparameters using a multivariate Metropolis algorithm. We'll tune
+#' the algorithm using a global adaptive scheme (algorithm 4 in Andrieu and Thoms). We'll also initialize the parameters at random values, which is done by replacing the vector of parameters in the stem object with a function that returns a named vector of parameters.
+#'
+## ----mcmc_kern, echo = TRUE----------------------------------------------
+# specify the initial proposal covariance matrix with row and column names
+# corresponding to parameters on their estimation scales
+
+par_initializer = function() {
+  priors$from_estimation_scale(priors$to_estimation_scale(parameters) +
+                                 rnorm(4, 0, 0.1))
+}
+
+measurement_process <-
+  stem_measure(emissions = emissions,
+               dynamics = dynamics,
+               data = sim_mjp_200$datasets[[1]])
+stem_object <- make_stem(dynamics = dynamics,
+                         measurement_process = measurement_process)
+
+# specify the kernel
+mcmc_kern <-
+  mcmc_kernel(
+    parameter_blocks =
+      list(parblock(
+        pars_nat = c("beta", "mu", "rho", "phi"),
+        pars_est = c("log_R0", "log_mu", "logit_rho", "log_phi"),
+        priors = priors,
+        # alg = "mvnss",
+        alg = "mvnmh",
+        sigma = diag(0.01, 4),
+        initializer = par_initializer,
+        control =
+          # mvnss_control(stop_adaptation = 2.5e4))),
+          mvnmh_control(stop_adaptation = 2.5e2))),
+    lna_ess_control = lna_control(bracket_update_iter = 50,
+                                  joint_initdist_update = TRUE))
+
+
+# debug(initdist_update)
+res <-
+  fit_stem(stem_object = stem_object,
+           method = "ode",
+           mcmc_kern = mcmc_kern,
+           iterations = 5e4,
+           # iterations = 5e2,
+           print_progress = 1000)
+
+write_rds(res, "res.rds")
+res <- write_rds("res.rds")
+res$results$posterior$initdist_samples
+
+source("/Users/damon/Documents/uci_covid_modeling2/code/stemr_functions.R")
+
+
+# Posterior Predictive looks good -----------------------------------------
+
+simulation_parameters_list <- split_along_dim(res$results$posterior$parameter_samples_nat, 1)
+
+init_dist_list <- split_along_dim(res$results$posterior$initdist_samples, 1)
+
+sim_results_tbl <- map2_dfr(simulation_parameters_list, init_dist_list,
+                            function(simulation_parameters, init_dist) {
+                              stem_object$dynamics$fixed_inits <- T
+                              stem_object$dynamics$initdist_params <-
+                                stem_object$dynamics$initdist_priors <-
+                                stem_object$dynamics$initializer[[1]]$init_states <-
+                                stem_object$dynamics$initializer[[1]]$prior <-
+                                init_dist
+                              stem_object$dynamics$parameters <- simulation_parameters
+                              tibble(sim_result = list(
+                                unlist(
+                                  simulate_stem(stem_object = stem_object,
+                                                method = "ode"),
+                                  recursive = F)))
+                            }) %>%
+  unnest_wider(sim_result)
+
+
+
+
+pp <- sim_results_tbl %>%
+  select(datasets) %>%
+  # mutate(.iteration = 1:n()) %>%
+  mutate(datasets = map(datasets, as_tibble)) %>%
+  unnest(datasets) %>%
+  group_by(time) %>%
+  median_qi(.width = c(0.5, 0.8, 0.95))
+
+ggplot() +
+  geom_lineribbon(data = pp, aes(time, S2I, ymin = .lower, ymax = .upper)) +
+  geom_point(data = as_tibble(measurement_process$data), aes(time, S2I))
 

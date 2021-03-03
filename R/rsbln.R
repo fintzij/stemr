@@ -1,7 +1,7 @@
 #' Stick-Breaking Log-Normal
 #'
 #' @param n number of observations
-#' @param logit_stick_means vector of stick means on the logit scale
+#' @param stick_means vector of stick means on the logit scale
 #' @param stick_sds vector of stick sds on the logit scale
 #' @param stick_size size to scale the samples by
 #'
@@ -9,21 +9,21 @@
 #' @export
 #'
 #' @examples
-rsbln <- function(n, logit_stick_means, stick_sds, stick_size) {
-  n_compartments <- length(logit_stick_means) + 1
+rsbln <- function(n, stick_means, stick_sds, stick_size) {
+  n_compartments <- length(stick_means) + 1
 
   normal_draws <-
     matrix(rnorm(n = n * (n_compartments - 1)),
            nrow = n,
            ncol = n_compartments - 1)
 
-  sbln_normal_to_volume(normal_draws, logit_stick_means, stick_sds, stick_size)
+  sbln_normal_to_volume(normal_draws, stick_means, stick_sds, stick_size)
 }
 
 #' Stick-Breaking Log-Normal
 #'
 #' @param normal_draws a matrix of normal draws to convert to compartment volumes
-#' @param logit_stick_means vector of stick means on the logit scale
+#' @param stick_means vector of stick means on the logit scale
 #' @param stick_sds vector of stick sds on the logit scale
 #' @param stick_size size to scale the samples by
 #'
@@ -31,7 +31,7 @@ rsbln <- function(n, logit_stick_means, stick_sds, stick_size) {
 #' @export
 #'
 #' @examples
-sbln_normal_to_volume <- function(normal_draws, logit_stick_means, stick_sds, stick_size) {
+sbln_normal_to_volume <- function(normal_draws, stick_means, stick_sds, stick_size) {
 
   return_vector <- is.null(dim(normal_draws))
 
@@ -40,7 +40,7 @@ sbln_normal_to_volume <- function(normal_draws, logit_stick_means, stick_sds, st
   partial_stick_proportions <- cbind(
     expit(normal_draws *
             rep(stick_sds, each = dim(normal_draws)[1]) +
-            rep(logit_stick_means, each = dim(normal_draws)[1])),
+            rep(stick_means, each = dim(normal_draws)[1])),
     1)
 
   full_stick_proportions <- matrix(nrow = dim(partial_stick_proportions)[1], ncol = dim(partial_stick_proportions)[2])

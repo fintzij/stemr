@@ -325,11 +325,11 @@ simulate_stem <-
                                     .Machine$double.eps))
                     }  else { # if sbln
                         prior_length <- length(stem_object$dynamics$initializer[[1]]$prior)
-                        logit_stick_means <- stem_object$dynamics$initializer[[1]]$prior[1:(prior_length / 2)]
+                        stick_means <- stem_object$dynamics$initializer[[1]]$prior[1:(prior_length / 2)]
                         stick_sds <- stem_object$dynamics$initializer[[1]]$prior[((prior_length / 2) + 1):prior_length]
 
                         init_states[, stem_object$dynamics$initializer[[1]]$codes] <-
-                            stemr::rsbln(nsim, logit_stick_means, stick_sds, stem_object$dynamics$popsize)
+                            stemr::rsbln(nsim, stick_means, stick_sds, stem_object$dynamics$popsize)
                     }
                     colnames(init_states) <-
                         names(stem_object$dynamics$comp_codes)
@@ -369,11 +369,11 @@ simulate_stem <-
                                     )
                             } else {
                                 prior_length <- length(stem_object$dynamics$initializer[[s]]$prior)
-                                logit_stick_means <- stem_object$dynamics$initializer[[s]]$prior[1:(prior_length / 2)]
+                                stick_means <- stem_object$dynamics$initializer[[s]]$prior[1:(prior_length / 2)]
                                 stick_sds <- stem_object$dynamics$initializer[[s]]$prior[((prior_length / 2) + 1):prior_length]
 
                                 init_states[, stem_object$dynamics$initializer[[s]]$codes] <-
-                                    stemr::rsbln(nsim, logit_stick_means, stick_sds, stem_object$dynamics$strata_sizes[s])
+                                    stemr::rsbln(nsim, stick_means, stick_sds, stem_object$dynamics$strata_sizes[s])
                             }
 
                         } else {
@@ -939,7 +939,7 @@ simulate_stem <-
 
                             if (stem_object$dynamics$initializer[[s]]$dist == "rsbln") {
                                 orig <- sbln_normal_to_volume(normal_draws = initdist_objects[[s]]$draws_cur,
-                                                              logit_stick_means = comp_prior[1:length(initdist_objects[[s]]$draws_cur)],
+                                                              stick_means = comp_prior[1:length(initdist_objects[[s]]$draws_cur)],
                                                               stick_sds = comp_prior[(length(initdist_objects[[s]]$draws_cur) + 1):length(comp_prior)],
                                                               stick_size = initdist_objects[[s]]$comp_size)
                             } else {
@@ -1532,7 +1532,7 @@ simulate_stem <-
 
                             if (stem_object$dynamics$initializer[[s]]$dist == "rsbln") {
                                 orig <- sbln_normal_to_volume(normal_draws = initdist_objects[[s]]$draws_cur,
-                                                              logit_stick_means = comp_prior[1:length(initdist_objects[[s]]$draws_cur)],
+                                                              stick_means = comp_prior[1:length(initdist_objects[[s]]$draws_cur)],
                                                               stick_sds = comp_prior[(length(initdist_objects[[s]]$draws_cur) + 1):length(comp_prior)],
                                                               stick_size = initdist_objects[[s]]$comp_size)
                             } else {
