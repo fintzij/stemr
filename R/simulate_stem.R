@@ -937,7 +937,7 @@ simulate_stem <-
                             # N(0,1) draws
                             draw_normals(initdist_objects[[s]]$draws_cur)
 
-                            if (stem_object$dynamics$initializer[[s]]$dist == "rsbln") {
+                            if (stem_object$dynamics$initializer[[s]]$dist == "sbln") {
                                 orig <- sbln_normal_to_volume(normal_draws = initdist_objects[[s]]$draws_cur,
                                                               stick_means = comp_prior[1:length(initdist_objects[[s]]$draws_cur)],
                                                               stick_sds = comp_prior[(length(initdist_objects[[s]]$draws_cur) + 1):length(comp_prior)],
@@ -1530,7 +1530,7 @@ simulate_stem <-
                             # N(0,1) draws
                             draw_normals(initdist_objects[[s]]$draws_cur)
 
-                            if (stem_object$dynamics$initializer[[s]]$dist == "rsbln") {
+                            if (stem_object$dynamics$initializer[[s]]$dist == "sbln") {
                                 orig <- sbln_normal_to_volume(normal_draws = initdist_objects[[s]]$draws_cur,
                                                               stick_means = comp_prior[1:length(initdist_objects[[s]]$draws_cur)],
                                                               stick_sds = comp_prior[(length(initdist_objects[[s]]$draws_cur) + 1):length(comp_prior)],

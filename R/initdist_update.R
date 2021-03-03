@@ -81,7 +81,7 @@ initdist_update <-
 
                 # map to volumes
 
-                if (stem_object$dynamics$initializer[[s]]$dist == "rsbln") {
+                if (stem_object$dynamics$initializer[[s]]$dist == "sbln") {
                     orig <- sbln_normal_to_volume(normal_draws = initdist_objects[[s]]$draws_ess,
                                                   stick_means = initdist_objects[[s]]$comp_prior[1:length(initdist_objects[[s]]$draws_cur)],
                                                   stick_sds = initdist_objects[[s]]$comp_prior[(length(initdist_objects[[s]]$draws_cur) + 1):length(initdist_objects[[s]]$comp_prior)],
@@ -248,7 +248,7 @@ initdist_update <-
                              orig =
                                  cos(theta) * initdist_objects[[s]]$draws_cur +
                                  sin(theta) * initdist_objects[[s]]$draws_prop)
-                    if (stem_object$dynamics$initializer[[s]]$dist == "rsbln") {
+                    if (stem_object$dynamics$initializer[[s]]$dist == "sbln") {
                         orig <- sbln_normal_to_volume(normal_draws = initdist_objects[[s]]$draws_cur,
                                                       stick_means = initdist_objects[[s]]$comp_prior[1:length(initdist_objects[[s]]$draws_cur)],
                                                       stick_sds = initdist_objects[[s]]$comp_prior[(length(initdist_objects[[s]]$draws_cur) + 1):length(initdist_objects[[s]]$comp_prior)],
