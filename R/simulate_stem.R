@@ -876,26 +876,30 @@ simulate_stem <-
                             rep(0.0, length(initializer[[t]]$init_states))
                         }
                     }
+                if (initializer[[t]]$dist == "dirmultinom" | initializer[[t]]$dist == "multinom") {
+                    # compartment probabilities
+                    comp_probs <- if (sum(comp_prior) != 0) {
+                        comp_prior / sum(comp_prior)
+                    } else {
+                        rep(0.0, length(comp_prior))
+                    }
 
-                # compartment probabilities
-                comp_probs <- if (sum(comp_prior) != 0) {
-                    comp_prior / sum(comp_prior)
+                    # unconstrained moments
+                    comp_mean <- comp_size_vec[t] * comp_probs
+                    comp_cov <- comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs))
+
+                    if (initializer[[t]]$dist == "dirmultinom") {
+                        comp_cov <- comp_cov * ((comp_size_vec[t] + sum(comp_prior)) / (1 + sum(comp_prior)))
+                    }
+
+                    comp_cov_svd <- svd(comp_cov)
+                    comp_cov_svd$d[length(comp_cov_svd$d)] <- 0
+                    comp_sqrt_cov <-
+                        comp_cov_svd$u %*% diag(sqrt(comp_cov_svd$d))
                 } else {
-                    rep(0.0, length(comp_prior))
+                    comp_mean <- NULL
+                    comp_sqrt_cov <- NULL
                 }
-
-                # unconstrained moments
-                comp_mean <- comp_size_vec[t] * comp_probs
-                comp_cov <- comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs))
-
-                if (initializer[[t]]$dist == "dirmultinom") {
-                    comp_cov <- comp_cov * ((comp_size_vec[t] + sum(comp_prior)) / (1 + sum(comp_prior)))
-                }
-
-                comp_cov_svd <- svd(comp_cov)
-                comp_cov_svd$d[length(comp_cov_svd$d)] <- 0
-                comp_sqrt_cov <-
-                    comp_cov_svd$u %*% diag(sqrt(comp_cov_svd$d))
 
                 initdist_objects[[t]] <-
                     list(
@@ -907,7 +911,8 @@ simulate_stem <-
                         draws_prop         = rep(0.0, length(initializer[[t]]$init_states) - 1),
                         draws_ess          = rep(0.0, length(initializer[[t]]$init_states) - 1),
                         comp_inds_R        = initializer[[t]]$codes,
-                        comp_inds_Cpp      = initializer[[t]]$codes - 1
+                        comp_inds_Cpp      = initializer[[t]]$codes - 1,
+                        comp_prior         = comp_prior
                     )
             }
 
@@ -1468,26 +1473,31 @@ simulate_stem <-
                             rep(0.0, length(initializer[[t]]$init_states))
                         }
                     }
-                ## This is skippable for sbln
-                # compartment probabilities
-                comp_probs <- if (sum(comp_prior) != 0) {
-                    comp_prior / sum(comp_prior)
+
+                if (initializer[[t]]$dist == "dirmultinom" | initializer[[t]]$dist == "multinom") {
+                    # compartment probabilities
+                    comp_probs <- if (sum(comp_prior) != 0) {
+                        comp_prior / sum(comp_prior)
+                    } else {
+                        rep(0.0, length(comp_prior))
+                    }
+
+                    # unconstrained moments
+                    comp_mean <- comp_size_vec[t] * comp_probs
+                    comp_cov <- comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs))
+
+                    if (initializer[[t]]$dist == "dirmultinom") {
+                        comp_cov <- comp_cov * ((comp_size_vec[t] + sum(comp_prior)) / (1 + sum(comp_prior)))
+                    }
+
+                    comp_cov_svd <- svd(comp_cov)
+                    comp_cov_svd$d[length(comp_cov_svd$d)] <- 0
+                    comp_sqrt_cov <-
+                        comp_cov_svd$u %*% diag(sqrt(comp_cov_svd$d))
                 } else {
-                    rep(0.0, length(comp_prior))
+                    comp_mean <- NULL
+                    comp_sqrt_cov <- NULL
                 }
-
-                # unconstrained moments
-                comp_mean  <- comp_size_vec[t] * comp_probs
-                comp_cov   <- comp_size_vec[t] * (diag(comp_probs) - comp_probs %*% t(comp_probs))
-
-                if (initializer[[t]]$dist == "dirmultinom") {
-                    comp_cov <- comp_cov * ((comp_size_vec[t] + sum(comp_prior)) / (1 + sum(comp_prior)))
-                }
-
-                comp_cov_svd <- svd(comp_cov)
-                comp_cov_svd$d[length(comp_cov_svd$d)] <- 0
-                comp_sqrt_cov <-
-                    comp_cov_svd$u %*% diag(sqrt(comp_cov_svd$d))
 
                 initdist_objects[[t]] <-
                     list(
@@ -1499,7 +1509,8 @@ simulate_stem <-
                         draws_prop         = rep(0.0, length(initializer[[t]]$init_states) - 1),
                         draws_ess          = rep(0.0, length(initializer[[t]]$init_states) - 1),
                         comp_inds_R        = initializer[[t]]$codes,
-                        comp_inds_Cpp      = initializer[[t]]$codes - 1
+                        comp_inds_Cpp      = initializer[[t]]$codes - 1,
+                        comp_prior         = comp_prior
                     )
             }
 

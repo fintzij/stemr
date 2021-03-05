@@ -41,23 +41,30 @@ prepare_initdist_objects =
                     }
                 }
 
-            # compartment probabilities
-            comp_probs <- if(sum(comp_prior) != 0) {
-                comp_prior / sum(comp_prior)
+            if (initializer[[s]]$dist == "dirmultinom" | initializer[[s]]$dist == "multinom") {
+                # compartment probabilities
+                comp_probs <- if(sum(comp_prior) != 0) {
+                    comp_prior / sum(comp_prior)
+                } else {
+                    rep(0.0, length(comp_prior))
+                }
+
+                # unconstrained moments
+                comp_mean <- comp_size_vec[s] * comp_probs
+                comp_cov <- comp_size_vec[s] * (diag(comp_probs) - comp_probs %*% t(comp_probs))
+
+                if (initializer[[s]]$dist == "dirmultinom") {
+                    comp_cov <- comp_cov * ((comp_size_vec[s] + sum(comp_prior)) / (1 + sum(comp_prior)))
+                }
+
+                comp_cov_svd <- svd(comp_cov)
+                comp_cov_svd$d[length(comp_cov_svd$d)] <- 0
+                comp_sqrt_cov <-
+                    comp_cov_svd$u %*% diag(sqrt(comp_cov_svd$d))
             } else {
-                rep(0.0, length(comp_prior))
+                comp_mean <- NULL
+                comp_sqrt_cov <- NULL
             }
-
-            # unconstrained moments
-            comp_mean  <- comp_size_vec[s] * comp_probs
-            comp_cov   <- comp_size_vec[s] * (diag(comp_probs) - comp_probs %*% t(comp_probs))
-
-            if(initializer[[s]]$dist == "dirmultinom")
-                comp_cov <- comp_cov * ((comp_size_vec[s] + sum(comp_prior))/(1 + sum(comp_prior)))
-
-            comp_cov_svd <- svd(comp_cov)
-            comp_cov_svd$d[length(comp_cov_svd$d)] <- 0
-            comp_sqrt_cov <- comp_cov_svd$u %*% diag(sqrt(comp_cov_svd$d))
 
             # number of compartments
             n_comps_strat = length(initializer[[s]]$init_states)
