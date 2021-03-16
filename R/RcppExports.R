@@ -111,7 +111,7 @@ census_incidence <- function(incid_mat, census_times, interval_inds) {
 #' @param init_state the initial compartment counts
 #' @param forcing_inds logical vector of indicating at which times in the
 #'   time-varying covariance matrix a forcing is applied.
-#' @param parmat matrix with parameters, constants, and time varying 
+#' @param parmat matrix with parameters, constants, and time varying
 #'   covariates and parameters.
 #'
 #' @return matrix containing the compartment counts at census times.

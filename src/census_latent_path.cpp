@@ -16,7 +16,7 @@ using namespace Rcpp;
 //' @param init_state the initial compartment counts
 //' @param forcing_inds logical vector of indicating at which times in the
 //'   time-varying covariance matrix a forcing is applied.
-//' @param parmat matrix with parameters, constants, and time varying 
+//' @param parmat matrix with parameters, constants, and time varying
 //'   covariates and parameters.
 //'
 //' @return matrix containing the compartment counts at census times.
@@ -42,56 +42,56 @@ void census_latent_path(
         int n_comps         = flow_matrix.n_cols;
         int n_rates         = flow_matrix.n_rows;
         int n_forcings      = forcing_tcov_inds.n_elem;
-        
+
         // for use with forcings
         double forcing_flow = 0;
         arma::vec forcing_distvec(n_comps, arma::fill::zeros);
-        
-        // get incidence indices 
+
+        // get incidence indices
         if (event_inds.isNotNull()) {
-                
-                // convert incidence indices to an arma::uvec   
+
+                // convert incidence indices to an arma::uvec
                 arma::uvec incid_inds = Rcpp::as<arma::uvec>(event_inds);
-                
+
                 // get indices in the census_path matrix to keep incidence
                 int n_census_events = incid_inds.n_elem;
                 int incid_start = flow_matrix.n_cols + 1;
-                
+
                 // census the incidence increments
                 for(int k = 1; k < n_census_times; ++k) {
-                        
+
                         for(int j = 0; j < n_census_events; ++j) {
-                                census_path(k-1, incid_start + j) = 
+                                census_path(k-1, incid_start + j) =
                                         arma::sum(path(arma::span(census_inds[k-1]+1, census_inds[k]), incid_inds[j]));
                         }
-                        
+
                 }
         }
-        
+
         // compute the prevalence if called for
         if(do_prevalence) {
-              
+
               // initialize the state and increment vectors
               arma::rowvec state(n_comps);
               arma::rowvec increment(n_rates, arma::fill::zeros);
-              
-              state = path.submat(row0, initdist_inds);
-              
+
+              state = parmat.submat(row0, initdist_inds);
+
               for(int k=1; k < n_census_times-1; ++k) {
-                    
+
                     // numbers of transitions
                     increment = arma::sum(path(arma::span(census_inds[k-1] + 1, census_inds[k]),
                                                arma::span(1, n_rates)), 0);
-                    
+
                     // new state
                     state += increment * flow_matrix;
-                    
+
                     // save state
                     census_path(k-1, arma::span(1, n_comps)) = state;
-                    
+
                     // apply forcings if called for - applied after censusing the path
                     if(forcing_inds[k]) {
-                          
+
                           // distribute the forcings proportionally to the compartment counts in the applicable states
                           for(int s=0; s < n_forcings; ++s) {
                                 forcing_flow     = parmat(k, forcing_tcov_inds[s]);
