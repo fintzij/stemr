@@ -23,7 +23,8 @@ explore_stick_breaking <- function(n, target_median, target_lower, target_upper,
   stick_means <- head(target_median / rev(cumsum(rev(target_median))), -1)
   stick_means <- logit(stick_means)
 
-  stick_sd_upper_limit <- sapply(1:(n_compartments - 1), function(i) optimize(f = function(x) norm(as.matrix(expit(qnorm(p = c(lower_p, upper_p), mean = stick_means[[i]], sd = x)) * popsize - c(target_lower_original_order[-missing_compartment_index][[i]], target_upper_original_order[-missing_compartment_index][[i]])), type = "f"), interval = c(0, 5))$minimum)
+  # stick_sd_upper_limit <- sapply(1:(n_compartments - 1), function(i) optimize(f = function(x) norm(as.matrix(expit(qnorm(p = c(lower_p, upper_p), mean = stick_means[[i]], sd = x)) * popsize - c(target_lower_original_order[-missing_compartment_index][[i]], target_upper_original_order[-missing_compartment_index][[i]])), type = "f"), interval = c(0, 5))$minimum)
+  stick_sd_upper_limit <- sapply(1:(n_compartments - 1), function(i) optimize(f = function(x) norm(as.matrix(expit(qnorm(p = c(lower_p, upper_p), mean = stick_means[[i]], sd = x)) * popsize - c(target_lower[i], target_upper[i])), type = "f"), interval = c(0, 5))$minimum)
   names(stick_sd_upper_limit) <- names(stick_means)
 
   stick_sds <- numeric(n_compartments - 1)
@@ -37,7 +38,7 @@ explore_stick_breaking <- function(n, target_median, target_lower, target_upper,
   }
 
   samples <- rsbln(n = n, stick_means, stick_sds, stick_size = popsize) %>%
-    `colnames<-`(names(stick_means))
+    `colnames<-`(compartments)
 
   reduce(.x =
            list(enframe(compartments, name = NULL, value = "name"),
@@ -76,62 +77,66 @@ target_lower[1] <- NA
 
 target_upper <- target_upper_full
 target_upper[1] <- NA
+popsize <- sum(target_median_full)
 
-# debugonce(explore_stick_breaking)
-explore_stick_breaking(n = 1e5, target_median_full, target_lower, target_upper)
-summarize_stick_breaking(n = 1e5, target_median = target_median_full, target_lower, target_upper)
+a <- explore_stick_breaking(n = 1e6, target_median_full, target_lower, target_upper)
+dput(a$name)
+dput(target_median_full[a$name])
+dput(c(head(a$stick_mean, -1), head(a$stick_sd, -1)))
 
-tmp <- map_dfr(seq_along(target_median), ~{
-  target_median <- target_median_full
+summarize_stick_breaking(n = 1e6, target_median = target_median_full, target_lower, target_upper)
 
-  target_lower <- target_lower_full
-  target_lower[.] <- NA
+tmp <-
+  map_dfr(seq_along(target_median_full), ~{
+    target_lower <- target_lower_full
+    target_lower[.] <- NA
 
-  target_upper <- target_upper_full
-  target_upper[.] <- NA
-  missing_var <- names(target_median)[.]
+    target_upper <- target_upper_full
+    target_upper[.] <- NA
+    missing_var <- names(target_median_full)[.]
 
-  summarize_stick_breaking(n = 1e6,
-                           target_median_full,
-                           target_lower_full,
-                           target_upper_full,
-                           width = 0.9) %>%
-    mutate(missing_var = missing_var)
+    summarize_stick_breaking(n = 1e6,
+                             target_median_full,
+                             target_lower,
+                             target_upper,
+                             width = 0.9) %>%
+      mutate(missing_var = missing_var)
 })
 
-tmp %>% arrange(desc(rel_diff))
+tmp %>%
+  group_by(missing_var) %>%
+  arrange(desc(rel_diff))
 
-tmp_bad <- map_dfr(seq_along(target_median), ~{
-  target_median <- target_median_full
 
-  target_lower <- target_lower_full
-  target_lower[.] <- NA
+target_median_full_02 = c(S = 2795419, E = 3498, I = 10493, R = 365205, D = 1077)
+target_lower_02       = c(S = NA,     E = 2000,  I = 4000, R = 3e+05, D = 1000)
+target_upper_02       = c(S = NA,     E = 8000,  I = 24000, R = 4e+05, D = 1200)
 
-  target_upper <- target_upper_full
-  target_upper[.] <- NA
-  missing_var <- names(target_median)[.]
 
-  summarize_stick_breaking_bad(n = 1e6,
-                           target_median,
-                           target_lower,
-                           target_upper,
-                           width = 0.9) %>%
-    mutate(missing_var = missing_var)
-})
+a <- explore_stick_breaking(n = 1e6, target_median_full_02, target_lower_02, target_upper_02)
+dput(a$name)
+dput(target_median_full[a$name])
+dput(c(head(a$stick_mean, -1), head(a$stick_sd, -1)))
 
-tmp %>% arrange(desc(rel_diff))
-tmp_bad %>% arrange(desc(rel_diff))
 
-summarize_stick_breaking(n = 1e6,
-                         target_median = c(S = 2739459, E = 17488, I = 52463, R = 365205, D = 1077),
-                         target_lower = c(S = NA, E = 10000, I = 20000, R = 3e+05, D = 1000),
-                         target_upper = c(S = NA, E = 40000, I = 120000, R = 4e+05, D = 1200),
-                         width = 0.9)
 
-# Way different results
-summarize_stick_breaking(n = 1e6,
-                         target_median = c(S = 2739459, E = 17488, I = 52463, R = 365205, D = 1077),
-                         target_lower = c(S = 2659325, E = 10000, I = NA, R = 3e+05, D = 1000),
-                         target_upper = c(S = 2790651, E = 40000, I = NA, R = 4e+05, D = 1200),
-                         width = 0.9)
+# March Conditions --------------------------------------------------------
+target_median_full_03 = c(S = 3168000, E = 2690, I = 5000, R = 1, D = 1)
+target_lower_03       = c(S = 3157000, E = NA,  I = 1500, R = 0, D = 0)
+target_upper_03       = c(S = 3174000, E = NA,  I = 13000, R = 2, D = 2)
 
+
+# popsize <- 3175692
+# S <- rbeta(n = 2000, 983,2.7) * popsize
+# E_plus_I <- popsize - S
+# # I
+# quantile(rbeta(n = 2000, 41.3, 17.26) * E_plus_I, probs = c(0.05, 0.5, 0.95))
+# # E
+# quantile(E_plus_I - (rbeta(n = 2000, 41.3, 17.26) * E_plus_I), probs = c(0.05, 0.5, 0.95))
+
+a <- explore_stick_breaking(n = 1e6, target_median_full_03, target_lower_03, target_upper_03)
+
+summarize_stick_breaking(n = 1e6, target_median = target_median_full_03, target_lower_03, target_upper_03)
+dput(a$name)
+dput(target_median_full_03[a$name])
+dput(c(head(a$stick_mean, -1), head(a$stick_sd, -1)))

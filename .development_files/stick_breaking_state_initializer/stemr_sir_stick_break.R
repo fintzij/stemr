@@ -32,7 +32,7 @@ state_initializer <-
   list(stem_initializer(
     init_states = c(S = popsize-10, I = 10, R = 0), # must match compartment names
     prior = c(4.5, 36, 0.5, 0.5),
-    dist = "rsbln",
+    dist = "sbln",
     fixed = F)) # initial state fixed for simulation, we'll change this later
 
 # state_initializer <-
@@ -205,7 +205,7 @@ res <-
            print_progress = 1000)
 
 write_rds(res, "res.rds")
-res <- write_rds("res.rds")
+res <- read_rds("res.rds")
 res$results$posterior$initdist_samples
 
 source("/Users/damon/Documents/uci_covid_modeling2/code/stemr_functions.R")
