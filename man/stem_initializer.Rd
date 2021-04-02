@@ -28,7 +28,8 @@ compartment counts or probabilities applies, possibly "ALL".}
 \item{prior}{hyperparameters for state probabilities at time t0.}
 
 \item{dist}{one of "multinom" if the initial distribution (or its normal
-approximation) is multinomial or "dirmultinom" if dirichlet-multinomial.}
+approximation) is multinomial, "dirmultinom" if dirichlet-multinomial, or
+"sbln" if stick-breaking logit-normal.}
 }
 \value{
 list of settings used to initialize the initial state at the first

@@ -23,7 +23,7 @@ explore_stick_breaking <- function(n, target_median, target_lower, target_upper,
   stick_means <- head(target_median / rev(cumsum(rev(target_median))), -1)
   stick_means <- logit(stick_means)
 
-  # stick_sd_upper_limit <- sapply(1:(n_compartments - 1), function(i) optimize(f = function(x) norm(as.matrix(expit(qnorm(p = c(lower_p, upper_p), mean = stick_means[[i]], sd = x)) * popsize - c(target_lower_original_order[-missing_compartment_index][[i]], target_upper_original_order[-missing_compartment_index][[i]])), type = "f"), interval = c(0, 5))$minimum)
+
   stick_sd_upper_limit <- sapply(1:(n_compartments - 1), function(i) optimize(f = function(x) norm(as.matrix(expit(qnorm(p = c(lower_p, upper_p), mean = stick_means[[i]], sd = x)) * popsize - c(target_lower[i], target_upper[i])), type = "f"), interval = c(0, 5))$minimum)
   names(stick_sd_upper_limit) <- names(stick_means)
 
