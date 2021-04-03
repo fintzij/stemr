@@ -34,7 +34,7 @@ should be censused.}
 
 \item{do_prevalence}{should the prevalence be computed}
 
-\item{parmat}{matrix with parameters, constants, and time varying 
+\item{parmat}{matrix with parameters, constants, and time varying
 covariates and parameters.}
 
 \item{forcing_inds}{logical vector of indicating at which times in the

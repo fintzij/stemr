@@ -23,7 +23,8 @@
 #'   compartment counts or probabilities applies, possibly "ALL".
 #' @param prior hyperparameters for state probabilities at time t0.
 #' @param dist one of "multinom" if the initial distribution (or its normal
-#'   approximation) is multinomial or "dirmultinom" if dirichlet-multinomial.
+#'   approximation) is multinomial, "dirmultinom" if dirichlet-multinomial, or
+#'   "sbln" if stick-breaking logit-normal.
 #'
 #' @return list of settings used to initialize the initial state at the first
 #'   observation time.

@@ -65,18 +65,18 @@ initialize_ode <-
                  initialization_attempts,
                  step_size,
                  initdist_objects) {
-              
+
               # get the initial state parameters
               data_log_lik <- NaN
               attempt      <- 0
               keep_going   <- TRUE
               flow_matrix  <- t(stoich_matrix)
-              
+
               while(keep_going && (attempt <= initialization_attempts)) {
-                    
+
                     try({
                           # integrate the ODEs
-                          path_init <- 
+                          path_init <-
                               integrate_odes(
                                   ode_times         = census_times,
                                   ode_pars          = parmat,
@@ -92,9 +92,9 @@ initialize_ode <-
                                   step_size         = step_size,
                                   ode_pointer       = proc_pointer,
                                   set_pars_pointer  = set_pars_pointer)
-                          
+
                           path <- list(latent_path = path_init$incid_path)
-                          
+
                           census_latent_path(
                               path                = path$latent_path,
                               census_path         = censusmat,
@@ -109,7 +109,7 @@ initialize_ode <-
                               forcings_out        = forcings_out,
                               forcing_transfers   = forcing_transfers
                           )
-                          
+
                           # evaluate the density of the incidence counts
                           evaluate_d_measure_LNA(
                               emitmat           = emitmat,
@@ -124,116 +124,122 @@ initialize_ode <-
                               census_indices    = census_indices,
                               param_vec         = param_vec,
                               d_meas_ptr        = d_meas_pointer)
-                          
+
                           # compute the dat log likelihood
                           data_log_lik <- sum(emitmat[,-1][measproc_indmat])
                           if(is.nan(data_log_lik)) data_log_lik <- -Inf
                     }, silent = TRUE)
-                    
+
                     # propose new parameter values and/or initial volumes
                     keep_going <- is.nan(data_log_lik) || data_log_lik == -Inf
                     attempt    <- attempt + 1
-                    
+
                     # try new parameters
                     if(keep_going) {
-                        
+
                         for(s in seq_along(initdist_objects)) {
-                            
+
                             if(!initdist_objects[[s]]$fixed) {
-                                
+
                                 # N(0,1) draws
                                 draw_normals(initdist_objects[[s]]$draws_cur)
-                                
+                                if (stem_object$dynamics$initializer[[s]]$dist == "sbln") {
+                                  orig <- sbln_normal_to_volume(normal_draws = initdist_objects[[s]]$draws_cur,
+                                                                stick_means = initdist_objects[[s]]$comp_prior[1:length(initdist_objects[[s]]$draws_cur)],
+                                                                stick_sds = initdist_objects[[s]]$comp_prior[(length(initdist_objects[[s]]$draws_cur) + 1):length(initdist_objects[[s]]$comp_prior)],
+                                                                stick_size = initdist_objects[[s]]$comp_size)
+                                  } else {
+                                    orig <- initdist_objects[[s]]$comp_mean + c(initdist_objects[[s]]$comp_sqrt_cov %*% initdist_objects[[s]]$draws_cur)
+                                  }
+
                                 # map draws
                                 copy_vec(dest = initdist_objects[[s]]$init_volumes,
-                                         orig = c(initdist_objects[[s]]$comp_mean +
-                                                      c(initdist_objects[[s]]$comp_sqrt_cov %*%
-                                                            initdist_objects[[s]]$draws_cur)))
-                                
-                                while(any(initdist_objects[[s]]$init_volumes < 0) | 
-                                      any(initdist_objects[[s]]$init_volumes > 
+                                         orig = orig)
+
+                                while(any(initdist_objects[[s]]$init_volumes < 0) |
+                                      any(initdist_objects[[s]]$init_volumes >
                                           initdist_objects[[s]]$comp_size)) {
-                                    
+
                                     # N(0,1) draws
                                     draw_normals(initdist_objects[[s]]$draws_cur)
-                                    
+
                                     # map draws
                                     copy_vec(dest = initdist_objects[[s]]$init_volumes,
                                              orig = c(initdist_objects[[s]]$comp_mean +
                                                           c(initdist_objects[[s]]$comp_sqrt_cov %*%
-                                                                initdist_objects[[s]]$draws_cur))) 
+                                                                initdist_objects[[s]]$draws_cur)))
                                 }
-                                
+
                                 # copy to the ode parameter matrix
                                 insert_initdist(parmat = parmat,
-                                        initdist_objects = initdist_objects[s], 
-                                        prop = FALSE, 
+                                        initdist_objects = initdist_objects[s],
+                                        prop = FALSE,
                                         rowind = 0,
                                         mcmc_rec = FALSE)
                             }
                         }
-                                      
+
                         # draw new parameter values if called for
                         for(s in seq_along(param_blocks)) {
                             if(!is.null(param_blocks[[s]]$initializer)) {
-                                
+
                                 resamp = T
                                 while(resamp) {
                                     # initialize parameters
-                                    param_blocks[[s]]$pars_nat = 
+                                    param_blocks[[s]]$pars_nat =
                                         param_blocks[[s]]$initializer()
-                                    
-                                    param_blocks[[s]]$pars_est = 
+
+                                    param_blocks[[s]]$pars_est =
                                         param_blocks[[s]]$priors$to_estimation_scale(
                                             param_blocks[[s]]$pars_nat)
-                                    
+
                                     # calculate log prior
-                                    param_blocks[[s]]$log_pd = 
+                                    param_blocks[[s]]$log_pd =
                                         param_blocks[[s]]$priors$logprior(
                                             param_blocks[[s]]$pars_est)
-                                    
+
                                     # resample if log prior is -Inf
                                     resamp = is.infinite(param_blocks[[s]]$log_pd)
                                 }
                             }
                         }
-                        
+
                         # insert parameters into the parameter matrix
                         insert_params(parmat = parmat,
-                                      param_blocks = param_blocks, 
+                                      param_blocks = param_blocks,
                                       nat = TRUE,
                                       prop = FALSE,
                                       rowind = 0)
-                                
+
                         if(!is.null(tparam)) {
                             for(s in seq_along(tparam)) {
-                                
+
                                 # sample new draws
                                 draw_normals(tparam[[s]]$draws_cur)
-                                tparam[[s]]$log_lik <- 
+                                tparam[[s]]$log_lik <-
                                     sum(dnorm(tparam[[s]]$draws_cur, log = TRUE))
-                                
+
                                 # get values
-                                tparam[[s]]$tpar_cur <- 
+                                tparam[[s]]$tpar_cur <-
                                     tparam[[s]]$draws2par(
                                         parameters = parmat[1,],
-                                        draws = tparam[[s]]$draws_cur)[tparam[[s]]$tpar_inds_R] 
-                                
+                                        draws = tparam[[s]]$draws_cur)[tparam[[s]]$tpar_inds_R]
+
                                 # insert into the parameter matrix
                                 vec_2_mat(dest = parmat,
                                           orig = tparam[[s]]$tpar_cur,
                                           ind  = tparam[[s]]$col_ind)
                             }
-                        }   
+                        }
                     }
               }
-              
+
               if(keep_going) {
-                    
+
                     stop("Initialization failed. Try different initial parameter values.")
-                    
+
               } else {
-                    
+
                   path$data_log_lik <- data_log_lik # sum of log emission probabilities
                   return(list(path = path,
                               param_blocks = param_blocks,
