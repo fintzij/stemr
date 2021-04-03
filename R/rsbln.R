@@ -10,7 +10,6 @@
 #' @return samples from a stick breaking process
 #' @export
 #'
-#' @examples
 rsbln <- function(n, stick_means, stick_sds, stick_size) {
   n_compartments <- length(stick_means) + 1
 
@@ -32,7 +31,6 @@ rsbln <- function(n, stick_means, stick_sds, stick_size) {
 #' @return samples from a stick breaking process
 #' @export
 #'
-#' @examples
 sbln_normal_to_volume <- function(normal_draws, stick_means, stick_sds, stick_size) {
 
   return_vector <- is.null(dim(normal_draws))
