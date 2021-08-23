@@ -40,7 +40,7 @@ The code for reproducing the simulations in Fintzi, et. al (2020) can be found i
 ['/.development_files/incidence_lna_simulations'](https://github.com/fintzij/stemr/tree/master/.development_files/incidence_lna_simulations) folder.
 There are two vignettes included in this package to help familiarize users
 with its basic functionality and that reproduce models the SEMs fit via the LNA
-in Fintzi, et al. (2020). The [stemr_sir](https://github.com/fintzij/stemr/blob/master/vignettes/stemr_sir.Rmd) vignette provides an introduction to
+in Fintzi, et al. (2020). The [stemr](https://github.com/fintzij/stemr/blob/master/vignettes/stemr.Rmd) vignette provides an introduction to
 the `stemr` package, and demonstrates how to simulate from and fit an SIR model
 via the LNA and ODE. The [ebola_westafrica](https://github.com/fintzij/stemr/blob/master/vignettes/ebola_westafrica.Rmd) vignette demonstrates how to simulate
 from and fit a multi-country model for Ebola transmission, and then provides code

@@ -45,7 +45,7 @@ found in the
 folder. There are two vignettes included in this package to help
 familiarize users with its basic functionality and that reproduce models
 the SEMs fit via the LNA in Fintzi, et al. (2020). The
-[stemr\_sir](https://github.com/fintzij/stemr/blob/master/vignettes/stemr_sir.Rmd)
+[stemr](https://github.com/fintzij/stemr/blob/master/vignettes/stemr.Rmd)
 vignette provides an introduction to the `stemr` package, and
 demonstrates how to simulate from and fit an SIR model via the LNA and
 ODE. The
