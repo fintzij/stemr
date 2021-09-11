@@ -3,7 +3,7 @@
 
 # stemr <img src="man/figures/logo.png" align="right" alt="" width="120" />
 
-## Baysian Inference for Stochastic Epidemic Models via the Linear Noise Approximation
+## Bayesian Inference for Stochastic Epidemic Models via the Linear Noise Approximation
 
 The **stemr** R package implements a Bayesian data augmentation
 algorithm for fitting stochastic epidemic models (SEMs) with arbitrary
