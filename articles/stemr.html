@@ -26,6 +26,8 @@
 <![endif]-->
 </head>
 <body data-spy="scroll" data-target="#toc">
+    
+
     <div class="container template-article">
       <header><div class="navbar navbar-default navbar-fixed-top" role="navigation">
   <div class="container">
@@ -38,18 +40,12 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">stemr</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.2.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.0</span>
       </span>
     </div>
 
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
-<li>
-  <a href="../index.html">
-    <span class="fas fa-home fa-lg"></span>
-     
-  </a>
-</li>
 <li>
   <a href="../articles/stemr.html">Get started</a>
 </li>
@@ -57,7 +53,7 @@
   <a href="../reference/index.html">Reference</a>
 </li>
 <li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Articles
      
     <span class="caret"></span>
@@ -71,7 +67,7 @@
       </ul>
 <ul class="nav navbar-nav navbar-right">
 <li>
-  <a href="https://github.com/fintzij/stemr/">
+  <a href="https://github.com/fintzij/stemr/" class="external-link">
     <span class="fab fa-github fa-lg"></span>
      
   </a>
@@ -90,52 +86,52 @@
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>stemr: Baysian Inference for Stochastic Epidemic Models via the Linear Noise Approximation</h1>
-                        <h4 class="author">Jonathan Fintz, Jon Wakefield, and Vladimir N. Minin</h4>
+                        <h4 data-toc-skip class="author">Jonathan Fintz, Jon Wakefield, and Vladimir N. Minin</h4>
             
-            <h4 class="date">2021-09-11</h4>
+            <h4 data-toc-skip class="date">2022-03-16</h4>
       
-      <small class="dont-index">Source: <a href="https://github.com/fintzij/stemr/blob/master/vignettes/stemr.Rmd"><code>vignettes/stemr.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/fintzij/stemr/blob/HEAD/vignettes/stemr.Rmd" class="external-link"><code>vignettes/stemr.Rmd</code></a></small>
       <div class="hidden name"><code>stemr.Rmd</code></div>
 
     </div>
 
     
     
-<div id="overview" class="section level1">
-<h1 class="hasAnchor">
-<a href="#overview" class="anchor"></a>Overview</h1>
+<div class="section level2">
+<h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
+</h2>
 <p>This vignette demonstrates the basic functionalities of the <code>stemr</code> package. Broadly, the package simulates and fits stochastic epidemic models to partially observed incidence and prevalence data, and implements the Bayesian data augmentation framework presented in Fintzi, Wakefield, and Minin (2020). Simulation can be conducted using ordinary differential equations (ODEs), Gillespie’s direct algorithm (Gillespie, 1976), and using a restarting version of the linear noise approximation (LNA; Fintzi et al., 2020). Inference is conducted using ODEs or the LNA. This vignette, in particular, demonstrates how to simulating partially observed incidence data from an outbreak with SIR dyanmics and fit an SIR model to the data via the linear noise approximation. This corresponds to the procedure used in the coverage simulation in Fintzi et al., (2020).</p>
 </div>
-<div id="installing-and-loading-the-stemr-package" class="section level1">
-<h1 class="hasAnchor">
-<a href="#installing-and-loading-the-stemr-package" class="anchor"></a>Installing and loading the <code>stemr</code> package</h1>
+<div class="section level2">
+<h2 id="installing-and-loading-the-stemr-package">Installing and loading the <code>stemr</code> package<a class="anchor" aria-label="anchor" href="#installing-and-loading-the-stemr-package"></a>
+</h2>
 <p>To install the <code>stemr</code> package, clone this repository and build the package from sources. Since <code>stemr</code> relies on compiled code, you . You should be able to rebuild in the usual way once you clone the package repo and install the other dependencies (odeintr, extraDistr, ggplot2, patchwork, Rcpp, RcppArmadillo, and BH).</p>
 </div>
-<div id="basic-example-partially-observed-incidence-from-an-outbreak-with-sir-dynamics" class="section level1">
-<h1 class="hasAnchor">
-<a href="#basic-example-partially-observed-incidence-from-an-outbreak-with-sir-dynamics" class="anchor"></a>Basic example: partially observed incidence from an outbreak with SIR dynamics</h1>
+<div class="section level2">
+<h2 id="basic-example-partially-observed-incidence-from-an-outbreak-with-sir-dynamics">Basic example: partially observed incidence from an outbreak with SIR dynamics<a class="anchor" aria-label="anchor" href="#basic-example-partially-observed-incidence-from-an-outbreak-with-sir-dynamics"></a>
+</h2>
 <p>As a basic example, we will simulate an outbreak with SIR dynamics and generate negative binomial incidence counts with a mean case detection rate of 0.5. Briefly, the SIR model describes the time-evolution of an outbreak homogeneously mixing population where each individual exists in one of three states - susceptible (S), infected (I), and recovered (R). Infection implies that an individual is infectious with no latent period, while recovery confers lifelong immunity. The waiting times between infection and recovery events are taken to be exponentially distributed and the rates of state transition change every time the population jumps to a different state. Hence, the transmission process is a Markov jump process. The rates at which infection and recovery events take place are <span class="math display">\[\lambda_{SI} = \beta S I,\ \text{and}\ \lambda_{IR} = \mu I,\]</span> where <span class="math inline">\(\beta\)</span> is the per-contact rate of infection, <span class="math inline">\(\mu\)</span> is the recovery rate, and <span class="math inline">\(S\)</span> and <span class="math inline">\(I\)</span> denote the numbers of susceptible and infectious individuals. The basic reproduction number under SIR dynamics is <span class="math inline">\(R_0 = \beta P/\mu\)</span>, where <span class="math inline">\(P=S+I+R\)</span> is the population size.</p>
 <p>We initialize parameters and instatiate the SIR model in the code block below. The functions in the <code>stemr</code> package are documented and can be accessed in the usual way, e.g., <code><a href="../reference/rate.html">help(rate)</a></code>.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/fintzij/stemr">stemr</a></span><span class="op">)</span>
-<span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://patchwork.data-imaginist.com">patchwork</a></span><span class="op">)</span>
-<span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org">ggplot2</a></span><span class="op">)</span>
+<code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/fintzij/stemr" class="external-link">stemr</a></span><span class="op">)</span>
+<span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://patchwork.data-imaginist.com" class="external-link">patchwork</a></span><span class="op">)</span>
+<span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span>
 
 <span class="va">popsize</span> <span class="op">=</span> <span class="fl">1e4</span> <span class="co"># population size</span>
 
 <span class="va">true_pars</span> <span class="op">=</span>
-      <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span>R0     <span class="op">=</span> <span class="fl">1.5</span>,  <span class="co"># basic reproduction number</span>
+      <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>R0     <span class="op">=</span> <span class="fl">1.5</span>,  <span class="co"># basic reproduction number</span>
         mu_inv <span class="op">=</span> <span class="fl">2</span>,    <span class="co"># infectious period duration = 2 days</span>
         rho    <span class="op">=</span> <span class="fl">0.5</span>,  <span class="co"># case detection rate</span>
         phi    <span class="op">=</span> <span class="fl">10</span><span class="op">)</span>   <span class="co"># negative binomial overdispersion</span>
 
 <span class="co"># initialize model compartments and rates</span>
 <span class="va">strata</span> <span class="op">&lt;-</span> <span class="cn">NULL</span> <span class="co"># no strata</span>
-<span class="va">compartments</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"S"</span>, <span class="st">"I"</span>, <span class="st">"R"</span><span class="op">)</span>
+<span class="va">compartments</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"S"</span>, <span class="st">"I"</span>, <span class="st">"R"</span><span class="op">)</span>
 
 <span class="co"># rates initialized as a list of rate lists</span>
 <span class="va">rates</span> <span class="op">&lt;-</span>
-  <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="fu"><a href="../reference/rate.html">rate</a></span><span class="op">(</span>rate <span class="op">=</span> <span class="st">"beta * I"</span>, <span class="co"># individual level rate (unlumped)</span>
+  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="../reference/rate.html">rate</a></span><span class="op">(</span>rate <span class="op">=</span> <span class="st">"beta * I"</span>, <span class="co"># individual level rate (unlumped)</span>
             from <span class="op">=</span> <span class="st">"S"</span>,        <span class="co"># source compartment</span>
             to   <span class="op">=</span> <span class="st">"I"</span>,        <span class="co"># destination compartment</span>
             incidence <span class="op">=</span> <span class="cn">T</span><span class="op">)</span>,    <span class="co"># compute incidence of S2I transitions, required for simulating incidence data</span>
@@ -147,20 +143,20 @@
 <span class="co"># list used for simulation/inference for the initial state, initial counts fixed.</span>
 <span class="co"># state initializer a list of stem_initializer lists.</span>
 <span class="va">state_initializer</span> <span class="op">&lt;-</span>
-  <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="fu"><a href="../reference/stem_initializer.html">stem_initializer</a></span><span class="op">(</span>
-          init_states <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span>S <span class="op">=</span> <span class="va">popsize</span><span class="op">-</span><span class="fl">10</span>, I <span class="op">=</span> <span class="fl">10</span>, R <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, <span class="co"># must match compartment names</span>
+  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="../reference/stem_initializer.html">stem_initializer</a></span><span class="op">(</span>
+          init_states <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>S <span class="op">=</span> <span class="va">popsize</span><span class="op">-</span><span class="fl">10</span>, I <span class="op">=</span> <span class="fl">10</span>, R <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, <span class="co"># must match compartment names</span>
           fixed <span class="op">=</span> <span class="cn">T</span><span class="op">)</span><span class="op">)</span> <span class="co"># initial state fixed for simulation, we'll change this later</span>
 
 <span class="co"># set the parameter values - must be a named vector</span>
 <span class="va">parameters</span> <span class="op">=</span>
-  <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="va">true_pars</span><span class="op">[</span><span class="st">"R0"</span><span class="op">]</span> <span class="op">/</span> <span class="va">popsize</span> <span class="op">/</span> <span class="va">true_pars</span><span class="op">[</span><span class="st">"mu_inv"</span><span class="op">]</span>, <span class="co"># R0 = beta * P / mu</span>
+  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">true_pars</span><span class="op">[</span><span class="st">"R0"</span><span class="op">]</span> <span class="op">/</span> <span class="va">popsize</span> <span class="op">/</span> <span class="va">true_pars</span><span class="op">[</span><span class="st">"mu_inv"</span><span class="op">]</span>, <span class="co"># R0 = beta * P / mu</span>
     <span class="fl">1</span><span class="op">/</span><span class="va">true_pars</span><span class="op">[</span><span class="st">"mu_inv"</span><span class="op">]</span>,
     <span class="va">true_pars</span><span class="op">[</span><span class="st">"rho"</span><span class="op">]</span>,
     <span class="va">true_pars</span><span class="op">[</span><span class="st">"phi"</span><span class="op">]</span><span class="op">)</span>
-<span class="fu"><a href="https://rdrr.io/r/base/names.html">names</a></span><span class="op">(</span><span class="va">parameters</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"beta"</span>, <span class="st">"mu"</span>, <span class="st">"rho"</span>, <span class="st">"phi"</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">parameters</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"beta"</span>, <span class="st">"mu"</span>, <span class="st">"rho"</span>, <span class="st">"phi"</span><span class="op">)</span>
 
 <span class="co"># declare the initial time to be constant</span>
-<span class="va">constants</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span>t0 <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>
+<span class="va">constants</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>t0 <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>
 <span class="va">t0</span> <span class="op">&lt;-</span> <span class="fl">0</span>; <span class="va">tmax</span> <span class="op">&lt;-</span> <span class="fl">40</span>
 
 <span class="co"># compile the model</span>
@@ -180,11 +176,11 @@
 
 <span class="co"># list of emission distribution lists (analogous to rate specification)</span>
 <span class="va">emissions</span> <span class="op">&lt;-</span>
-  <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="fu"><a href="../reference/emission.html">emission</a></span><span class="op">(</span>meas_var <span class="op">=</span> <span class="st">"S2I"</span>, <span class="co"># transition or compartment being measured (S-&gt;I transitions)</span>
+  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="../reference/emission.html">emission</a></span><span class="op">(</span>meas_var <span class="op">=</span> <span class="st">"S2I"</span>, <span class="co"># transition or compartment being measured (S-&gt;I transitions)</span>
                 distribution    <span class="op">=</span> <span class="st">"negbinomial"</span>,         <span class="co"># emission distribution</span>
-                emission_params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"phi"</span>, <span class="st">"S2I * rho"</span><span class="op">)</span>, <span class="co"># distribution pars, here overdispersion and mean</span>
+                emission_params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"phi"</span>, <span class="st">"S2I * rho"</span><span class="op">)</span>, <span class="co"># distribution pars, here overdispersion and mean</span>
                 incidence       <span class="op">=</span> <span class="cn">TRUE</span>,                  <span class="co"># is the data incidence</span>
-                obstimes        <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span><span class="op">(</span><span class="fl">1</span>, <span class="va">tmax</span>, by <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>  <span class="co"># vector of observation times</span>
+                obstimes        <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">1</span>, <span class="va">tmax</span>, by <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>  <span class="co"># vector of observation times</span>
 
 <span class="co"># compile the measurement process</span>
 <span class="va">measurement_process</span> <span class="op">&lt;-</span>
@@ -196,9 +192,9 @@
 <span class="va">stem_object</span> <span class="op">&lt;-</span> 
   <span class="fu"><a href="../reference/make_stem.html">make_stem</a></span><span class="op">(</span>dynamics <span class="op">=</span> <span class="va">dynamics</span>,
             measurement_process <span class="op">=</span> <span class="va">measurement_process</span><span class="op">)</span></code></pre></div>
-<div id="simulating-an-outbreak-and-data" class="section level2">
-<h2 class="hasAnchor">
-<a href="#simulating-an-outbreak-and-data" class="anchor"></a>Simulating an outbreak and data</h2>
+<div class="section level3">
+<h3 id="simulating-an-outbreak-and-data">Simulating an outbreak and data<a class="anchor" aria-label="anchor" href="#simulating-an-outbreak-and-data"></a>
+</h3>
 <p>Having compiled the model, we can simulate an outbreak and incidence (or prevalence) data using Gillespie’s direct algorith to simulate a MJP path, with the LNA, or deterministically with ODEs. Since we specified that the data should consist of incidence counts in instatiating the model, the simulation function will produce incidence data. The prevalence and incidence curves are plotted below.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">sim_mjp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_stem.html">simulate_stem</a></span><span class="op">(</span>stem_object <span class="op">=</span> <span class="va">stem_object</span>, method <span class="op">=</span> <span class="st">"gillespie"</span>, full_paths <span class="op">=</span> <span class="cn">T</span><span class="op">)</span>
@@ -206,16 +202,16 @@
 <span class="va">sim_ode</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_stem.html">simulate_stem</a></span><span class="op">(</span>stem_object <span class="op">=</span> <span class="va">stem_object</span>, method <span class="op">=</span> <span class="st">"ode"</span><span class="op">)</span></code></pre></div>
 <p><img src="stemr_files/figure-html/plot_sims-1.png" width="768"></p>
 </div>
-<div id="fitting-the-model-to-data" class="section level2">
-<h2 class="hasAnchor">
-<a href="#fitting-the-model-to-data" class="anchor"></a>Fitting the model to data</h2>
+<div class="section level3">
+<h3 id="fitting-the-model-to-data">Fitting the model to data<a class="anchor" aria-label="anchor" href="#fitting-the-model-to-data"></a>
+</h3>
 <p>We’ll keep the dataset simulated under the MJP (shown below) and fit an SIR model to the data.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html">ggplot</a></span><span class="op">(</span>data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html">as.data.frame</a></span><span class="op">(</span><span class="va">sim_mjp</span><span class="op">$</span><span class="va">datasets</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>,
-                <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html">aes</a></span><span class="op">(</span>x<span class="op">=</span><span class="va">time</span>, y <span class="op">=</span> <span class="va">S2I</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span>
-  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html">geom_point</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span>
-  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html">theme_minimal</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span>
-  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html">labs</a></span><span class="op">(</span>x <span class="op">=</span> <span class="st">"Week"</span>, y <span class="op">=</span> <span class="st">"Count"</span>, title <span class="op">=</span> <span class="st">"Observed Incidence"</span><span class="op">)</span></code></pre></div>
+<code class="sourceCode R"><span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span>data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">sim_mjp</span><span class="op">$</span><span class="va">datasets</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>,
+                <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x<span class="op">=</span><span class="va">time</span>, y <span class="op">=</span> <span class="va">S2I</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span>
+  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span>
+  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span>
+  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>x <span class="op">=</span> <span class="st">"Week"</span>, y <span class="op">=</span> <span class="st">"Count"</span>, title <span class="op">=</span> <span class="st">"Observed Incidence"</span><span class="op">)</span></code></pre></div>
 <p><img src="stemr_files/figure-html/plot_dat-1.png" width="700"></p>
 <p>We’ll need to recompile the measurement process with the simulated data fed to the data argument of the <code>stem_measure</code> function since the data was not present when the measurement process was originally compiled. There is no need to recompile the model dynamics object, although we’ll have to regenerate the object with the new measurement process.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
@@ -228,57 +224,58 @@
             measurement_process <span class="op">=</span> <span class="va">measurement_process</span><span class="op">)</span></code></pre></div>
 <p>In order to perform inference, we’ll need to specify a function for transforming the model parameters from their natural scale to the estimation scale on which the MCMC explores the posterior, a function for transforming parameters on their estimation scale to the natural scale on which they enter the model dynamics and measurement process, and a function that returns the log prior. We’ll parameterize the MCMC estimation scale in terms of the log basic reproduction number, log recovery rate, logit mean case detection rate, and log of the negative binomial overdispersion parameter. The functions are specified as follows and placed into a list of functions (note that it is critical that the function signatures follow the specification given below):</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="co">### Parameterization in terms of log(R0) and log(mu)</span>
+<code class="sourceCode R">
+<span class="co">### Parameterization in terms of log(R0) and log(mu)</span>
 <span class="co">## Priors for log(R0), log(mu), logit(rho), phi</span>
 <span class="co"># Parameters (natural scale): beta, mu, rho, phi</span>
 <span class="co"># Parameters (estimation scale): log(beta * N / mu), log(mu), logit(rho), log(phi)</span>
 
 <span class="co"># function to take params_nat and return params_est</span>
 <span class="va">to_estimation_scale</span> <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">params_nat</span><span class="op">)</span> <span class="op">{</span>
-      <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html">log</a></span><span class="op">(</span><span class="va">params_nat</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="va">popsize</span> <span class="op">/</span> <span class="va">params_nat</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">-</span> <span class="fl">1</span><span class="op">)</span>, <span class="co"># (beta,mu,N) -&gt; log(R0-1)</span>
-        <span class="fu"><a href="https://rdrr.io/r/base/Log.html">log</a></span><span class="op">(</span><span class="va">params_nat</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span>,                     <span class="co"># mu -&gt; log(mu)</span>
+      <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="va">params_nat</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="va">popsize</span> <span class="op">/</span> <span class="va">params_nat</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">-</span> <span class="fl">1</span><span class="op">)</span>, <span class="co"># (beta,mu,N) -&gt; log(R0-1)</span>
+        <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="va">params_nat</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span>,                     <span class="co"># mu -&gt; log(mu)</span>
         <span class="fu"><a href="../reference/logit.html">logit</a></span><span class="op">(</span><span class="va">params_nat</span><span class="op">[</span><span class="fl">3</span><span class="op">]</span><span class="op">)</span>,                   <span class="co"># rho -&gt; logit(rho)</span>
-        <span class="fu"><a href="https://rdrr.io/r/base/Log.html">log</a></span><span class="op">(</span><span class="va">params_nat</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span><span class="op">)</span><span class="op">)</span>                     <span class="co"># phi -&gt; log(phi)</span>
+        <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="va">params_nat</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span><span class="op">)</span><span class="op">)</span>                     <span class="co"># phi -&gt; log(phi)</span>
 <span class="op">}</span>
 
 <span class="co"># function to take params_est and return params_nat</span>
 <span class="va">from_estimation_scale</span> <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">params_est</span><span class="op">)</span> <span class="op">{</span>
-      <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html">exp</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html">log</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html">exp</a></span><span class="op">(</span><span class="va">params_est</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span><span class="op">+</span><span class="fl">1</span><span class="op">)</span> <span class="op">+</span> <span class="va">params_est</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html">log</a></span><span class="op">(</span><span class="va">popsize</span><span class="op">)</span><span class="op">)</span>, <span class="co"># (log(R0), log(mu), N) -&gt; beta = exp(log(R0) + log(mu) - log(N))</span>
-        <span class="fu"><a href="https://rdrr.io/r/base/Log.html">exp</a></span><span class="op">(</span><span class="va">params_est</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span>, <span class="co"># log(mu) -&gt; mu</span>
+      <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">params_est</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span><span class="op">+</span><span class="fl">1</span><span class="op">)</span> <span class="op">+</span> <span class="va">params_est</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="va">popsize</span><span class="op">)</span><span class="op">)</span>, <span class="co"># (log(R0), log(mu), N) -&gt; beta = exp(log(R0) + log(mu) - log(N))</span>
+        <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">params_est</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span>, <span class="co"># log(mu) -&gt; mu</span>
         <span class="fu"><a href="../reference/expit.html">expit</a></span><span class="op">(</span><span class="va">params_est</span><span class="op">[</span><span class="fl">3</span><span class="op">]</span><span class="op">)</span>, <span class="co"># logit(rho) -&gt; rho</span>
-        <span class="fu"><a href="https://rdrr.io/r/base/Log.html">exp</a></span><span class="op">(</span><span class="va">params_est</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span><span class="op">)</span><span class="op">)</span> <span class="co"># log(phi) -&gt; phi</span>
+        <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">params_est</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span><span class="op">)</span><span class="op">)</span> <span class="co"># log(phi) -&gt; phi</span>
 <span class="op">}</span>
 
 <span class="co"># calculate the log prior density. note the jacobian for phi</span>
 <span class="va">logprior</span> <span class="op">=</span>
       <span class="kw">function</span><span class="op">(</span><span class="va">params_est</span><span class="op">)</span> <span class="op">{</span>
-            <span class="fu"><a href="https://rdrr.io/r/base/sum.html">sum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="va">params_est</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, <span class="fl">0</span>, <span class="fl">0.5</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,
-                <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="va">params_est</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span>, <span class="op">-</span><span class="fl">0.7</span>, <span class="fl">0.35</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,
-                <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="va">params_est</span><span class="op">[</span><span class="fl">3</span><span class="op">]</span>, <span class="fl">0</span>, <span class="fl">1</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,
-                <span class="fu"><a href="https://rdrr.io/r/stats/Exponential.html">dexp</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html">exp</a></span><span class="op">(</span><span class="va">params_est</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span><span class="op">)</span>, <span class="fl">0.1</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">+</span> <span class="va">params_est</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span><span class="op">)</span>
+            <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">dnorm</a></span><span class="op">(</span><span class="va">params_est</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, <span class="fl">0</span>, <span class="fl">0.5</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,
+                <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">dnorm</a></span><span class="op">(</span><span class="va">params_est</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span>, <span class="op">-</span><span class="fl">0.7</span>, <span class="fl">0.35</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,
+                <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">dnorm</a></span><span class="op">(</span><span class="va">params_est</span><span class="op">[</span><span class="fl">3</span><span class="op">]</span>, <span class="fl">0</span>, <span class="fl">1</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,
+                <span class="fu"><a href="https://rdrr.io/r/stats/Exponential.html" class="external-link">dexp</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">params_est</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span><span class="op">)</span>, <span class="fl">0.1</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">+</span> <span class="va">params_est</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span><span class="op">)</span>
       <span class="op">}</span>
 
 <span class="co"># return all three functions in a list</span>
-<span class="va">priors</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>logprior <span class="op">=</span> <span class="va">logprior</span>,
+<span class="va">priors</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>logprior <span class="op">=</span> <span class="va">logprior</span>,
                to_estimation_scale <span class="op">=</span> <span class="va">to_estimation_scale</span>,
                from_estimation_scale <span class="op">=</span> <span class="va">from_estimation_scale</span><span class="op">)</span></code></pre></div>
 <p>We now specify the MCMC transition kernel. The main building block in the MCMC kernel is a list of parameter block lists, each specified via a call to the <code><a href="../reference/parblock.html">parblock()</a></code> function. In this simple example, we’ll update the model hyperparameters using a multivariate normal Metropolis-Hastings algorithm. We’ll tune the algorithm using a global adaptive scheme (algorithm 4 in Andrieu and Thoms). We’ll also initialize the parameters at random values, which is accomplished by specifying a function that adds noise to the parameters on their estimation scale.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">par_initializer</span> <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span>
   <span class="va">priors</span><span class="op">$</span><span class="fu">from_estimation_scale</span><span class="op">(</span><span class="va">priors</span><span class="op">$</span><span class="fu">to_estimation_scale</span><span class="op">(</span><span class="va">parameters</span><span class="op">)</span> <span class="op">+</span> 
-                                 <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">rnorm</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">0</span>, <span class="fl">0.1</span><span class="op">)</span><span class="op">)</span>
+                                 <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">0</span>, <span class="fl">0.1</span><span class="op">)</span><span class="op">)</span>
 <span class="op">}</span>
   
 <span class="co"># specify the kernel</span>
 <span class="va">mcmc_kern</span> <span class="op">&lt;-</span>
         <span class="fu"><a href="../reference/mcmc_kernel.html">mcmc_kernel</a></span><span class="op">(</span>
           parameter_blocks <span class="op">=</span> 
-              <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="fu"><a href="../reference/parblock.html">parblock</a></span><span class="op">(</span>
-                  pars_nat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"beta"</span>, <span class="st">"mu"</span>, <span class="st">"rho"</span>, <span class="st">"phi"</span><span class="op">)</span>,
-                  pars_est <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"log_R0"</span>, <span class="st">"log_mu"</span>, <span class="st">"logit_rho"</span>, <span class="st">"log_phi"</span><span class="op">)</span>,
+              <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="../reference/parblock.html">parblock</a></span><span class="op">(</span>
+                  pars_nat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"beta"</span>, <span class="st">"mu"</span>, <span class="st">"rho"</span>, <span class="st">"phi"</span><span class="op">)</span>,
+                  pars_est <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"log_R0"</span>, <span class="st">"log_mu"</span>, <span class="st">"logit_rho"</span>, <span class="st">"log_phi"</span><span class="op">)</span>,
                   priors <span class="op">=</span> <span class="va">priors</span>,
                   alg <span class="op">=</span> <span class="st">"mvnmh"</span>,
-                  sigma <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/diag.html">diag</a></span><span class="op">(</span><span class="fl">0.01</span>, <span class="fl">4</span><span class="op">)</span>,
+                  sigma <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/diag.html" class="external-link">diag</a></span><span class="op">(</span><span class="fl">0.01</span>, <span class="fl">4</span><span class="op">)</span>,
                   initializer <span class="op">=</span> <span class="va">par_initializer</span>,
                   control <span class="op">=</span> 
                     <span class="fu"><a href="../reference/mvnmh_control.html">mvnmh_control</a></span><span class="op">(</span>stop_adaptation <span class="op">=</span> <span class="fl">2.5e2</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>, 
@@ -297,9 +294,9 @@
 <span class="va">posterior</span> <span class="op">=</span> <span class="va">res</span><span class="op">$</span><span class="va">results</span><span class="op">$</span><span class="va">posterior</span> <span class="co"># list with posterior objects</span></code></pre></div>
 </div>
 </div>
-<div id="references" class="section level1">
-<h1 class="hasAnchor">
-<a href="#references" class="anchor"></a>References</h1>
+<div class="section level2">
+<h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
+</h2>
 <p>Andrieu, C., and Thoms, J.. “A tutorial on adaptive MCMC.” <strong>Statistics and Computing</strong> 18.4 (2008): 343-373.</p>
 <p>Fintzi, J., Wakefield, J., &amp; Minin, V. N. (2020). <strong>A linear noise approximation for stochastic epidemic models fit to partially observed incidence counts.</strong> arXiv preprint arXiv:2001.05099.</p>
 <p>Gillespie, D. T. (1976). <strong>A general method for numerically simulating the stochastic time</strong> <strong>evolution of coupled chemical reactions.</strong> Journal of Computational Physics 22, 403–434.</p>
@@ -318,11 +315,13 @@
 
 
       <footer><div class="copyright">
-  <p>Developed by Jon Fintzi, Jon Wakefield, Vladimir Minin.</p>
+  <p></p>
+<p>Developed by Jon Fintzi, Damon Bayer, Jon Wakefield, Vladimir Minin.</p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
+  <p></p>
+<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.2.</p>
 </div>
 
       </footer>
@@ -330,6 +329,8 @@
 
   
 
+
+  
 
   </body>
 </html>

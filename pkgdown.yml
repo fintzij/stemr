@@ -1,8 +1,8 @@
 pandoc: 2.7.3
-pkgdown: 1.6.1
+pkgdown: 2.0.2
 pkgdown_sha: ~
 articles:
   ebola_westafrica: ebola_westafrica.html
   stemr: stemr.html
-last_built: 2021-09-11T23:27Z
+last_built: 2022-03-16T17:26Z
 
