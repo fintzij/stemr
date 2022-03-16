@@ -915,6 +915,14 @@ fit_stem =
                         comp_chol(param_blocks[[ind]]$kernel_cov_chol,
                                   param_blocks[[ind]]$sigma)
                     }
+                    # print(paste("iter:", iter))
+                    # print(paste("ind:", ind))
+                    # print("param_blocks[[ind]]")
+                    # print(param_blocks[[ind]])
+                    # print("proposal_scaling:")
+                    # print(param_blocks[[ind]]$mvnmh_objects$proposal_scaling)
+                    # print("gain_factors")
+                    # print(param_blocks[[ind]]$gain_factors[iter])
 
                     # sample new parameters
                     mvnmh_update(
